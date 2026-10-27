@@ -203,9 +203,10 @@ a auditoria de um ticket antigo continue fiel ao fluxo que rodou.
 - Recebimento: `POST /webhooks/waha` autenticado por **HMAC-SHA512 do corpo bruto**, responde 200
   rápido e enfileira. Eventos tratados: `message`, `message.ack`, `session.status`,
   `message.reaction`.
-- Presença: o WAHA mantém "online" por `WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS` (25s) após cada
-  chamada, imitando o WhatsApp Web. O envio do painel termina com presença `offline` para o celular
-  do atendente voltar a receber push.
+- Presença: `WAHA_PRESENCE_AUTO_ONLINE=False`. O número **não** aparece online para o contato. Com
+  presença automática ligada, o aparelho do atendente deixa de receber notificação enquanto a sessão
+  está online — preço alto demais para um número que também vive no celular. Presença de
+  `typing`/`recording` continua sendo enviada e sempre é encerrada com `offline`.
 - Envio: serviço PHP `WahaClient` chamando `/api/sendText`, `/api/sendImage`, `/api/sendFile`,
   `/api/startTyping`, `/api/sendSeen`. `wa_message_id` devolvido é gravado; falha de envio é
   visível no painel e reenviável.
@@ -302,8 +303,11 @@ resumida aqui para a implementação:
   histórico preservado localmente.
 - **Sessão do WhatsApp cai** quando o celular desvincula ou fica muito tempo offline. Mitigação:
   alerta de sessão, reescaneamento pelo painel.
-- **GOWS e botões**: menu interativo pode não funcionar de forma confiável; por isso o MVP é
-  texto.
+- **Botões interativos não existem no GOWS**: `POST /api/sendButtons` responde 501 e a documentação
+  do WAHA marca a feature como `DEPRECATED`. `POST /api/sendList` funciona no GOWS, mas o próprio
+  WAHA avisa que "may stop working anytime". Enquete (`sendPoll`) funciona, mas o voto chega por
+  evento separado e não serve como menu de setores. Decisão: **menu de texto numerado**, que aceita
+  número ou nome digitado, tem "voltar" e "atendente", e não depende de API frágil.
 - **Mídia apagada em 90 dias**: se surgir demanda jurídica sobre um anexo antigo, ele não existe
   mais. O texto e o evento permanecem.
 - **Cinco setores, cinco atendentes**: setor coberto por uma pessoa só fica desassistido quando
