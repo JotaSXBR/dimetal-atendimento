@@ -1,11 +1,12 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/livewire-starter-kit",
+    "name": "dimetal/atendimento",
     "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
+    "description": "Central de atendimento via WhatsApp da Dimetal Distribuidora.",
     "keywords": [
         "laravel",
-        "framework"
+        "livewire",
+        "whatsapp"
     ],
     "license": "MIT",
     "require": {
