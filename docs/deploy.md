@@ -144,6 +144,15 @@ escrita à mão — evite drop de coluna no mesmo deploy que remove o código qu
 5. Status vira **Conectado**.
 6. `channels.backfill_days` ficou `0` com a importação desmarcada.
 7. Mensagem do celular para o número gera evento `message` em "Últimos eventos".
-8. Texto enviado pelo formulário chega no celular; depois de ~25s o contato vê "visto por último".
-9. Reiniciar o container WAHA: volta **Conectado** sem pedir QR.
-10. Repetir no `main` com o número real.
+8. Texto enviado pelo formulário chega no celular; o contato vê **"visto por último"**, nunca
+   "online" (`WAHA_PRESENCE_AUTO_ONLINE=False`).
+9. **Prova do eco (bug #2299 do GOWS)**: com o número conectado, envie uma mensagem pelo
+   **celular** para um contato e confirme em qual conversa o evento `fromMe` cai. Se cair na
+   conversa errada, fixar `devlikeapro/waha:gows-2026.7.1`, que é a versão confirmada sem o
+   defeito, e reavaliar quando a issue fechar.
+10. Confirmar que `message.any` chega em "Últimos eventos" para o envio feito pelo celular — sem
+    ele o registro de `fora_do_painel` não existe.
+11. Enviar pelo painel e confirmar que **não** aparece uma segunda mensagem marcada como enviada
+    fora do painel (o eco do nosso próprio envio foi reconhecido).
+12. Reiniciar o container WAHA: volta **Conectado** sem pedir QR.
+13. Repetir no `main` com o número real.

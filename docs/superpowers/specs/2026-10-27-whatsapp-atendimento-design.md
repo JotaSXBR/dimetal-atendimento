@@ -87,7 +87,8 @@ O projeto fracassa se:
 - **Um fluxo único** de pré-atendimento vale para os dois números.
 - **Modelo de ticket**: mesmo ticket enquanto não encerra; depois de encerrado, mensagem nova abre
   ticket novo vinculado ao mesmo contato, com os anteriores visíveis. Encerramento automático
-  após 24h sem movimento.
+  após 24h corridas sem movimento, **exceto quando a última mensagem é do cliente** — nesse caso o
+  ticket espera resposta humana e não é fechado sozinho.
 - **Protocolo** no formato `2026-000123` (ano + sequencial).
 - **Retenção**: o texto das mensagens e os eventos ficam para sempre; os **arquivos** (imagem,
   vídeo, PDF, áudio) são apagados do disco após **90 dias**, permanecendo o registro de que
@@ -201,16 +202,31 @@ a auditoria de um ticket antigo continue fiel ao fluxo que rodou.
   webhook apontando para o app. Matriz completa de variáveis em
   `docs/superpowers/specs/waha-config.md`.
 - Recebimento: `POST /webhooks/waha` autenticado por **HMAC-SHA512 do corpo bruto**, responde 200
-  rápido e enfileira. Eventos tratados: `message`, `message.ack`, `session.status`,
-  `message.reaction`.
-- Presença: o WAHA mantém "online" por `WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS` (25s) após cada
-  chamada, imitando o WhatsApp Web. O envio do painel termina com presença `offline` para o celular
-  do atendente voltar a receber push.
+  rápido e enfileira. Eventos tratados: `message`, **`message.any`**, `message.ack`,
+  `session.status`, `message.reaction`.
+- **Por que `message.any`**: `message` só entrega o que chega para o número. Mensagem enviada por
+  outro dispositivo vinculado (o celular do atendente) só aparece em `message.any`. Sem ele, o
+  requisito de registrar o envio fora do painel simplesmente não acontece. O custo é que o WAHA
+  entrega `message` **e** `message.any` para a mesma mensagem, às vezes em paralelo — por isso a
+  unicidade de `wa_message_id` é a única defesa, e não pode ser checagem em código.
+- Presença: `WAHA_PRESENCE_AUTO_ONLINE=False`. O número **não** aparece online para o contato. Com
+  presença automática ligada, o aparelho do atendente deixa de receber notificação enquanto a sessão
+  está online — preço alto demais para um número que também vive no celular. Presença de
+  `typing`/`recording` continua sendo enviada e sempre é encerrada com `offline`.
 - Envio: serviço PHP `WahaClient` chamando `/api/sendText`, `/api/sendImage`, `/api/sendFile`,
   `/api/startTyping`, `/api/sendSeen`. `wa_message_id` devolvido é gravado; falha de envio é
   visível no painel e reenviável.
-- Mensagem com `fromMe` que não saiu do painel: grava com `origin = fora_do_painel`, atribui ao
-  dono do ticket e registra evento.
+- **Mensagem `fromMe` — o caso ambíguo, e por que ele exige prova**: todo `fromMe` pode ser
+  (a) o eco de uma mensagem que o próprio painel acabou de enviar, ou (b) alguém digitando no
+  celular. Tratar todo `fromMe` como `fora_do_painel` duplicaria **cada mensagem enviada pelo
+  painel** e inflaria o relatório de produtividade com trabalho que não existiu.
+  Só vira `origin = fora_do_painel` quando **não existe** linha nossa correspondente: mesma
+  conversa, mesmo corpo, dentro de 60s, em estado de envio (`queued`, `sending`, `sent`,
+  `delivered`, `read`) — com ou sem `wa_message_id` já carimbado. Provas faltando, a mensagem é
+  registrada como `fora_do_painel` (o desfecho seguro para o atendente humano é não silenciar o
+  que ele digitou). Atribuição vai para `attributed_user_id` denormalizado no momento da
+  ingestão, para que transferir o ticket depois não reescreva o relatório de ontem.
+  Origem do padrão: DeskcommCRM (MIT, 4.879⭐), que pagou caro por esse bug em produção.
 - Importação inicial: ao conectar um número, se o backfill estiver ligado e com
   `backfill_days > 0` (padrão 5, editável por número, `0` desliga), um job lê
   `/api/{session}/chats` e, para cada chat,
@@ -302,8 +318,11 @@ resumida aqui para a implementação:
   histórico preservado localmente.
 - **Sessão do WhatsApp cai** quando o celular desvincula ou fica muito tempo offline. Mitigação:
   alerta de sessão, reescaneamento pelo painel.
-- **GOWS e botões**: menu interativo pode não funcionar de forma confiável; por isso o MVP é
-  texto.
+- **Botões interativos não existem no GOWS**: `POST /api/sendButtons` responde 501 e a documentação
+  do WAHA marca a feature como `DEPRECATED`. `POST /api/sendList` funciona no GOWS, mas o próprio
+  WAHA avisa que "may stop working anytime". Enquete (`sendPoll`) funciona, mas o voto chega por
+  evento separado e não serve como menu de setores. Decisão: **menu de texto numerado**, que aceita
+  número ou nome digitado, tem "voltar" e "atendente", e não depende de API frágil.
 - **Mídia apagada em 90 dias**: se surgir demanda jurídica sobre um anexo antigo, ele não existe
   mais. O texto e o evento permanecem.
 - **Cinco setores, cinco atendentes**: setor coberto por uma pessoa só fica desassistido quando

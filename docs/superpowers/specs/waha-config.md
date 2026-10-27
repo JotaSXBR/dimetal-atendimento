@@ -32,8 +32,8 @@ compartilhar sessão: o WhatsApp derruba o cliente anterior quando o mesmo núme
 | `WAHA_DASHBOARD_ENABLED` | `false` | `false` |
 | `WHATSAPP_SWAGGER_ENABLED` | `false` | `false` |
 | `WAHA_WORKER_RESTART_SESSIONS` | `true` | `true` |
-| `WAHA_PRESENCE_AUTO_ONLINE` | `true` | `true` |
-| `WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS` | `25` | `25` |
+| `WAHA_PRESENCE_AUTO_ONLINE` | `false` | `false` |
+| `WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS` | `0` | `0` |
 | `WHATSAPP_HOOK_URL` | `http://<app-main>/webhooks/waha` | `http://<app-beta>/webhooks/waha` |
 | `WHATSAPP_HOOK_HMAC_KEY` | `<segredo 1>` | `<segredo 2>` |
 | `WHATSAPP_HOOK_RETRIES_POLICY` | `exponential` | `exponential` |
@@ -53,19 +53,24 @@ compartilhar sessão: o WhatsApp derruba o cliente anterior quando o mesmo núme
 `WHATSAPP_HOOK_EVENTS` **não** deve ser `*`. Assinar só o que o sistema usa:
 
 ```
-session.status,message,message.ack,message.reaction,message.revoked,presence.update
+session.status,message,message.any,message.ack,message.reaction,message.revoked,presence.update
 ```
 
-### Por que 25 segundos de presença
+`message.any` é obrigatório: `message` não entrega o que foi enviado por outro dispositivo
+vinculado, e é justamente esse o caso do atendente que responde pelo celular. Como o WAHA emite
+`message` **e** `message.any` para a mesma mensagem (às vezes concorrentes), a unicidade de
+`wa_message_id` no banco é a única deduplicação confiável.
 
-O WAHA marca a sessão como `online` a cada chamada ao WhatsApp e a mantém assim por
-`WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS` (padrão `90`, que é o comportamento do WhatsApp Web).
-Com `25` o contato vê "online" por alguns segundos e depois "visto por último", igual a um celular
-normal. Não existe código nosso nessa parte.
+### Presença: auto-online desligado
 
-**Nuance que importa para a operação:** enquanto existe um cliente web ativo, o WhatsApp **não
-manda push** para o celular do atendente. Por isso o envio humano termina com presença
-`offline` (ver §5), senão o atendente não é notificado no telefone.
+`WAHA_PRESENCE_AUTO_ONLINE=False`. O número **não** aparece "online" para o contato; ele vê
+"visto por último", como um celular comum.
+
+A razão é operacional, não estética: enquanto existe um cliente web ativo, o WhatsApp **não manda
+push** para o celular. Com auto-online ligado (ou com o padrão `90` segundos depois de cada
+chamada), o aparelho do atendente fica sem notificação justamente quando o número é usado também
+fora do painel — que é o nosso caso. Presença de `typing`/`recording` continua sendo enviada e
+sempre é encerrada com `offline` (ver §5).
 
 ### Por que os limites de histórico
 
@@ -201,3 +206,75 @@ arquivo**, porque a retenção de 90 dias é nossa e o volume do WAHA não é ba
 - **Um número por sessão**: `main` e `beta` exigem chips diferentes.
 - **API key rotacionada** no Coolify exige atualizar a tela do app; por isso a tela valida a chave
   com um `GET /api/sessions` antes de salvar.
+
+## 9. Armadilhas do GOWS (levantadas no crmv2 e reconferidas na doc)
+
+### Mídia: a URL do evento não é confiável
+
+`media.url` no evento `message` pode vir como `mmg.whatsapp.net/....enc` (cifrado, inútil),
+`null`, ou apontando para `localhost` (endereço interno do container WAHA, inalcançável do app).
+`GET /api/files` só serve o storage **local**; se um dia migrarmos para S3, é `/api/s3`.
+
+Fallback obrigatório, na ordem:
+
+1. tentar `media.url` se for absoluta e alcançável;
+2. senão `GET /api/{session}/chats/{chatId}/messages/{messageId}?downloadMedia=true`;
+3. se ainda falhar, gravar a mensagem com `media_path = null` e sinalizar na auditoria. Nunca
+   perder o texto por causa do anexo.
+
+`WHATSAPP_FILES_LIFETIME` acima de ~24 dias estoura um timeout de 32 bits dentro do WAHA (issue
+#2018). Por isso ele fica em `0` (sem expiração) e a retenção de 90 dias é do nosso app.
+
+### QR: vida curta e finita
+
+O primeiro QR vale 60s; os seguintes, 20s cada, até 6 no total. Depois disso a sessão vira
+`FAILED` e **só sai disso com `restart`**. A tela precisa avisar do prazo e oferecer o código de
+pareamento como alternativa.
+
+### Código de pareamento
+
+`POST /api/{session}/auth/request-code` com `{phoneNumber}` devolve `{code}`. Não definir nome de
+dispositivo customizado na sessão — isso quebra o código de pareamento no GOWS.
+
+### Nono dígito (Brasil)
+
+Sem o app `brazilian-phone-numbers` habilitado no container (`WAHA_APPS_ENABLED`,
+`WAHA_APPS_ON`, `WAHA_API_KEY_PLAIN`), o envio escolhe o formato errado do número **em silêncio**:
+a mensagem sai e não chega. Não existe correção no código do app; é configuração de container.
+
+### Mensagem que chega com o WAHA fora do ar
+
+`session.status` não reentrega o que passou durante a queda. As mensagens perdidas chegam depois
+como *history sync*, não como evento `message`. Por isso existe catch-up na reconexão: ao ver a
+sessão voltar para `WORKING`, rodar a mesma rotina idempotente do backfill para a janela recente.
+
+### Filtros na origem
+
+Grupos, status, newsletter e broadcast precisam ser ignorados antes de virar ticket. Sem isso a
+fila enche de lixo que ninguém consegue fechar.
+
+### Envio: ritmo importa mais que o texto
+
+O DeskcommCRM (WAHA em produção) limita o envio a ~1 mensagem por 1,2s com jitter de até 800ms, e
+5s entre mensagens de campanha. É a defesa mais barata contra bloqueio por padrão de robô. Vale
+adotar no `WahaClient`: fila serial por sessão, não `sleep` no request do usuário.
+
+### Envio travado
+
+Mensagem gravada como `sending` há mais de 5 minutos é marcada `failed` por comando agendado.
+Sem isso, uma queda do WAHA no meio de um envio deixa a bolha girando para sempre e o atendente
+reenvia por fora — gerando justamente a duplicata que o painel deveria evitar.
+
+### Interativos: o que existe de verdade no GOWS
+
+
+| API | GOWS | Situação |
+|---|---|---|
+| `POST /api/sendButtons` | ❌ 501 | `DEPRECATED` na doc; implementado só no NOWEB |
+| `POST /api/send/buttons/reply` | ❌ | somente WEBJS |
+| `POST /api/sendList` | ✔️ | "may stop working anytime", só conversa 1:1 |
+| `POST /api/sendPoll` | ✔️ | funciona; voto chega por evento `poll.vote` |
+
+Decisão: **menu de texto numerado**. Aceita número ou nome, tem "voltar" e "atendente", não
+depende de API frágil e é trivial de testar e auditar.
+
