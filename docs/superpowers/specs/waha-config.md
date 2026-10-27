@@ -53,8 +53,13 @@ compartilhar sessão: o WhatsApp derruba o cliente anterior quando o mesmo núme
 `WHATSAPP_HOOK_EVENTS` **não** deve ser `*`. Assinar só o que o sistema usa:
 
 ```
-session.status,message,message.ack,message.reaction,message.revoked,presence.update
+session.status,message,message.any,message.ack,message.reaction,message.revoked,presence.update
 ```
+
+`message.any` é obrigatório: `message` não entrega o que foi enviado por outro dispositivo
+vinculado, e é justamente esse o caso do atendente que responde pelo celular. Como o WAHA emite
+`message` **e** `message.any` para a mesma mensagem (às vezes concorrentes), a unicidade de
+`wa_message_id` no banco é a única deduplicação confiável.
 
 ### Presença: auto-online desligado
 
@@ -248,7 +253,20 @@ sessão voltar para `WORKING`, rodar a mesma rotina idempotente do backfill para
 Grupos, status, newsletter e broadcast precisam ser ignorados antes de virar ticket. Sem isso a
 fila enche de lixo que ninguém consegue fechar.
 
+### Envio: ritmo importa mais que o texto
+
+O DeskcommCRM (WAHA em produção) limita o envio a ~1 mensagem por 1,2s com jitter de até 800ms, e
+5s entre mensagens de campanha. É a defesa mais barata contra bloqueio por padrão de robô. Vale
+adotar no `WahaClient`: fila serial por sessão, não `sleep` no request do usuário.
+
+### Envio travado
+
+Mensagem gravada como `sending` há mais de 5 minutos é marcada `failed` por comando agendado.
+Sem isso, uma queda do WAHA no meio de um envio deixa a bolha girando para sempre e o atendente
+reenvia por fora — gerando justamente a duplicata que o painel deveria evitar.
+
 ### Interativos: o que existe de verdade no GOWS
+
 
 | API | GOWS | Situação |
 |---|---|---|
