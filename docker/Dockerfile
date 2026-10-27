@@ -4,6 +4,12 @@
 # O Vite precisa de vendor/livewire/flux/dist/flux.css, então o Composer roda antes dos assets.
 FROM serversideup/php:8.5.12-fpm-nginx-bookworm AS base
 
+# Produção por padrão: sem isso a imagem avisa a cada boot que o OPcache está off.
+# Código é imutável (vem da imagem), então o OPcache nunca precisa revalidar timestamps.
+ENV PHP_OPCACHE_ENABLE=1 \
+    PHP_OPCACHE_VALIDATE_TIMESTAMPS=0 \
+    PHP_MEMORY_LIMIT=256M
+
 USER root
 
 RUN install-php-extensions pdo_pgsql intl zip gd bcmath redis
@@ -19,10 +25,11 @@ RUN composer install \
         --prefer-dist \
         --optimize-autoloader
 
-COPY . .
+COPY --chown=www-data:www-data . .
 
 RUN php artisan package:discover --ansi \
-    && php artisan vendor:publish --tag=laravel-assets --ansi --force
+    && php artisan vendor:publish --tag=laravel-assets --ansi --force \
+    && chown -R www-data:www-data /var/www/html
 
 USER www-data
 
