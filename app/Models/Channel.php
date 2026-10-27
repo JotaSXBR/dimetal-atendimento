@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use App\Enums\ChannelStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\ChannelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -15,12 +15,12 @@ use Illuminate\Support\Carbon;
  * @property string $waha_session
  * @property string|null $phone
  * @property ChannelStatus $status
- * @property Carbon|null $last_event_at
+ * @property CarbonImmutable|null $last_event_at
  * @property int $backfill_days
- * @property Carbon|null $backfill_last_run_at
+ * @property CarbonImmutable|null $backfill_last_run_at
  * @property bool $active
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
     'name',
