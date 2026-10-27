@@ -29,15 +29,30 @@ Projeto interno da Dimetal Distribuidora. Sem cadastro público.
 ```powershell
 docker compose up -d
 composer setup
+php artisan db:seed
 npm run dev
 php artisan serve
+php artisan queue:work
 ```
 
-A aplicação fica em `http://localhost:8000`.
+A aplicação fica em `http://localhost:8000`. O `queue:work` é necessário para o webhook do WhatsApp:
+os eventos entram na fila do Redis antes de serem processados.
 
 O `composer setup` instala dependências, cria o `.env`, gera a `APP_KEY`, roda as migrações e
 compila os assets. Os containers do `compose.yaml` criam `dimetal` e `dimetal_test`;
 `DB_USERNAME=dimetal` e `DB_PASSWORD=secret` já vêm no `.env.example`.
+
+O `db:seed` cria os cinco setores e, se `ADMIN_EMAIL`/`ADMIN_PASSWORD` estiverem no `.env`, o
+administrador inicial. Outros usuários: `php artisan app:create-user email@dimetal.com.br "Nome"
+--role=atendente`.
+
+## Documentação
+
+- [`docs/deploy.md`](docs/deploy.md) — Coolify, `main`/`beta`, variáveis e checklist de prova.
+- [`docs/superpowers/specs/waha-config.md`](docs/superpowers/specs/waha-config.md) — configuração de
+  referência do WAHA/GOWS (sessão, presença, webhook, mídia).
+- [`docs/superpowers/specs/2026-10-27-whatsapp-atendimento-design.md`](docs/superpowers/specs/2026-10-27-whatsapp-atendimento-design.md)
+  — desenho do produto.
 
 ## Testes e qualidade
 
