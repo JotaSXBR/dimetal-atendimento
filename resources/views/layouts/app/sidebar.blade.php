@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
     </head>
@@ -15,6 +15,16 @@
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
+
+                    @can('admin')
+                        <flux:sidebar.item icon="chat-bubble-left-right" :href="route('configuracoes.canais')" :current="request()->routeIs('configuracoes.canais')" wire:navigate>
+                            Canais
+                        </flux:sidebar.item>
+
+                        <flux:sidebar.item icon="cog-6-tooth" :href="route('configuracoes.whatsapp')" :current="request()->routeIs('configuracoes.whatsapp')" wire:navigate>
+                            WhatsApp
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 

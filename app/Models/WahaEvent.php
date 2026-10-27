@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * Envelope bruto recebido do WAHA, guardado antes de qualquer regra de negócio.
@@ -16,9 +16,9 @@ use Illuminate\Support\Carbon;
  * @property string $event
  * @property string|null $session
  * @property array<string, mixed> $payload
- * @property Carbon $received_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable $received_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
 #[Fillable(['waha_event_id', 'channel_id', 'event', 'session', 'payload', 'received_at'])]
 class WahaEvent extends Model
