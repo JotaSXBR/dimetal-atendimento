@@ -46,7 +46,7 @@ montada com recursos nativos do Coolify — Applications, Databases e, se precis
 | `scheduler-beta` | Application (mesmo Dockerfile, `schedule:work`) | `scheduler-beta` | — | — |
 | `pg-beta` | Database PostgreSQL 18 | nome interno gerado | 5432 | volume do recurso |
 | `redis-beta` | Database Redis 8 | nome interno gerado | 6379 | volume do recurso |
-| `waha-beta` | Application (imagem `devlikeapro/waha:gows-2026.9.2`) | `waha-beta` | 3000, sem domínio | `/app/.sessions`, `/app/.media` |
+| `waha-beta` | Application (imagem `devlikeapro/waha:gows-2026.10.1`) | `waha-beta` | 3000, sem domínio | `/app/.sessions`, `/app/.media` |
 
 - `pg-beta` e `redis-beta` não aceitam alias na API; o host é o nome interno que o Coolify gera e
   mostra na URL interna (estável entre deploys).

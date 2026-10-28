@@ -18,6 +18,13 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'waha' => [
+        'url' => env('WAHA_URL'),
+        'key' => env('WAHA_API_KEY'),
+        // Opcional: URL interna (ex.: http://app-beta/webhooks/waha); padrão é APP_URL.
+        'webhook_url' => env('WAHA_WEBHOOK_URL'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

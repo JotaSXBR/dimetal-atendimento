@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Http;
 /**
  * Cliente HTTP do WAHA para uma sessão (canal).
  *
- * Não guarda cache de configuração: base URL e API key vêm do banco a cada
- * chamada, então trocar a configuração na tela vale na próxima mensagem.
+ * Não guarda cache de configuração: base URL e API key vêm do ambiente (WahaSettings).
  */
 class WahaClient
 {
@@ -33,15 +32,34 @@ class WahaClient
         $response = $this->request()->post('/api/sessions', [
             'name' => $this->sessionName(),
             'start' => true,
+            'config' => $this->sessionConfig(),
         ]);
 
         if ($response->status() === 422) {
+            // Sessão já existe: reaplica a configuração (webhook/HMAC) antes de iniciar.
+            $this->ensureOk($this->request()->put('/api/sessions/'.$this->sessionName(), [
+                'name' => $this->sessionName(),
+                'config' => $this->sessionConfig(),
+            ]));
             $this->ensureOk($this->request()->post($this->sessionPath('/start', true)));
 
             return;
         }
 
         $this->ensureOk($response);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sessionConfig(): array
+    {
+        return ['webhooks' => [[
+            'url' => WahaSettings::webhookUrl(),
+            'events' => ['session.status', 'message', 'message.any', 'message.ack', 'message.reaction', 'message.revoked', 'presence.update'],
+            'hmac' => ['key' => WahaSettings::webhookSecret()],
+            'retries' => ['policy' => 'exponential', 'delaySeconds' => 3, 'attempts' => 8],
+        ]]];
     }
 
     public function stop(): void

@@ -64,7 +64,7 @@ php /var/www/html/artisan schedule:work
 ```
 
 WAHA é `POST /applications/dockerimage` com `docker_registry_image_name: devlikeapro/waha`,
-`docker_registry_image_tag: gows-2026.9.2`, `ports_exposes: 3000`,
+`docker_registry_image_tag: gows-2026.10.1`, `ports_exposes: 3000`,
 `custom_network_aliases: waha-beta`, `connect_to_docker_network: true`, sem domínio e **com
 `health_check_enabled: false`** — a imagem não tem `curl` nem `wget`, então qualquer healthcheck HTTP
 do Coolify reprova e o deploy é marcado como falho.

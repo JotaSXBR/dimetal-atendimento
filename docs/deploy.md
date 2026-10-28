@@ -14,7 +14,7 @@ Projeto `dimetal-main` (produção) e projeto `dimetal-beta` (teste), cada um co
 | `scheduler` | Application (mesmo Dockerfile, `schedule:work`) | não | — |
 | `pg` | Database PostgreSQL 18 | não | gerenciado pelo Coolify |
 | `redis` | Database Redis 8 | não | gerenciado pelo Coolify |
-| `waha` | Application (imagem `devlikeapro/waha:gows-2026.9.2`) | não | `/app/.sessions`, `/app/.media` |
+| `waha` | Application (imagem `devlikeapro/waha:gows-2026.10.1`) | não | `/app/.sessions`, `/app/.media` |
 
 Não há `compose.coolify.yaml`. Um Service ou uma aplicação docker-compose apareceria como **um**
 recurso com vários containers pendurados — exatamente o que não queremos.
@@ -40,6 +40,8 @@ DB_PASSWORD=<senha do pg>
 REDIS_HOST=<host da URL interna do redis>
 REDIS_PASSWORD=<senha do redis>
 AUTORUN_ENABLED=true        # só no app; worker e scheduler usam false
+WAHA_URL=http://waha-beta:3000   # app e worker (o worker envia mensagens)
+WAHA_API_KEY=<mesma chave do container waha>
 ```
 
 O restante é fixo e igual nos três serviços PHP: `APP_ENV=production`, `APP_DEBUG=false`,
@@ -58,17 +60,18 @@ WAHA_WORKER_ID=waha-beta
 WHATSAPP_DEFAULT_ENGINE=GOWS
 WAHA_API_KEY=<chave>
 WAHA_PRESENCE_AUTO_ONLINE=False
-WHATSAPP_HOOK_URL=http://app-beta/webhooks/waha
-WHATSAPP_HOOK_EVENTS=session.status,message,message.any,message.ack,message.reaction,message.revoked,presence.update
-WHATSAPP_HOOK_HMAC_KEY=<segredo>
 WAHA_EVENTS_DOWNLOAD_MEDIA=true
 ```
 
 `message.any` é obrigatório: `message` não entrega o que foi enviado por outro aparelho da conta, e
 sem ele não existe registro `fora_do_painel`. O webhook usa o alias interno, não o domínio público.
 
-`WAHA_API_KEY` e `WHATSAPP_HOOK_HMAC_KEY` são lidos pelo container do WAHA e precisam ser digitados
-de novo, iguais, em **Configurações → WhatsApp** (a tela testa com `GET /api/sessions`).
+O webhook, os eventos e o HMAC não são mais variáveis do WAHA: o app os registra na sessão ao clicar
+**Conectar** (segredo derivado da `APP_KEY`). Para o webhook ir pela rede interna, defina
+`WAHA_WEBHOOK_URL=http://app-beta/webhooks/waha` no app; sem isso usa `APP_URL`.
+
+Healthcheck do `waha`: tipo `cmd`, `curl -fsS http://127.0.0.1:3000/ping`, início de 60 s. Validado no beta
+antes do main; se o `/ping` exigir a API key, usar `WAHA_API_KEY_EXCLUDE_PATH=ping`.
 
 ## 3. Domínio e HTTPS
 
@@ -102,10 +105,9 @@ a versão antiga não cai antes da nova subir.
 3. Deploy nos Databases, depois `waha`, depois `app`. `worker` e `scheduler` por último.
 4. No terminal do `app`: `php artisan db:seed --force` (cinco setores) e
    `php artisan app:create-user email@dimetal.com.br "Nome" --role=admin`.
-5. **Configurações → WhatsApp**: URL `http://waha-beta:3000`, API key e segredo HMAC; salve.
-6. **Canais** → decidir sobre "Importar histórico" (desmarcado) → **Conectar** → QR ou código de
+5. **Canais** → decidir sobre "Importar histórico" (desmarcado) → **Conectar** → QR ou código de
    pareamento.
-7. Confirmar **Conectado** e enviar o texto de teste.
+6. Confirmar **Conectado** e enviar o texto de teste.
 
 Recursos do beta hoje:
 

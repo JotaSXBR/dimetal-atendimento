@@ -21,9 +21,6 @@
                             Canais
                         </flux:sidebar.item>
 
-                        <flux:sidebar.item icon="cog-6-tooth" :href="route('configuracoes.whatsapp')" :current="request()->routeIs('configuracoes.whatsapp')" wire:navigate>
-                            WhatsApp
-                        </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>
             </flux:sidebar.nav>

@@ -4,8 +4,8 @@ namespace Tests\Feature\Webhooks;
 
 use App\Jobs\HandleWahaEvent;
 use App\Models\Channel;
-use App\Models\Setting;
 use App\Models\WahaEvent;
+use App\Settings\WahaSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
@@ -19,13 +19,13 @@ class WahaWebhookTest extends TestCase
     {
         parent::setUp();
 
-        Setting::put('waha.webhook_secret', 'segredo', 'secret');
         Queue::fake();
     }
 
     /** @param array<string, mixed> $overrides */
-    private function sendEvent(array $overrides = [], ?string $secret = 'segredo'): TestResponse
+    private function sendEvent(array $overrides = [], ?string $secret = 'valido'): TestResponse
     {
+        $secret = $secret === 'valido' ? WahaSettings::webhookSecret() : $secret;
         $body = array_merge([
             'id' => 'evt_01',
             'event' => 'session.status',
@@ -59,7 +59,7 @@ class WahaWebhookTest extends TestCase
 
         $this->call('POST', '/webhooks/waha', [], [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_WEBHOOK_HMAC' => hash_hmac('sha512', 'outro-corpo', 'segredo'),
+            'HTTP_X_WEBHOOK_HMAC' => hash_hmac('sha512', 'outro-corpo', WahaSettings::webhookSecret()),
         ], $json)->assertUnauthorized();
 
         $this->assertSame(0, WahaEvent::count());
