@@ -148,6 +148,8 @@ Rollback: reimplante o commit anterior. Migrações destrutivas exigem migraçã
 - **Contato não recebe notificação** → presença ficou `online`; `WAHA_PRESENCE_AUTO_ONLINE=False`
   evita isso.
 - **Fila parada** → `worker` precisa estar rodando com o mesmo `QUEUE_CONNECTION` do `app`.
+- **`worker`/`scheduler` rodando o servidor web em vez do comando** → o Coolify ignora `start_command` em build
+  por Dockerfile; confira `dockerfile_target_build` (`worker`/`scheduler`) e os estágios do Dockerfile.
 - **`worker`/`scheduler` unhealthy** → o healthcheck usa `healthcheck-queue`/`healthcheck-schedule`
   (precisam de `pgrep` na imagem). Se reprovar, desligue o healthcheck do recurso e investigue.
 - **`waha` unhealthy** → use healthcheck tipo `http` em `/ping`; o tipo `cmd` com `curl` reprova porque a
