@@ -158,7 +158,8 @@ class ChannelCard extends Component
 
         $this->leaveOffline();
 
-        $this->sentMessage = 'Enviado: '.($response['id'] ?? 'sem id');
+        $id = $response['id'] ?? null;
+        $this->sentMessage = 'Enviado: '.(is_string($id) ? $id : 'sem id');
     }
 
     public function render(): View

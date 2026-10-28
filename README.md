@@ -15,7 +15,7 @@ Projeto interno da Dimetal Distribuidora. Sem cadastro público.
 | Cache/fila | Redis 8 (`predis` no Windows, `phpredis` no Linux) |
 | WhatsApp | WAHA self-hosted, engine GOWS |
 | Build | Vite, Node 24 LTS |
-| Qualidade | PHPUnit 12, Larastan 7, Pint |
+| Qualidade | PHPUnit 12, Larastan 7, Pint, PHPMD |
 
 ## Requisitos locais
 
@@ -57,10 +57,26 @@ administrador inicial. Outros usuários: `php artisan app:create-user email@dime
 ## Testes e qualidade
 
 ```powershell
-composer test        # Pint + Larastan + PHPUnit
-composer lint        # corrige estilo
-composer types:check # apenas análise estática
+composer test            # Pint + Larastan + PHPMD + PHPUnit
+composer lint            # corrige estilo
+composer types:check     # análise estática (Larastan, nível max)
+composer complexity      # complexidade e tamanho (PHPMD)
+composer security:audit  # vulnerabilidades em dependências (composer audit + npm audit)
+composer ci:check        # o que o CI roda: estilo, tipos, complexidade e testes com cobertura
 ```
+
+| Verificação | Ferramenta | Limite |
+|---|---|---|
+| Estilo | Pint, preset Laravel | sem diferenças |
+| Tipos | Larastan, nível `max` | 0 erros, sem baseline nem `ignore` |
+| Complexidade | PHPMD (`phpmd.xml`) | ciclomática 10, NPath 200, classe 50 |
+| Tamanho | PHPMD (`phpmd.xml`) | método 100 linhas, classe 1000, 10 parâmetros, 25 métodos |
+| Código morto | PHPMD | campos, métodos e variáveis sem uso |
+| Cobertura | PHPUnit com `pcov` (só no CI) | mínimo 80% (medido: 83,8%), script `coverage` |
+| Dependências | `composer audit`, `npm audit` | sem vulnerabilidade `high` ou acima; job `audit` à parte |
+
+Os limites do PHPMD são os padrão da ferramenta; a única exceção é `TooManyPublicMethods` (15), porque o
+`WahaClient` tem um método por endpoint do WAHA. Subir um limite exige justificar no `phpmd.xml`.
 
 ## Fluxo de branches
 

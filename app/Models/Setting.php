@@ -21,7 +21,7 @@ class Setting extends Model
     public static function put(string $key, mixed $value, string $type = 'string'): void
     {
         $stored = $type === 'secret'
-            ? Crypt::encryptString((string) $value)
+            ? Crypt::encryptString(is_scalar($value) ? (string) $value : (string) json_encode($value))
             : json_encode($value);
 
         static::updateOrCreate(['key' => $key], ['value' => $stored, 'type' => $type]);

@@ -30,6 +30,7 @@
         "laravel/sail": "^1.53",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.9.3",
+        "phpmd/phpmd": "^3.0",
         "phpunit/phpunit": "^12.5.23"
     },
     "autoload": {
@@ -65,15 +66,29 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
-            "@test"
+            "@lint:check",
+            "@types:check",
+            "@complexity",
+            "@coverage"
         ],
         "types:check": [
             "phpstan analyse"
+        ],
+        "complexity": [
+            "phpmd analyze app --format text --ruleset phpmd.xml"
+        ],
+        "coverage": [
+            "@php artisan test --coverage --min=80"
+        ],
+        "security:audit": [
+            "composer audit --no-interaction",
+            "npm audit --audit-level=high"
         ],
         "test": [
             "@php artisan config:clear --ansi",
             "@lint:check",
             "@types:check",
+            "@complexity",
             "@php artisan test"
         ],
         "post-autoload-dump": [

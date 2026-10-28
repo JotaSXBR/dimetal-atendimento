@@ -11,26 +11,33 @@ final class WahaSettings
 {
     public static function baseUrl(): string
     {
-        return rtrim((string) config('services.waha.url'), '/');
+        return rtrim(self::config('services.waha.url'), '/');
     }
 
     public static function apiKey(): string
     {
-        return (string) config('services.waha.key');
+        return self::config('services.waha.key');
     }
 
     public static function webhookSecret(): string
     {
-        return hash_hmac('sha256', 'waha-webhook', (string) config('app.key'));
+        return hash_hmac('sha256', 'waha-webhook', self::config('app.key'));
     }
 
     public static function webhookUrl(): string
     {
-        return (string) (config('services.waha.webhook_url') ?: url('/webhooks/waha'));
+        return self::config('services.waha.webhook_url') ?: url('/webhooks/waha');
     }
 
     public static function isConfigured(): bool
     {
         return self::baseUrl() !== '' && self::apiKey() !== '';
+    }
+
+    private static function config(string $key): string
+    {
+        $value = config($key);
+
+        return is_string($value) ? $value : '';
     }
 }

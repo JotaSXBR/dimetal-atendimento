@@ -220,6 +220,6 @@ class WahaClient
 
         $body = $response->json();
 
-        return is_array($body) ? $body : [];
+        return is_array($body) ? array_filter($body, is_string(...), ARRAY_FILTER_USE_KEY) : [];
     }
 }

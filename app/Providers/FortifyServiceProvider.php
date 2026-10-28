@@ -40,7 +40,7 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureAuthentication(): void
     {
         Fortify::authenticateUsing(function (Request $request): ?User {
-            $email = (string) $request->input(Fortify::username());
+            $email = $request->string(Fortify::username())->toString();
 
             /** @var User|null $user */
             $user = User::query()->where(Fortify::username(), $email)->first();
@@ -49,7 +49,7 @@ class FortifyServiceProvider extends ServiceProvider
                 return null;
             }
 
-            return Hash::check((string) $request->input('password'), $user->password) ? $user : null;
+            return Hash::check($request->string('password')->toString(), $user->password) ? $user : null;
         });
     }
 
@@ -86,13 +86,13 @@ class FortifyServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $throttleKey = Str::transliterate($request->string(Fortify::username())->lower()->toString().'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
         });
 
         RateLimiter::for('passkeys', function (Request $request) {
-            $credentialId = $request->input('credential.id');
+            $credentialId = $request->string('credential.id')->toString();
 
             return Limit::perMinute(10)->by(
                 ($credentialId ?: $request->session()->getId()).'|'.$request->ip(),

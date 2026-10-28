@@ -71,6 +71,8 @@ class WahaWebhookController
             return null;
         }
 
-        return Channel::query()->where('waha_session', $session)->value('id');
+        $id = Channel::query()->where('waha_session', $session)->value('id');
+
+        return is_int($id) ? $id : null;
     }
 }

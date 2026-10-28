@@ -27,9 +27,7 @@ class ResolveContact
             $waId = $lid === null ? $from : $this->phoneFromSenderAlt($senderAlt);
             $name = $displayName === null ? null : mb_substr(trim($displayName), 0, self::NAME_LIMIT);
 
-            $contact = ($waId !== null ? Contact::query()->where('wa_id', $waId)->first() : null)
-                ?? ($lid !== null ? Contact::query()->where('lid', $lid)->first() : null)
-                ?? new Contact;
+            $contact = $this->findExisting($waId, $lid) ?? new Contact;
 
             $contact->wa_id ??= $waId;
 
@@ -47,6 +45,13 @@ class ResolveContact
 
             return $contact;
         });
+    }
+
+    private function findExisting(?string $waId, ?string $lid): ?Contact
+    {
+        $byPhone = $waId === null ? null : Contact::query()->where('wa_id', $waId)->first();
+
+        return $byPhone ?? ($lid === null ? null : Contact::query()->where('lid', $lid)->first());
     }
 
     private function lidTaken(string $lid): bool

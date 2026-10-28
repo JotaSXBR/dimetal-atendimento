@@ -62,7 +62,7 @@ class HandleWahaEvent implements ShouldQueue
 
     private function applyStatus(WahaEvent $event): void
     {
-        $raw = $event->payload['payload']['status'] ?? null;
+        $raw = data_get($event->payload, 'payload.status');
 
         $status = is_string($raw) ? ChannelStatus::tryFrom($raw) : null;
 
@@ -71,6 +71,10 @@ class HandleWahaEvent implements ShouldQueue
         }
 
         $channel = $event->channel;
+
+        if ($channel === null) {
+            return;
+        }
 
         $channel->status = $status;
         $channel->last_event_at = $event->received_at;

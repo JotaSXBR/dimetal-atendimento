@@ -38,7 +38,7 @@ class Channels extends Component
                 ->map(fn (WahaEvent $event): array => [
                     'event' => $event->event,
                     'session' => $event->session,
-                    'at' => $event->received_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i:s'),
+                    'at' => $event->received_at->timezone(config()->string('app.display_timezone'))->format('d/m/Y H:i:s'),
                 ])
                 ->all(),
         ]);
