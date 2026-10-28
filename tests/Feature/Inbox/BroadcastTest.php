@@ -103,6 +103,14 @@ class BroadcastTest extends TestCase
         );
     }
 
+    public function test_reverb_so_aceita_a_origem_do_app_por_padrao(): void
+    {
+        $origins = config('reverb.apps.apps.0.allowed_origins');
+
+        $this->assertNotContains('*', $origins);
+        $this->assertSame([parse_url((string) config('app.url'), PHP_URL_HOST)], $origins);
+    }
+
     public function test_autorizacao_dos_canais(): void
     {
         // O phpunit usa o broadcaster `null`, que aprova qualquer canal; aqui precisa o driver real.

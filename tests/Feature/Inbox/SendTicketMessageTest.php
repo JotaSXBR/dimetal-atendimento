@@ -113,6 +113,21 @@ class SendTicketMessageTest extends TestCase
         }
     }
 
+    public function test_falha_guarda_o_motivo_que_o_waha_devolveu(): void
+    {
+        Http::fake(['*/api/sendText' => Http::response([
+            'statusCode' => 500,
+            'exception' => ['message' => '2 UNKNOWN: recipient is not on WhatsApp'],
+        ], 500)]);
+
+        try {
+            $this->send('oi');
+            $this->fail('Deveria lançar WahaRequestException');
+        } catch (WahaRequestException) {
+            $this->assertStringContainsString('recipient is not on WhatsApp', (string) Message::query()->sole()->failure_reason);
+        }
+    }
+
     public function test_ticket_desatualizado_nao_sobrescreve_first_human_reply_at(): void
     {
         $earlier = now()->subHour()->startOfSecond();

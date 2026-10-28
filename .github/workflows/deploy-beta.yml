@@ -27,12 +27,32 @@ jobs:
       - name: Sincroniza beta com main
         run: git push origin HEAD:refs/heads/beta
 
-      - name: Deploy no Coolify (app, worker, scheduler, reverb)
+      # Ordem importa: o app roda as migrações ao subir, então vai sozinho e o workflow espera ele ficar
+      # saudável antes de trocar os demais. Migrações precisam funcionar com o código da versão anterior
+      # (ver docs/deploy.md), porque worker, scheduler e reverb ainda rodam a versão velha nesse intervalo.
+      - name: Deploy no Coolify (app, depois worker, scheduler e reverb)
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
         run: |
-          curl -fsS -X POST "$COOLIFY_URL/api/v1/deploy" \
-            -H "Authorization: Bearer $COOLIFY_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"uuid":"ipbknnticmaubtzdonxjqgy6,jme7xgh4ugrrf3qbrxaclwlj,3thwz32zdtnmr2sme70jrpdf,oncydt57liptigusmj64ac3o"}'
+          api() { curl -fsS -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" "$@"; }
+
+          deploy() {
+            ids=$(api -X POST "$COOLIFY_URL/api/v1/deploy" -d "{\"uuid\":\"$1\"}" | jq -r '.deployments[].deployment_uuid')
+            [ -n "$ids" ] || { echo "Coolify não enfileirou deploy para $1"; exit 1; }
+            for id in $ids; do
+              status=""
+              for _ in $(seq 1 90); do
+                status=$(api "$COOLIFY_URL/api/v1/deployments/$id" | jq -r .status)
+                case "$status" in
+                  finished) break ;;
+                  failed|error|cancelled*) echo "deploy $id terminou como $status"; exit 1 ;;
+                esac
+                sleep 20
+              done
+              [ "$status" = finished ] || { echo "deploy $id não terminou a tempo (status: $status)"; exit 1; }
+            done
+          }
+
+          deploy ipbknnticmaubtzdonxjqgy6
+          deploy jme7xgh4ugrrf3qbrxaclwlj,3thwz32zdtnmr2sme70jrpdf,oncydt57liptigusmj64ac3o

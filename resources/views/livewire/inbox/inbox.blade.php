@@ -122,6 +122,10 @@
 
                                 <p class="break-words whitespace-pre-wrap">{{ $message->body !== '' ? $message->body : '['.$message->type.']' }}</p>
 
+                                @if ($message->failure_reason)
+                                    <p class="mt-1 text-xs text-danger">{{ $message->failure_reason }}</p>
+                                @endif
+
                                 <p class="mt-1 flex items-center justify-end gap-1 font-mono text-[10px] text-ink-3">
                                     {{ $message->sent_at->timezone($tz)->format('H:i') }}
                                     @if ($out)
