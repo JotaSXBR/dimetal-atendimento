@@ -78,7 +78,7 @@
             "phpmd analyze app --format text --ruleset phpmd.xml"
         ],
         "coverage": [
-            "@php artisan test --coverage --min=0"
+            "@php artisan test --coverage --min=80"
         ],
         "security:audit": [
             "composer audit --no-interaction",
