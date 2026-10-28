@@ -22,7 +22,7 @@ class MessageFactory extends Factory
             'ticket_id' => Ticket::factory(),
             'channel_id' => fn (array $attributes) => Ticket::query()->whereKey($attributes['ticket_id'])->firstOrFail()->channel_id,
             'contact_id' => fn (array $attributes) => Ticket::query()->whereKey($attributes['ticket_id'])->firstOrFail()->contact_id,
-            'wa_message_id' => 'false_'.fake()->unique()->numerify('##########'),
+            'wa_message_id' => strtoupper(fake()->unique()->bothify('3EB0????????????')),
             'direction' => MessageDirection::IN,
             'type' => 'text',
             'body' => fake()->sentence(),

@@ -34,7 +34,7 @@ class ApplyAckTest extends TestCase
         $ticket = Ticket::factory()->for($this->channel)->create();
 
         return Message::factory()->for($ticket)->create([
-            'wa_message_id' => self::WA_ID,
+            'wa_message_id' => Message::waKey(self::WA_ID),
             'delivery_status' => $status,
         ]);
     }
@@ -77,6 +77,16 @@ class ApplyAckTest extends TestCase
 
         $this->assertSame(DeliveryStatus::READ, $message->fresh()?->delivery_status);
         $this->assertNotNull($message->fresh()?->read_at);
+    }
+
+    public function test_ack_com_prefixo_de_chat_diferente_casa_pelo_id_da_mensagem(): void
+    {
+        $message = $this->message();
+        $message->update(['wa_message_id' => '3EB0AABBCCDDEEFF0011']);
+
+        $this->assertTrue(app(ApplyAck::class)($this->ack(3, 'true_16449842241553@lid_3EB0AABBCCDDEEFF0011')));
+
+        $this->assertSame(DeliveryStatus::READ, $message->fresh()?->delivery_status);
     }
 
     public function test_ack_atrasado_nunca_rebaixa_o_estado(): void

@@ -85,6 +85,16 @@ class IngestMessageTest extends TestCase
         return app(IngestMessage::class)($event);
     }
 
+    public function test_mesmo_id_com_prefixo_de_chat_diferente_nao_duplica_a_mensagem(): void
+    {
+        $ingest = app(IngestMessage::class);
+
+        $ingest($this->event($this->inbound('false_5516997524950@c.us_3EB0SAMEID0001')));
+        $ingest($this->event($this->inbound('false_16449842241553@lid_3EB0SAMEID0001')));
+
+        $this->assertSame(1, Message::query()->where('wa_message_id', '3EB0SAMEID0001')->count());
+    }
+
     public function test_mensagem_recebida_cria_contato_ticket_e_mensagem(): void
     {
         $message = $this->ingest($this->event($this->inbound()));
@@ -177,7 +187,7 @@ class IngestMessageTest extends TestCase
         $result = $this->ingest($this->event($this->fromPhone('true_5516997524950@c.us_ECO'), 'message.any'));
 
         $this->assertTrue($result?->is($pending));
-        $this->assertSame('true_5516997524950@c.us_ECO', $pending->fresh()?->wa_message_id);
+        $this->assertSame('ECO', $pending->fresh()?->wa_message_id);
         $this->assertSame(MessageOrigin::PAINEL, $pending->fresh()?->origin);
         $this->assertSame(1, Message::query()->count());
     }

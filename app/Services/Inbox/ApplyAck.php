@@ -3,6 +3,7 @@
 namespace App\Services\Inbox;
 
 use App\Enums\DeliveryStatus;
+use App\Events\MessageStatusChanged;
 use App\Models\Message;
 use App\Models\WahaEvent;
 use Illuminate\Support\Facades\DB;
@@ -21,10 +22,10 @@ class ApplyAck
     public function __invoke(WahaEvent $event): bool
     {
         $data = $event->payload['payload'] ?? null;
-        $waId = is_array($data) ? ($data['id'] ?? null) : null;
+        $waId = is_array($data) && is_string($data['id'] ?? null) ? Message::waKey($data['id']) : null;
         $status = is_array($data) ? $this->statusFor($data['ack'] ?? null) : null;
 
-        if ($event->channel === null || ! is_string($waId) || $status === null) {
+        if ($event->channel === null || $waId === null || $status === null) {
             return true;
         }
 
@@ -58,6 +59,8 @@ class ApplyAck
             }
 
             $message->save();
+
+            MessageStatusChanged::dispatch($message);
 
             return true;
         });

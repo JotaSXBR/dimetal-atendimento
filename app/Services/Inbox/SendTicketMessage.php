@@ -5,6 +5,9 @@ namespace App\Services\Inbox;
 use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
+use App\Events\MessageCreated;
+use App\Events\MessageStatusChanged;
+use App\Events\TicketUpdated;
 use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
@@ -36,12 +39,15 @@ class SendTicketMessage
             'sent_at' => now(),
         ]);
 
+        MessageCreated::dispatch($message);
+
         try {
             $response = (new WahaClient($ticket->channel))->sendText($contact->wa_id ?? (string) $contact->lid, $text);
         } catch (Throwable $e) {
             // Se o eco do celular já casou com a linha (ela ganhou o id), a mensagem saiu: não é falha.
             if ($message->refresh()->wa_message_id === null) {
                 $message->update(['delivery_status' => DeliveryStatus::FAILED]);
+                MessageStatusChanged::dispatch($message);
             }
 
             throw $e;
@@ -52,13 +58,15 @@ class SendTicketMessage
         $waId = $response['id'] ?? null;
 
         if ($message->wa_message_id === null && is_string($waId) && $waId !== '') {
-            $message->wa_message_id = $waId;
+            $message->wa_message_id = Message::waKey($waId);
         }
 
         $message->delivery_status ??= DeliveryStatus::SENT;
         $message->save();
 
         $ticket->recordOutbound($message->sent_at);
+        MessageStatusChanged::dispatch($message);
+        TicketUpdated::dispatch($ticket);
 
         TicketEvent::create([
             'ticket_id' => $ticket->id,

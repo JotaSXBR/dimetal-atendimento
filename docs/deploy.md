@@ -68,7 +68,7 @@ sem ele não existe registro `fora_do_painel`. O webhook usa o alias interno, n�
 
 O webhook, os eventos e o HMAC não são mais variáveis do WAHA: o app os registra na sessão ao clicar
 **Conectar** (segredo derivado da `APP_KEY`). Para o webhook ir pela rede interna, defina
-`WAHA_WEBHOOK_URL=http://app-beta/webhooks/waha` no app; sem isso usa `APP_URL`.
+`WAHA_WEBHOOK_URL=http://app-beta:8080/webhooks/waha` no app e no worker (a imagem escuta na 8080; sem a porta o WAHA leva ECONNREFUSED); sem a variável usa `APP_URL`. Depois de mudá-la, reaplique a sessão (Conectar no cartão do canal) para o WAHA gravar o novo endereço.
 
 Healthchecks do Coolify (a troca de container só acontece quando o novo está saudável):
 
@@ -125,14 +125,33 @@ Recursos do beta hoje:
 | `app-beta` | `ipbknnticmaubtzdonxjqgy6` |
 | `worker-beta` | `jme7xgh4ugrrf3qbrxaclwlj` |
 | `scheduler-beta` | `3thwz32zdtnmr2sme70jrpdf` |
+| `reverb-beta` | `oncydt57liptigusmj64ac3o` |
 | `waha-beta` | `gxpbtauw9ylqyd8nni3keznx` |
 | `pg-beta` | `m3kcov2jn01utd97jjho2lox` |
 | `redis-beta` | `vp3u0qyz2tsmyveqrb6ml2zi` |
 
+### Reverb (tempo real da Inbox)
+
+`reverb-beta` é um Application do mesmo Dockerfile, estágio `reverb` (`reverb:start` na porta 8080),
+alias `reverb-beta`, healthcheck `http` em `/up`, sem migração (`AUTORUN_ENABLED=false`).
+
+- **Navegador → Reverb**: não há DNS curinga, então o websocket sai pelo mesmo domínio do app, no
+  caminho `/app` (`domains: https://dimetal-beta.fluxie.com.br/app` no `reverb-beta`). O front lê o
+  endereço de `window.location`; `REVERB_PUBLIC_URL` só é preenchida em desenvolvimento
+  (`http://localhost:8080`).
+- O Coolify liga `is_stripprefix_enabled` por padrão e remove `/app` antes de repassar: o Reverb recebia
+  `/<chave>` e respondia 404. No `reverb-beta` o campo fica **desligado** (`PATCH` com
+  `{"is_stripprefix_enabled":false}` e novo deploy).
+- **App/worker → Reverb**: rede interna, `REVERB_HOST=reverb-beta`, `REVERB_PORT=8080`,
+  `REVERB_SCHEME=http`.
+- Variáveis comuns a `app-beta`, `worker-beta` e `reverb-beta`: `BROADCAST_CONNECTION=reverb`,
+  `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET` (os mesmos valores nos três). O `reverb-beta`
+  também leva as variáveis base do worker (`APP_KEY`, banco, Redis), pois sobe o framework.
+
 ## 7. Atualização e rollback
 
 Merge em `main` → workflow `tests` → se passar, `deploy-beta` sincroniza a branch `beta` e chama
-`POST /api/v1/deploy` para `app-beta`, `worker-beta` e `scheduler-beta` (o `waha-beta` fica de fora: tag
+`POST /api/v1/deploy` para `app-beta`, `worker-beta`, `scheduler-beta` e `reverb-beta` (o `waha-beta` fica de fora: tag
 fixa e sessão única do WhatsApp). O `migrate --force` roda no start do `app`. Segredos do repositório:
 `COOLIFY_URL` e `COOLIFY_API_TOKEN`. Branches de PR são apagadas ao mergear. O volume preserva a
 sessão, então o WhatsApp volta sozinho (`WAHA_WORKER_RESTART_SESSIONS=true`).
