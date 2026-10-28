@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 /**
  * Mensagem de uma conversa. Só a entrega e o id do WhatsApp mudam depois de criada.
@@ -49,6 +50,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class Message extends Model
 {
+    /**
+     * O WAHA cita o id como `{fromMe}_{chat}_{id}` e o chat varia (`@c.us` ou `@lid`) entre o envio, o eco e o
+     * ack. Só o trecho final identifica a mensagem; é ele que fica em `wa_message_id`.
+     */
+    public static function waKey(string $waId): string
+    {
+        return Str::afterLast($waId, '_');
+    }
+
     /** @use HasFactory<MessageFactory> */
     use HasFactory;
 

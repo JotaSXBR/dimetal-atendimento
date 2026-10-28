@@ -72,7 +72,7 @@ class SendTicketMessageTest extends TestCase
 
         $message = $this->send();
 
-        $this->assertSame(self::SENT_ID, $message->fresh()?->wa_message_id);
+        $this->assertSame(Message::waKey(self::SENT_ID), $message->fresh()?->wa_message_id);
         $this->assertSame(MessageDirection::OUT, $message->direction);
         $this->assertSame(MessageOrigin::PAINEL, $message->origin);
         $this->assertSame($this->author->id, $message->author_user_id);
@@ -184,7 +184,7 @@ class SendTicketMessageTest extends TestCase
         $message = $this->send();
 
         $this->assertSame(1, Message::query()->count());
-        $this->assertSame(self::SENT_ID, $message->fresh()?->wa_message_id);
+        $this->assertSame(Message::waKey(self::SENT_ID), $message->fresh()?->wa_message_id);
         $this->assertSame(MessageOrigin::PAINEL, $message->fresh()?->origin);
     }
 }

@@ -58,7 +58,7 @@ class SendTicketMessage
         $waId = $response['id'] ?? null;
 
         if ($message->wa_message_id === null && is_string($waId) && $waId !== '') {
-            $message->wa_message_id = $waId;
+            $message->wa_message_id = Message::waKey($waId);
         }
 
         $message->delivery_status ??= DeliveryStatus::SENT;

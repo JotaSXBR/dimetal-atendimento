@@ -40,7 +40,7 @@ class IngestMessage
             return null;
         }
 
-        $waId = $data['id'] ?? null;
+        $waId = is_string($data['id'] ?? null) ? Message::waKey($data['id']) : null;
         $fromMe = (bool) ($data['fromMe'] ?? false);
 
         if (! is_string($waId) || $waId === '' || ($event->event === 'message.any' && ! $fromMe)) {
