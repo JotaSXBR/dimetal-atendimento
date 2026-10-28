@@ -6,9 +6,11 @@ FROM serversideup/php:8.5.12-fpm-nginx-bookworm AS base
 
 # Produção por padrão: sem isso a imagem avisa a cada boot que o OPcache está off.
 # Código é imutável (vem da imagem), então o OPcache nunca precisa revalidar timestamps.
+# SHOW_WELCOME_MESSAGE=false desliga o banner ASCII e os avisos de tuning no log do container.
 ENV PHP_OPCACHE_ENABLE=1 \
     PHP_OPCACHE_VALIDATE_TIMESTAMPS=0 \
-    PHP_MEMORY_LIMIT=256M
+    PHP_MEMORY_LIMIT=256M \
+    SHOW_WELCOME_MESSAGE=false
 
 USER root
 
