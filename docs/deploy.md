@@ -70,8 +70,17 @@ O webhook, os eventos e o HMAC não são mais variáveis do WAHA: o app os regis
 **Conectar** (segredo derivado da `APP_KEY`). Para o webhook ir pela rede interna, defina
 `WAHA_WEBHOOK_URL=http://app-beta/webhooks/waha` no app; sem isso usa `APP_URL`.
 
-Healthcheck do `waha`: tipo `cmd`, `curl -fsS http://127.0.0.1:3000/ping`, início de 60 s. Validado no beta
-antes do main; se o `/ping` exigir a API key, usar `WAHA_API_KEY_EXCLUDE_PATH=ping`.
+Healthchecks do Coolify (a troca de container só acontece quando o novo está saudável):
+
+| Serviço | Tipo | Verificação |
+|---|---|---|
+| `app` | http | `GET /up` na porta 80, início de 60 s |
+| `waha` | http | `GET /ping` na porta 3000, host `localhost`, retorno 200 (não exige API key) |
+| `worker` | cmd | `healthcheck-queue` (script da imagem; confirma o `queue:work`) |
+| `scheduler` | cmd | `healthcheck-schedule` (script da imagem; confirma o `schedule:work`) |
+
+A imagem do WAHA não tem `curl` nem `wget`, então healthcheck `cmd` com `curl` reprova; o tipo `http`
+funciona porque a requisição parte do Coolify.
 
 ## 3. Domínio e HTTPS
 
@@ -93,9 +102,9 @@ três ou usar storage externo.
 - `beta` → ambiente de teste.
 - `beta` é sincronizada a partir de `main` (`git push origin main:beta`), não o contrário.
 
-O deploy **não** é automático no push: `is_auto_deploy_enabled=false` nos quatro Applications. A
-atualização será disparada por GitHub Actions com uma API key própria, e só depois de verificada —
-a versão antiga não cai antes da nova subir.
+O deploy **não** é automático no push do Coolify: `is_auto_deploy_enabled=false` nos Applications. Quem
+dispara é o workflow `.github/workflows/deploy-beta.yml` (seção 7). Com healthcheck ligado, a versão
+antiga só cai depois que a nova fica saudável.
 
 ## 6. Primeiro deploy
 
@@ -122,7 +131,10 @@ Recursos do beta hoje:
 
 ## 7. Atualização e rollback
 
-Push em `main` → Coolify reconstrói → `migrate --force` roda no start do `app`. O volume preserva a
+Merge em `main` → workflow `tests` → se passar, `deploy-beta` sincroniza a branch `beta` e chama
+`POST /api/v1/deploy` para `app-beta`, `worker-beta` e `scheduler-beta` (o `waha-beta` fica de fora: tag
+fixa e sessão única do WhatsApp). O `migrate --force` roda no start do `app`. Segredos do repositório:
+`COOLIFY_URL` e `COOLIFY_API_TOKEN`. Branches de PR são apagadas ao mergear. O volume preserva a
 sessão, então o WhatsApp volta sozinho (`WAHA_WORKER_RESTART_SESSIONS=true`).
 
 Rollback: reimplante o commit anterior. Migrações destrutivas exigem migração de volta escrita à mão
@@ -136,10 +148,10 @@ Rollback: reimplante o commit anterior. Migrações destrutivas exigem migraçã
 - **Contato não recebe notificação** → presença ficou `online`; `WAHA_PRESENCE_AUTO_ONLINE=False`
   evita isso.
 - **Fila parada** → `worker` precisa estar rodando com o mesmo `QUEUE_CONNECTION` do `app`.
-- **`worker`/`scheduler` sem status `healthy`** → os três Applications têm healthcheck do Coolify
-  desligado; o da imagem (`healthcheck-queue`) não é usado.
-- **`waha` unhealthy** → a imagem não tem `curl` nem `wget`; healthcheck HTTP do Coolify reprova.
-  Deixe desligado.
+- **`worker`/`scheduler` unhealthy** → o healthcheck usa `healthcheck-queue`/`healthcheck-schedule`
+  (precisam de `pgrep` na imagem). Se reprovar, desligue o healthcheck do recurso e investigue.
+- **`waha` unhealthy** → use healthcheck tipo `http` em `/ping`; o tipo `cmd` com `curl` reprova porque a
+  imagem não tem `curl` nem `wget`.
 - **404 do Traefik ou certificado inválido** → o `domains` do recurso não é o domínio real, ou o
   deploy não rodou depois de gravá-lo.
 
