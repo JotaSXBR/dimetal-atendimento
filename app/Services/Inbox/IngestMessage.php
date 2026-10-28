@@ -6,6 +6,8 @@ use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
+use App\Events\MessageCreated;
+use App\Events\TicketUpdated;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
@@ -79,6 +81,7 @@ class IngestMessage
         if ($fromMe && ($pending = $this->matchPending($channel, $contact, $body)) !== null) {
             $pending->update(['wa_message_id' => $waId]);
             $pending->ticket->recordOutbound($sentAt);
+            TicketUpdated::dispatch($pending->ticket);
 
             return $pending;
         }
@@ -190,6 +193,9 @@ class IngestMessage
             'type' => $fromMe ? 'message_out' : 'message_in',
             'payload' => ['message_id' => $message->id],
         ]);
+
+        MessageCreated::dispatch($message);
+        TicketUpdated::dispatch($ticket);
 
         return $message;
     }

@@ -3,6 +3,7 @@
 namespace App\Actions\Inbox;
 
 use App\Enums\TicketStatus;
+use App\Events\TicketUpdated;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
@@ -27,6 +28,7 @@ class CloseTicket
 
             if ($closed) {
                 TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'closed', 'actor_user_id' => $user->id]);
+                TicketUpdated::dispatch($ticket->refresh());
             }
         });
 

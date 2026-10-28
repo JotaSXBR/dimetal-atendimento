@@ -3,6 +3,7 @@
 namespace App\Services\Inbox;
 
 use App\Enums\DeliveryStatus;
+use App\Events\MessageStatusChanged;
 use App\Models\Message;
 use App\Models\WahaEvent;
 use Illuminate\Support\Facades\DB;
@@ -58,6 +59,8 @@ class ApplyAck
             }
 
             $message->save();
+
+            MessageStatusChanged::dispatch($message);
 
             return true;
         });

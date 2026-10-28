@@ -25,6 +25,8 @@
         "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
     },
     "devDependencies": {
-        "fontaine": "^0.8.2"
+        "fontaine": "^0.8.2",
+        "laravel-echo": "^2.6.3",
+        "pusher-js": "^8.6.0"
     }
 }

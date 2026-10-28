@@ -3,6 +3,7 @@
 namespace App\Actions\Inbox;
 
 use App\Enums\TicketStatus;
+use App\Events\TicketUpdated;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
@@ -31,6 +32,10 @@ class ClaimTicket
             }
 
             $ticket->refresh();
+
+            if ($won) {
+                TicketUpdated::dispatch($ticket);
+            }
 
             return $won;
         });
