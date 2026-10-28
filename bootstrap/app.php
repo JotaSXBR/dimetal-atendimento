@@ -12,6 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // O Coolify expõe o app atrás do proxy/Traefik dele. Sem confiar no proxy, o Laravel
+        // acha que o request chegou por HTTP: gera URLs http://, marca cookie como inseguro e
+        // o redirect pós-login volta para http.
+        $middleware->trustProxies(at: '*');
+
         $middleware->validateCsrfTokens(except: [
             'webhooks/waha',
         ]);
