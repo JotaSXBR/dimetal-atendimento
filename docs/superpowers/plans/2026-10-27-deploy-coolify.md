@@ -1,5 +1,10 @@
 # Deploy Coolify — Implementation Plan
 
+> **Superado em 28/10/2026.** As tarefas 1 e 4 continuam válidas (imagem e documentação). A
+> topologia de compose único foi substituída por seis recursos separados no Coolify — ver
+> `docs/superpowers/notes/2026-10-28-topologia-coolify.md` e `docs/deploy.md`. `compose.coolify.yaml`
+> não existe mais.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Publicar o sistema em `dimetal.fluxie.com.br` (main) e `dimetal-beta.fluxie.com.br` (beta) com app, worker, scheduler, Postgres, Redis e WAHA em um `docker-compose` versionado.

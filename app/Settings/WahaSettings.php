@@ -2,49 +2,35 @@
 
 namespace App\Settings;
 
-use App\Models\Setting;
-
 /**
- * Configuração de conexão com o WAHA, guardada no banco.
- *
- * Os valores precisam bater com as variáveis do container WAHA (ver
- * docs/superpowers/specs/waha-config.md).
+ * Conexão com o WAHA: URL e API key vêm do ambiente do app (config/services.php);
+ * o segredo do webhook é derivado da APP_KEY e enviado ao WAHA ao iniciar a sessão,
+ * então ninguém digita nem copia nada entre containers além da API key.
  */
 final class WahaSettings
 {
     public static function baseUrl(): string
     {
-        return (string) Setting::get('waha.base_url', '');
-    }
-
-    public static function sessionName(): string
-    {
-        return (string) Setting::get('waha.session_name', '');
+        return rtrim((string) config('services.waha.url'), '/');
     }
 
     public static function apiKey(): string
     {
-        return (string) Setting::get('waha.api_key', '');
+        return (string) config('services.waha.key');
     }
 
     public static function webhookSecret(): string
     {
-        return (string) Setting::get('waha.webhook_secret', '');
+        return hash_hmac('sha256', 'waha-webhook', (string) config('app.key'));
+    }
+
+    public static function webhookUrl(): string
+    {
+        return (string) (config('services.waha.webhook_url') ?: url('/webhooks/waha'));
     }
 
     public static function isConfigured(): bool
     {
-        return filled(self::baseUrl())
-            && filled(self::sessionName())
-            && filled(self::apiKey())
-            && filled(self::webhookSecret());
-    }
-
-    public static function save(string $baseUrl, string $sessionName, string $apiKey, string $webhookSecret): void
-    {
-        Setting::put('waha.base_url', rtrim($baseUrl, '/'));
-        Setting::put('waha.session_name', $sessionName);
-        Setting::put('waha.api_key', $apiKey, 'secret');
-        Setting::put('waha.webhook_secret', $webhookSecret, 'secret');
+        return self::baseUrl() !== '' && self::apiKey() !== '';
     }
 }

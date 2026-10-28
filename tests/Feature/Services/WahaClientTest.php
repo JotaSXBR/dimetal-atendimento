@@ -3,9 +3,9 @@
 namespace Tests\Feature\Services;
 
 use App\Models\Channel;
-use App\Models\Setting;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaRequestException;
+use App\Settings\WahaSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -18,10 +18,7 @@ class WahaClientTest extends TestCase
     {
         parent::setUp();
 
-        Setting::put('waha.base_url', 'http://waha.test:3000');
-        Setting::put('waha.api_key', 'test-key', 'secret');
-        Setting::put('waha.session_name', 'main');
-        Setting::put('waha.webhook_secret', 'segredo', 'secret');
+        config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
     }
 
     public function test_envia_texto_com_a_sessao_e_a_api_key(): void
@@ -54,6 +51,7 @@ class WahaClientTest extends TestCase
     {
         Http::fake([
             '*/api/sessions' => Http::response(['message' => 'already exists'], 422),
+            '*/api/sessions/main' => Http::response([], 200),
             '*/api/sessions/main/start' => Http::response(['status' => 'STARTING'], 200),
         ]);
         $channel = Channel::factory()->create(['waha_session' => 'main']);
@@ -96,5 +94,16 @@ class WahaClientTest extends TestCase
 
         Http::assertSent(fn ($request) => $request['presence'] === 'offline'
             && $request->url() === 'http://waha.test:3000/api/main/presence');
+    }
+
+    public function test_iniciar_registra_webhook_com_hmac_derivado_da_app_key(): void
+    {
+        Http::fake(['*/api/sessions' => Http::response(['status' => 'STARTING'], 201)]);
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
+
+        (new WahaClient($channel))->start();
+
+        Http::assertSent(fn ($request) => $request['config']['webhooks'][0]['hmac']['key'] === WahaSettings::webhookSecret()
+            && str_ends_with($request['config']['webhooks'][0]['url'], '/webhooks/waha'));
     }
 }
