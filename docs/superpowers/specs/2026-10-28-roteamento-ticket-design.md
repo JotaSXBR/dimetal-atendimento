@@ -16,8 +16,13 @@ dependem de o ticket ter setor, protocolo e motivo de encerramento:
 
 1. Setor no ticket e **transferência** entre setores.
 2. **Fila por setor**: visibilidade e `assumir` respeitam os setores do atendente.
-3. **Reatribuição** pelo supervisor/admin (ticket sem dono presente não pode ficar parado).
-4. **Protocolo** `AAAA-NNNNNN`, único, sequencial por ano.
+3. **Reatribuição e tomada de ticket**: supervisor/admin reatribuem; o atendente também pode assumir o ticket
+   que está com colega do mesmo setor, salvo se a opção "pode transferir" dele estiver desligada.
+4. **Ordem dos setores** (menu do bot e listas): Vendas, Financeiro, Comercial, SAC, Diretoria. O seeder passa a criar
+nessa ordem, e uma migração de dados reordena o beta, que já tem os setores na ordem antiga. A migração só mexe se a
+ordem ainda for a original (assim não desfaz uma reordenação feita depois pela gestão de setores).
+
+**Protocolo** `AAAA-NNNNNN`, único, sequencial por ano.
 5. **Motivo de encerramento** (`closed_reason`) e **encerramento automático** por inatividade.
 
 Fora: estado `bot` e motor de fluxo, distribuição automática, SLA, presença por setor, mídia, horário
@@ -27,14 +32,22 @@ de funcionamento, tela de gestão de setores.
 
 **Visibilidade** (`Ticket::visibleTo`)
 - Supervisor e admin: todos. Usuário inativo: nenhum.
-- Atendente: tickets `aguardando` **sem setor** ou em um dos **seus setores**, mais os que ele assumiu.
+- Atendente: tickets **sem setor**, tickets de um dos **seus setores** (`aguardando` e `em_atendimento`) e os
+  que ele assumiu. Ele vê a conversa dos colegas do seu setor, mas só o responsável (ou supervisor/admin) responde.
 - Atendente sem nenhum setor vê só os sem setor e os próprios.
+- Isso amplia a regra da fatia 1 (que mostrava só a fila e os próprios) porque tomar o ticket de um colega exige
+  vê-lo. Ver "Decisões do builder".
 
-**Assumir** (`claim`): só em ticket visível, sem responsável e não encerrado (regra atual) e, agora, de um
-setor do atendente ou sem setor.
+**Assumir** (`claim`): ticket sem responsável e não encerrado, de um setor do atendente ou sem setor. Não
+depende da opção "pode transferir".
+
+**Tomar** (`takeover`): o atendente assume um ticket `em_atendimento` que está com **outro responsável**, de um setor
+dele. Só vale se `users.can_transfer` for verdadeiro. É uma troca condicional (`UPDATE ... WHERE assigned_user_id =
+<responsável que ele viu>`): se o ticket mudou de dono no meio do caminho, quem perdeu recebe aviso. Evento
+`taken_over` com `{from_user, to_user}`; o responsável anterior perde o ticket da lista em tempo real.
 
 **Transferir** (`transfer`)
-- Quem pode: o responsável, o supervisor e o admin. Ticket encerrado não transfere.
+- Quem pode: o responsável (se `can_transfer`), o supervisor e o admin. Ticket encerrado não transfere.
 - Destino: setor que recebe tickets (`SectorStatus::receivesTickets()`: `ativo` ou `fora_do_menu`).
   `desativado` é recusado.
 - Efeito, numa transação e com `UPDATE` condicional (não vence quem perdeu a corrida): `sector_id` = destino,
@@ -44,7 +57,12 @@ setor do atendente ou sem setor.
 
 **Reatribuir** (`reassign`): supervisor/admin escolhem um usuário ativo que pertença ao setor do ticket (ou
 qualquer, se o ticket não tem setor). Ticket vai a `em_atendimento` com o novo responsável. Evento
-`reassigned` com `{from_user, to_user}`.
+`reassigned` com `{from_user, to_user}`. O atendente não escolhe o destino; ele só pode tomar para si (`takeover`).
+
+**Opção "pode transferir"** (`users.can_transfer`, padrão verdadeiro): quando desligada para um atendente, ele deixa
+de **transferir** e de **tomar** tickets. Continua assumindo tickets livres, respondendo e encerrando os seus.
+Supervisor e admin não são afetados. Enquanto não há tela de usuários, liga-se e desliga-se por
+`php artisan user:can-transfer {email} {on|off}`; a opção na tela chega com a gestão de usuários.
 
 **Protocolo**
 - Formato `AAAA-NNNNNN`; o ano é o de `opened_at` no fuso de exibição (`America/Sao_Paulo`), não em UTC,
@@ -66,14 +84,20 @@ qualquer, se o ticket não tem setor). Ticket vai a `em_atendimento` com o novo 
 
 ## 4. Dados
 
-- `tickets`: `protocol` (string, único), `closed_reason` (string, nulo).
+- `tickets`: `protocol` (string, único, **nulo na expansão**), `closed_reason` (string, nulo).
 - `ticket_sequences`: `year` (pk), `last` (int).
-- Sem mudança em `ticket_events`; novos tipos: `transferred`, `reassigned`.
+- `users`: `can_transfer` (boolean, padrão verdadeiro).
+- Sem mudança em `ticket_events`; novos tipos: `transferred`, `reassigned`, `taken_over`.
+- **Compatibilidade no deploy** (regra de migrações do `docs/deploy.md`): o app sobe antes do worker, então o worker
+  antigo ainda cria tickets sem protocolo por alguns minutos. Por isso `protocol` entra como coluna nula, o código
+  novo a preenche e a migração preenche os antigos; o `NOT NULL` vem num PR seguinte, depois de a versão nova estar
+  em todos os recursos (expand/contract).
 
 ## 5. Tela (mínima, a serviço do domínio)
 
-Na conversa: protocolo e setor visíveis; botão **Transferir** (escolhe setor e nota); botão **Reatribuir**
-só para supervisor/admin. A fila continua como está, filtrada pela nova visibilidade.
+Na conversa: protocolo e setor visíveis; botão **Transferir** (escolhe setor e nota); botão **Reatribuir** só para
+supervisor/admin; botão **Tomar** para o atendente num ticket de colega. Quem não pode, não vê o botão. A fila continua
+como está, filtrada pela nova visibilidade.
 
 ## 6. Tempo real
 
@@ -83,6 +107,9 @@ quem perdeu o ticket (ele some da lista) e quem passou a poder vê-lo.
 ## 7. Critérios de aceite
 
 - Atendente do setor A não vê nem assume ticket do setor B; supervisor vê e opera ambos.
+- Atendente do setor A toma um ticket em atendimento de colega do setor A; com `can_transfer` desligado, não toma
+  nem transfere. Dois atendentes tomando o mesmo ticket ao mesmo tempo: um vence, o outro recebe aviso.
+- O menu do bot e as listas de setor saem na ordem Vendas, Financeiro, Comercial, SAC, Diretoria, inclusive no beta.
 - Transferir devolve o ticket à fila do setor de destino sem responsável e registra o evento; setor
   `desativado` é recusado; duas transferências simultâneas não corrompem o ticket.
 - Todo ticket tem protocolo; dois tickets criados ao mesmo tempo nunca repetem número; virada de ano usa o
@@ -93,12 +120,16 @@ quem perdeu o ticket (ele some da lista) e quem passou a poder vê-lo.
 
 ## 8. Decisões do builder (podem ser contestadas)
 
-- **Reatribuir entra nesta fatia**, porque é a saída para ticket de atendente ausente e usa a mesma
-  primitiva da transferência.
+- **Reatribuir entra nesta fatia** (decisão do dono), porque é a saída para ticket de atendente ausente e usa a
+  mesma primitiva da transferência.
+- **O atendente também pode tomar o ticket de um colega** (decisão do dono), limitado a tickets do seu setor.
+  Consequência que a spec registra: o atendente passa a **ler** conversas de colegas do mesmo setor. Se isso for
+  indesejado, a alternativa é uma lista "em atendimento no setor" só com contato e responsável, sem as mensagens.
+- **A opção "pode transferir" cobre transferir e tomar** (um único interruptor), e não afeta assumir ticket livre.
+- **Sem tela de gestão de setores nem de usuários nesta fatia** (decisão do dono): vêm em fatias próprias.
 - **Encerramento automático vale para qualquer ticket aberto** que satisfaça a regra, inclusive `aguardando`
   (só acontece se a última mensagem for nossa).
 - **Nota na transferência é opcional** e fica só no evento, não vira mensagem para o cliente.
-- **Sem tela de gestão de setores nesta fatia**: os cinco setores vêm do seeder, como hoje.
 
 ## 9. Antes de implementar
 
