@@ -70,6 +70,22 @@ class Ticket extends Model
     }
 
     /**
+     * Supervisor/admin veem tudo; atendente vê a fila (aguardando) e os próprios; inativo, nada.
+     *
+     * @param  Builder<Ticket>  $query
+     */
+    public function scopeVisibleTo(Builder $query, User $user): void
+    {
+        if (! $user->active) {
+            $query->whereRaw('false');
+        } elseif (! $user->canSeeAllSectors()) {
+            $query->where(fn (Builder $q) => $q
+                ->where('status', TicketStatus::AGUARDANDO->value)
+                ->orWhere('assigned_user_id', $user->id));
+        }
+    }
+
+    /**
      * Registra uma mensagem recebida. Atômico e só avança: um evento atrasado nunca recua o horário.
      */
     public function recordInbound(CarbonInterface $at): void
