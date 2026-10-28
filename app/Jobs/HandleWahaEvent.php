@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\ChannelStatus;
 use App\Models\WahaEvent;
+use App\Services\Inbox\IngestMessage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -21,9 +22,11 @@ class HandleWahaEvent implements ShouldQueue
             return;
         }
 
-        if ($event->event === 'session.status') {
-            $this->applyStatus($event);
-        }
+        match ($event->event) {
+            'session.status' => $this->applyStatus($event),
+            'message', 'message.any' => app(IngestMessage::class)($event),
+            default => null,
+        };
     }
 
     private function applyStatus(WahaEvent $event): void

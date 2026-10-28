@@ -5,6 +5,7 @@ namespace Tests\Feature\Jobs;
 use App\Enums\ChannelStatus;
 use App\Jobs\HandleWahaEvent;
 use App\Models\Channel;
+use App\Models\Message;
 use App\Models\WahaEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -32,6 +33,30 @@ class HandleWahaEventTest extends TestCase
 
         $this->assertSame(ChannelStatus::WORKING, $channel->fresh()->status);
         $this->assertNotNull($channel->fresh()->last_event_at);
+    }
+
+    public function test_evento_de_mensagem_vira_mensagem_no_inbox(): void
+    {
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
+        $event = WahaEvent::create([
+            'waha_event_id' => 'evt_msg',
+            'channel_id' => $channel->id,
+            'event' => 'message',
+            'session' => 'main',
+            'payload' => ['payload' => [
+                'id' => 'false_5516997524950@c.us_ABC',
+                'from' => '5516997524950@c.us',
+                'fromMe' => false,
+                'body' => 'Oi',
+                'timestamp' => 1_793_000_000,
+            ]],
+            'received_at' => now(),
+        ]);
+
+        (new HandleWahaEvent($event->id))->handle();
+
+        $this->assertSame('Oi', Message::query()->sole()->body);
+        $this->assertSame(ChannelStatus::WORKING, $channel->fresh()->status);
     }
 
     public function test_status_desconhecido_e_evento_sem_canal_sao_ignorados(): void
