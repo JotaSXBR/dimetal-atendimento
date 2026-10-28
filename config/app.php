@@ -67,6 +67,12 @@ return [
 
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
+    /*
+    | O banco guarda tudo em UTC (o WAHA também fala UTC). Este é só o fuso em que as telas mostram
+    | horários para a equipe.
+    */
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'America/Sao_Paulo'),
+
     'admin' => [
         'email' => env('ADMIN_EMAIL'),
         'password' => env('ADMIN_PASSWORD'),

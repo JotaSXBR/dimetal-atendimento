@@ -60,6 +60,15 @@ class ChannelsScreenTest extends TestCase
             ->assertSee('Conectado');
     }
 
+    public function test_horarios_sao_exibidos_no_fuso_de_sao_paulo(): void
+    {
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
+        $channel->forceFill(['last_event_at' => '2026-10-28 12:00:00'])->save();
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->assertSee('28/10/2026 09:00:00');
+    }
+
     public function test_lista_um_cartao_por_canal(): void
     {
         Channel::factory()->create(['name' => 'Numero 1', 'waha_session' => 'um']);

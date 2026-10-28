@@ -128,7 +128,7 @@ class IngestMessage
     {
         // Timestamp ausente, zero ou negativo não é data de verdade: usa o horário de recebimento.
         return is_numeric($timestamp) && (int) $timestamp > 0
-            ? CarbonImmutable::createFromTimestamp((int) $timestamp, config('app.timezone'))
+            ? CarbonImmutable::createFromTimestampUTC((int) $timestamp)
             : $fallback;
     }
 

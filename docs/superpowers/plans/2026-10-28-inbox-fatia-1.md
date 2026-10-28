@@ -21,6 +21,7 @@
 - Mensagens e eventos nunca são editados ou apagados pela interface. Só `delivery_status`, `delivered_at`, `read_at` e `wa_message_id` (preenchimento do pendente) mudam depois da criação.
 - Mensagem de grupo (`@g.us`), `status@broadcast` e newsletter são ignoradas com log.
 - O WAHA já assina `message`, `message.any`, `message.ack`; nada muda na configuração da sessão.
+- Horários: app e banco em UTC (`APP_TIMEZONE=UTC`); telas formatam com `->timezone(config('app.display_timezone'))` (padrão `America/Sao_Paulo`).
 - Mensagens da interface em português; código e nomes de classes em inglês, como o repositório já faz.
 - Sem mexer no `main` do Coolify; só beta.
 

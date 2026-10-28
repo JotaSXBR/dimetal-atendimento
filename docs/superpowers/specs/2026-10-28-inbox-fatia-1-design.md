@@ -202,6 +202,8 @@ PR B
 - **Responder sem assumir**: ticket `aguardando` sem responsável exige **Assumir** antes de responder,
   inclusive para supervisor. Supervisor e admin podem responder tickets de outro responsável sem trocar o
   responsável. `first_human_reply_at` marca a primeira mensagem humana de saída do ticket.
+- **Horário**: app e banco em UTC (`APP_TIMEZONE=UTC`); as telas exibem em `America/Sao_Paulo` via
+  `config('app.display_timezone')`. O `timestamp` do WAHA é epoch em segundos e entra como UTC, sem conversão.
 - **Broadcast**: canal privado `inbox` (autorizado para usuário ativo com qualquer papel) e canal privado
   `users.{id}`. Os eventos levam só ids e tipo; o corpo da mensagem é buscado pelo Livewire depois, já
   sob a policy, então o canal nunca vaza texto.

@@ -45,7 +45,7 @@ WAHA_API_KEY=<mesma chave do container waha>
 ```
 
 O restante é fixo e igual nos três serviços PHP: `APP_ENV=production`, `APP_DEBUG=false`,
-`APP_TIMEZONE=America/Sao_Paulo`, `LOG_CHANNEL=stderr`, `DB_CONNECTION=pgsql`, `DB_PORT=5432`,
+`APP_TIMEZONE=UTC` (as telas exibem em `APP_DISPLAY_TIMEZONE`, padrão `America/Sao_Paulo`), `LOG_CHANNEL=stderr`, `DB_CONNECTION=pgsql`, `DB_PORT=5432`,
 `DB_DATABASE=dimetal`, `DB_USERNAME=dimetal`, `REDIS_CLIENT=phpredis`, `REDIS_PORT=6379`,
 `SESSION_DRIVER=redis`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis`.
 

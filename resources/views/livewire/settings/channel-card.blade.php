@@ -42,7 +42,7 @@
         <p class="mt-3 text-xs text-ink-3">
             Último evento:
             <span class="font-mono text-ink-2">
-                {{ $channel->last_event_at?->format('d/m/Y H:i:s') ?? 'nenhum' }}
+                {{ $channel->last_event_at?->timezone(config('app.display_timezone'))->format('d/m/Y H:i:s') ?? 'nenhum' }}
             </span>
         </p>
 
