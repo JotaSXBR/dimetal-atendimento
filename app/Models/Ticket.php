@@ -84,7 +84,8 @@ class Ticket extends Model
     }
 
     /**
-     * Supervisor/admin veem tudo; atendente vê a fila (aguardando) e os próprios; inativo, nada.
+     * Supervisor/admin veem tudo; inativo, nada. O atendente vê os que assumiu, a fila `aguardando` sem setor ou de
+     * um dos seus setores e os `em_atendimento` dos seus setores (para poder tomar o ticket de um colega).
      *
      * @param  Builder<Ticket>  $query
      */
@@ -92,11 +93,24 @@ class Ticket extends Model
     {
         if (! $user->active) {
             $query->whereRaw('false');
-        } elseif (! $user->canSeeAllSectors()) {
-            $query->where(fn (Builder $q) => $q
-                ->where('status', TicketStatus::AGUARDANDO->value)
-                ->orWhere('assigned_user_id', $user->id));
+
+            return;
         }
+
+        if ($user->canSeeAllSectors()) {
+            return;
+        }
+
+        $mySectors = $user->sectors()->select('sectors.id');
+
+        $query->where(fn (Builder $q) => $q
+            ->where('assigned_user_id', $user->id)
+            ->orWhere(fn (Builder $queue) => $queue
+                ->where('status', TicketStatus::AGUARDANDO->value)
+                ->where(fn (Builder $sector) => $sector->whereNull('sector_id')->orWhereIn('sector_id', $mySectors)))
+            ->orWhere(fn (Builder $active) => $active
+                ->where('status', TicketStatus::EM_ATENDIMENTO->value)
+                ->whereIn('sector_id', $mySectors)));
     }
 
     /**

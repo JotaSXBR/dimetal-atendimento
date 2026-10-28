@@ -4,6 +4,7 @@ namespace App\Services\Inbox;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * Protocolo `AAAA-NNNNNN`, sequencial por ano. Chamar dentro da transação que cria o ticket: o incremento fica
@@ -17,13 +18,13 @@ final class TicketProtocol
         // O ano é o de São Paulo: um ticket aberto às 22h de 31/12 já é 01/01 em UTC.
         $year = $openedAt->copy()->timezone(config()->string('app.display_timezone'))->year;
 
-        $row = DB::selectOne(
+        $last = DB::scalar(
             'insert into ticket_sequences (year, last) values (?, 1)
              on conflict (year) do update set last = ticket_sequences.last + 1
              returning last',
             [$year],
         );
 
-        return sprintf('%d-%06d', $year, is_object($row) ? (int) $row->last : 1);
+        return sprintf('%d-%06d', $year, is_numeric($last) ? (int) $last : throw new LogicException('Sequência do protocolo sem retorno.'));
     }
 }

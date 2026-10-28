@@ -82,7 +82,7 @@
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
                     </p>
                     <p class="truncate font-mono text-[11px] text-ink-3">
-                        {{ $ticket->contact->wa_id ?? $ticket->contact->lid }} · {{ $ticket->channel->name }}
+                        {{ $ticket->protocol }} · {{ $ticket->contact->wa_id ?? $ticket->contact->lid }} · {{ $ticket->channel->name }}
                     </p>
                 </div>
 
@@ -90,10 +90,60 @@
                     <flux:button variant="primary" size="sm" icon="check" wire:click="claim" wire:loading.attr="disabled">Assumir</flux:button>
                 @endif
 
+                @if ($canTakeover)
+                    <flux:button size="sm" icon="arrow-uturn-left" wire:click="takeover({{ $ticket->assigned_user_id }})" wire:confirm="Tomar este ticket de {{ $ticket->assignee?->name }}?">Tomar</flux:button>
+                @endif
+
+                @if ($canTransfer)
+                    <flux:button size="sm" icon="arrows-right-left" wire:click="openPanel('transfer')">Transferir</flux:button>
+                @endif
+
+                @if ($canReassign)
+                    <flux:button size="sm" icon="user-plus" wire:click="openPanel('reassign')">Reatribuir</flux:button>
+                @endif
+
                 @if ($canClose)
                     <flux:button size="sm" wire:click="close" wire:confirm="Encerrar este ticket? A próxima mensagem do cliente abre um ticket novo.">Encerrar</flux:button>
                 @endif
             </header>
+
+            @if ($panel === 'transfer')
+                <form wire:submit="transfer" class="flex flex-wrap items-end gap-3 border-b border-line bg-surface px-4 py-3">
+                    <div class="w-48">
+                        <flux:select wire:model="transferSectorId" label="Transferir para o setor" placeholder="Escolha o setor">
+                            @foreach ($sectors as $sector)
+                                <flux:select.option :value="$sector->id">{{ $sector->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        @error('transferSectorId')
+                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div class="min-w-48 flex-1">
+                        <flux:input wire:model="transferNote" label="Nota (opcional, só para a equipe)" maxlength="500" />
+                        @error('transferNote')
+                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <flux:button type="submit" variant="primary" size="sm">Transferir</flux:button>
+                    <flux:button type="button" size="sm" variant="subtle" wire:click="closePanel">Cancelar</flux:button>
+                </form>
+            @elseif ($panel === 'reassign')
+                <form wire:submit="reassign" class="flex flex-wrap items-end gap-3 border-b border-line bg-surface px-4 py-3">
+                    <div class="w-64">
+                        <flux:select wire:model="reassignUserId" label="Reatribuir para" placeholder="Escolha a pessoa">
+                            @foreach ($candidates as $candidate)
+                                <flux:select.option :value="$candidate->id">{{ $candidate->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        @error('reassignUserId')
+                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <flux:button type="submit" variant="primary" size="sm">Reatribuir</flux:button>
+                    <flux:button type="button" size="sm" variant="subtle" wire:click="closePanel">Cancelar</flux:button>
+                </form>
+            @endif
 
             @if ($notice)
                 <div class="border-b border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="alert">{{ $notice }}</div>
@@ -171,6 +221,10 @@
                 <div>
                     <dt class="text-xs text-ink-3">Canal</dt>
                     <dd class="text-ink">{{ $ticket->channel->name }}{{ $ticket->channel->phone ? ' · '.$ticket->channel->phone : '' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-ink-3">Protocolo</dt>
+                    <dd class="font-mono text-ink">{{ $ticket->protocol }}</dd>
                 </div>
                 <div>
                     <dt class="text-xs text-ink-3">Setor</dt>

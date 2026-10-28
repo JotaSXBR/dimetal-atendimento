@@ -74,6 +74,14 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * Pode atender tickets desse setor: ticket sem setor é de todos; supervisor e admin atendem qualquer um.
+     */
+    public function canHandleSector(?int $sectorId): bool
+    {
+        return $sectorId === null || $this->canSeeAllSectors() || $this->sectors()->whereKey($sectorId)->exists();
+    }
+
+    /**
      * Get the user's initials
      */
     public function initials(): string
