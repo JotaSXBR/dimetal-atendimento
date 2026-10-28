@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use App\Models\WahaEvent;
 use App\Services\Inbox\ApplyAck;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -102,6 +103,19 @@ class ApplyAckTest extends TestCase
         $this->assertTrue(app(ApplyAck::class)($this->ack($code)));
 
         $this->assertSame(DeliveryStatus::SENT, $message->fresh()?->delivery_status);
+    }
+
+    public function test_ack_le_a_mensagem_com_trava_de_linha_para_nao_rebaixar_em_paralelo(): void
+    {
+        $this->message();
+        $queries = [];
+        DB::listen(function ($query) use (&$queries) {
+            $queries[] = $query->sql;
+        });
+
+        app(ApplyAck::class)($this->ack(2));
+
+        $this->assertNotEmpty(array_filter($queries, fn (string $sql) => str_contains(strtolower($sql), 'for update')));
     }
 
     public function test_ack_negativo_marca_falha_apenas_se_nada_melhor(): void

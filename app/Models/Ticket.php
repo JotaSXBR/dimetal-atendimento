@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TicketStatus;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $id
@@ -65,6 +67,32 @@ class Ticket extends Model
     public function scopeOpen(Builder $query): void
     {
         $query->where('status', '<>', TicketStatus::ENCERRADO->value);
+    }
+
+    /**
+     * Registra uma mensagem recebida. Atômico e só avança: um evento atrasado nunca recua o horário.
+     */
+    public function recordInbound(CarbonInterface $at): void
+    {
+        DB::update(
+            'update tickets set last_inbound_at = greatest(last_inbound_at, ?), updated_at = ? where id = ?',
+            [$at, now(), $this->id],
+        );
+
+        $this->refresh();
+    }
+
+    /**
+     * Registra uma resposta humana (painel ou celular). Também marca a primeira resposta, uma única vez.
+     */
+    public function recordOutbound(CarbonInterface $at): void
+    {
+        DB::update(
+            'update tickets set last_outbound_at = greatest(last_outbound_at, ?), first_human_reply_at = coalesce(first_human_reply_at, ?), updated_at = ? where id = ?',
+            [$at, $at, now(), $this->id],
+        );
+
+        $this->refresh();
     }
 
     /**

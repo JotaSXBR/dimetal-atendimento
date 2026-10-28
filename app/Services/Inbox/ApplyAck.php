@@ -5,6 +5,7 @@ namespace App\Services\Inbox;
 use App\Enums\DeliveryStatus;
 use App\Models\Message;
 use App\Models\WahaEvent;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Aplica um `message.ack` do WAHA na mensagem correspondente.
@@ -27,34 +28,39 @@ class ApplyAck
             return true;
         }
 
-        $message = Message::query()
-            ->where('channel_id', $event->channel->id)
-            ->where('wa_message_id', $waId)
-            ->first();
+        // Entregue e lido chegam quase juntos e em workers diferentes: a linha é lida com trava para que
+        // o job que leu "entregue" não grave por cima de "lido".
+        return DB::transaction(function () use ($event, $waId, $status): bool {
+            $message = Message::query()
+                ->where('channel_id', $event->channel_id)
+                ->where('wa_message_id', $waId)
+                ->lockForUpdate()
+                ->first();
 
-        if ($message === null) {
-            return false;
-        }
+            if ($message === null) {
+                return false;
+            }
 
-        $current = $message->delivery_status?->rank() ?? 0;
+            $current = $message->delivery_status?->rank() ?? 0;
 
-        if ($status === DeliveryStatus::FAILED ? $current > 1 : $status->rank() <= $current) {
+            if ($status === DeliveryStatus::FAILED ? $current > 1 : $status->rank() <= $current) {
+                return true;
+            }
+
+            $message->delivery_status = $status;
+
+            if ($status->rank() >= DeliveryStatus::DELIVERED->rank()) {
+                $message->delivered_at ??= $event->received_at;
+            }
+
+            if ($status === DeliveryStatus::READ) {
+                $message->read_at ??= $event->received_at;
+            }
+
+            $message->save();
+
             return true;
-        }
-
-        $message->delivery_status = $status;
-
-        if ($status->rank() >= DeliveryStatus::DELIVERED->rank()) {
-            $message->delivered_at ??= $event->received_at;
-        }
-
-        if ($status === DeliveryStatus::READ) {
-            $message->read_at ??= $event->received_at;
-        }
-
-        $message->save();
-
-        return true;
+        });
     }
 
     private function statusFor(mixed $code): ?DeliveryStatus

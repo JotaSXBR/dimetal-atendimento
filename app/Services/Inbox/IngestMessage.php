@@ -57,6 +57,16 @@ class IngestMessage
             return $existing;
         }
 
+        $hasMedia = (bool) ($data['hasMedia'] ?? false);
+        $body = $hasMedia ? '' : (is_string($data['body'] ?? null) ? $data['body'] : '');
+        $type = $this->typeFor($data, $hasMedia, $body);
+
+        if ($type === null) {
+            Log::info('Mensagem do WAHA sem conteúdo ignorada', ['id' => $waId, 'event' => $event->waha_event_id]);
+
+            return null;
+        }
+
         $info = $data['_data']['Info'] ?? [];
         $contact = ($this->resolveContact)(
             $peer,
@@ -64,20 +74,17 @@ class IngestMessage
             ! $fromMe && is_string($name = $info['PushName'] ?? $data['notifyName'] ?? null) ? $name : null,
         );
 
-        $hasMedia = (bool) ($data['hasMedia'] ?? false);
-        $body = $hasMedia ? '' : (is_string($data['body'] ?? null) ? $data['body'] : '');
-        $sentAt = is_numeric($data['timestamp'] ?? null)
-            ? CarbonImmutable::createFromTimestamp((int) $data['timestamp'], config('app.timezone'))
-            : $event->received_at;
+        $sentAt = $this->sentAt($data['timestamp'] ?? null, $event->received_at);
 
         if ($fromMe && ($pending = $this->matchPending($channel, $contact, $body)) !== null) {
             $pending->update(['wa_message_id' => $waId]);
+            $pending->ticket->recordOutbound($sentAt);
 
             return $pending;
         }
 
         try {
-            return DB::transaction(fn () => $this->store($channel, $contact, $waId, $fromMe, $hasMedia ? 'media' : 'text', $body, $sentAt));
+            return DB::transaction(fn () => $this->store($channel, $contact, $waId, $fromMe, $type, $body, $sentAt));
         } catch (UniqueConstraintViolationException $e) {
             // Corrida com outro job da mesma mensagem: a linha dele vale, a nossa é descartada.
             return Message::query()
@@ -97,6 +104,34 @@ class IngestMessage
         return Message::query()->where('channel_id', $channel->id)->where('wa_message_id', $waId)->first();
     }
 
+    /**
+     * Tipo da mensagem, ou null quando não há nada para mostrar (sem texto, sem mídia e sem tipo não textual).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function typeFor(array $data, bool $hasMedia, string $body): ?string
+    {
+        if ($hasMedia) {
+            return 'media';
+        }
+
+        if ($body !== '') {
+            return 'text';
+        }
+
+        $type = $data['type'] ?? null;
+
+        return is_string($type) && ! in_array($type, ['', 'chat', 'text'], true) ? $type : null;
+    }
+
+    private function sentAt(mixed $timestamp, CarbonImmutable $fallback): CarbonImmutable
+    {
+        // Timestamp ausente, zero ou negativo não é data de verdade: usa o horário de recebimento.
+        return is_numeric($timestamp) && (int) $timestamp > 0
+            ? CarbonImmutable::createFromTimestamp((int) $timestamp, config('app.timezone'))
+            : $fallback;
+    }
+
     private function matchPending(Channel $channel, Contact $contact, string $body): ?Message
     {
         return Message::query()
@@ -105,6 +140,7 @@ class IngestMessage
             ->where('direction', MessageDirection::OUT->value)
             ->where('origin', MessageOrigin::PAINEL->value)
             ->whereNull('wa_message_id')
+            ->whereNull('delivery_status')
             ->where('body', $body)
             ->where('created_at', '>=', now()->subSeconds(self::ECHO_WINDOW_SECONDS))
             ->oldest('id')
@@ -113,11 +149,14 @@ class IngestMessage
 
     private function store(Channel $channel, Contact $contact, string $waId, bool $fromMe, string $type, string $body, CarbonImmutable $sentAt): Message
     {
+        // Serializa a abertura de ticket por contato e canal: duas mensagens simultâneas do mesmo cliente
+        // não disputam o índice único (o job perdedor perderia a mensagem, pois o WAHA não reenvia).
+        DB::select('select pg_advisory_xact_lock(hashtext(?))', ['ticket:'.$contact->id.':'.$channel->id]);
+
         $ticket = Ticket::query()
             ->open()
             ->where('contact_id', $contact->id)
             ->where('channel_id', $channel->id)
-            ->lockForUpdate()
             ->first();
 
         if ($ticket === null) {
@@ -131,14 +170,7 @@ class IngestMessage
             TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'opened']);
         }
 
-        if ($fromMe) {
-            $ticket->first_human_reply_at ??= $sentAt;
-            $ticket->last_outbound_at = $sentAt;
-        } else {
-            $ticket->last_inbound_at = $sentAt;
-        }
-
-        $ticket->save();
+        $fromMe ? $ticket->recordOutbound($sentAt) : $ticket->recordInbound($sentAt);
 
         $message = Message::create([
             'ticket_id' => $ticket->id,

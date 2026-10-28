@@ -113,6 +113,51 @@ class SendTicketMessageTest extends TestCase
         }
     }
 
+    public function test_ticket_desatualizado_nao_sobrescreve_first_human_reply_at(): void
+    {
+        $earlier = now()->subHour()->startOfSecond();
+        Http::fake(function () use ($earlier) {
+            Ticket::query()->whereKey($this->ticket->id)->update(['first_human_reply_at' => $earlier]);
+
+            return Http::response(['id' => self::SENT_ID], 201);
+        });
+
+        $this->send();
+
+        $this->assertSame($earlier->getTimestamp(), $this->ticket->fresh()?->first_human_reply_at?->getTimestamp());
+    }
+
+    public function test_eco_casado_antes_da_falha_http_nao_marca_a_mensagem_como_falha(): void
+    {
+        Http::fake(function () {
+            $echo = WahaEvent::create([
+                'waha_event_id' => 'evt_echo2',
+                'channel_id' => $this->channel->id,
+                'event' => 'message.any',
+                'session' => 'main',
+                'payload' => ['payload' => [
+                    'id' => self::SENT_ID,
+                    'from' => '5516999990001@c.us',
+                    'to' => self::PEER,
+                    'fromMe' => true,
+                    'body' => 'Segue o orcamento',
+                    'timestamp' => now()->timestamp,
+                ]],
+                'received_at' => now(),
+            ]);
+            app(IngestMessage::class)($echo);
+
+            return Http::response(['message' => 'timeout'], 504);
+        });
+
+        try {
+            $this->send();
+            $this->fail('Deveria relançar a falha do cliente');
+        } catch (WahaRequestException) {
+            $this->assertNotSame(DeliveryStatus::FAILED, Message::query()->sole()->delivery_status);
+        }
+    }
+
     public function test_eco_chegando_antes_da_resposta_do_waha_nao_duplica(): void
     {
         Http::fake(function () {

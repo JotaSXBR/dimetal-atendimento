@@ -3,12 +3,16 @@
 namespace App\Services\Inbox;
 
 use App\Models\Contact;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Acha ou cria o contato de um remetente do WhatsApp.
  *
  * O WhatsApp entrega parte dos remetentes como `<id>@lid`. Quando o payload traz o telefone real em
  * `SenderAlt`, ele vira a identidade do contato e o lid fica guardado ao lado.
+ *
+ * Duas mensagens do mesmo remetente podem chegar em workers diferentes; o lock por remetente evita
+ * que ambos façam "procura, não acha, insere" e um deles estoure o índice único.
  */
 class ResolveContact
 {
@@ -16,24 +20,38 @@ class ResolveContact
 
     public function __invoke(string $from, ?string $senderAlt = null, ?string $displayName = null): Contact
     {
-        $lid = str_ends_with($from, '@lid') ? $from : null;
-        $waId = $lid === null ? $from : $this->phoneFromSenderAlt($senderAlt);
-        $name = $displayName === null ? null : mb_substr(trim($displayName), 0, self::NAME_LIMIT);
+        return DB::transaction(function () use ($from, $senderAlt, $displayName): Contact {
+            DB::select('select pg_advisory_xact_lock(hashtext(?))', ['contact:'.$from]);
 
-        $contact = ($waId !== null ? Contact::query()->where('wa_id', $waId)->first() : null)
-            ?? ($lid !== null ? Contact::query()->where('lid', $lid)->first() : null)
-            ?? new Contact;
+            $lid = str_ends_with($from, '@lid') ? $from : null;
+            $waId = $lid === null ? $from : $this->phoneFromSenderAlt($senderAlt);
+            $name = $displayName === null ? null : mb_substr(trim($displayName), 0, self::NAME_LIMIT);
 
-        $contact->wa_id ??= $waId;
-        $contact->lid ??= $lid;
+            $contact = ($waId !== null ? Contact::query()->where('wa_id', $waId)->first() : null)
+                ?? ($lid !== null ? Contact::query()->where('lid', $lid)->first() : null)
+                ?? new Contact;
 
-        if ($name !== null && $name !== '') {
-            $contact->name = $name;
-        }
+            $contact->wa_id ??= $waId;
 
-        $contact->save();
+            // O mesmo lid pode já pertencer a outro registro (contato criado antes de o telefone aparecer):
+            // não o reatribui, para não violar o índice único e travar toda a ingestão desse remetente.
+            if ($lid !== null && $contact->lid === null && ! $this->lidTaken($lid)) {
+                $contact->lid = $lid;
+            }
 
-        return $contact;
+            if ($name !== null && $name !== '') {
+                $contact->name = $name;
+            }
+
+            $contact->save();
+
+            return $contact;
+        });
+    }
+
+    private function lidTaken(string $lid): bool
+    {
+        return Contact::query()->where('lid', $lid)->exists();
     }
 
     private function phoneFromSenderAlt(?string $senderAlt): ?string

@@ -16,6 +16,12 @@ class HandleWahaEvent implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
 
+    /** O WAHA não reenvia um webhook já aceito: se o job falhar de vez, a mensagem se perde. Daí as tentativas. */
+    public int $tries = 6;
+
+    /** @var array<int, int> */
+    public array $backoff = [2, 5, 10, 30];
+
     private const ACK_MAX_ATTEMPTS = 6;
 
     private const ACK_RETRY_SECONDS = 5;

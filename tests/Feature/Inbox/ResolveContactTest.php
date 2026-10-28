@@ -5,6 +5,7 @@ namespace Tests\Feature\Inbox;
 use App\Models\Contact;
 use App\Services\Inbox\ResolveContact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -78,6 +79,30 @@ class ResolveContactTest extends TestCase
         $this->assertTrue($first->is($second));
         $this->assertSame('5516997524950@c.us', $second->fresh()?->wa_id);
         $this->assertSame(1, Contact::query()->count());
+    }
+
+    public function test_lid_que_pertence_a_outro_contato_nao_e_reatribuido_nem_quebra(): void
+    {
+        $lidOnly = Contact::factory()->create(['wa_id' => null, 'lid' => self::LID]);
+        $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => null]);
+
+        $resolved = $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
+
+        $this->assertTrue($resolved->is($phone));
+        $this->assertNull($phone->fresh()?->lid);
+        $this->assertSame(self::LID, $lidOnly->fresh()?->lid);
+    }
+
+    public function test_resolucao_e_serializada_por_remetente(): void
+    {
+        $queries = [];
+        DB::listen(function ($query) use (&$queries) {
+            $queries[] = $query->sql;
+        });
+
+        $this->resolve('5511999888777@c.us');
+
+        $this->assertNotEmpty(array_filter($queries, fn (string $sql) => str_contains($sql, 'pg_advisory_xact_lock')));
     }
 
     public function test_apelido_nao_e_sobrescrito(): void

@@ -39,7 +39,10 @@ class SendTicketMessage
         try {
             $response = (new WahaClient($ticket->channel))->sendText($contact->wa_id ?? (string) $contact->lid, $text);
         } catch (Throwable $e) {
-            $message->update(['delivery_status' => DeliveryStatus::FAILED]);
+            // Se o eco do celular já casou com a linha (ela ganhou o id), a mensagem saiu: não é falha.
+            if ($message->refresh()->wa_message_id === null) {
+                $message->update(['delivery_status' => DeliveryStatus::FAILED]);
+            }
 
             throw $e;
         }
@@ -55,9 +58,7 @@ class SendTicketMessage
         $message->delivery_status ??= DeliveryStatus::SENT;
         $message->save();
 
-        $ticket->first_human_reply_at ??= $message->sent_at;
-        $ticket->last_outbound_at = $message->sent_at;
-        $ticket->save();
+        $ticket->recordOutbound($message->sent_at);
 
         TicketEvent::create([
             'ticket_id' => $ticket->id,

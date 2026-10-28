@@ -13,6 +13,7 @@ use App\Models\Ticket;
 use App\Models\WahaEvent;
 use App\Services\Inbox\IngestMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class IngestMessageTest extends TestCase
@@ -220,15 +221,90 @@ class IngestMessageTest extends TestCase
         $this->assertSame(0, Message::query()->count());
     }
 
-    public function test_payload_sem_body_e_sem_timestamp_nao_quebra(): void
+    public function test_payload_sem_body_e_sem_midia_e_ignorado_sem_abrir_ticket(): void
     {
         $payload = $this->inbound();
-        unset($payload['body'], $payload['timestamp']);
+        unset($payload['body']);
 
-        $message = $this->ingest($this->event($payload));
+        $this->assertNull($this->ingest($this->event($payload)));
+        $this->assertSame(0, Message::query()->count());
+        $this->assertSame(0, Ticket::query()->count());
+    }
 
-        $this->assertSame('', $message?->body);
-        $this->assertNotNull($message?->sent_at);
+    public function test_payload_sem_timestamp_usa_o_horario_de_recebimento(): void
+    {
+        $payload = $this->inbound();
+        unset($payload['timestamp']);
+        $event = $this->event($payload);
+
+        $message = $this->ingest($event);
+
+        $this->assertSame($event->received_at->getTimestamp(), $message?->sent_at->getTimestamp());
+    }
+
+    public function test_timestamp_zero_nao_vira_1970(): void
+    {
+        $event = $this->event($this->inbound('false_5516997524950@c.us_ZERO', ['timestamp' => 0]));
+
+        $message = $this->ingest($event);
+
+        $this->assertSame($event->received_at->getTimestamp(), $message?->sent_at->getTimestamp());
+    }
+
+    public function test_mensagem_antiga_nao_recua_o_ultimo_horario_do_ticket(): void
+    {
+        $this->ingest($this->event($this->inbound('false_5516997524950@c.us_NEW', ['timestamp' => 1_793_000_100])));
+        $this->ingest($this->event($this->inbound('false_5516997524950@c.us_OLD', ['timestamp' => 1_793_000_000])));
+
+        $this->assertSame(1_793_000_100, Ticket::query()->sole()->last_inbound_at?->getTimestamp());
+    }
+
+    public function test_pendente_que_falhou_nao_engole_o_eco_do_celular(): void
+    {
+        $contact = Contact::factory()->create(['wa_id' => self::PEER]);
+        $ticket = Ticket::factory()->for($contact)->for($this->channel)->create(['status' => TicketStatus::EM_ATENDIMENTO]);
+        $failed = Message::factory()->for($ticket)->create([
+            'wa_message_id' => null,
+            'direction' => MessageDirection::OUT,
+            'origin' => MessageOrigin::PAINEL,
+            'body' => 'Segue o orcamento',
+            'delivery_status' => DeliveryStatus::FAILED,
+        ]);
+
+        $result = $this->ingest($this->event($this->fromPhone('true_5516997524950@c.us_ECO'), 'message.any'));
+
+        $this->assertFalse($result?->is($failed));
+        $this->assertSame(MessageOrigin::FORA_DO_PAINEL, $result?->origin);
+    }
+
+    public function test_eco_casado_com_pendente_atualiza_o_ticket(): void
+    {
+        $contact = Contact::factory()->create(['wa_id' => self::PEER]);
+        $ticket = Ticket::factory()->for($contact)->for($this->channel)->create(['status' => TicketStatus::EM_ATENDIMENTO]);
+        Message::factory()->for($ticket)->create([
+            'wa_message_id' => null,
+            'direction' => MessageDirection::OUT,
+            'origin' => MessageOrigin::PAINEL,
+            'body' => 'Segue o orcamento',
+        ]);
+
+        $this->ingest($this->event($this->fromPhone('true_5516997524950@c.us_ECO'), 'message.any'));
+
+        $this->assertNotNull($ticket->fresh()?->first_human_reply_at);
+        $this->assertNotNull($ticket->fresh()?->last_outbound_at);
+    }
+
+    public function test_abertura_de_ticket_e_serializada_por_contato_e_canal(): void
+    {
+        $queries = [];
+        DB::listen(function ($query) use (&$queries) {
+            $queries[] = $query->sql;
+        });
+
+        $this->ingest($this->event($this->inbound()));
+
+        $locks = array_filter($queries, fn (string $sql) => str_contains($sql, 'pg_advisory_xact_lock'));
+        $this->assertGreaterThanOrEqual(2, count($locks), 'contato e ticket devem ser serializados');
     }
 
     public function test_midia_grava_a_mensagem_sem_corpo_e_sem_baixar_arquivo(): void

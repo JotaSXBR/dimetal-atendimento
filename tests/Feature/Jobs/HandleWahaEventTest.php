@@ -59,6 +59,14 @@ class HandleWahaEventTest extends TestCase
         $this->assertSame(ChannelStatus::WORKING, $channel->fresh()->status);
     }
 
+    public function test_job_tenta_de_novo_antes_de_ir_para_failed_jobs(): void
+    {
+        $job = new HandleWahaEvent(1);
+
+        $this->assertSame(6, $job->tries);
+        $this->assertSame([2, 5, 10, 30], $job->backoff);
+    }
+
     public function test_status_desconhecido_e_evento_sem_canal_sao_ignorados(): void
     {
         $channel = Channel::factory()->create([
