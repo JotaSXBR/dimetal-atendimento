@@ -55,13 +55,10 @@ curl -s -X POST "$COOLIFY_URL/api/v1/applications/public" \
   }'
 ```
 
-`worker-beta` e `scheduler-beta` são iguais, sem `domains`, com `health_check_enabled:false`, sem
-`name` de domínio e com `start_command`:
-
-```
-php /var/www/html/artisan queue:work --tries=3 --timeout=120 --max-time=3600
-php /var/www/html/artisan schedule:work
-```
+`worker-beta` e `scheduler-beta` são iguais ao app, sem `domains`, e usam `dockerfile_target_build`
+`worker` e `scheduler` (estágios do `docker/Dockerfile`; o `app` usa `runtime`). **Não** use
+`start_command`: em build por Dockerfile o Coolify o ignora e o container sobe o servidor web. O
+healthcheck deles é do tipo `cmd` (`healthcheck-queue` e `healthcheck-schedule`).
 
 WAHA é `POST /applications/dockerimage` com `docker_registry_image_name: devlikeapro/waha`,
 `docker_registry_image_tag: gows-2026.10.1`, `ports_exposes: 3000`,

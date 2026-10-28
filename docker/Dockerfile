@@ -63,3 +63,19 @@ RUN chown -R www-data:www-data storage bootstrap/cache
 USER www-data
 
 EXPOSE 8080
+
+
+# No Coolify, build por Dockerfile ignora o campo "start_command": o comando do container é o CMD da
+# imagem. Por isso worker e scheduler são estágios próprios, escolhidos em "dockerfile_target_build".
+FROM runtime AS worker
+
+STOPSIGNAL SIGTERM
+
+CMD ["php", "/var/www/html/artisan", "queue:work", "--tries=3", "--timeout=120", "--max-time=3600"]
+
+
+FROM runtime AS scheduler
+
+STOPSIGNAL SIGTERM
+
+CMD ["php", "/var/www/html/artisan", "schedule:work"]
