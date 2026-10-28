@@ -9,6 +9,9 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+<meta name="reverb-key" content="{{ config('broadcasting.connections.reverb.key') }}">
+<meta name="reverb-url" content="{{ config('broadcasting.connections.reverb.public_url') }}">
+
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])

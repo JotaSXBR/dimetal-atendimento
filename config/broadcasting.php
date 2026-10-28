@@ -35,7 +35,10 @@ return [
             'key' => env('REVERB_APP_KEY'),
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
+            // Endereço do Reverb para o navegador; vazio = mesma origem da página (roteado pelo proxy em /app).
+            'public_url' => env('REVERB_PUBLIC_URL'),
             'options' => [
+                // Endereço para o servidor publicar eventos (rede interna).
                 'host' => env('REVERB_HOST'),
                 'port' => env('REVERB_PORT', 443),
                 'scheme' => env('REVERB_SCHEME', 'https'),
