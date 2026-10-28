@@ -50,14 +50,17 @@
                     </span>
                 </p>
 
-                @if (! $channel)
-                    <div class="mt-4">
-                        <flux:input wire:model="sessionName" label="Nome da sessão" placeholder="principal" />
-                        @error('sessionName')
+                <div class="mt-4 flex items-end gap-2">
+                    <div class="flex-1">
+                        <flux:input wire:model="{{ $channel ? 'channelName' : 'sessionName' }}" label="{{ $channel ? 'Nome do canal' : 'Nome da sessão' }}" placeholder="principal" />
+                        @error($channel ? 'channelName' : 'sessionName')
                             <p class="mt-2 text-xs text-danger">{{ $message }}</p>
                         @enderror
                     </div>
-                @endif
+                    @if ($channel)
+                        <flux:button wire:click="rename" size="sm">Salvar nome</flux:button>
+                    @endif
+                </div>
 
                 <div class="mt-4 flex items-center gap-2">
                     <x-ui.button variant="primary" wire:click="connect" wire:loading.attr="disabled">

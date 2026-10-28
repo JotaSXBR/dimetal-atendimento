@@ -25,6 +25,8 @@ class Channels extends Component
 
     public string $sessionName = '';
 
+    public string $channelName = '';
+
     public string $authMethod = 'qr';
 
     public string $pairingPhone = '';
@@ -44,6 +46,7 @@ class Channels extends Component
     public function mount(): void
     {
         $this->channel = Channel::query()->first();
+        $this->channelName = $this->channel->name ?? '';
 
         $this->loadEvents();
     }
@@ -80,6 +83,14 @@ class Channels extends Component
         }
 
         $this->setStatus($channel, ChannelStatus::STARTING);
+    }
+
+    public function rename(): void
+    {
+        $this->validate(['channelName' => ['required', 'string', 'max:60']]);
+
+        $channel = $this->channel();
+        $channel->update(['name' => trim($this->channelName)]);
     }
 
     public function disconnect(): void

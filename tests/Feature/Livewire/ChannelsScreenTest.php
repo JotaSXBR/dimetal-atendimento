@@ -161,4 +161,16 @@ class ChannelsScreenTest extends TestCase
 
         Http::assertNothingSent();
     }
+
+    public function test_admin_renomeia_o_canal_existente(): void
+    {
+        $channel = Channel::factory()->create(['name' => 'Antigo', 'waha_session' => 'main']);
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))
+            ->test(Channels::class)
+            ->set('channelName', 'Comercial')
+            ->call('rename');
+
+        $this->assertSame('Comercial', $channel->fresh()->name);
+    }
 }
