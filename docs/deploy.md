@@ -158,7 +158,9 @@ Merge em `main` → workflow `tests` → se passar, `deploy-beta` sincroniza a b
 ordem**, esperando cada etapa terminar com sucesso (status `finished` no Coolify, que só troca o container
 depois do healthcheck): primeiro `app-beta`, que roda o `migrate --force` no start; depois `worker-beta`,
 `scheduler-beta` e `reverb-beta` (o `waha-beta` fica de fora: tag fixa e sessão única do WhatsApp). Se uma
-etapa falhar, o workflow para e não troca o resto. O Coolify limita builds simultâneas (padrão 2), por isso
+etapa falhar, o workflow para e não troca o resto. Para esperar, o token em `COOLIFY_API_TOKEN` precisa das permissões `deploy` **e `read`**
+(o Coolify responde 403 ao consultar o status com token só de deploy). Sem `read`, o workflow emite um
+aviso e segue sem esperar: os deploys sobem em fila, sem garantia de ordem. O Coolify limita builds simultâneas (padrão 2), por isso
 o workflow não manda tudo de uma vez. Segredos do repositório:
 `COOLIFY_URL` e `COOLIFY_API_TOKEN`. Branches de PR são apagadas ao mergear. O volume preserva a
 sessão, então o WhatsApp volta sozinho (`WAHA_WORKER_RESTART_SESSIONS=true`).

@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   deploy:
+    timeout-minutes: 45
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -30,27 +31,47 @@ jobs:
       # Ordem importa: o app roda as migrações ao subir, então vai sozinho e o workflow espera ele ficar
       # saudável antes de trocar os demais. Migrações precisam funcionar com o código da versão anterior
       # (ver docs/deploy.md), porque worker, scheduler e reverb ainda rodam a versão velha nesse intervalo.
+      #
+      # Esperar exige que COOLIFY_API_TOKEN tenha a permissão "read" além de "deploy". Sem ela, o Coolify
+      # responde 403 ao consultar o deploy: o workflow avisa e segue sem esperar (os deploys sobem em fila).
       - name: Deploy no Coolify (app, depois worker, scheduler e reverb)
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
         run: |
-          api() { curl -fsS -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" "$@"; }
+          api() { curl -fsS --max-time 30 -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" "$@"; }
+
+          # 0 = terminou; 1 = falhou ou estourou o tempo; 2 = o token não pode ler o status
+          wait_finished() {
+            for _ in $(seq 1 90); do
+              code=$(curl -s --max-time 30 -o /tmp/deployment.json -w '%{http_code}'                 -H "Authorization: Bearer $COOLIFY_API_TOKEN" "$COOLIFY_URL/api/v1/deployments/$1")
+              case "$code" in
+                200) ;;
+                401|403) return 2 ;;
+                *) sleep 20; continue ;;
+              esac
+              status=$(jq -r .status /tmp/deployment.json)
+              case "$status" in
+                finished) return 0 ;;
+                failed|error|cancelled*) echo "deploy $1 terminou como $status"; return 1 ;;
+              esac
+              sleep 20
+            done
+            echo "deploy $1 não terminou a tempo"
+            return 1
+          }
 
           deploy() {
             ids=$(api -X POST "$COOLIFY_URL/api/v1/deploy" -d "{\"uuid\":\"$1\"}" | jq -r '.deployments[].deployment_uuid')
             [ -n "$ids" ] || { echo "Coolify não enfileirou deploy para $1"; exit 1; }
             for id in $ids; do
-              status=""
-              for _ in $(seq 1 90); do
-                status=$(api "$COOLIFY_URL/api/v1/deployments/$id" | jq -r .status)
-                case "$status" in
-                  finished) break ;;
-                  failed|error|cancelled*) echo "deploy $id terminou como $status"; exit 1 ;;
-                esac
-                sleep 20
-              done
-              [ "$status" = finished ] || { echo "deploy $id não terminou a tempo (status: $status)"; exit 1; }
+              rc=0
+              wait_finished "$id" || rc=$?
+              case "$rc" in
+                0) ;;
+                2) echo "::warning::COOLIFY_API_TOKEN sem permissão de leitura: seguindo sem esperar o deploy $id" ;;
+                *) exit 1 ;;
+              esac
             done
           }
 
