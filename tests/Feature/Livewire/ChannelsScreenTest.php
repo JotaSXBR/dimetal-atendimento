@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire;
 
 use App\Enums\ChannelStatus;
 use App\Enums\UserRole;
+use App\Livewire\Settings\ChannelCard;
 use App\Livewire\Settings\Channels;
 use App\Models\Channel;
 use App\Models\User;
@@ -22,6 +23,11 @@ class ChannelsScreenTest extends TestCase
         parent::setUp();
 
         config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
+    }
+
+    private function admin(): User
+    {
+        return User::factory()->create(['role' => UserRole::ADMIN]);
     }
 
     /** @return array<string, array{UserRole}> */
@@ -47,32 +53,99 @@ class ChannelsScreenTest extends TestCase
             'name' => 'WhatsApp principal',
             'status' => ChannelStatus::WORKING,
         ]);
-        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
 
-        $this->actingAs($admin)->get('/configuracoes/canais')
+        $this->actingAs($this->admin())->get('/configuracoes/canais')
             ->assertOk()
             ->assertSee('WhatsApp principal')
             ->assertSee('Conectado');
     }
 
+    public function test_horarios_sao_exibidos_no_fuso_de_sao_paulo(): void
+    {
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
+        $channel->forceFill(['last_event_at' => '2026-10-28 12:00:00'])->save();
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->assertSee('28/10/2026 09:00:00');
+    }
+
+    public function test_lista_um_cartao_por_canal(): void
+    {
+        Channel::factory()->create(['name' => 'Numero 1', 'waha_session' => 'um']);
+        Channel::factory()->create(['name' => 'Numero 2', 'waha_session' => 'dois']);
+
+        Livewire::actingAs($this->admin())->test(Channels::class)
+            ->assertSeeLivewire(ChannelCard::class)
+            ->assertSee('Numero 1')
+            ->assertSee('Numero 2');
+    }
+
+    public function test_adiciona_segundo_canal_pelo_nome_da_sessao(): void
+    {
+        Channel::factory()->create(['waha_session' => 'um']);
+
+        Livewire::actingAs($this->admin())->test(Channels::class)
+            ->set('sessionName', 'dois')
+            ->call('addChannel')
+            ->assertHasNoErrors()
+            ->assertSet('sessionName', '');
+
+        $this->assertSame(2, Channel::query()->count());
+        $this->assertSame('dois', Channel::query()->where('waha_session', 'dois')->sole()->name);
+    }
+
+    public function test_sessao_duplicada_e_rejeitada(): void
+    {
+        Channel::factory()->create(['waha_session' => 'um']);
+
+        Livewire::actingAs($this->admin())->test(Channels::class)
+            ->set('sessionName', 'um')
+            ->call('addChannel')
+            ->assertHasErrors('sessionName');
+
+        $this->assertSame(1, Channel::query()->count());
+    }
+
+    public function test_nome_de_sessao_invalido_e_rejeitado(): void
+    {
+        Livewire::actingAs($this->admin())->test(Channels::class)
+            ->set('sessionName', 'com espaco/e barra')
+            ->call('addChannel')
+            ->assertHasErrors('sessionName');
+
+        $this->assertSame(0, Channel::query()->count());
+    }
+
     public function test_conectar_chama_o_waha_e_marca_iniciando(): void
     {
         Http::fake(['*/api/sessions*' => Http::response(['status' => 'STARTING'], 200)]);
-        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
         $channel = Channel::factory()->create(['waha_session' => 'main']);
 
-        Livewire::actingAs($admin)->test(Channels::class)->call('connect');
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])->call('connect');
 
         $this->assertSame(ChannelStatus::STARTING, $channel->fresh()->status);
+    }
+
+    public function test_conectar_um_canal_nao_afeta_o_outro(): void
+    {
+        Http::fake(['*/api/sessions*' => Http::response(['status' => 'STARTING'], 200)]);
+        $first = Channel::factory()->create(['waha_session' => 'um']);
+        $second = Channel::factory()->create(['waha_session' => 'dois']);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $first])->call('connect');
+
+        $this->assertSame(ChannelStatus::STARTING, $first->fresh()->status);
+        $this->assertSame(ChannelStatus::STOPPED, $second->fresh()->status);
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/sessions/um') || $request['name'] === 'um');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/sessions/dois') || ($request['name'] ?? null) === 'dois');
     }
 
     public function test_waha_fora_do_ar_mostra_erro_e_nao_quebra(): void
     {
         Http::fake(['*/api/sessions*' => Http::response(['message' => 'fora do ar'], 500)]);
-        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
-        Channel::factory()->create(['waha_session' => 'main']);
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
 
-        Livewire::actingAs($admin)->test(Channels::class)
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
             ->call('connect')
             ->assertSet('errorMessage', fn ($message) => str_contains($message, 'WAHA'));
     }
@@ -83,10 +156,9 @@ class ChannelsScreenTest extends TestCase
             '*/api/sessions/main' => Http::response(['status' => 'SCAN_QR_CODE'], 200),
             '*/auth/qr*' => Http::response('PNGDATA', 200, ['Content-Type' => 'image/png']),
         ]);
-        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
-        Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::SCAN_QR_CODE]);
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::SCAN_QR_CODE]);
 
-        Livewire::actingAs($admin)->test(Channels::class)
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
             ->call('refreshStatus')
             ->assertSet('qr', fn ($qr) => str_starts_with($qr, 'data:image/png;base64,'));
     }
@@ -97,10 +169,9 @@ class ChannelsScreenTest extends TestCase
             '*/auth/request-code' => Http::response(['code' => 'ABCD-ABCD'], 200),
             '*/auth/qr*' => Http::response('PNGDATA', 200, ['Content-Type' => 'image/png']),
         ]);
-        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
-        Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::SCAN_QR_CODE]);
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::SCAN_QR_CODE]);
 
-        Livewire::actingAs($admin)->test(Channels::class)
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
             ->set('pairingPhone', '+55 (16) 99812-4477')
             ->call('requestPairingCode')
             ->assertSet('pairingCode', 'ABCD-ABCD')
@@ -113,10 +184,9 @@ class ChannelsScreenTest extends TestCase
     public function test_importacao_de_historico_vem_desligada_e_e_gravada_na_conexao(): void
     {
         Http::fake(['*/api/sessions*' => Http::response(['status' => 'STARTING'], 200)]);
-        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
         $channel = Channel::factory()->create(['waha_session' => 'main']);
 
-        Livewire::actingAs($admin)->test(Channels::class)
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
             ->assertSet('backfill', false)
             ->assertSet('backfillDays', 5)
             ->set('backfill', true)
@@ -131,10 +201,9 @@ class ChannelsScreenTest extends TestCase
             '*/api/sendText' => Http::response(['id' => 'ABC123'], 201),
             '*/presence' => Http::response([], 200),
         ]);
-        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
-        Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::WORKING]);
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::WORKING]);
 
-        Livewire::actingAs($admin)->test(Channels::class)
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
             ->set('testPhone', '+55 (16) 99812-4477')
             ->set('testText', 'Teste do painel')
             ->call('sendTest')
@@ -150,10 +219,9 @@ class ChannelsScreenTest extends TestCase
     public function test_telefone_invalido_nao_chama_o_waha(): void
     {
         Http::fake();
-        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
-        Channel::factory()->create(['waha_session' => 'main']);
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
 
-        Livewire::actingAs($admin)->test(Channels::class)
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
             ->set('testPhone', '123')
             ->set('testText', 'oi')
             ->call('sendTest')
@@ -166,8 +234,8 @@ class ChannelsScreenTest extends TestCase
     {
         $channel = Channel::factory()->create(['name' => 'Antigo', 'waha_session' => 'main']);
 
-        Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))
-            ->test(Channels::class)
+        Livewire::actingAs($this->admin())
+            ->test(ChannelCard::class, ['channel' => $channel])
             ->set('channelName', 'Comercial')
             ->call('rename');
 
