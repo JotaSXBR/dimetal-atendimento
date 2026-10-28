@@ -14,10 +14,8 @@ use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\WahaEvent;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Transforma um evento `message`/`message.any` do WAHA em contato + ticket + mensagem.
@@ -34,72 +32,23 @@ class IngestMessage
     public function __invoke(WahaEvent $event): ?Message
     {
         $channel = $event->channel;
-        $data = $event->payload['payload'] ?? null;
+        $incoming = $channel === null ? null : IncomingMessage::fromEvent($event);
 
-        if ($channel === null || ! is_array($data)) {
+        if ($channel === null || $incoming === null) {
             return null;
         }
 
-        $waId = is_string($data['id'] ?? null) ? Message::waKey($data['id']) : null;
-        $fromMe = (bool) ($data['fromMe'] ?? false);
-
-        if (! is_string($waId) || $waId === '' || ($event->event === 'message.any' && ! $fromMe)) {
-            return null;
-        }
-
-        $peer = $fromMe ? ($data['to'] ?? null) : ($data['from'] ?? null);
-
-        if (! is_string($peer) || $this->isIgnoredChat($peer)) {
-            Log::info('Mensagem do WAHA ignorada (grupo ou broadcast)', ['peer' => $peer, 'event' => $event->waha_event_id]);
-
-            return null;
-        }
-
-        if (($existing = $this->find($channel, $waId)) !== null) {
+        if (($existing = $this->find($channel, $incoming->waId)) !== null) {
             return $existing;
         }
 
-        $hasMedia = (bool) ($data['hasMedia'] ?? false);
-        $body = $hasMedia ? '' : (is_string($data['body'] ?? null) ? $data['body'] : '');
-        $type = $this->typeFor($data, $hasMedia, $body);
+        $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
 
-        if ($type === null) {
-            Log::info('Mensagem do WAHA sem conteúdo ignorada', ['id' => $waId, 'event' => $event->waha_event_id]);
-
-            return null;
+        if ($incoming->fromMe && ($pending = $this->matchPending($channel, $contact, $incoming->body)) !== null) {
+            return $this->adoptEcho($pending, $incoming);
         }
 
-        $info = $data['_data']['Info'] ?? [];
-        $contact = ($this->resolveContact)(
-            $peer,
-            is_string($alt = $info[$fromMe ? 'RecipientAlt' : 'SenderAlt'] ?? null) ? $alt : null,
-            ! $fromMe && is_string($name = $info['PushName'] ?? $data['notifyName'] ?? null) ? $name : null,
-        );
-
-        $sentAt = $this->sentAt($data['timestamp'] ?? null, $event->received_at);
-
-        if ($fromMe && ($pending = $this->matchPending($channel, $contact, $body)) !== null) {
-            $pending->update(['wa_message_id' => $waId]);
-            $pending->ticket->recordOutbound($sentAt);
-            TicketUpdated::dispatch($pending->ticket);
-
-            return $pending;
-        }
-
-        try {
-            return DB::transaction(fn () => $this->store($channel, $contact, $waId, $fromMe, $type, $body, $sentAt));
-        } catch (UniqueConstraintViolationException $e) {
-            // Corrida com outro job da mesma mensagem: a linha dele vale, a nossa é descartada.
-            return Message::query()
-                ->where('channel_id', $channel->id)
-                ->where('wa_message_id', $waId)
-                ->firstOr(fn () => throw $e);
-        }
-    }
-
-    private function isIgnoredChat(string $chat): bool
-    {
-        return str_ends_with($chat, '@g.us') || $chat === 'status@broadcast' || str_ends_with($chat, '@newsletter');
+        return $this->storeOnce($channel, $contact, $incoming);
     }
 
     private function find(Channel $channel, string $waId): ?Message
@@ -108,31 +57,27 @@ class IngestMessage
     }
 
     /**
-     * Tipo da mensagem, ou null quando não há nada para mostrar (sem texto, sem mídia e sem tipo não textual).
-     *
-     * @param  array<string, mixed>  $data
+     * O eco da mensagem do painel chegou: a linha local ganha o id do WhatsApp em vez de virar uma segunda.
      */
-    private function typeFor(array $data, bool $hasMedia, string $body): ?string
+    private function adoptEcho(Message $pending, IncomingMessage $incoming): Message
     {
-        if ($hasMedia) {
-            return 'media';
-        }
+        $ticket = $pending->ticket()->firstOrFail();
 
-        if ($body !== '') {
-            return 'text';
-        }
+        $pending->update(['wa_message_id' => $incoming->waId]);
+        $ticket->recordOutbound($incoming->sentAt);
+        TicketUpdated::dispatch($ticket);
 
-        $type = $data['type'] ?? null;
-
-        return is_string($type) && ! in_array($type, ['', 'chat', 'text'], true) ? $type : null;
+        return $pending;
     }
 
-    private function sentAt(mixed $timestamp, CarbonImmutable $fallback): CarbonImmutable
+    private function storeOnce(Channel $channel, Contact $contact, IncomingMessage $incoming): Message
     {
-        // Timestamp ausente, zero ou negativo não é data de verdade: usa o horário de recebimento.
-        return is_numeric($timestamp) && (int) $timestamp > 0
-            ? CarbonImmutable::createFromTimestampUTC((int) $timestamp)
-            : $fallback;
+        try {
+            return DB::transaction(fn () => $this->store($channel, $contact, $incoming));
+        } catch (UniqueConstraintViolationException $e) {
+            // Corrida com outro job da mesma mensagem: a linha dele vale, a nossa é descartada.
+            return $this->find($channel, $incoming->waId) ?? throw $e;
+        }
     }
 
     private function matchPending(Channel $channel, Contact $contact, string $body): ?Message
@@ -150,7 +95,38 @@ class IngestMessage
             ->first();
     }
 
-    private function store(Channel $channel, Contact $contact, string $waId, bool $fromMe, string $type, string $body, CarbonImmutable $sentAt): Message
+    private function store(Channel $channel, Contact $contact, IncomingMessage $incoming): Message
+    {
+        $ticket = $this->openTicketFor($channel, $contact, $incoming);
+
+        $incoming->fromMe ? $ticket->recordOutbound($incoming->sentAt) : $ticket->recordInbound($incoming->sentAt);
+
+        $message = Message::create([
+            'ticket_id' => $ticket->id,
+            'channel_id' => $channel->id,
+            'contact_id' => $contact->id,
+            'wa_message_id' => $incoming->waId,
+            'direction' => $incoming->fromMe ? MessageDirection::OUT : MessageDirection::IN,
+            'type' => $incoming->type,
+            'body' => $incoming->body,
+            'origin' => $incoming->fromMe ? MessageOrigin::FORA_DO_PAINEL : MessageOrigin::CONTATO,
+            'sent_at' => $incoming->sentAt,
+            'delivery_status' => $incoming->fromMe ? DeliveryStatus::SENT : null,
+        ]);
+
+        TicketEvent::create([
+            'ticket_id' => $ticket->id,
+            'type' => $incoming->fromMe ? 'message_out' : 'message_in',
+            'payload' => ['message_id' => $message->id],
+        ]);
+
+        MessageCreated::dispatch($message);
+        TicketUpdated::dispatch($ticket);
+
+        return $message;
+    }
+
+    private function openTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming): Ticket
     {
         // Serializa a abertura de ticket por contato e canal: duas mensagens simultâneas do mesmo cliente
         // não disputam o índice único (o job perdedor perderia a mensagem, pois o WAHA não reenvia).
@@ -162,41 +138,19 @@ class IngestMessage
             ->where('channel_id', $channel->id)
             ->first();
 
-        if ($ticket === null) {
-            $ticket = Ticket::create([
-                'contact_id' => $contact->id,
-                'channel_id' => $channel->id,
-                'status' => $fromMe ? TicketStatus::EM_ATENDIMENTO : TicketStatus::AGUARDANDO,
-                'opened_at' => $sentAt,
-            ]);
-
-            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'opened']);
+        if ($ticket !== null) {
+            return $ticket;
         }
 
-        $fromMe ? $ticket->recordOutbound($sentAt) : $ticket->recordInbound($sentAt);
-
-        $message = Message::create([
-            'ticket_id' => $ticket->id,
-            'channel_id' => $channel->id,
+        $ticket = Ticket::create([
             'contact_id' => $contact->id,
-            'wa_message_id' => $waId,
-            'direction' => $fromMe ? MessageDirection::OUT : MessageDirection::IN,
-            'type' => $type,
-            'body' => $body,
-            'origin' => $fromMe ? MessageOrigin::FORA_DO_PAINEL : MessageOrigin::CONTATO,
-            'sent_at' => $sentAt,
-            'delivery_status' => $fromMe ? DeliveryStatus::SENT : null,
+            'channel_id' => $channel->id,
+            'status' => $incoming->fromMe ? TicketStatus::EM_ATENDIMENTO : TicketStatus::AGUARDANDO,
+            'opened_at' => $incoming->sentAt,
         ]);
 
-        TicketEvent::create([
-            'ticket_id' => $ticket->id,
-            'type' => $fromMe ? 'message_out' : 'message_in',
-            'payload' => ['message_id' => $message->id],
-        ]);
+        TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'opened']);
 
-        MessageCreated::dispatch($message);
-        TicketUpdated::dispatch($ticket);
-
-        return $message;
+        return $ticket;
     }
 }

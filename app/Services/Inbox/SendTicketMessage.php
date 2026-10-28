@@ -26,7 +26,8 @@ class SendTicketMessage
 {
     public function __invoke(Ticket $ticket, User $author, string $text): Message
     {
-        $contact = $ticket->contact;
+        $contact = $ticket->contact()->firstOrFail();
+        $channel = $ticket->channel()->firstOrFail();
 
         $message = Message::create([
             'ticket_id' => $ticket->id,
@@ -43,7 +44,7 @@ class SendTicketMessage
         MessageCreated::dispatch($message);
 
         try {
-            $response = (new WahaClient($ticket->channel))->sendText($contact->wa_id ?? (string) $contact->lid, $text);
+            $response = (new WahaClient($channel))->sendText($contact->wa_id ?? (string) $contact->lid, $text);
         } catch (Throwable $e) {
             // Se o eco do celular já casou com a linha (ela ganhou o id), a mensagem saiu: não é falha.
             if ($message->refresh()->wa_message_id === null) {

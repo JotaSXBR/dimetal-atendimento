@@ -22,8 +22,9 @@ class ApplyAck
     public function __invoke(WahaEvent $event): bool
     {
         $data = $event->payload['payload'] ?? null;
-        $waId = is_array($data) && is_string($data['id'] ?? null) ? Message::waKey($data['id']) : null;
-        $status = is_array($data) ? $this->statusFor($data['ack'] ?? null) : null;
+        $data = is_array($data) ? $data : [];
+        $waId = is_string($data['id'] ?? null) ? Message::waKey($data['id']) : null;
+        $status = $this->statusFor($data['ack'] ?? null);
 
         if ($event->channel === null || $waId === null || $status === null) {
             return true;
@@ -31,39 +32,50 @@ class ApplyAck
 
         // Entregue e lido chegam quase juntos e em workers diferentes: a linha é lida com trava para que
         // o job que leu "entregue" não grave por cima de "lido".
-        return DB::transaction(function () use ($event, $waId, $status): bool {
-            $message = Message::query()
-                ->where('channel_id', $event->channel_id)
-                ->where('wa_message_id', $waId)
-                ->lockForUpdate()
-                ->first();
+        return DB::transaction(fn (): bool => $this->apply($event, $waId, $status));
+    }
 
-            if ($message === null) {
-                return false;
-            }
+    private function apply(WahaEvent $event, string $waId, DeliveryStatus $status): bool
+    {
+        $message = Message::query()
+            ->where('channel_id', $event->channel_id)
+            ->where('wa_message_id', $waId)
+            ->lockForUpdate()
+            ->first();
 
-            $current = $message->delivery_status?->rank() ?? 0;
+        if ($message === null) {
+            return false;
+        }
 
-            if ($status === DeliveryStatus::FAILED ? $current > 1 : $status->rank() <= $current) {
-                return true;
-            }
-
-            $message->delivery_status = $status;
-
-            if ($status->rank() >= DeliveryStatus::DELIVERED->rank()) {
-                $message->delivered_at ??= $event->received_at;
-            }
-
-            if ($status === DeliveryStatus::READ) {
-                $message->read_at ??= $event->received_at;
-            }
-
-            $message->save();
-
-            MessageStatusChanged::dispatch($message);
-
+        if (! $this->advances($message->delivery_status, $status)) {
             return true;
-        });
+        }
+
+        $message->delivery_status = $status;
+
+        if ($status->rank() >= DeliveryStatus::DELIVERED->rank()) {
+            $message->delivered_at ??= $event->received_at;
+        }
+
+        if ($status === DeliveryStatus::READ) {
+            $message->read_at ??= $event->received_at;
+        }
+
+        $message->save();
+
+        MessageStatusChanged::dispatch($message);
+
+        return true;
+    }
+
+    /**
+     * Só avança: falha não sobrescreve entregue/lido, e um estado igual ou anterior é ignorado.
+     */
+    private function advances(?DeliveryStatus $current, DeliveryStatus $new): bool
+    {
+        $rank = $current?->rank() ?? 0;
+
+        return $new === DeliveryStatus::FAILED ? $rank <= 1 : $new->rank() > $rank;
     }
 
     private function statusFor(mixed $code): ?DeliveryStatus

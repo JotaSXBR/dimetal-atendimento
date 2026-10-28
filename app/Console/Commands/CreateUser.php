@@ -33,7 +33,8 @@ class CreateUser extends Command
             return self::FAILURE;
         }
 
-        $password = (string) $this->secret('Senha');
+        $secret = $this->secret('Senha');
+        $password = is_string($secret) ? $secret : '';
 
         if (strlen($password) < 8) {
             $this->error('A senha precisa ter ao menos 8 caracteres.');
