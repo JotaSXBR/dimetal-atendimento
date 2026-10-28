@@ -23,5 +23,8 @@
     },
     "overrides": {
         "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
+    },
+    "devDependencies": {
+        "fontaine": "^0.8.2"
     }
 }
