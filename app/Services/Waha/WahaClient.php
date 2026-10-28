@@ -29,24 +29,26 @@ class WahaClient
 
     public function start(): void
     {
-        $response = $this->request()->post('/api/sessions', [
-            'name' => $this->sessionName(),
-            'start' => true,
-            'config' => $this->sessionConfig(),
-        ]);
+        $existing = $this->request()->get('/api/sessions/'.$this->sessionName());
 
-        if ($response->status() === 422) {
-            // Sessão já existe: reaplica a configuração (webhook/HMAC) antes de iniciar.
-            $this->ensureOk($this->request()->put('/api/sessions/'.$this->sessionName(), [
+        if ($existing->status() === 404) {
+            $this->ensureOk($this->request()->post('/api/sessions', [
                 'name' => $this->sessionName(),
+                'start' => true,
                 'config' => $this->sessionConfig(),
             ]));
-            $this->ensureOk($this->request()->post($this->sessionPath('/start', true)));
 
             return;
         }
 
-        $this->ensureOk($response);
+        $this->ensureOk($existing);
+
+        // Sessão já existe: reaplica a configuração (webhook/HMAC) e inicia (idempotente).
+        $this->ensureOk($this->request()->put('/api/sessions/'.$this->sessionName(), [
+            'name' => $this->sessionName(),
+            'config' => $this->sessionConfig(),
+        ]));
+        $this->ensureOk($this->request()->post($this->sessionPath('/start', true)));
     }
 
     /**
