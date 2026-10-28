@@ -48,6 +48,8 @@ services:
     environment:
       <<: *app-env
       AUTORUN_ENABLED: "true"
+      # Coolify gera o domínio a partir desta chave e roteia para a porta 8080 do container.
+      SERVICE_FQDN_APP_8080: ${SERVICE_FQDN_APP_8080}
     expose:
       - "8080"
     volumes:
