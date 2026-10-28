@@ -32,8 +32,8 @@ de funcionamento, tela de gestão de setores.
 
 **Visibilidade** (`Ticket::visibleTo`)
 - Supervisor e admin: todos. Usuário inativo: nenhum.
-- Atendente: tickets **sem setor**, tickets de um dos **seus setores** (`aguardando` e `em_atendimento`) e os
-  que ele assumiu. Ele vê a conversa dos colegas do seu setor, mas só o responsável (ou supervisor/admin) responde.
+- Atendente: os que ele assumiu; os `aguardando` **sem setor** ou de um dos **seus setores**; e os
+  `em_atendimento` de um dos seus setores. Ticket `em_atendimento` sem setor só é visto por quem o assumiu. Ele vê a conversa dos colegas do seu setor, mas só o responsável (ou supervisor/admin) responde.
 - Atendente sem nenhum setor vê só os sem setor e os próprios.
 - Isso amplia a regra da fatia 1 (que mostrava só a fila e os próprios) porque tomar o ticket de um colega exige
   vê-lo. Ver "Decisões do builder".
@@ -62,7 +62,7 @@ qualquer, se o ticket não tem setor). Ticket vai a `em_atendimento` com o novo 
 **Opção "pode transferir"** (`users.can_transfer`, padrão verdadeiro): quando desligada para um atendente, ele deixa
 de **transferir** e de **tomar** tickets. Continua assumindo tickets livres, respondendo e encerrando os seus.
 Supervisor e admin não são afetados. Enquanto não há tela de usuários, liga-se e desliga-se por
-`php artisan user:can-transfer {email} {on|off}`; a opção na tela chega com a gestão de usuários.
+`php artisan app:user-can-transfer {email} {on|off}`; a opção na tela chega com a gestão de usuários.
 
 **Protocolo**
 - Formato `AAAA-NNNNNN`; o ano é o de `opened_at` no fuso de exibição (`America/Sao_Paulo`), não em UTC,
@@ -79,7 +79,7 @@ Supervisor e admin não são afetados. Enquanto não há tela de usuários, liga
   (`last_outbound_at` maior que `last_inbound_at`). Ticket cuja última mensagem é do cliente espera resposta
   humana e **nunca** fecha sozinho. Movimento = o maior entre `last_inbound_at`, `last_outbound_at` e
   `opened_at`.
-- Comando agendado a cada 10 minutos, um `UPDATE` condicional que também grava o evento `closed` com ator
+- Comando `app:close-inactive-tickets`, agendado a cada 10 minutos, um `UPDATE` condicional que também grava o evento `closed` com ator
   nulo e `{reason: inatividade}`. Idempotente: rodar duas vezes não duplica nem reabre.
 
 ## 4. Dados

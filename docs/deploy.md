@@ -130,6 +130,13 @@ Recursos do beta hoje:
 | `pg-beta` | `m3kcov2jn01utd97jjho2lox` |
 | `redis-beta` | `vp3u0qyz2tsmyveqrb6ml2zi` |
 
+### Tarefas agendadas
+
+O `scheduler-beta` roda `schedule:work`. Hoje há uma tarefa: `app:close-inactive-tickets`, a cada 10 minutos
+(encerra ticket parado há mais de 24 h cuja última mensagem é nossa). Nova tarefa em `routes/console.php` entra
+sozinha no próximo deploy do scheduler; a opção "pode transferir" de um usuário se muda por
+`php artisan app:user-can-transfer {email} {on|off}` (terminal do `app-beta` no Coolify).
+
 ### Reverb (tempo real da Inbox)
 
 Origens aceitas no websocket: `config/reverb.php` lê `REVERB_ALLOWED_ORIGINS` (hosts ou URLs separados por
