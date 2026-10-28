@@ -24,6 +24,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $password
  * @property UserRole $role
  * @property bool $active
+ * @property bool $can_transfer
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -50,6 +51,7 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'role' => UserRole::class,
             'active' => 'boolean',
+            'can_transfer' => 'boolean',
         ];
     }
 
@@ -69,6 +71,14 @@ class User extends Authenticatable implements PasskeyUser
     public function canSeeAllSectors(): bool
     {
         return $this->role !== UserRole::ATENDENTE;
+    }
+
+    /**
+     * Pode atender tickets desse setor: ticket sem setor é de todos; supervisor e admin atendem qualquer um.
+     */
+    public function canHandleSector(?int $sectorId): bool
+    {
+        return $sectorId === null || $this->canSeeAllSectors() || $this->sectors()->whereKey($sectorId)->exists();
     }
 
     /**

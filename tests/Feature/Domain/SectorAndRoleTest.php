@@ -20,7 +20,7 @@ class SectorAndRoleTest extends TestCase
         $this->seed();
 
         $this->assertSame(
-            ['Comercial', 'Financeiro', 'Vendas', 'Diretoria', 'SAC'],
+            ['Vendas', 'Financeiro', 'Comercial', 'SAC', 'Diretoria'],
             Sector::orderBy('menu_order')->pluck('name')->all()
         );
     }

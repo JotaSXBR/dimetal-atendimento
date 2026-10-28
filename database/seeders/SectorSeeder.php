@@ -11,7 +11,7 @@ class SectorSeeder extends Seeder
     /**
      * Ordem do menu do chatbot.
      */
-    public const SECTORS = ['Comercial', 'Financeiro', 'Vendas', 'Diretoria', 'SAC'];
+    public const SECTORS = ['Vendas', 'Financeiro', 'Comercial', 'SAC', 'Diretoria'];
 
     public function run(): void
     {
