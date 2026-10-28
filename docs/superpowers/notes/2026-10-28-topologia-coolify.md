@@ -70,6 +70,7 @@ montada com recursos nativos do Coolify — Applications, Databases e, se precis
 | `worker-beta` | Application (Git) | `jme7xgh4ugrrf3qbrxaclwlj` |
 | `scheduler-beta` | Application (Git) | `3thwz32zdtnmr2sme70jrpdf` |
 | `waha-beta` | Application (imagem) | `gxpbtauw9ylqyd8nni3keznx` |
+| `reverb-beta` | Application (Git, estágio `reverb`) | `oncydt57liptigusmj64ac3o` |
 | `pg-beta` | Database PostgreSQL 18 | `m3kcov2jn01utd97jjho2lox` |
 | `redis-beta` | Database Redis 8 | `vp3u0qyz2tsmyveqrb6ml2zi` |
 

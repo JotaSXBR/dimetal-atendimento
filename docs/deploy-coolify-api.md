@@ -60,6 +60,12 @@ curl -s -X POST "$COOLIFY_URL/api/v1/applications/public" \
 `start_command`: em build por Dockerfile o Coolify o ignora e o container sobe o servidor web. O
 healthcheck deles é do tipo `cmd` (`healthcheck-queue` e `healthcheck-schedule`).
 
+`reverb-beta` também é igual ao app, com `dockerfile_target_build` `reverb`, alias `reverb-beta`,
+healthcheck `http` em `/up` (porta 8080) e `domains` `https://dimetal-beta.fluxie.com.br/app`
+(roteamento por caminho no mesmo domínio; depois do create, `PATCH` com `is_stripprefix_enabled: false`,
+senão o Traefik remove `/app` e o Reverb responde 404). `dockerfile_target_build` **não** é aceito no `POST`:
+crie e depois `PATCH /applications/{uuid}` com `{"dockerfile_target_build":"reverb"}`.
+
 WAHA é `POST /applications/dockerimage` com `docker_registry_image_name: devlikeapro/waha`,
 `docker_registry_image_tag: gows-2026.10.1`, `ports_exposes: 3000`,
 `custom_network_aliases: waha-beta`, `connect_to_docker_network: true`, sem domínio e healthcheck

@@ -27,7 +27,7 @@ jobs:
       - name: Sincroniza beta com main
         run: git push origin HEAD:refs/heads/beta
 
-      - name: Deploy no Coolify (app, worker, scheduler)
+      - name: Deploy no Coolify (app, worker, scheduler, reverb)
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
@@ -35,4 +35,4 @@ jobs:
           curl -fsS -X POST "$COOLIFY_URL/api/v1/deploy" \
             -H "Authorization: Bearer $COOLIFY_API_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"uuid":"ipbknnticmaubtzdonxjqgy6,jme7xgh4ugrrf3qbrxaclwlj,3thwz32zdtnmr2sme70jrpdf"}'
+            -d '{"uuid":"ipbknnticmaubtzdonxjqgy6,jme7xgh4ugrrf3qbrxaclwlj,3thwz32zdtnmr2sme70jrpdf,oncydt57liptigusmj64ac3o"}'
