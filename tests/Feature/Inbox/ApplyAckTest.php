@@ -79,6 +79,16 @@ class ApplyAckTest extends TestCase
         $this->assertNotNull($message->fresh()?->read_at);
     }
 
+    public function test_ack_com_prefixo_de_chat_diferente_casa_pelo_id_da_mensagem(): void
+    {
+        $message = $this->message();
+        $message->update(['wa_message_id' => 'true_5516997524950@c.us_3EB0AABBCCDDEEFF0011']);
+
+        $this->assertTrue(app(ApplyAck::class)($this->ack(3, 'true_16449842241553@lid_3EB0AABBCCDDEEFF0011')));
+
+        $this->assertSame(DeliveryStatus::READ, $message->fresh()?->delivery_status);
+    }
+
     public function test_ack_atrasado_nunca_rebaixa_o_estado(): void
     {
         $message = $this->message(DeliveryStatus::READ);

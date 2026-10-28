@@ -7,6 +7,7 @@ use App\Events\MessageStatusChanged;
 use App\Models\Message;
 use App\Models\WahaEvent;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Aplica um `message.ack` do WAHA na mensagem correspondente.
@@ -32,11 +33,7 @@ class ApplyAck
         // Entregue e lido chegam quase juntos e em workers diferentes: a linha é lida com trava para que
         // o job que leu "entregue" não grave por cima de "lido".
         return DB::transaction(function () use ($event, $waId, $status): bool {
-            $message = Message::query()
-                ->where('channel_id', $event->channel_id)
-                ->where('wa_message_id', $waId)
-                ->lockForUpdate()
-                ->first();
+            $message = $this->find($event->channel_id, $waId);
 
             if ($message === null) {
                 return false;
@@ -64,6 +61,29 @@ class ApplyAck
 
             return true;
         });
+    }
+
+    /**
+     * O ack e a mensagem podem citar o mesmo id com prefixos de chat diferentes (`@c.us` x `@lid`); o sufixo
+     * após o último `_` é o id da mensagem no WhatsApp. Casa exato primeiro e cai para o sufixo.
+     *
+     * shortcut: o fallback varre as mensagens de 7 dias do canal, sem índice; indexar o sufixo se o volume pedir.
+     */
+    private function find(?int $channelId, string $waId): ?Message
+    {
+        $base = Message::query()->where('channel_id', $channelId)->lockForUpdate();
+
+        $message = (clone $base)->where('wa_message_id', $waId)->first();
+        $suffix = Str::afterLast($waId, '_');
+
+        if ($message !== null || ! preg_match('/^[A-Za-z0-9]{10,}$/', $suffix)) {
+            return $message;
+        }
+
+        return $base
+            ->where('wa_message_id', 'like', '%\_'.$suffix)
+            ->where('created_at', '>=', now()->subDays(7))
+            ->first();
     }
 
     private function statusFor(mixed $code): ?DeliveryStatus
