@@ -50,7 +50,7 @@ curl -s -X POST "$COOLIFY_URL/api/v1/applications/public" \
     "connect_to_docker_network":true,"custom_network_aliases":"app-beta",
     "health_check_enabled":true,"health_check_path":"/up","health_check_port":8080,
     "health_check_scheme":"http","health_check_interval":15,"health_check_timeout":5,
-    "health_check_retries":5,"health_check_start_period":60,
+    "health_check_retries":5,"health_check_start_period":15,
     "instant_deploy":false
   }'
 ```

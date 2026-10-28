@@ -202,7 +202,7 @@ class WahaClient
     {
         $body = mb_substr($response->body(), 0, 200);
 
-        $message = $response->json('message');
+        $message = $response->json('message') ?? $response->json('exception.message');
 
         if (is_string($message) && $message !== '') {
             $body = $message;

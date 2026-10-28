@@ -30,6 +30,7 @@ use Illuminate\Support\Str;
  * @property DeliveryStatus|null $delivery_status
  * @property CarbonImmutable|null $delivered_at
  * @property CarbonImmutable|null $read_at
+ * @property string|null $failure_reason
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -47,6 +48,7 @@ use Illuminate\Support\Str;
     'delivery_status',
     'delivered_at',
     'read_at',
+    'failure_reason',
 ])]
 class Message extends Model
 {

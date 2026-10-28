@@ -74,7 +74,7 @@ Healthchecks do Coolify (a troca de container só acontece quando o novo está s
 
 | Serviço | Tipo | Verificação |
 |---|---|---|
-| `app` | http | `GET /up` na porta 80, início de 60 s |
+| `app` | http | `GET /up` na porta 8080, início de 15 s, 5 tentativas |
 | `waha` | http | `GET /ping` na porta 3000, host `localhost`, retorno 200 (não exige API key) |
 | `worker` | cmd | `healthcheck-queue` (script da imagem; confirma o `queue:work`) |
 | `scheduler` | cmd | `healthcheck-schedule` (script da imagem; confirma o `schedule:work`) |
@@ -132,6 +132,10 @@ Recursos do beta hoje:
 
 ### Reverb (tempo real da Inbox)
 
+Origens aceitas no websocket: `config/reverb.php` lê `REVERB_ALLOWED_ORIGINS` (hosts ou URLs separados por
+vírgula, aceita curinga) e, sem ela, usa o host do `APP_URL`. O Reverb compara só o host da origem. Não use
+`*` em produção.
+
 `reverb-beta` é um Application do mesmo Dockerfile, estágio `reverb` (`reverb:start` na porta 8080),
 alias `reverb-beta`, healthcheck `http` em `/up`, sem migração (`AUTORUN_ENABLED=false`).
 
@@ -150,11 +154,20 @@ alias `reverb-beta`, healthcheck `http` em `/up`, sem migração (`AUTORUN_ENABL
 
 ## 7. Atualização e rollback
 
-Merge em `main` → workflow `tests` → se passar, `deploy-beta` sincroniza a branch `beta` e chama
-`POST /api/v1/deploy` para `app-beta`, `worker-beta`, `scheduler-beta` e `reverb-beta` (o `waha-beta` fica de fora: tag
-fixa e sessão única do WhatsApp). O `migrate --force` roda no start do `app`. Segredos do repositório:
+Merge em `main` → workflow `tests` → se passar, `deploy-beta` sincroniza a branch `beta` e faz o deploy **em
+ordem**, esperando cada etapa terminar com sucesso (status `finished` no Coolify, que só troca o container
+depois do healthcheck): primeiro `app-beta`, que roda o `migrate --force` no start; depois `worker-beta`,
+`scheduler-beta` e `reverb-beta` (o `waha-beta` fica de fora: tag fixa e sessão única do WhatsApp). Se uma
+etapa falhar, o workflow para e não troca o resto. O Coolify limita builds simultâneas (padrão 2), por isso
+o workflow não manda tudo de uma vez. Segredos do repositório:
 `COOLIFY_URL` e `COOLIFY_API_TOKEN`. Branches de PR são apagadas ao mergear. O volume preserva a
 sessão, então o WhatsApp volta sozinho (`WAHA_WORKER_RESTART_SESSIONS=true`).
+
+**Regra das migrações (expand/contract).** Entre o app novo subir e o worker, o scheduler e o reverb trocarem,
+há código das duas versões rodando contra o mesmo banco. Toda migração precisa funcionar com o código da
+versão anterior: adicionar coluna nullable ou tabela nova é seguro; remover ou renomear coluna, mudar tipo
+ou reescrever dados que o código velho ainda grava vai em dois deploys (primeiro o código novo que não usa
+mais o campo, depois a migração que o remove).
 
 Rollback: reimplante o commit anterior. Migrações destrutivas exigem migração de volta escrita à mão
 — evite drop de coluna no mesmo deploy que remove o código que a usa.

@@ -13,6 +13,7 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
 use App\Services\Waha\WahaClient;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -46,7 +47,7 @@ class SendTicketMessage
         } catch (Throwable $e) {
             // Se o eco do celular já casou com a linha (ela ganhou o id), a mensagem saiu: não é falha.
             if ($message->refresh()->wa_message_id === null) {
-                $message->update(['delivery_status' => DeliveryStatus::FAILED]);
+                $message->update(['delivery_status' => DeliveryStatus::FAILED, 'failure_reason' => Str::limit($e->getMessage(), 250)]);
                 MessageStatusChanged::dispatch($message);
             }
 
