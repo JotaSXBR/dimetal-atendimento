@@ -65,9 +65,11 @@ php /var/www/html/artisan schedule:work
 
 WAHA é `POST /applications/dockerimage` com `docker_registry_image_name: devlikeapro/waha`,
 `docker_registry_image_tag: gows-2026.10.1`, `ports_exposes: 3000`,
-`custom_network_aliases: waha-beta`, `connect_to_docker_network: true`, sem domínio e **com
-`health_check_enabled: false`** — a imagem não tem `curl` nem `wget`, então qualquer healthcheck HTTP
-do Coolify reprova e o deploy é marcado como falho.
+`custom_network_aliases: waha-beta`, `connect_to_docker_network: true`, sem domínio e healthcheck
+`health_check_type: http`, `health_check_path: /ping`, `health_check_port: 3000`,
+`health_check_host: localhost`, `health_check_return_code: 200` — a imagem não tem `curl` nem `wget`,
+então o tipo `cmd` com `curl` reprova. Worker e scheduler usam `health_check_type: cmd` com
+`healthcheck-queue` e `healthcheck-schedule`.
 
 `custom_network_aliases` não aparece no OpenAPI, mas o controller aceita no create e no `PATCH
 /applications/{uuid}`.

@@ -1,5 +1,11 @@
 # Fase 0 — Canal WhatsApp (WAHA/GOWS) — plano de implementação
 
+> **Status (2026-10-28): Fase 0 concluída e em uso no `beta`.** Este plano é histórico. Desvios em
+> relação ao texto abaixo: a configuração do WAHA saiu do banco (tela Configurações > WhatsApp
+> removida) e vem do ambiente (`WAHA_URL`, `WAHA_API_KEY`); o HMAC do webhook deriva da `APP_KEY` e é
+> registrado na sessão pelo app; WAHA atualizado para 2026.10.1; deploy automático por GitHub Actions
+> (`deploy-beta.yml`). Referência atual: `docs/deploy.md` e `docs/superpowers/specs/waha-config.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** deixar de pé a base do produto (Laravel 13 + Livewire 4 + PostgreSQL 18) com login por

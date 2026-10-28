@@ -5,18 +5,19 @@ Levantado em 2026-10-27 direto da documentação oficial (`waha.devlike.pro/docs
 
 Este documento existe porque o comportamento de sessão, presença e histórico do WAHA **não é
 intuitivo** e porque quase tudo que sobra de configuração nele é variável de ambiente — ou seja,
-mora no Coolify e não no banco do app.
+mora no Coolify e não no banco do app. O app não tem tela para servidor, chave nem HMAC.
 
 ## 1. O que é ambiente e o que é sistema
 
 | Onde | O quê | Por quê |
 |---|---|---|
-| **Coolify** (env do container WAHA) | engine, API key, HMAC do webhook, URL do webhook, limites de histórico do GOWS, presença automática, pasta de sessão/mídia | o WAHA só lê env antes de subir; não existe tela dele no nosso app |
-| **Banco do app** (tela Configurações) | URL interna do WAHA, API key (cifrada), segredo HMAC, nome da sessão, dias de backfill, SLA, horário, empresa, SMTP | muda sem redeploy e fica auditável |
-| **`.env` do app** | `APP_KEY`, conexão Postgres/Redis, domínio | bootstrap e infraestrutura |
+| **Coolify** (env do container WAHA) | engine, API key, limites de histórico do GOWS, presença automática, pasta de sessão/mídia | o WAHA só lê env antes de subir |
+| **Env do app/worker** | `WAHA_URL`, `WAHA_API_KEY`, `WAHA_WEBHOOK_URL` (opcional) | infraestrutura; o app não pede isso na tela |
+| **Sessão do WAHA** (registrada pelo app ao clicar **Conectar**) | URL do webhook, eventos, retries e HMAC | `POST/PUT /api/sessions`; o HMAC é derivado da `APP_KEY` |
+| **Banco do app** (tela Canais) | nome do canal, nome da sessão, dias de backfill; futuramente SLA, horário, empresa, SMTP | muda sem redeploy e fica auditável |
 
-O **mesmo valor** de API key e HMAC aparece nos dois lados (env do WAHA e tela do app). O app
-guarda cópia cifrada para poder chamar o WAHA; o WAHA guarda para autenticar as chamadas.
+A **API key** é a mesma (texto puro) no env do WAHA e no env do app. O HMAC não é digitado em lugar
+algum: `hash_hmac('sha256', 'waha-webhook', APP_KEY)`, enviado ao WAHA na configuração da sessão.
 
 ## 2. Matriz de ambiente — `main` e `beta`
 
@@ -34,11 +35,6 @@ compartilhar sessão: o WhatsApp derruba o cliente anterior quando o mesmo núme
 | `WAHA_WORKER_RESTART_SESSIONS` | `true` | `true` |
 | `WAHA_PRESENCE_AUTO_ONLINE` | `false` | `false` |
 | `WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS` | `0` | `0` |
-| `WHATSAPP_HOOK_URL` | `http://<app-main>/webhooks/waha` | `http://<app-beta>/webhooks/waha` |
-| `WHATSAPP_HOOK_HMAC_KEY` | `<segredo 1>` | `<segredo 2>` |
-| `WHATSAPP_HOOK_RETRIES_POLICY` | `exponential` | `exponential` |
-| `WHATSAPP_HOOK_RETRIES_DELAY_SECONDS` | `3` | `3` |
-| `WHATSAPP_HOOK_RETRIES_ATTEMPTS` | `8` | `8` |
 | `WHATSAPP_FILES_FOLDER` | `/app/.media` | `/app/.media` |
 | `WHATSAPP_FILES_LIFETIME` | `0` | `0` |
 | `WAHA_EVENTS_DOWNLOAD_MEDIA` | `true` | `true` |
@@ -50,7 +46,8 @@ compartilhar sessão: o WhatsApp derruba o cliente anterior quando o mesmo núme
 | `WAHA_GOWS_DEVICE_HISTORY_SYNC_FULL_SYNC_SIZE_MB_LIMIT` | `256` | `256` |
 | `WAHA_GOWS_DEVICE_HISTORY_SYNC_STORAGE_QUOTA_MB` | `512` | `512` |
 
-`WHATSAPP_HOOK_EVENTS` **não** deve ser `*`. Assinar só o que o sistema usa:
+O webhook (URL, HMAC, retries) não é mais variável do WAHA: o app o registra na sessão. Os eventos
+**não** devem ser `*`. O app assina só o que o sistema usa:
 
 ```
 session.status,message,message.any,message.ack,message.reaction,message.revoked,presence.update
@@ -99,12 +96,13 @@ Postgres. Funciona, mas mistura estado do WAHA no banco do app e exige `max_conn
 
 WAHA **sem domínio público**: o app o alcança pelo DNS interno do Coolify
 (`http://<service-name>:3000`) e busca o QR pelo servidor. O webhook é uma chamada WAHA → app na
-rede interna, então `WHATSAPP_HOOK_URL` usa o hostname interno do app, não o domínio público.
+rede interna, então `WAHA_WEBHOOK_URL` (env do app) usa o hostname interno do app, não o domínio público.
 
 `WAHA_DASHBOARD_ENABLED=false` e `WHATSAPP_SWAGGER_ENABLED=false` fecham as duas telas que
 exigiriam senha própria. Diagnóstico é feito pela tela Canais do app e pelos logs do container.
 
-`WAHA_API_KEY` em `sha512:`: o valor em texto puro fica só na tela do app, nunca no env do WAHA.
+`WAHA_API_KEY`: mesmo valor (texto puro) no WAHA e no env do app. Com `sha512:<hash>` no WAHA, o app
+precisaria do texto puro em `WAHA_API_KEY`, pois o hash não vale como chave de chamada.
 
 ## 4. Sessão: estados e endpoints
 

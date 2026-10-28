@@ -80,8 +80,8 @@ Achados que viraram documentação:
 
 - `custom_network_aliases` não está no OpenAPI, mas o controller aceita no create e no PATCH.
 - `POST /storages` exige `name` em volume persistente (422 sem ele).
-- A imagem do WAHA não tem `curl` nem `wget`: qualquer healthcheck HTTP do Coolify reprova e marca
-  o deploy como falho. Healthcheck do `waha` fica desligado.
+- A imagem do WAHA não tem `curl` nem `wget`: healthcheck `cmd` com `curl` reprova. O que funciona é o
+  tipo `http` em `/ping` (porta 3000, retorno 200), executado pelo Coolify.
 - O Redis criado como Database **gera senha**; `REDIS_PASSWORD` é obrigatório.
 - `connect_to_docker_network` só aparece dentro de `settings` no `GET`.
 
