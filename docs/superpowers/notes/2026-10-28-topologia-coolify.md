@@ -53,7 +53,7 @@ montada com recursos nativos do Coolify — Applications, Databases e, se precis
 - Os quatro Applications entram na rede `coolify` com alias próprio, porque main e beta convivem no
   mesmo VPS: `app-beta`, `waha-beta`… evitam colisão de DNS.
 - Só `app-beta` tem `AUTORUN_ENABLED=true` (migrate no start). Domínio só nele.
-- WAHA aponta o webhook para `http://app-beta/webhooks/waha`, nunca para o domínio público.
+- WAHA aponta o webhook para `http://app-beta:8080/webhooks/waha`, nunca para o domínio público.
 
 ## Regra para atualizações (definida pelo dono)
 

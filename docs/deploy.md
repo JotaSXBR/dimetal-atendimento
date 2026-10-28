@@ -68,7 +68,7 @@ sem ele não existe registro `fora_do_painel`. O webhook usa o alias interno, n�
 
 O webhook, os eventos e o HMAC não são mais variáveis do WAHA: o app os registra na sessão ao clicar
 **Conectar** (segredo derivado da `APP_KEY`). Para o webhook ir pela rede interna, defina
-`WAHA_WEBHOOK_URL=http://app-beta/webhooks/waha` no app; sem isso usa `APP_URL`.
+`WAHA_WEBHOOK_URL=http://app-beta:8080/webhooks/waha` no app e no worker (a imagem escuta na 8080; sem a porta o WAHA leva ECONNREFUSED); sem a variável usa `APP_URL`. Depois de mudá-la, reaplique a sessão (Conectar no cartão do canal) para o WAHA gravar o novo endereço.
 
 Healthchecks do Coolify (a troca de container só acontece quando o novo está saudável):
 
