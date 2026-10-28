@@ -33,17 +33,13 @@ class SettingStoreTest extends TestCase
         $this->assertSame('chave-super-secreta', Setting::get('waha.api_key'));
     }
 
-    public function test_waha_settings_le_as_chaves_com_prefixo(): void
+    public function test_waha_settings_le_o_ambiente_e_deriva_o_segredo_do_webhook(): void
     {
-        Setting::put('waha.base_url', 'http://waha:3000');
-        Setting::put('waha.session_name', 'main');
-        Setting::put('waha.api_key', 'chave', 'secret');
-        Setting::put('waha.webhook_secret', 'segredo', 'secret');
+        config(['services.waha.url' => 'http://waha:3000/', 'services.waha.key' => 'chave']);
 
         $this->assertSame('http://waha:3000', WahaSettings::baseUrl());
-        $this->assertSame('main', WahaSettings::sessionName());
         $this->assertSame('chave', WahaSettings::apiKey());
-        $this->assertSame('segredo', WahaSettings::webhookSecret());
+        $this->assertSame(hash_hmac('sha256', 'waha-webhook', config('app.key')), WahaSettings::webhookSecret());
         $this->assertTrue(WahaSettings::isConfigured());
     }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Services;
 use App\Models\Channel;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaRequestException;
+use App\Settings\WahaSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -102,7 +103,7 @@ class WahaClientTest extends TestCase
 
         (new WahaClient($channel))->start();
 
-        Http::assertSent(fn ($request) => $request['config']['webhooks'][0]['hmac']['key'] === \App\Settings\WahaSettings::webhookSecret()
+        Http::assertSent(fn ($request) => $request['config']['webhooks'][0]['hmac']['key'] === WahaSettings::webhookSecret()
             && str_ends_with($request['config']['webhooks'][0]['url'], '/webhooks/waha'));
     }
 }
