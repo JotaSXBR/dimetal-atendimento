@@ -6,7 +6,6 @@ use App\Enums\ChannelStatus;
 use App\Models\Channel;
 use App\Models\WahaEvent;
 use App\Services\Waha\WahaClient;
-use App\Settings\WahaSettings;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -23,6 +22,10 @@ class Channels extends Component
     public array $lastEvents = [];
 
     public ?string $errorMessage = null;
+
+    public string $sessionName = '';
+
+    public string $channelName = '';
 
     public string $authMethod = 'qr';
 
@@ -42,10 +45,8 @@ class Channels extends Component
 
     public function mount(): void
     {
-        $this->channel = Channel::firstOrCreate(
-            ['waha_session' => WahaSettings::sessionName() ?: 'main'],
-            ['name' => 'WhatsApp principal'],
-        );
+        $this->channel = Channel::query()->first();
+        $this->channelName = $this->channel->name ?? '';
 
         $this->loadEvents();
     }
@@ -59,6 +60,14 @@ class Channels extends Component
                 ? ['required', 'integer', 'min:1', 'max:365']
                 : ['nullable'],
         ]);
+
+        if ($this->channel === null) {
+            $this->validate(['sessionName' => ['required', 'regex:/^[A-Za-z0-9_-]{1,60}$/']], [
+                'sessionName.regex' => 'Use só letras, números, hífen e sublinhado.',
+            ]);
+
+            $this->channel = Channel::create(['name' => $this->sessionName, 'waha_session' => $this->sessionName]);
+        }
 
         $channel = $this->channel();
 
@@ -76,8 +85,20 @@ class Channels extends Component
         $this->setStatus($channel, ChannelStatus::STARTING);
     }
 
+    public function rename(): void
+    {
+        $this->validate(['channelName' => ['required', 'string', 'max:60']]);
+
+        $channel = $this->channel();
+        $channel->update(['name' => trim($this->channelName)]);
+    }
+
     public function disconnect(): void
     {
+        if ($this->channel === null) {
+            return;
+        }
+
         $this->reset('errorMessage', 'qr', 'pairingCode');
 
         try {
@@ -93,6 +114,10 @@ class Channels extends Component
 
     public function refreshStatus(): void
     {
+        if ($this->channel === null) {
+            return;
+        }
+
         $channel = $this->channel();
 
         try {
@@ -175,10 +200,7 @@ class Channels extends Component
 
     private function channel(): Channel
     {
-        return $this->channel ??= Channel::firstOrCreate(
-            ['waha_session' => WahaSettings::sessionName() ?: 'main'],
-            ['name' => 'WhatsApp principal'],
-        );
+        return $this->channel ?? throw new \LogicException('Nenhum canal criado.');
     }
 
     private function setStatus(Channel $channel, ChannelStatus $status): void

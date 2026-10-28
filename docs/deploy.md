@@ -1,139 +1,147 @@
 # Deploy no Coolify — `main` e `beta`
 
-Dois projetos no mesmo VPS, cada um completo e independente: aplicação, worker, scheduler, banco,
-cache e WAHA. Um não enxerga o outro. Só a aplicação tem domínio público.
+Dois projetos no mesmo VPS, cada um completo e independente: seis recursos separados, cada um com
+start/stop, logs, terminal e limites próprios.
 
 ## 1. Topologia
 
 Projeto `dimetal-main` (produção) e projeto `dimetal-beta` (teste), cada um com:
 
-| Serviço | Imagem | Domínio | Volume |
+| Recurso | Tipo no Coolify | Domínio | Volume |
 |---|---|---|---|
-| `app` | build do repositório | **sim**, HTTPS | — |
-| `queue-worker` | mesma build, `php artisan queue:work` | não | — |
-| `scheduler` | mesma build, `php artisan schedule:work` | não | — |
-| `postgres` | `postgres:18-alpine` | não | `postgres-data` → `/var/lib/postgresql` |
-| `redis` | `redis:8-alpine` | não | opcional |
-| `waha` | `devlikeapro/waha:gows` | não | `waha-sessions` → `/app/.sessions`, `waha-media` → `/app/.media` |
+| `app` | Application (Git, `/docker/Dockerfile`) | **sim**, HTTPS | `/var/www/html/storage/app` |
+| `worker` | Application (mesmo Dockerfile, `queue:work`) | não | — |
+| `scheduler` | Application (mesmo Dockerfile, `schedule:work`) | não | — |
+| `pg` | Database PostgreSQL 18 | não | gerenciado pelo Coolify |
+| `redis` | Database Redis 8 | não | gerenciado pelo Coolify |
+| `waha` | Application (imagem `devlikeapro/waha:gows-2026.10.1`) | não | `/app/.sessions`, `/app/.media` |
 
-O `app` chama o WAHA pelo DNS interno do Coolify: `http://<service-name>:3000`. O WAHA chama o app
-pelo hostname interno, não pelo domínio público.
+Não há `compose.coolify.yaml`. Um Service ou uma aplicação docker-compose apareceria como **um**
+recurso com vários containers pendurados — exatamente o que não queremos.
 
-No PostgreSQL 18 o volume é montado em `/var/lib/postgresql` — montar em
-`/var/lib/postgresql/data` faz o container recusar subir.
+Recursos separados só se falam pela rede Docker `coolify`. Por isso:
 
-## 2. Variáveis da aplicação
+- os quatro Applications têm **Connect to predefined network** ligado;
+- cada um tem **Network Aliases** único por projeto: `app-beta`, `worker-beta`, `scheduler-beta`,
+  `waha-beta` (no main, `-main`). Main e beta dividem a rede, então nome sem sufixo resolveria para
+  o projeto errado;
+- `pg` e `redis` não aceitam alias na API: o host é o nome interno que o Coolify gera e mostra na
+  URL interna (estável entre deploys).
 
-Só o que é bootstrap e infraestrutura:
+## 2. Variáveis
+
+Tudo é configurado por recurso, na aba Environment. O que muda por projeto:
 
 ```
 APP_KEY=base64:...
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://atendimento.dimetal.com.br
-APP_TIMEZONE=America/Sao_Paulo
-
-DB_CONNECTION=pgsql
-DB_HOST=<service-name-do-postgres>
-DB_PORT=5432
-DB_DATABASE=dimetal
-DB_USERNAME=dimetal
-DB_PASSWORD=<senha>
-
-REDIS_CLIENT=phpredis
-REDIS_HOST=<service-name-do-redis>
-REDIS_PORT=6379
-QUEUE_CONNECTION=redis
-CACHE_STORE=redis
-SESSION_DRIVER=database
+APP_URL=https://dimetal-beta.fluxie.com.br
+DB_HOST=<host da URL interna do pg>
+DB_PASSWORD=<senha do pg>
+REDIS_HOST=<host da URL interna do redis>
+REDIS_PASSWORD=<senha do redis>
+AUTORUN_ENABLED=true        # só no app; worker e scheduler usam false
+WAHA_URL=http://waha-beta:3000   # app e worker (o worker envia mensagens)
+WAHA_API_KEY=<mesma chave do container waha>
 ```
 
-Não existe `WAHA_*` no `.env` da aplicação: URL, API key, segredo do webhook e nome da sessão moram
-na tabela `settings`, editáveis na tela **Configurações → WhatsApp**, com o segredo cifrado.
+O restante é fixo e igual nos três serviços PHP: `APP_ENV=production`, `APP_DEBUG=false`,
+`APP_TIMEZONE=America/Sao_Paulo`, `LOG_CHANNEL=stderr`, `DB_CONNECTION=pgsql`, `DB_PORT=5432`,
+`DB_DATABASE=dimetal`, `DB_USERNAME=dimetal`, `REDIS_CLIENT=phpredis`, `REDIS_PORT=6379`,
+`SESSION_DRIVER=redis`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis`.
 
-Opcional, apenas para semear um administrador inicial (`php artisan db:seed`): `ADMIN_NAME`,
-`ADMIN_EMAIL`, `ADMIN_PASSWORD`. Depois do primeiro acesso, crie os demais usuários com
-`php artisan app:create-user`.
+`AUTORUN_ENABLED=true` roda migrate/caches/storage link no start do `app`. Ligar isso em worker ou
+scheduler faz três migrações concorrentes.
 
-## 3. Variáveis do WAHA
-
-Use a matriz da seção 2 de [`docs/superpowers/specs/waha-config.md`](superpowers/specs/waha-config.md),
-trocando `main`/`beta`, a API key, o segredo HMAC e o hostname do app:
+No `waha`, a matriz completa está em
+[`docs/superpowers/specs/waha-config.md`](superpowers/specs/waha-config.md). O essencial:
 
 ```
-WAHA_WORKER_ID=waha-main            # waha-beta no projeto beta
+WAHA_WORKER_ID=waha-beta
 WHATSAPP_DEFAULT_ENGINE=GOWS
-TZ=America/Sao_Paulo
-WAHA_API_KEY=sha512:<hash>
-WAHA_DASHBOARD_ENABLED=false
-WHATSAPP_SWAGGER_ENABLED=false
-WAHA_WORKER_RESTART_SESSIONS=true
-WAHA_PRESENCE_AUTO_ONLINE=true
-WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS=25
-WHATSAPP_HOOK_URL=http://<app>/webhooks/waha
-WHATSAPP_HOOK_HMAC_KEY=<segredo>
-WHATSAPP_HOOK_EVENTS=session.status,message,message.ack,message.reaction,message.revoked,presence.update
-WHATSAPP_HOOK_RETRIES_POLICY=exponential
-WHATSAPP_HOOK_RETRIES_DELAY_SECONDS=3
-WHATSAPP_HOOK_RETRIES_ATTEMPTS=8
-WHATSAPP_FILES_FOLDER=/app/.media
-WHATSAPP_FILES_LIFETIME=0
+WAHA_API_KEY=<chave>
+WAHA_PRESENCE_AUTO_ONLINE=False
 WAHA_EVENTS_DOWNLOAD_MEDIA=true
 ```
 
-O mesmo valor de `WAHA_API_KEY` e de `WHATSAPP_HOOK_HMAC_KEY` é digitado na tela **Configurações →
-WhatsApp**. A tela testa a URL e a chave com um `GET /api/sessions` antes de gravar.
+`message.any` é obrigatório: `message` não entrega o que foi enviado por outro aparelho da conta, e
+sem ele não existe registro `fora_do_painel`. O webhook usa o alias interno, não o domínio público.
 
-Cada projeto usa **um número e uma sessão**, nunca compartilhados: reconectar o mesmo número em
-outro cliente derruba o anterior. `main` usa o número real, `beta` o chip de teste.
+O webhook, os eventos e o HMAC não são mais variáveis do WAHA: o app os registra na sessão ao clicar
+**Conectar** (segredo derivado da `APP_KEY`). Para o webhook ir pela rede interna, defina
+`WAHA_WEBHOOK_URL=http://app-beta/webhooks/waha` no app; sem isso usa `APP_URL`.
+
+Healthcheck do `waha`: tipo `cmd`, `curl -fsS http://127.0.0.1:3000/ping`, início de 60 s. Validado no beta
+antes do main; se o `/ping` exigir a API key, usar `WAHA_API_KEY_EXCLUDE_PATH=ping`.
+
+## 3. Domínio e HTTPS
+
+Só o `app` recebe domínio. O Coolify cuida do certificado; `bootstrap/app.php` confia no proxy
+(`trustProxies(at: '*')`), sem o que o Laravel geraria URLs `http://` e cookies sem `Secure`.
 
 ## 4. Persistência da sessão
 
-O volume `waha-sessions` em `/app/.sessions` é o que faz o QR sobreviver a redeploy. Sem ele, todo
-deploy pede leitura de QR de novo. O `waha-media` em `/app/.media` guarda a mídia temporária do
-WAHA; o app baixa e guarda a própria cópia, então esse volume não é backup.
+O volume `/app/.sessions` do `waha` é o que faz o QR sobreviver a redeploy. `/app/.media` é mídia
+temporária do WAHA — o app guarda a própria cópia, então não é backup.
+
+`app` guarda mídia do painel em `/var/www/html/storage/app`. Worker e scheduler **não** montam esse
+volume: nada em Fase 0 escreve ali. Quando a mídia entrar, decidir entre montar o mesmo volume nos
+três ou usar storage externo.
 
 ## 5. Fluxo de branches
 
-- `main` → produção. Recebe merge apenas por PR com o check `tests` verde (branch protegida, sem
-  force push).
-- `beta` → ambiente de teste. `git push origin beta` já reconstrói.
-- `beta` é sincronizada a partir de `main` (`git checkout beta && git merge --ff-only main`), não o
-  contrário.
+- `main` → produção. Recebe merge apenas por PR com o check `tests` verde.
+- `beta` → ambiente de teste.
+- `beta` é sincronizada a partir de `main` (`git push origin main:beta`), não o contrário.
+
+O deploy **não** é automático no push: `is_auto_deploy_enabled=false` nos quatro Applications. A
+atualização será disparada por GitHub Actions com uma API key própria, e só depois de verificada —
+a versão antiga não cai antes da nova subir.
 
 ## 6. Primeiro deploy
 
-1. Suba os serviços e configure o domínio apenas no `app`.
-2. No `app`: `php artisan migrate --force` e `php artisan db:seed --force` (cria os cinco setores).
-3. Crie o administrador: `php artisan app:create-user email@dimetal.com.br "Nome" --role=admin`.
-4. Entre em **Configurações → WhatsApp**, preencha URL interna do WAHA, API key e segredo HMAC, e
-   salve — a tela confirma a conexão.
-5. Abra **Canais**, decida sobre "Importar histórico" (desmarcado por padrão) e clique em
-   **Conectar**.
-6. Autentique por **QR** ou por **código de pareamento** (WhatsApp → Aparelhos conectados →
-   Conectar aparelho → Conectar com número de telefone). O QR fica na tela como alternativa.
-7. Confirme o status **Conectado** e envie o texto de teste.
+1. Crie os Databases (`pg`, `redis`) e os quatro Applications. Como fazer pela API:
+   [`docs/deploy-coolify-api.md`](deploy-coolify-api.md).
+2. Preencha as variáveis da seção 2 em cada recurso.
+3. Deploy nos Databases, depois `waha`, depois `app`. `worker` e `scheduler` por último.
+4. No terminal do `app`: `php artisan db:seed --force` (cinco setores) e
+   `php artisan app:create-user email@dimetal.com.br "Nome" --role=admin`.
+5. **Canais** → decidir sobre "Importar histórico" (desmarcado) → **Conectar** → QR ou código de
+   pareamento.
+6. Confirmar **Conectado** e enviar o texto de teste.
+
+Recursos do beta hoje:
+
+| Recurso | UUID |
+|---|---|
+| `app-beta` | `ipbknnticmaubtzdonxjqgy6` |
+| `worker-beta` | `jme7xgh4ugrrf3qbrxaclwlj` |
+| `scheduler-beta` | `3thwz32zdtnmr2sme70jrpdf` |
+| `waha-beta` | `gxpbtauw9ylqyd8nni3keznx` |
+| `pg-beta` | `m3kcov2jn01utd97jjho2lox` |
+| `redis-beta` | `vp3u0qyz2tsmyveqrb6ml2zi` |
 
 ## 7. Atualização e rollback
 
-Push em `main` → Coolify reconstrói → `php artisan migrate --force` roda no deploy. O volume
-preserva a sessão, então o WhatsApp volta sozinho quando o container sobe
-(`WAHA_WORKER_RESTART_SESSIONS=true`).
+Push em `main` → Coolify reconstrói → `migrate --force` roda no start do `app`. O volume preserva a
+sessão, então o WhatsApp volta sozinho (`WAHA_WORKER_RESTART_SESSIONS=true`).
 
-Rollback: reimplante o commit anterior pelo Coolify. Migrações destrutivas exigem migração de volta
-escrita à mão — evite drop de coluna no mesmo deploy que remove o código que a usa.
+Rollback: reimplante o commit anterior. Migrações destrutivas exigem migração de volta escrita à mão
+— evite drop de coluna no mesmo deploy que remove o código que a usa.
 
 ## 8. Diagnóstico
 
-- **Status estranho na tela Canais** → `GET /api/sessions` pelo container do app, ou logs do
-  container `waha`.
-- **Webhook não chega** → o app responde `401` quando o HMAC não confere (segredo divergente entre
-  WAHA e tela) e nada é gravado; `WAHA_DASHBOARD_ENABLED=false` não é a causa.
-- **Sessão perdida a cada deploy** → volume `waha-sessions` não está montado.
-- **Contato não recebe notificação no celular** → presença ficou `online`; o envio pelo painel
-  termina mandando `offline`, e `WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS=25` limita o resto.
-- **Fila parada** → o serviço `queue-worker` precisa estar rodando com o mesmo `QUEUE_CONNECTION` do
-  app.
+- **Status estranho na tela Canais** → logs do `waha`; ele loga o engine GOWS e a sessão.
+- **Webhook não chega** → o app responde `401` quando o HMAC não confere e nada é gravado.
+- **Sessão perdida a cada deploy** → volume `/app/.sessions` não está montado.
+- **Contato não recebe notificação** → presença ficou `online`; `WAHA_PRESENCE_AUTO_ONLINE=False`
+  evita isso.
+- **Fila parada** → `worker` precisa estar rodando com o mesmo `QUEUE_CONNECTION` do `app`.
+- **`worker`/`scheduler` sem status `healthy`** → os três Applications têm healthcheck do Coolify
+  desligado; o da imagem (`healthcheck-queue`) não é usado.
+- **`waha` unhealthy** → a imagem não tem `curl` nem `wget`; healthcheck HTTP do Coolify reprova.
+  Deixe desligado.
+- **404 do Traefik ou certificado inválido** → o `domains` do recurso não é o domínio real, ou o
+  deploy não rodou depois de gravá-lo.
 
 ## 9. Checklist de prova no beta
 
@@ -145,14 +153,12 @@ escrita à mão — evite drop de coluna no mesmo deploy que remove o código qu
 6. `channels.backfill_days` ficou `0` com a importação desmarcada.
 7. Mensagem do celular para o número gera evento `message` em "Últimos eventos".
 8. Texto enviado pelo formulário chega no celular; o contato vê **"visto por último"**, nunca
-   "online" (`WAHA_PRESENCE_AUTO_ONLINE=False`).
-9. **Prova do eco (bug #2299 do GOWS)**: com o número conectado, envie uma mensagem pelo
-   **celular** para um contato e confirme em qual conversa o evento `fromMe` cai. Se cair na
-   conversa errada, fixar `devlikeapro/waha:gows-2026.7.1`, que é a versão confirmada sem o
-   defeito, e reavaliar quando a issue fechar.
-10. Confirmar que `message.any` chega em "Últimos eventos" para o envio feito pelo celular — sem
-    ele o registro de `fora_do_painel` não existe.
+   "online".
+9. **Prova do eco (bug #2299 do GOWS)**: envie pelo **celular** para um contato e confirme em qual
+   conversa o evento `fromMe` cai. Se cair na conversa errada, fixar
+   `devlikeapro/waha:gows-2026.7.1` e reavaliar quando a issue fechar.
+10. Confirmar que `message.any` chega em "Últimos eventos" para o envio feito pelo celular.
 11. Enviar pelo painel e confirmar que **não** aparece uma segunda mensagem marcada como enviada
-    fora do painel (o eco do nosso próprio envio foi reconhecido).
-12. Reiniciar o container WAHA: volta **Conectado** sem pedir QR.
+    fora do painel.
+12. Reiniciar o container `waha`: volta **Conectado** sem pedir QR.
 13. Repetir no `main` com o número real.

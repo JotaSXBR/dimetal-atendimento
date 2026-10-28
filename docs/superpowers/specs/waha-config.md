@@ -1,6 +1,6 @@
 # WAHA/GOWS — configuração de referência
 
-Versão de referência: **WAHA 2026.9.2**, engine **GOWS**, imagem `devlikeapro/waha:gows`.
+Versão de referência: **WAHA 2026.10.1**, engine **GOWS**, imagem `devlikeapro/waha:gows`.
 Levantado em 2026-10-27 direto da documentação oficial (`waha.devlike.pro/docs`).
 
 Este documento existe porque o comportamento de sessão, presença e histórico do WAHA **não é

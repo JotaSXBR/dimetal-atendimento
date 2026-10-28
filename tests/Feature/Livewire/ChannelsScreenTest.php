@@ -6,7 +6,6 @@ use App\Enums\ChannelStatus;
 use App\Enums\UserRole;
 use App\Livewire\Settings\Channels;
 use App\Models\Channel;
-use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -22,10 +21,7 @@ class ChannelsScreenTest extends TestCase
     {
         parent::setUp();
 
-        Setting::put('waha.base_url', 'http://waha.test:3000');
-        Setting::put('waha.api_key', 'test-key', 'secret');
-        Setting::put('waha.session_name', 'main');
-        Setting::put('waha.webhook_secret', 'segredo', 'secret');
+        config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
     }
 
     /** @return array<string, array{UserRole}> */
@@ -164,5 +160,17 @@ class ChannelsScreenTest extends TestCase
             ->assertHasErrors('testPhone');
 
         Http::assertNothingSent();
+    }
+
+    public function test_admin_renomeia_o_canal_existente(): void
+    {
+        $channel = Channel::factory()->create(['name' => 'Antigo', 'waha_session' => 'main']);
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))
+            ->test(Channels::class)
+            ->set('channelName', 'Comercial')
+            ->call('rename');
+
+        $this->assertSame('Comercial', $channel->fresh()->name);
     }
 }

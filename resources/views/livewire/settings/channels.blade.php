@@ -28,9 +28,9 @@
             <div class="rounded-[14px] border border-line bg-surface p-5">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-sm font-semibold text-ink">{{ $channel?->name ?? 'WhatsApp principal' }}</p>
+                        <p class="text-sm font-semibold text-ink">{{ $channel?->name ?? 'Novo WhatsApp' }}</p>
                         <p class="mt-0.5 font-mono text-xs text-ink-3">
-                            sessão {{ $channel?->waha_session ?? 'main' }}
+                            sessão {{ $channel?->waha_session ?? '—' }}
                             @if ($channel?->phone)
                                 · {{ $channel->phone }}
                             @endif
@@ -50,9 +50,21 @@
                     </span>
                 </p>
 
+                <div class="mt-4 flex items-end gap-2">
+                    <div class="flex-1">
+                        <flux:input wire:model="{{ $channel ? 'channelName' : 'sessionName' }}" label="{{ $channel ? 'Nome do canal' : 'Nome da sessão' }}" placeholder="principal" />
+                        @error($channel ? 'channelName' : 'sessionName')
+                            <p class="mt-2 text-xs text-danger">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    @if ($channel)
+                        <flux:button wire:click="rename" size="sm">Salvar nome</flux:button>
+                    @endif
+                </div>
+
                 <div class="mt-4 flex items-center gap-2">
                     <x-ui.button variant="primary" wire:click="connect" wire:loading.attr="disabled">
-                        Conectar
+                        {{ $channel ? 'Conectar' : 'Criar e gerar QR' }}
                     </x-ui.button>
                     <x-ui.button variant="secondary" wire:click="disconnect" wire:loading.attr="disabled">
                         Desconectar
