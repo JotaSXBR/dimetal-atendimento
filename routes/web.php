@@ -5,6 +5,7 @@ use App\Http\Controllers\Webhooks\WahaWebhookController;
 use App\Livewire\Inbox\Inbox;
 use App\Livewire\Settings\BusinessHoursPage;
 use App\Livewire\Settings\Channels;
+use App\Livewire\Settings\Users;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -14,6 +15,10 @@ Route::post('webhooks/waha', WahaWebhookController::class)->middleware('throttle
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('inbox', Inbox::class)->name('inbox');
     Route::get('midia/{message}', MessageMediaController::class)->name('midia');
+});
+
+Route::middleware(['auth', 'can:supervisor'])->group(function () {
+    Route::get('configuracoes/usuarios', Users::class)->name('configuracoes.usuarios');
 });
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
