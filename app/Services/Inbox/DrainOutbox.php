@@ -54,6 +54,12 @@ class DrainOutbox
         return $this->waiting($channel)->exists();
     }
 
+    /** O canal consta conectado e ainda há mensagem aguardando: o envio estacionou (sessão sincronizando). */
+    public function stuckWhileConnected(Channel $channel): bool
+    {
+        return $channel->refresh()->status === ChannelStatus::WORKING && $this->waiting($channel)->exists();
+    }
+
     /** Falha as que esperaram demais (ou todas, quando o canal é omitido). */
     public function expire(?Channel $channel = null): void
     {

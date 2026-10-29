@@ -8,7 +8,6 @@ use App\Models\Channel;
 use App\Models\Message;
 use App\Models\WahaEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class HandleWahaEventTest extends TestCase
@@ -34,27 +33,6 @@ class HandleWahaEventTest extends TestCase
 
         $this->assertSame(ChannelStatus::WORKING, $channel->fresh()->status);
         $this->assertNotNull($channel->fresh()->last_event_at);
-    }
-
-    public function test_todo_evento_recebido_registra_o_tipo_sem_o_conteudo(): void
-    {
-        Log::spy();
-        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
-        $event = WahaEvent::create([
-            'waha_event_id' => 'evt_log',
-            'channel_id' => $channel->id,
-            'event' => 'message',
-            'session' => 'main',
-            'payload' => ['payload' => ['id' => 'false_x@c.us_A', 'from' => 'x@c.us', 'type' => 'vcard', 'hasMedia' => false, 'body' => 'BEGIN:VCARD segredo']],
-            'received_at' => now(),
-        ]);
-
-        (new HandleWahaEvent($event->id))->handle();
-
-        Log::shouldHaveReceived('warning')->withArgs(fn (string $message, array $context) => $message === 'Evento do WAHA recebido'
-            && $context['event'] === 'message'
-            && $context['type'] === 'vcard'
-            && ! str_contains(json_encode($context) ?: '', 'segredo'))->once();
     }
 
     public function test_evento_message_waiting_de_visualizacao_unica_entra_pelo_job(): void

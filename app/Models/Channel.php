@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Enums\ChannelStatus;
+use App\Observers\ChannelObserver;
 use Carbon\CarbonImmutable;
 use Database\Factories\ChannelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -32,6 +34,7 @@ use Illuminate\Database\Eloquent\Model;
     'backfill_last_run_at',
     'active',
 ])]
+#[ObservedBy(ChannelObserver::class)]
 class Channel extends Model
 {
     /** @use HasFactory<ChannelFactory> */
