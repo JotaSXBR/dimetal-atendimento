@@ -87,9 +87,11 @@ class SendTicketMessageTest extends TestCase
 
         (new SendTicketMessageJob($message->id))->failed(new \RuntimeException('worker morto'));
 
+        // Pode ter saído antes de o worker morrer: falha "sem resposta", que pede conferir no celular antes de reenviar.
         $fresh = $message->fresh();
         $this->assertSame(DeliveryStatus::FAILED, $fresh?->delivery_status);
-        $this->assertStringContainsString('worker morto', (string) $fresh->failure_reason);
+        $this->assertSame('unknown', $fresh->failure_code);
+        $this->assertStringContainsString('pode ter sido enviada', (string) $fresh->failure_reason);
     }
 
     public function test_job_que_falha_nao_sobrescreve_mensagem_ja_enviada(): void

@@ -175,6 +175,20 @@ class OutboxDrainTest extends TestCase
         Queue::assertPushed(DrainOutboxJob::class, fn (DrainOutboxJob $job) => $job->channelId === $this->channel->id);
     }
 
+    public function test_o_comando_recolhe_linha_presa_em_enviando_sem_dono(): void
+    {
+        $stuck = app(SendTicketMessage::class)->create($this->ticket, $this->author, 'presa');
+        Message::query()->whereKey($stuck->id)->update(['updated_at' => now()->subMinutes(11)]);
+        $recent = app(SendTicketMessage::class)->create($this->ticket, $this->author, 'recente');
+
+        $this->artisan('app:drain-outbox')->assertSuccessful();
+
+        $fresh = $stuck->fresh();
+        $this->assertSame(DeliveryStatus::FAILED, $fresh?->delivery_status);
+        $this->assertSame(SendFailure::UNKNOWN, $fresh->failure_code);
+        $this->assertNull($recent->fresh()?->delivery_status);
+    }
+
     public function test_quando_a_sessao_volta_a_working_a_fila_e_esvaziada(): void
     {
         $this->channel->update(['status' => ChannelStatus::STOPPED]);

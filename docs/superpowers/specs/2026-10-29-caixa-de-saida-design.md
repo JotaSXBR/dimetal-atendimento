@@ -44,3 +44,19 @@ atendentes mandarem nesse intervalo **esperam e saem depois**, na ordem, em vez 
 
 Freio por canal depois de 463/475 (vem com o limite de envio por sessão); mídia na caixa de saída (a fatia de envio de
 arquivos herda esta mesma regra).
+
+## Implementado (29/10/2026)
+
+- `DeliveryStatus::QUEUED` e `messages.failure_code`; `SendFailure` classifica a falha (`session_down`, `rate_limit`, `unknown`,
+  `refused`, `expired`) e define o tipo de reenvio (`safe`, `confirm`, `none`).
+- `SendTicketMessage::deliver` deixa a mensagem em `queued` quando o canal não está `WORKING` ou há uma `queued` mais antiga;
+  falha de sessão durante o envio também volta para a fila; as demais viram falha com código e motivo.
+- `DrainOutbox` + `DrainOutboxJob` (fila `outbound`, lotes de 10) e `app:drain-outbox` (a cada minuto: expira em 24 h, recolhe
+  envio preso há 10 min como "sem resposta" e agenda o esvaziamento dos canais conectados). O webhook `session.status` →
+  `WORKING` agenda o esvaziamento na hora.
+- `ResendTicketMessage`: reenvio na mesma linha com trava por `updated_at`; a tela (botão "Reenviar", com confirmação quando
+  pode ter saído) e o servidor usam a mesma regra. Faixa de aviso quando o canal não está conectado.
+- O eco `fromMe` tardio casa também com falha "sem resposta" (janela de 60 s a partir da última tentativa) e a marca enviada.
+
+Como testar no beta: em Canais, **Desconectar**; mande duas respostas (ficam "Aguardando conexão"); **Conectar** de novo: elas
+saem em ordem.
