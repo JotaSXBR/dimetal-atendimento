@@ -8,6 +8,7 @@ use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
 use App\Events\MessageCreated;
 use App\Events\TicketUpdated;
+use App\Jobs\ResolveMessageMediaJob;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
@@ -126,6 +127,10 @@ class IngestMessage
 
         MessageCreated::dispatch($message);
         TicketUpdated::dispatch($ticket);
+
+        if ($message->hasMedia() && $message->media_ref === null) {
+            ResolveMessageMediaJob::dispatch($message->id)->afterCommit();
+        }
 
         return $message;
     }

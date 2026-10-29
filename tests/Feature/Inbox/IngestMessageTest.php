@@ -6,6 +6,7 @@ use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
+use App\Jobs\ResolveMessageMediaJob;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
@@ -14,6 +15,7 @@ use App\Models\WahaEvent;
 use App\Services\Inbox\IngestMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class IngestMessageTest extends TestCase
@@ -27,6 +29,8 @@ class IngestMessageTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Queue::fake();
 
         $this->channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
     }
@@ -339,6 +343,14 @@ class IngestMessageTest extends TestCase
         $this->assertSame('abc.ogg', $message->media_ref);
         $this->assertSame('abc.ogg', $message->media_name);
         $this->assertSame('audio/ogg', $message->media_mime);
+    }
+
+    public function test_midia_sem_referencia_pede_a_busca_e_com_referencia_nao(): void
+    {
+        $this->ingest($this->event($this->inbound('false_5516997524950@c.us_NOREF', ['hasMedia' => true])));
+        $this->ingest($this->event($this->inbound('false_5516997524950@c.us_REF', ['hasMedia' => true, 'media' => ['filename' => 'r.jpg']])));
+
+        Queue::assertPushed(ResolveMessageMediaJob::class, 1);
     }
 
     public function test_midia_so_com_url_enc_fica_sem_referencia(): void

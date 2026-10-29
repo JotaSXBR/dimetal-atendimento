@@ -131,6 +131,28 @@ class WahaClient
         ]));
     }
 
+    /**
+     * Pede ao WAHA que baixe a mídia da mensagem e devolve o nome do arquivo guardado. O `media.url` do GOWS não
+     * serve (CDN cifrado ou endereço interno); o nome em `media.filename` é o que a rota de mídia lê depois.
+     *
+     * @return array{filename: string, mimetype: ?string}|null `null` enquanto o WAHA não tem o arquivo
+     */
+    public function downloadMessageMedia(string $chatId, string $waId): ?array
+    {
+        $response = $this->request()->get(
+            $this->sessionPath('/chats/'.rawurlencode($chatId).'/messages/'.rawurlencode($waId)),
+            ['downloadMedia' => 'true'],
+        );
+        $this->ensureOk($response);
+
+        $filename = $response->json('media.filename');
+        $mimetype = $response->json('media.mimetype');
+
+        return is_string($filename) && $filename !== ''
+            ? ['filename' => $filename, 'mimetype' => is_string($mimetype) ? $mimetype : null]
+            : null;
+    }
+
     public function sendSeen(string $chatId): void
     {
         $this->ensureOk($this->request()->post('/api/sendSeen', [
