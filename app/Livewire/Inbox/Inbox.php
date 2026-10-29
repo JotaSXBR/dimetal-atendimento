@@ -17,6 +17,7 @@ use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -148,6 +149,16 @@ class Inbox extends Component
             'draft.required' => 'Escreva uma mensagem.',
             'draft.max' => 'A mensagem passa de 4096 caracteres.',
         ]);
+
+        // Freio contra conta comprometida ou laço no navegador. Só o envio conta; indicadores de digitação, que são
+        // bem mais frequentes, terão limite próprio quando existirem.
+        $allowed = RateLimiter::attempt('send-message:'.$this->user()->id, config()->integer('security.send_message_per_minute'), fn () => true, 60);
+
+        if (! $allowed) {
+            $this->addError('draft', 'Você está enviando mensagens rápido demais. Aguarde alguns segundos.');
+
+            return;
+        }
 
         SendTicketMessageJob::dispatch($ticket->id, $this->user()->id, $this->draft);
 
