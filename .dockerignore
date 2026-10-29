@@ -37,4 +37,5 @@ docs
 compose*.yaml
 docker/*
 !docker/nginx
+!docker/worker.sh
 *.md

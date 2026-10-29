@@ -5,6 +5,7 @@ namespace Tests\Feature\Inbox;
 use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
+use App\Jobs\SendTicketMessageJob;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
@@ -16,6 +17,8 @@ use App\Services\Inbox\SendTicketMessage;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Sleep;
 use Tests\TestCase;
 
 class SendTicketMessageTest extends TestCase
@@ -36,6 +39,9 @@ class SendTicketMessageTest extends TestCase
     {
         parent::setUp();
 
+        Sleep::fake();
+        Queue::fake();
+        Http::preventStrayRequests();
         config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
 
         $this->channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
@@ -49,6 +55,56 @@ class SendTicketMessageTest extends TestCase
     private function send(string $text = 'Segue o orcamento'): Message
     {
         return app(SendTicketMessage::class)($this->ticket, $this->author, $text);
+    }
+
+    public function test_create_grava_a_linha_sem_chamar_o_waha(): void
+    {
+        Http::fake();
+
+        $message = app(SendTicketMessage::class)->create($this->ticket, $this->author, 'oi');
+
+        Http::assertNothingSent();
+        $this->assertSame('oi', $message->body);
+        $this->assertNull($message->delivery_status);
+        $this->assertNull($message->wa_message_id);
+        $this->assertSame($this->author->id, $message->author_user_id);
+    }
+
+    public function test_deliver_envia_uma_linha_ja_criada(): void
+    {
+        Http::fake(['*/api/sendText' => Http::response(['id' => self::SENT_ID], 201)]);
+        $message = app(SendTicketMessage::class)->create($this->ticket, $this->author, 'oi');
+
+        app(SendTicketMessage::class)->deliver($message);
+
+        $this->assertSame(DeliveryStatus::SENT, $message->fresh()?->delivery_status);
+        $this->assertSame(Message::waKey(self::SENT_ID), $message->fresh()?->wa_message_id);
+    }
+
+    public function test_job_que_morre_antes_do_envio_marca_a_mensagem_como_falha(): void
+    {
+        $message = app(SendTicketMessage::class)->create($this->ticket, $this->author, 'oi');
+
+        (new SendTicketMessageJob($message->id))->failed(new \RuntimeException('worker morto'));
+
+        $fresh = $message->fresh();
+        $this->assertSame(DeliveryStatus::FAILED, $fresh?->delivery_status);
+        $this->assertStringContainsString('worker morto', (string) $fresh->failure_reason);
+    }
+
+    public function test_job_que_falha_nao_sobrescreve_mensagem_ja_enviada(): void
+    {
+        $message = app(SendTicketMessage::class)->create($this->ticket, $this->author, 'oi');
+        $message->update(['wa_message_id' => 'ABC', 'delivery_status' => DeliveryStatus::SENT]);
+
+        (new SendTicketMessageJob($message->id))->failed(new \RuntimeException('tarde demais'));
+
+        $this->assertSame(DeliveryStatus::SENT, $message->fresh()?->delivery_status);
+    }
+
+    public function test_fila_de_saida_espera_mais_que_o_timeout_do_job(): void
+    {
+        $this->assertGreaterThan((new SendTicketMessageJob(1))->timeout, config()->integer('queue.connections.redis.retry_after'));
     }
 
     public function test_grava_a_linha_antes_de_chamar_o_waha(): void
@@ -77,7 +133,7 @@ class SendTicketMessageTest extends TestCase
         $this->assertSame(MessageOrigin::PAINEL, $message->origin);
         $this->assertSame($this->author->id, $message->author_user_id);
         $this->assertSame(DeliveryStatus::SENT, $message->fresh()?->delivery_status);
-        Http::assertSent(fn ($request) => $request['chatId'] === self::PEER && $request['text'] === 'Segue o orcamento');
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/api/sendText') && $request['chatId'] === self::PEER && $request['text'] === 'Segue o orcamento');
         $this->assertSame('message_out', $this->ticket->events()->latest('id')->value('type'));
     }
 
@@ -144,7 +200,11 @@ class SendTicketMessageTest extends TestCase
 
     public function test_eco_casado_antes_da_falha_http_nao_marca_a_mensagem_como_falha(): void
     {
-        Http::fake(function () {
+        Http::fake(function ($request) {
+            if (! str_ends_with($request->url(), '/api/sendText')) {
+                return Http::response([], 201);
+            }
+
             $echo = WahaEvent::create([
                 'waha_event_id' => 'evt_echo2',
                 'channel_id' => $this->channel->id,
@@ -175,7 +235,11 @@ class SendTicketMessageTest extends TestCase
 
     public function test_eco_chegando_antes_da_resposta_do_waha_nao_duplica(): void
     {
-        Http::fake(function () {
+        Http::fake(function ($request) {
+            if (! str_ends_with($request->url(), '/api/sendText')) {
+                return Http::response([], 201);
+            }
+
             $echo = WahaEvent::create([
                 'waha_event_id' => 'evt_echo',
                 'channel_id' => $this->channel->id,

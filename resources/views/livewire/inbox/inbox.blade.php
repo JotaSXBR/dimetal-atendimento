@@ -170,7 +170,15 @@
                                     <p class="mb-0.5 font-mono text-[10px] tracking-wide text-warn uppercase">Celular · fora do painel</p>
                                 @endif
 
-                                <p class="break-words whitespace-pre-wrap">{{ $message->body !== '' ? $message->body : '['.$message->type.']' }}</p>
+                                @if ($message->hasMedia() || $message->type === 'view_once')
+                                    @include('livewire.inbox.media', ['message' => $message])
+                                @endif
+
+                                @if ($message->body !== '')
+                                    <p class="break-words whitespace-pre-wrap">{{ $message->body }}</p>
+                                @elseif (! $message->hasMedia() && $message->type !== 'view_once')
+                                    <p class="break-words whitespace-pre-wrap">[{{ $message->type }}]</p>
+                                @endif
 
                                 @if ($message->failure_reason)
                                     <p class="mt-1 text-xs text-danger">{{ $message->failure_reason }}</p>

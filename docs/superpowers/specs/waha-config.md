@@ -192,9 +192,11 @@ Outros headers: `X-Webhook-Request-Id`, `X-Webhook-Timestamp` (ms).
 
 ## 7. Mídia
 
-`WHATSAPP_EVENTS_DOWNLOAD_MEDIA=true` faz o evento chegar com a URL do arquivo. Com
-`WHATSAPP_FILES_LIFETIME=0` o WAHA não apaga; ainda assim o app **baixa e guarda o próprio
-arquivo**, porque a retenção de 90 dias é nossa e o volume do WAHA não é backup.
+`WHATSAPP_EVENTS_DOWNLOAD_MEDIA=true` faz o WAHA baixar a mídia e guardá-la no volume. **Decisão do dono
+(29/10/2026): o WAHA guarda os arquivos** (entrada e saída) e faz a limpeza por variável
+(`WHATSAPP_FILES_LIFETIME=7776000`, 90 dias; o bug que limitava o prazo a ~24 dias saiu na 2026.4.1). O app guarda só a
+referência (`messages.media_ref`) e serve o arquivo por `GET /midia/{mensagem}`. S3 entra depois trocando
+`WAHA_MEDIA_STORAGE`. Detalhes em `docs/superpowers/specs/2026-10-29-midia-e-presenca-design.md`.
 
 ## 8. Riscos operacionais
 
@@ -220,8 +222,8 @@ Fallback obrigatório, na ordem:
 3. se ainda falhar, gravar a mensagem com `media_path = null` e sinalizar na auditoria. Nunca
    perder o texto por causa do anexo.
 
-`WHATSAPP_FILES_LIFETIME` acima de ~24 dias estoura um timeout de 32 bits dentro do WAHA (issue
-#2018). Por isso ele fica em `0` (sem expiração) e a retenção de 90 dias é do nosso app.
+`WHATSAPP_FILES_LIFETIME` acima de ~24 dias estourava um timeout de 32 bits dentro do WAHA (issue #2018),
+corrigido na 2026.4.1 (o beta usa a 2026.10.1).
 
 ### QR: vida curta e finita
 

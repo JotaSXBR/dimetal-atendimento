@@ -13,26 +13,35 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
 use App\Services\Waha\WahaClient;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Envia um texto do painel para o cliente do ticket.
+ * Envia um texto do painel para o cliente do ticket, em dois passos.
  *
- * A linha local nasce ANTES da chamada ao WAHA, para o eco `fromMe` que pode chegar antes da
- * resposta HTTP encontrar a mensagem pendente em vez de gravar uma segunda. Permissão é da Policy.
+ * `create` grava a linha no clique, para o atendente ver a própria mensagem na hora e para o eco `fromMe` que pode chegar
+ * antes da resposta HTTP encontrar a mensagem pendente em vez de gravar uma segunda. `deliver` fala com o WAHA e roda
+ * na fila de saída. Permissão é da Policy.
  */
 class SendTicketMessage
 {
+    public function __construct(private readonly Presence $presence) {}
+
     public function __invoke(Ticket $ticket, User $author, string $text): Message
     {
-        $contact = $ticket->contact()->firstOrFail();
-        $channel = $ticket->channel()->firstOrFail();
+        $message = $this->create($ticket, $author, $text);
+        $this->deliver($message);
 
+        return $message;
+    }
+
+    public function create(Ticket $ticket, User $author, string $text): Message
+    {
         $message = Message::create([
             'ticket_id' => $ticket->id,
             'channel_id' => $ticket->channel_id,
-            'contact_id' => $contact->id,
+            'contact_id' => $ticket->contact_id,
             'direction' => MessageDirection::OUT,
             'type' => 'text',
             'body' => $text,
@@ -43,17 +52,31 @@ class SendTicketMessage
 
         MessageCreated::dispatch($message);
 
+        return $message;
+    }
+
+    public function deliver(Message $message): void
+    {
+        $ticket = $message->ticket()->firstOrFail();
+        $contact = $ticket->contact()->firstOrFail();
+        $channel = $ticket->channel()->firstOrFail();
+
+        $client = new WahaClient($channel);
+        $this->presence->before($client, $ticket, $contact, $message->body);
+
         try {
-            $response = (new WahaClient($channel))->sendText($contact->wa_id ?? (string) $contact->lid, $text);
+            $response = $client->sendText($contact->wa_id ?? (string) $contact->lid, $message->body);
         } catch (Throwable $e) {
             // Se o eco do celular já casou com a linha (ela ganhou o id), a mensagem saiu: não é falha.
             if ($message->refresh()->wa_message_id === null) {
-                $message->update(['delivery_status' => DeliveryStatus::FAILED, 'failure_reason' => Str::limit($e->getMessage(), 250)]);
+                $message->update(['delivery_status' => DeliveryStatus::FAILED, 'failure_reason' => $this->failureReason($e)]);
                 MessageStatusChanged::dispatch($message);
             }
 
             throw $e;
         }
+
+        $this->presence->scheduleOffline($channel);
 
         $message->refresh();
 
@@ -73,10 +96,22 @@ class SendTicketMessage
         TicketEvent::create([
             'ticket_id' => $ticket->id,
             'type' => 'message_out',
-            'actor_user_id' => $author->id,
+            'actor_user_id' => $message->author_user_id,
             'payload' => ['message_id' => $message->id],
         ]);
+    }
 
-        return $message;
+    /**
+     * Erros 463 (timelock) e 475 (limite de mensagens) pedem pausa: tentar de novo ou reparear a sessão só piora.
+     */
+    private function failureReason(Throwable $e): string
+    {
+        if (preg_match('/\b(463|475)\b/', $e->getMessage()) === 1) {
+            Log::warning('WhatsApp limitou o envio (463/475): pausar, sem reiniciar nem repareiar a sessão', ['erro' => $e->getMessage()]);
+
+            return 'Limite do WhatsApp (463/475): aguarde antes de enviar de novo; não reinicie a sessão.';
+        }
+
+        return Str::limit($e->getMessage(), 250);
     }
 }

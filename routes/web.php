@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MessageMediaController;
 use App\Http\Controllers\Webhooks\WahaWebhookController;
 use App\Livewire\Inbox\Inbox;
 use App\Livewire\Settings\Channels;
@@ -11,6 +12,7 @@ Route::post('webhooks/waha', WahaWebhookController::class)->middleware('throttle
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('inbox', Inbox::class)->name('inbox');
+    Route::get('midia/{message}', MessageMediaController::class)->name('midia');
 });
 
 Route::middleware(['auth', 'can:admin'])->group(function () {

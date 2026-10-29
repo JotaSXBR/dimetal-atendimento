@@ -79,7 +79,10 @@ FROM runtime AS worker
 
 STOPSIGNAL SIGTERM
 
-CMD ["php", "/var/www/html/artisan", "queue:work", "--tries=3", "--timeout=120", "--max-time=3600"]
+# Um processo para `outbound` e outro para `default`, no mesmo container (ver docker/worker.sh).
+COPY --chmod=755 docker/worker.sh /usr/local/bin/worker.sh
+
+CMD ["/usr/local/bin/worker.sh"]
 
 
 FROM runtime AS reverb

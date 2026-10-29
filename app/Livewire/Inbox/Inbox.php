@@ -14,6 +14,7 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\SendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -160,7 +161,7 @@ class Inbox extends Component
             return;
         }
 
-        SendTicketMessageJob::dispatch($ticket->id, $this->user()->id, $this->draft);
+        SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $this->draft)->id);
 
         $this->reset('draft');
     }

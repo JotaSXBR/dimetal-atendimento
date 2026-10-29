@@ -21,6 +21,7 @@ final readonly class IncomingMessage
         public CarbonImmutable $sentAt,
         public ?string $alternateJid,
         public ?string $pushName,
+        public ?IncomingMedia $media = null,
     ) {}
 
     /**
@@ -47,6 +48,7 @@ final readonly class IncomingMessage
             sentAt: self::sentAt($data['timestamp'] ?? null, $event->received_at),
             alternateJid: self::string(data_get($data, '_data.Info.'.($fromMe ? 'RecipientAlt' : 'SenderAlt'))),
             pushName: $fromMe ? null : self::string(data_get($data, '_data.Info.PushName') ?? $data['notifyName'] ?? null),
+            media: $content['media'],
         );
     }
 
@@ -85,7 +87,7 @@ final readonly class IncomingMessage
 
     /**
      * @param  array<array-key, mixed>  $data
-     * @return array{type: string, body: string}|null
+     * @return array{type: string, body: string, media: ?IncomingMedia}|null
      */
     private static function content(array $data, WahaEvent $event): ?array
     {
@@ -94,12 +96,41 @@ final readonly class IncomingMessage
         $type = self::typeFor($data, $hasMedia, $body);
 
         if ($type !== null) {
-            return ['type' => $type, 'body' => $body];
+            return ['type' => $type, 'body' => $body, 'media' => $type === 'media' ? self::media($data) : null];
         }
 
         Log::info('Mensagem do WAHA sem conteúdo ignorada', ['id' => $data['id'] ?? null, 'event' => $event->waha_event_id]);
 
         return null;
+    }
+
+    /**
+     * Só o nome do arquivo no WAHA vira referência; a `url` do GOWS costuma ser um CDN cifrado (`.enc`) ou um endereço
+     * interno do container, e nunca é usada. Nome com barra ou `..` é descartado: a rota de mídia o repassaria ao WAHA.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    private static function media(array $data): IncomingMedia
+    {
+        $filename = self::string(data_get($data, 'media.filename'));
+        $mime = self::string(data_get($data, 'media.mimetype'));
+        $size = data_get($data, 'media.size');
+
+        return new IncomingMedia(
+            ref: IncomingMedia::safeRef($filename),
+            mime: $mime === null ? null : trim(explode(';', $mime)[0]),
+            size: is_int($size) && $size >= 0 ? $size : null,
+        );
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $data
+     */
+    private static function isViewOnce(array $data): bool
+    {
+        $message = data_get($data, '_data.Message');
+
+        return is_array($message) && array_intersect(array_keys($message), ['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension']) !== [];
     }
 
     private static function string(mixed $value): ?string
@@ -125,6 +156,10 @@ final readonly class IncomingMessage
 
         if ($body !== '') {
             return 'text';
+        }
+
+        if (self::isViewOnce($data)) {
+            return 'view_once';
         }
 
         $type = $data['type'] ?? null;

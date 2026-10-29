@@ -110,7 +110,10 @@ class InboxTest extends TestCase
             ->call('send')
             ->assertSet('draft', '');
 
-        Queue::assertPushed(SendTicketMessageJob::class, fn ($job) => $job->text === 'Olá!' && $job->ticketId === $ticket->id);
+        $message = Message::query()->sole();
+        $this->assertSame('Olá!', $message->body);
+        $this->assertNull($message->delivery_status);
+        Queue::assertPushedOn('outbound', SendTicketMessageJob::class, fn ($job) => $job->messageId === $message->id);
     }
 
     public function test_enviar_texto_vazio_e_rejeitado(): void
