@@ -15,9 +15,11 @@ use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Inbox\AttachmentRules;
+use App\Services\Inbox\Presence;
 use App\Services\Inbox\ResendTicketMessage;
 use App\Services\Inbox\SendTicketMedia;
 use App\Services\Inbox\SendTicketMessage;
+use App\Services\Waha\WahaClient;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -48,6 +50,9 @@ class Inbox extends Component
     /** Legenda de mídia no WhatsApp: acima disto o texto sai como mensagem separada. */
     private const CAPTION_LIMIT = 1024;
 
+    /** "Gravando áudio…" chega a cada poucos segundos; limite próprio, mais folgado que o de envio. */
+    private const PRESENCE_PER_MINUTE = 20;
+
     public ?int $ticketId = null;
 
     #[Url]
@@ -57,6 +62,9 @@ class Inbox extends Component
 
     /** O arquivo que acabou de subir; `commitUpload` o move para a bandeja ou o descarta. */
     public ?TemporaryUploadedFile $upload = null;
+
+    /** A gravação de voz que o navegador acabou de subir; `sendVoice` a envia. */
+    public ?TemporaryUploadedFile $voice = null;
 
     /** @var array<int, TemporaryUploadedFile> Bandeja: arquivos aceitos, na ordem de envio. */
     public array $attachments = [];
@@ -265,6 +273,72 @@ class Inbox extends Component
         }
 
         $this->reset('attachments', 'upload');
+    }
+
+    /**
+     * O atendente começou ou parou de gravar áudio: o cliente vê "gravando áudio…". Chega a cada poucos segundos
+     * enquanto grava, então tem limite próprio (separado do de envio) e nunca devolve erro ao navegador.
+     */
+    public function recording(bool $on): void
+    {
+        $ticket = $this->selected();
+        $this->authorize('reply', $ticket);
+
+        $key = 'presence:'.$this->user()->id;
+
+        if ($on && ! RateLimiter::attempt($key, self::PRESENCE_PER_MINUTE, fn () => true, 60)) {
+            return;
+        }
+
+        $channel = $ticket->channel()->firstOrFail();
+        $contact = $ticket->contact()->firstOrFail();
+
+        if (! $channel->isConnected()) {
+            return;
+        }
+
+        $presence = app(Presence::class);
+        $presence->recording(new WahaClient($channel), $contact->wa_id ?? (string) $contact->lid, $on);
+
+        if (! $on) {
+            $presence->scheduleOffline($channel);
+        }
+    }
+
+    /** Envia a gravação que o navegador acabou de subir (`voice`) como mensagem de voz do WhatsApp. */
+    public function sendVoice(): void
+    {
+        $ticket = $this->selected();
+        $this->authorize('reply', $ticket);
+        $this->resetErrorBag('voice');
+
+        $file = $this->voice;
+        $this->voice = null;
+
+        if ($file === null) {
+            return;
+        }
+
+        $error = AttachmentRules::validate($file, voice: true);
+
+        if ($error === null && ! $this->reserveSends(1)) {
+            $error = 'Você está enviando mensagens rápido demais. Aguarde alguns segundos.';
+        }
+
+        if ($error !== null) {
+            $this->addError('voice', $error);
+            $file->delete();
+
+            return;
+        }
+
+        try {
+            app(SendTicketMedia::class)($ticket, $this->user(), $file, voice: true);
+        } catch (InvalidArgumentException $e) {
+            $this->addError('voice', $e->getMessage());
+        }
+
+        $file->delete();
     }
 
     private function captionFits(TemporaryUploadedFile $first): bool

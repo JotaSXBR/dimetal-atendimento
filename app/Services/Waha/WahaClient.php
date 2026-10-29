@@ -193,11 +193,15 @@ class WahaClient
         ]));
     }
 
-    public function setPresence(string $presence): void
+    /**
+     * Presença da sessão (`online`/`offline`) ou, com `$chatId`, a presença naquela conversa (`typing`, `recording`, `paused`).
+     */
+    public function setPresence(string $presence, ?string $chatId = null): void
     {
-        $this->ensureOk($this->request()->post($this->sessionPath('/presence'), [
+        $this->ensureOk($this->request()->post($this->sessionPath('/presence'), array_filter([
+            'chatId' => $chatId,
             'presence' => $presence,
-        ]));
+        ])));
     }
 
     /**

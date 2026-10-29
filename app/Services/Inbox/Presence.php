@@ -37,6 +37,12 @@ class Presence
         });
     }
 
+    /** "Gravando áudio…" para o cliente enquanto o atendente grava; melhor esforço, como o resto da presença. */
+    public function recording(WahaClient $client, string $chatId, bool $on): void
+    {
+        $this->attempt($on ? 'gravando' : 'parou de gravar', fn () => $client->setPresence($on ? 'recording' : 'paused', $chatId));
+    }
+
     public function scheduleOffline(Channel $channel): void
     {
         $token = Str::random(16);

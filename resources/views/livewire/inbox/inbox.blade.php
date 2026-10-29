@@ -226,10 +226,11 @@
                         x-on:dragleave.prevent="dragging = false"
                         x-on:drop.prevent="drop($event)"
                         x-on:paste="paste($event)"
+                        x-on:voice-phase.window="voiceBusy = $event.detail !== 'idle'"
                         x-bind:class="dragging ? 'rounded-md ring-2 ring-accent' : ''"
                     >
                         @if ($attachments !== [])
-                            <ul class="mb-2 flex flex-wrap gap-2" aria-label="Arquivos para enviar">
+                            <ul x-show="!voiceBusy" class="mb-2 flex flex-wrap gap-2" aria-label="Arquivos para enviar">
                                 @foreach ($attachments as $index => $file)
                                     <li wire:key="attachment-{{ $index }}-{{ $file->getFilename() }}" class="flex items-center gap-2 rounded-md border border-line bg-canvas px-2 py-1 text-xs">
                                         <flux:icon.paper-clip class="size-3.5 text-ink-3" />
@@ -249,7 +250,31 @@
                             <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
                         @enderror
 
-                        <form wire:submit="send" class="flex items-end gap-2">
+                        {{-- Gravador de voz: o estado vive no Alpine (wire:ignore); ver resources/js/voice-recorder.js --}}
+                        <div wire:ignore x-data="voiceRecorder($wire)" x-on:voice-start.window="start()">
+                            <p x-show="error" x-cloak x-text="error" class="mb-2 text-xs text-danger" role="alert"></p>
+
+                            <div x-show="phase === 'recording'" x-cloak class="flex items-center gap-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2">
+                                <span class="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true"></span>
+                                <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
+                                <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
+                                <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()">Descartar</button>
+                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-white" x-on:click="stop()">Parar</button>
+                            </div>
+
+                            <div x-show="phase === 'preview'" x-cloak class="flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
+                                <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
+                                <button type="button" class="text-sm text-ink-2 hover:text-ink" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</button>
+                                <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()" x-bind:disabled="sending">Descartar</button>
+                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-white disabled:opacity-50" x-on:click="send()" x-bind:disabled="sending">Enviar</button>
+                            </div>
+                        </div>
+
+                        @error('voice')
+                            <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
+                        @enderror
+
+                        <form wire:submit="send" class="flex items-end gap-2" x-show="!voiceBusy">
                             <input
                                 type="file"
                                 multiple
@@ -260,6 +285,7 @@
                                 x-on:change="addFiles($event.target.files); $event.target.value = ''"
                             >
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-on:click="$refs.picker.click()" />
+                            <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-on:click="$dispatch('voice-start')" />
 
                             <div class="flex-1">
                                 <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />

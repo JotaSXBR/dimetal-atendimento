@@ -10,6 +10,7 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('attachTray', ($wire) => ({
         uploading: 0,
         dragging: false,
+        voiceBusy: false,
         notice: '',
 
         async addFiles(list) {
