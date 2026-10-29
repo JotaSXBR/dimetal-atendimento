@@ -60,6 +60,14 @@ COPY --from=assets --chown=www-data:www-data /build/public/build ./public/build
 
 RUN chown -R www-data:www-data storage bootstrap/cache
 
+# Cabeçalhos de segurança também nos arquivos estáticos (ver o comentário do arquivo). O sed insere o include antes do
+# `add_header Cache-Control` de cada location de assets e fontes; o build falha se não inserir exatamente duas vezes,
+# para uma atualização da imagem base nunca remover a proteção em silêncio.
+COPY docker/nginx/static-security-headers.conf /etc/nginx/static-security-headers.conf
+
+RUN sed -i '/add_header Cache-Control "public, max-age=31536000, immutable";/i\    include /etc/nginx/static-security-headers.conf;' /etc/nginx/server-opts.d/performance.conf \
+    && test "$(grep -c 'include /etc/nginx/static-security-headers.conf' /etc/nginx/server-opts.d/performance.conf)" = 2
+
 USER www-data
 
 EXPOSE 8080

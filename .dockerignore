@@ -35,5 +35,6 @@ bootstrap/cache/*.php
 tests
 docs
 compose*.yaml
-docker
+docker/*
+!docker/nginx
 *.md
