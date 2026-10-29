@@ -52,9 +52,4 @@ class ResolveMessageMediaJob implements ShouldQueue
 
         MessageStatusChanged::dispatch($message);
     }
-
-    public function failed(\Throwable $e): void
-    {
-        // Nada a desfazer: a linha já existe e a tela mostra "Mídia indisponível".
-    }
 }

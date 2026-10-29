@@ -85,13 +85,4 @@ class ResolveMessageMediaJobTest extends TestCase
 
         (new ResolveMessageMediaJob($this->message->id))->handle();
     }
-
-    public function test_esgotadas_as_tentativas_a_mensagem_continua_sem_referencia(): void
-    {
-        (new ResolveMessageMediaJob($this->message->id))->failed(new \RuntimeException('x'));
-
-        $fresh = $this->message->fresh();
-        $this->assertNull($fresh?->media_ref);
-        $this->assertSame('media', $fresh->type);
-    }
 }
