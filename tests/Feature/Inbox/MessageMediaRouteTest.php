@@ -54,6 +54,7 @@ class MessageMediaRouteTest extends TestCase
         $response->assertOk();
         $this->assertSame('DADOS', $response->streamedContent());
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-Accel-Buffering', 'no');
         $response->assertHeader('Content-Type', 'audio/ogg');
         $this->assertStringContainsString('private', (string) $response->headers->get('Cache-Control'));
         $this->assertStringNotContainsString('test-key', json_encode($response->headers->all()) ?: '');

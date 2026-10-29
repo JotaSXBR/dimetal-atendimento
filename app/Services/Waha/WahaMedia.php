@@ -9,6 +9,9 @@ use Illuminate\Http\Client\Response;
  */
 class WahaMedia
 {
+    /** O WAHA baixa a mídia do WhatsApp antes de responder: foto em HD, vídeo e documento passam dos 15 s padrão. */
+    private const DOWNLOAD_TIMEOUT_SECONDS = 90;
+
     public function __construct(private readonly WahaClient $client) {}
 
     /**
@@ -20,7 +23,7 @@ class WahaMedia
      */
     public function downloadMessageMedia(string $chatId, string $waId): ?array
     {
-        $response = $this->client->http()->get(
+        $response = $this->client->http()->timeout(self::DOWNLOAD_TIMEOUT_SECONDS)->get(
             $this->sessionPath('/chats/'.rawurlencode($chatId).'/messages/'.rawurlencode($waId)),
             ['downloadMedia' => 'true'],
         );
