@@ -38,7 +38,7 @@
 - Modify: `app/Models/Contact.php`, `resources/views/livewire/inbox/inbox.blade.php` (linhas 46, 50, 72, 85), `tests/Feature/Livewire/InboxTest.php`
 
 **Interfaces:**
-- Produces: `PhoneFormat::display(?string $waId, ?string $lid = null): string`; `PhoneFormat::toWaId(string $input): ?string`; `Contact::label(): string`; `Contact::phoneLabel(): string`. (A fase Contatos consome estas assinaturas.)
+- Produces: `PhoneFormat::display(?string $waId): string`; `PhoneFormat::toWaId(string $input): ?string`; `Contact::label(): string`; `Contact::phoneLabel(): string`. (A fase Contatos consome estas assinaturas.)
 
 - [ ] **Step 1: Testes** (`PhoneFormatTest`, com `DataProvider`): `display('5516997524950@c.us')` = `(16) 99752-4950`; `'551633334444@c.us'` = `(16) 3333-4444`; `'14155550100@c.us'` = `+14155550100`; `display(null, 'x@lid')` e `display(null, null)` = `Número oculto pelo WhatsApp`. `toWaId`: `'(16) 99752-4950'`, `'+55 16 99752-4950'`, `'16997524950'` → `'5516997524950@c.us'`; `'12'`, `'abc'`, 16+ dígitos → `null`.
 - [ ] **Step 2: Rodar e falhar** — `php artisan test --compact tests/Unit/PhoneFormatTest.php`.

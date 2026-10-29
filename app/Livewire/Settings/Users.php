@@ -72,7 +72,6 @@ class Users extends Component
         $this->authorize('viewAny', User::class);
 
         $role = UserRole::tryFrom($this->role);
-        $target = $this->editingId === null ? null : User::query()->findOrFail($this->editingId);
 
         if ($role === null) {
             $this->addError('role', 'Papel inválido.');
@@ -80,16 +79,39 @@ class Users extends Component
             return;
         }
 
-        if ($target === null) {
-            $this->authorize('create', [User::class, $role]);
-        } else {
-            $this->authorize('update', $target);
+        $target = $this->editingId === null ? null : User::query()->findOrFail($this->editingId);
 
-            if ($role !== $target->role) {
-                $this->authorize('assignRole', [User::class, $role]);
-            }
+        $this->authorizeSave($target, $role);
+        $this->validateForm($target);
+
+        if ($target?->isLastActiveAdmin() && $role !== UserRole::ADMIN) {
+            $this->addError('role', 'Este é o único administrador ativo. Promova outra pessoa antes de rebaixá-lo.');
+
+            return;
         }
 
+        $this->persist($target ?? new User, $role, $target === null);
+        $this->resetForm();
+    }
+
+    /** Criar vale pelo papel pedido; editar vale pelo papel de quem está sendo editado e, se o papel muda, pelo novo. */
+    private function authorizeSave(?User $target, UserRole $role): void
+    {
+        if ($target === null) {
+            $this->authorize('create', [User::class, $role]);
+
+            return;
+        }
+
+        $this->authorize('update', $target);
+
+        if ($role !== $target->role) {
+            $this->authorize('assignRole', [User::class, $role]);
+        }
+    }
+
+    private function validateForm(?User $target): void
+    {
         $this->validate([
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($target?->id)],
@@ -104,14 +126,10 @@ class Users extends Component
             'password.required' => 'Defina uma senha.',
             'password.min' => 'A senha precisa ter ao menos 8 caracteres.',
         ]);
+    }
 
-        if ($target?->isLastActiveAdmin() && $role !== UserRole::ADMIN) {
-            $this->addError('role', 'Este é o único administrador ativo. Promova outra pessoa antes de rebaixá-lo.');
-
-            return;
-        }
-
-        $user = $target ?? new User;
+    private function persist(User $user, UserRole $role, bool $creating): void
+    {
         $user->forceFill([
             'name' => trim($this->name),
             'email' => trim($this->email),
@@ -119,7 +137,7 @@ class Users extends Component
             'can_transfer' => $this->canTransfer,
         ]);
 
-        if ($target === null) {
+        if ($creating) {
             $user->forceFill(['active' => true, 'email_verified_at' => now()]);
         }
 
@@ -131,8 +149,6 @@ class Users extends Component
             $user->save();
             $user->sectors()->sync($this->sectorIds);
         });
-
-        $this->resetForm();
     }
 
     public function toggleActive(int $id): void

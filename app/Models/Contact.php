@@ -35,7 +35,7 @@ class Contact extends Model
 
     public function phoneLabel(): string
     {
-        return PhoneFormat::display($this->wa_id, $this->lid);
+        return PhoneFormat::display($this->wa_id);
     }
 
     /**

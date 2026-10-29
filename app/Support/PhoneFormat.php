@@ -12,7 +12,7 @@ final class PhoneFormat
 {
     public const HIDDEN = 'Número oculto pelo WhatsApp';
 
-    public static function display(?string $waId, ?string $lid = null): string
+    public static function display(?string $waId): string
     {
         $digits = $waId === null ? '' : preg_replace('/\D/', '', explode('@', $waId)[0]);
 

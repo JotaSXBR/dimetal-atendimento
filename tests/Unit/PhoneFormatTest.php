@@ -8,22 +8,22 @@ use PHPUnit\Framework\TestCase;
 
 class PhoneFormatTest extends TestCase
 {
-    /** @return array<string, array{string|null, string|null, string}> */
+    /** @return array<string, array{string|null, string}> */
     public static function exibicoes(): array
     {
         return [
-            'celular' => ['5516997524950@c.us', null, '(16) 99752-4950'],
-            'fixo' => ['551633334444@c.us', null, '(16) 3333-4444'],
-            'outro pais' => ['14155550100@c.us', null, '+14155550100'],
-            'so lid' => [null, '16449842241553@lid', 'Número oculto pelo WhatsApp'],
-            'nada' => [null, null, 'Número oculto pelo WhatsApp'],
+            'celular' => ['5516997524950@c.us', '(16) 99752-4950'],
+            'fixo' => ['551633334444@c.us', '(16) 3333-4444'],
+            'outro pais' => ['14155550100@c.us', '+14155550100'],
+            'sem telefone (so lid)' => [null, 'Número oculto pelo WhatsApp'],
+            'vazio' => ['', 'Número oculto pelo WhatsApp'],
         ];
     }
 
     #[DataProvider('exibicoes')]
-    public function test_display(?string $waId, ?string $lid, string $esperado): void
+    public function test_display(?string $waId, string $esperado): void
     {
-        $this->assertSame($esperado, PhoneFormat::display($waId, $lid));
+        $this->assertSame($esperado, PhoneFormat::display($waId));
     }
 
     /** @return array<string, array{string, string|null}> */

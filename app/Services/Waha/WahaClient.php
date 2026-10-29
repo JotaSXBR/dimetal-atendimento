@@ -17,8 +17,6 @@ class WahaClient
 {
     private const TIMEOUT_SECONDS = 15;
 
-    private const MEDIA_TIMEOUT_SECONDS = 90;
-
     public function __construct(private readonly Channel $channel) {}
 
     /**
@@ -131,38 +129,6 @@ class WahaClient
             'chatId' => $chatId,
             'text' => $text,
         ]));
-    }
-
-    /**
-     * Envia um arquivo em base64. O endpoint depende do tipo: imagem, vídeo, voz (o WAHA converte para OGG/OPUS com
-     * `convert`) ou arquivo/documento. Áudio não tem legenda no WhatsApp.
-     *
-     * @param  string  $kind  `image`, `video`, `audio` ou `document` (qualquer outro valor vai como arquivo)
-     * @return array<string, mixed>
-     */
-    public function sendMedia(string $kind, string $chatId, string $mimetype, string $filename, string $data, string $caption = ''): array
-    {
-        $endpoint = match ($kind) {
-            'image' => '/api/sendImage',
-            'video' => '/api/sendVideo',
-            'audio' => '/api/sendVoice',
-            default => '/api/sendFile',
-        };
-
-        $body = [
-            'session' => $this->sessionName(),
-            'chatId' => $chatId,
-            'file' => ['mimetype' => $mimetype, 'filename' => $filename, 'data' => $data],
-        ];
-
-        if ($kind === 'audio') {
-            $body['convert'] = true;
-        } elseif ($caption !== '') {
-            $body['caption'] = $caption;
-        }
-
-        // O WAHA sobe o arquivo ao WhatsApp antes de responder: documento de vários MB passa dos 15 s padrão.
-        return $this->decode($this->request()->timeout(self::MEDIA_TIMEOUT_SECONDS)->post($endpoint, $body));
     }
 
     /**
