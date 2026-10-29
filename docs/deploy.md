@@ -130,17 +130,18 @@ Recursos do beta hoje:
 | `pg-beta` | `m3kcov2jn01utd97jjho2lox` |
 | `redis-beta` | `vp3u0qyz2tsmyveqrb6ml2zi` |
 
-### Fila de saída (`outbound-beta`)
+### Fila de saída (dentro do `worker-beta`)
 
-Application do mesmo Dockerfile, estágio `worker-outbound` (`queue:work --queue=outbound --tries=1 --timeout=120`),
-**um único processo**: o envio humanizado (visto, digitando, pausa, envio) leva segundos, e um só consumidor garante
-que as mensagens de cada conversa saiam na ordem. O `worker-beta` consome só `default`. Sem este recurso as
-respostas do painel ficam paradas na fila (não se perdem). Crie como o `worker-beta` (mesmas variáveis, sem
-`domains`, `dockerfile_target_build` `worker-outbound` via `PATCH`, healthcheck `cmd` `healthcheck-queue`) e
-inclua o uuid no `deploy-beta.yml`. O `retry_after` da fila (`REDIS_QUEUE_RETRY_AFTER`, padrão 180) fica acima do
-timeout do job (120). **Não escale réplicas** do `outbound-beta`: com mais de um processo, uma mensagem curta ultrapassa
-a longa que veio antes e a ordem da conversa se perde. Ao trocar o formato do `SendTicketMessageJob` (como na fatia de
-mídia), esvazie a fila `default` de envios antigos antes do deploy: um job serializado pelo código velho falha no worker novo.
+O estágio `worker` roda `docker/worker.sh`, que inicia **dois** processos de fila no mesmo container: `outbound`
+(`--tries=1 --timeout=120`, **um único processo**) e `default` (`--tries=3`). O envio humanizado (visto, digitando,
+pausa, envio) leva segundos, e um só consumidor em `outbound` garante que as mensagens de cada conversa saiam na ordem,
+sem prender a ingestão, os acks e o tempo real, que ficam em `default`. Se um dos processos morrer, o script encerra o
+outro e o container sai com erro, para o Coolify reiniciar os dois juntos. O `retry_after` da fila
+(`REDIS_QUEUE_RETRY_AFTER`, padrão 180) fica acima do timeout do job (120). **Não escale réplicas** do `worker-beta`:
+com mais de um processo em `outbound`, uma mensagem curta ultrapassa a longa que veio antes. Ao trocar o formato do
+`SendTicketMessageJob` (como na fatia de mídia), esvazie a fila `default` de envios antigos antes do deploy: um job
+serializado pelo código velho falha no worker novo. Se um dia um único processo de saída virar gargalo, separe em
+um recurso próprio (estágio com `queue:work --queue=outbound`) ou serialize por conversa.
 
 ### Mídia no WAHA
 
