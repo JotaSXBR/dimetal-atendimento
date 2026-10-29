@@ -55,7 +55,7 @@ class Index extends Component
         try {
             $result = $createContact($this->newPhone, $this->newName);
         } catch (ValidationException $e) {
-            $this->addError('newPhone', $e->errors()['phone'][0] ?? 'Telefone inválido.');
+            $this->addError('newPhone', $e->validator->errors()->first('phone') ?: 'Telefone inválido.');
 
             return;
         }
