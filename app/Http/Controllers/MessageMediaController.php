@@ -70,6 +70,8 @@ class MessageMediaController extends Controller
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=3600',
             'Accept-Ranges' => 'bytes',
+            // Sem isto o nginx grava a resposta inteira em disco antes de entregar, e o vídeo só começa ao fim.
+            'X-Accel-Buffering' => 'no',
         ];
 
         foreach (['Content-Range', 'Content-Length'] as $name) {
