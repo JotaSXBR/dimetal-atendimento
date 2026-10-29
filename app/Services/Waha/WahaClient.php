@@ -7,6 +7,7 @@ use App\Settings\WahaSettings;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Cliente HTTP do WAHA para uma sessão (canal).
@@ -145,12 +146,26 @@ class WahaClient
         );
         $this->ensureOk($response);
 
-        $filename = $response->json('media.filename');
+        $filename = $response->json('media.filename') ?? $this->filenameFromUrl($response->json('media.url'));
         $mimetype = $response->json('media.mimetype');
 
-        return is_string($filename) && $filename !== ''
-            ? ['filename' => $filename, 'mimetype' => is_string($mimetype) ? $mimetype : null]
-            : null;
+        if (! is_string($filename) || $filename === '') {
+            Log::warning('WAHA respondeu sem arquivo aproveitável para a mídia', ['media' => $response->json('media')]);
+
+            return null;
+        }
+
+        return ['filename' => $filename, 'mimetype' => is_string($mimetype) ? $mimetype : null];
+    }
+
+    /**
+     * Só o último trecho de uma URL do próprio WAHA (`/api/files/...`) vira nome; a URL em si nunca é buscada.
+     */
+    private function filenameFromUrl(mixed $url): ?string
+    {
+        $path = is_string($url) ? parse_url($url, PHP_URL_PATH) : null;
+
+        return is_string($path) && str_contains($path, '/api/files/') ? rawurldecode(basename($path)) : null;
     }
 
     /**

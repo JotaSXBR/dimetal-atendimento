@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class ResolveMessageMediaJobTest extends TestCase
@@ -77,6 +78,37 @@ class ResolveMessageMediaJobTest extends TestCase
         (new ResolveMessageMediaJob($this->message->id))->handle();
 
         $this->assertSame(100, mb_strlen((string) $this->message->fresh()?->media_mime));
+    }
+
+    public function test_nome_com_arroba_do_id_serializado_e_aceito(): void
+    {
+        Http::fake(['*' => Http::response(['media' => ['filename' => 'false_5516997524950@c.us_IMG1.jpeg', 'mimetype' => 'image/jpeg']])]);
+
+        (new ResolveMessageMediaJob($this->message->id))->handle();
+
+        $this->assertSame('false_5516997524950@c.us_IMG1.jpeg', $this->message->fresh()?->media_ref);
+    }
+
+    public function test_sem_filename_usa_o_nome_do_arquivo_da_url_do_proprio_waha(): void
+    {
+        Http::fake(['*' => Http::response(['media' => ['url' => 'http://localhost:3000/api/files/main/false_5516997524950%40c.us_IMG1.jpeg', 'mimetype' => 'image/jpeg']])]);
+
+        (new ResolveMessageMediaJob($this->message->id))->handle();
+
+        $this->assertSame('false_5516997524950@c.us_IMG1.jpeg', $this->message->fresh()?->media_ref);
+    }
+
+    public function test_resposta_sem_arquivo_aproveitavel_registra_o_que_veio_em_media(): void
+    {
+        Log::spy();
+        Http::fake(['*' => Http::response(['media' => ['url' => 'https://mmg.whatsapp.net/x.enc', 'error' => 'boom']])]);
+
+        try {
+            (new ResolveMessageMediaJob($this->message->id))->handle();
+            $this->fail('Deveria pedir nova tentativa');
+        } catch (\RuntimeException) {
+            Log::shouldHaveReceived('warning')->once();
+        }
     }
 
     public function test_midia_ja_resolvida_nao_chama_o_waha(): void
