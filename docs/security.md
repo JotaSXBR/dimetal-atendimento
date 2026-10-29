@@ -92,3 +92,19 @@ Rodar na hora: `gh workflow run security` e `gh workflow run security-scan`.
 **Estado da imagem em 28/10/2026:** 0 vulnerabilidades críticas ou altas com correção publicada (Debian 12.15 e pacotes do
 Composer). Existem 296 críticas ou altas **sem correção** no Debian base (por exemplo `bsdutils`); o job as ignora de propósito e
 a varredura semanal as traz de volta assim que o Debian publicar a correção.
+
+### Primeira rodada do ZAP no beta (28/10/2026)
+
+Varredura passiva, só das páginas sem login. Triagem de cada aviso:
+
+| Aviso do ZAP | Veredito | O que foi feito |
+|---|---|---|
+| `X-Content-Type-Options` e HSTS ausentes em assets e fontes | **Real.** A imagem base define os cabeçalhos no `server`, mas o `performance.conf` dela declara `add_header` nos locations de assets e fontes, e o nginx não herda os do `server` num location que declara os próprios | Corrigido: `docker/nginx/static-security-headers.conf` é incluído nesses locations pelo Dockerfile, e o build falha se a inclusão não ocorrer duas vezes |
+| CSP e Permissions-Policy ausentes em assets, 404 e rotas do Livewire/Flux | Baixo risco: política de conteúdo só importa em documento HTML. A CSP segue em `report-only` (ver acima) | Nenhuma ação agora |
+| Cookie sem `HttpOnly` | **Esperado.** É o `XSRF-TOKEN`, que o Laravel deixa legível pelo JavaScript de propósito; o cookie de sessão tem `HttpOnly` | Nenhuma |
+| "Cross-Domain Misconfiguration" nas fontes | Esperado: `Access-Control-Allow-Origin: *` em arquivos de fonte públicos, definido pela imagem base | Nenhuma |
+| `Cross-Origin-Embedder-Policy` ausente | Opcional: só serve para isolamento de origem cruzada | Nenhuma |
+| Cache-control, conteúdo não armazenável, redirect grande, "Modern Web Application", identificação de sessão e autenticação | Informativos | Nenhuma |
+
+O que passou limpo: nenhum vazamento de cabeçalho de versão ou depuração, nenhuma biblioteca JavaScript vulnerável e nenhum ponto de
+XSS refletido nas páginas varridas. O ZAP não faz login, então telas autenticadas (inbox, canais) não foram cobertas.
