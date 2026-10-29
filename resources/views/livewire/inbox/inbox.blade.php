@@ -337,6 +337,10 @@
                     <dd class="font-mono text-ink">{{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}</dd>
                 </div>
             </dl>
+
+            <hr class="my-4 border-line">
+
+            <livewire:contacts.contact-card :contact-id="$ticket->contact_id" :key="'contact-'.$ticket->contact_id" />
         @endif
     </aside>
 </div>
