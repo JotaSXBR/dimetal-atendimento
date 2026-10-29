@@ -153,6 +153,29 @@ class WahaClient
             : null;
     }
 
+    /**
+     * Lê um arquivo guardado no WAHA, repassando o `Range` do navegador (o Safari exige para tocar áudio e vídeo).
+     * O WAHA serve `/api/files/{sessão}/{arquivo}`; a rota sem a sessão é a tentativa de reserva.
+     * Devolve `null` quando o arquivo não existe.
+     */
+    public function streamFile(string $ref, ?string $range = null): ?Response
+    {
+        foreach (['/api/files/'.rawurlencode($this->sessionName()).'/'.rawurlencode($ref), '/api/files/'.rawurlencode($ref)] as $path) {
+            $request = $this->request()->withOptions(['stream' => true])->withHeaders($range === null ? [] : ['Range' => $range]);
+            $response = $request->get($path);
+
+            if ($response->status() === 404) {
+                continue;
+            }
+
+            $this->ensureOk($response);
+
+            return $response;
+        }
+
+        return null;
+    }
+
     public function sendSeen(string $chatId): void
     {
         $this->ensureOk($this->request()->post('/api/sendSeen', [
