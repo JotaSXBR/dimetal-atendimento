@@ -6,3 +6,5 @@
 
 import './echo';
 import './audio-player';
+import './attach-tray';
+import './voice-recorder';

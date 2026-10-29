@@ -43,11 +43,11 @@
                             wire:key="ticket-{{ $item->id }}"
                             class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
                         >
-                            <flux:avatar :name="$item->contact->name ?? $item->contact->wa_id" size="sm" />
+                            <flux:avatar :name="$item->contact->label()" size="sm" />
 
                             <span class="min-w-0 flex-1">
                                 <span class="flex items-baseline justify-between gap-2">
-                                    <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->name ?? $item->contact->wa_id }}</span>
+                                    <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
                                     <span class="font-mono text-[10px] text-ink-3">
                                         {{ ($item->last_inbound_at ?? $item->opened_at)->timezone($tz)->format('H:i') }}
                                     </span>
@@ -69,7 +69,7 @@
     <section class="flex min-h-0 flex-col bg-canvas {{ $ticket ? '' : 'hidden lg:flex' }}">
         @if ($ticket)
             @php
-                $name = $ticket->contact->name ?? $ticket->contact->wa_id;
+                $name = $ticket->contact->label();
             @endphp
 
             <header class="flex items-center gap-3 border-b border-line bg-surface px-4 py-3">
@@ -82,7 +82,7 @@
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
                     </p>
                     <p class="truncate font-mono text-[11px] text-ink-3">
-                        {{ $ticket->protocol }} · {{ $ticket->contact->wa_id ?? $ticket->contact->lid }} · {{ $ticket->channel->name }}
+                        {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}
                     </p>
                 </div>
 
@@ -168,6 +168,10 @@
 
                         <div wire:key="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
                             <div class="max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
+                                @if ($message->origin === \App\Enums\MessageOrigin::BOT)
+                                    <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
+                                @endif
+
                                 @if ($outside)
                                     <p class="mb-0.5 font-mono text-[10px] tracking-wide text-warn uppercase">Celular · fora do painel</p>
                                 @endif
@@ -216,15 +220,83 @@
                 @endif
 
                 @if ($canReply)
-                    <form wire:submit="send" class="flex items-end gap-2">
-                        <div class="flex-1">
-                            <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }" />
-                            @error('draft')
-                                <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-                            @enderror
+                    <div
+                        wire:key="composer-{{ $ticket->id }}"
+                        x-data="attachTray($wire, {{ $ticket->id }})"
+                        x-on:dragover.prevent="dragging = true"
+                        x-on:dragleave.prevent="dragging = false"
+                        x-on:drop.prevent="drop($event)"
+                        x-on:paste="paste($event)"
+                        x-on:voice-phase.window="voiceBusy = $event.detail !== 'idle'"
+                        x-bind:class="dragging ? 'rounded-md ring-2 ring-accent' : ''"
+                    >
+                        @if ($attachments !== [])
+                            <ul x-show="!voiceBusy" class="mb-2 flex flex-wrap gap-2" aria-label="Arquivos para enviar">
+                                @foreach ($attachments as $index => $file)
+                                    <li wire:key="attachment-{{ $index }}-{{ $file->getFilename() }}" class="flex items-center gap-2 rounded-md border border-line bg-canvas px-2 py-1 text-xs">
+                                        <flux:icon.paper-clip class="size-3.5 text-ink-3" />
+                                        <span class="max-w-40 truncate text-ink">{{ $file->getClientOriginalName() }}</span>
+                                        <span class="font-mono text-ink-3">{{ \Illuminate\Support\Number::fileSize($file->getSize(), 1) }}</span>
+                                        <button type="button" wire:click="removeAttachment({{ $index }})" class="text-ink-3 hover:text-danger" aria-label="Remover {{ $file->getClientOriginalName() }}">
+                                            <flux:icon.x-mark class="size-3.5" />
+                                        </button>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+
+                        <p x-show="uploading > 0" x-cloak class="mb-2 text-xs text-ink-3" role="status">Enviando arquivo…</p>
+                        <p x-show="notice" x-cloak x-text="notice" class="mb-2 text-xs text-danger" role="alert"></p>
+                        @error('attachments')
+                            <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
+                        @enderror
+
+                        {{-- Gravador de voz: o estado vive no Alpine (wire:ignore); ver resources/js/voice-recorder.js --}}
+                        <div wire:ignore x-data="voiceRecorder($wire, {{ $ticket->id }})" x-on:voice-start.window="start()">
+                            <p x-show="error" x-cloak x-text="error" class="mb-2 text-xs text-danger" role="alert"></p>
+
+                            <div x-show="phase === 'recording'" x-cloak class="flex items-center gap-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2">
+                                <span class="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true"></span>
+                                <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
+                                <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
+                                <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()">Descartar</button>
+                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-white" x-on:click="stop()">Parar</button>
+                            </div>
+
+                            <div x-show="phase === 'preview'" x-cloak class="flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
+                                <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
+                                <button type="button" class="text-sm text-ink-2 hover:text-ink" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</button>
+                                <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()" x-bind:disabled="sending">Descartar</button>
+                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-white disabled:opacity-50" x-on:click="send()" x-bind:disabled="sending">Enviar</button>
+                            </div>
                         </div>
-                        <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" />
-                    </form>
+
+                        @error('voice')
+                            <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
+                        @enderror
+
+                        <form wire:submit="send" class="flex items-end gap-2" x-show="!voiceBusy">
+                            <input
+                                type="file"
+                                multiple
+                                class="hidden"
+                                x-ref="picker"
+                                aria-label="Escolher arquivos"
+                                accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.mp3,.ogg,.m4a,.mp4"
+                                x-on:change="addFiles($event.target.files); $event.target.value = ''"
+                            >
+                            <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-on:click="$refs.picker.click()" />
+                            <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-on:click="$dispatch('voice-start')" />
+
+                            <div class="flex-1">
+                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />
+                                @error('draft')
+                                    <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-bind:disabled="uploading > 0" />
+                        </form>
+                    </div>
                 @elseif ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                     <p class="text-center text-sm text-ink-3">Ticket encerrado. Somente leitura.</p>
                 @elseif ($ticket->assigned_user_id === null)

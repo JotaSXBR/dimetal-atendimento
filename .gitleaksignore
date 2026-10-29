@@ -1,0 +1,2 @@
+# Falsos positivos do gitleaks (impressão digital = commit:arquivo:regra:linha). Senha de exemplo usada só em teste.
+332489ba1564841019224cb02c57ff25b16a76ad:tests/Feature/Livewire/UsersPageTest.php:generic-api-key:151

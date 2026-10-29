@@ -45,7 +45,7 @@ class IngestMessage
 
         $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
 
-        if ($incoming->fromMe && $incoming->type === 'text' && ($pending = $this->matchPending($channel, $contact, $incoming->body)) !== null) {
+        if ($incoming->fromMe && in_array($incoming->type, ['text', 'media'], true) && ($pending = $this->matchPending($channel, $contact, $incoming)) !== null) {
             return $this->adoptEcho($pending, $incoming);
         }
 
@@ -71,7 +71,11 @@ class IngestMessage
             'failure_reason' => null,
             'failure_code' => null,
         ]);
-        $ticket->recordOutbound($incoming->sentAt);
+        // O eco da resposta automática não é trabalho humano (ver `SendTicketMessage::deliver`).
+        if ($pending->origin !== MessageOrigin::BOT) {
+            $ticket->recordOutbound($incoming->sentAt);
+        }
+
         TicketUpdated::dispatch($ticket);
 
         return $pending;
@@ -87,18 +91,23 @@ class IngestMessage
         }
     }
 
-    private function matchPending(Channel $channel, Contact $contact, string $body): ?Message
+    /**
+     * A linha do painel que este eco `fromMe` representa. Anexo casa por tipo e legenda, não pelo tipo do arquivo: o
+     * WhatsApp recomprime imagens e converte a voz, então o `mimetype` do eco não é o que enviamos.
+     */
+    private function matchPending(Channel $channel, Contact $contact, IncomingMessage $incoming): ?Message
     {
         return Message::query()
             ->where('channel_id', $channel->id)
             ->where('contact_id', $contact->id)
             ->where('direction', MessageDirection::OUT->value)
-            ->where('origin', MessageOrigin::PAINEL->value)
+            ->whereIn('origin', [MessageOrigin::PAINEL->value, MessageOrigin::BOT->value])
             ->whereNull('wa_message_id')
             ->where(fn ($q) => $q->whereNull('delivery_status')
                 // Só a falha "sem resposta" pode ter saído; as recusadas pelo WAHA não são engolidas pelo eco do celular.
                 ->orWhere(fn ($failed) => $failed->where('delivery_status', DeliveryStatus::FAILED->value)->where('failure_code', SendFailure::UNKNOWN)))
-            ->where('body', $body)
+            ->where('type', $incoming->type)
+            ->where('body', $incoming->body)
             ->where('updated_at', '>=', now()->subSeconds(self::ECHO_WINDOW_SECONDS))
             ->oldest('id')
             ->first();
@@ -135,6 +144,11 @@ class IngestMessage
 
         MessageCreated::dispatch($message);
         TicketUpdated::dispatch($ticket);
+
+        if (! $incoming->fromMe) {
+            // Depois do commit: só uma mensagem realmente gravada pode gerar resposta (a que perdeu a corrida é descartada).
+            DB::afterCommit(fn () => app(AfterHoursReply::class)($message));
+        }
 
         if ($message->hasMedia()) {
             ResolveMessageMediaJob::dispatch($message->id)->afterCommit();

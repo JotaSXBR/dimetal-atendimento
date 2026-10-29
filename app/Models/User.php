@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -66,6 +67,22 @@ class User extends Authenticatable implements PasskeyUser
     public function isAdmin(): bool
     {
         return $this->role === UserRole::ADMIN;
+    }
+
+    /** Admin ativo que é o único: desativá-lo ou rebaixá-lo trancaria a administração do sistema. */
+    public function isLastActiveAdmin(): bool
+    {
+        return $this->isAdmin()
+            && $this->active
+            && ! static::query()->where('role', UserRole::ADMIN->value)->where('active', true)->whereKeyNot($this->id)->exists();
+    }
+
+    /**
+     * @return HasMany<Ticket, $this>
+     */
+    public function assignedTickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'assigned_user_id');
     }
 
     public function canSeeAllSectors(): bool

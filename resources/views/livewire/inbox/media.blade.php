@@ -1,6 +1,6 @@
 @php
     $mime = (string) $message->media_mime;
-    $url = $message->media_ref !== null ? route('midia', $message) : null;
+    $url = $message->media_ref !== null || $message->local_path !== null ? route('midia', $message) : null;
     $kind = match (true) {
         str_starts_with($mime, 'image/') => 'Foto',
         str_starts_with($mime, 'video/') => 'Vídeo',
@@ -21,6 +21,8 @@
     @include('livewire.inbox.location', ['message' => $message])
 @elseif ($message->type === 'contact')
     @include('livewire.inbox.contact', ['message' => $message])
+@elseif ($url === null && $message->media_purged_at !== null)
+    <p class="text-ink-2 italic">Arquivo expirado (os anexos são guardados por 90 dias).</p>
 @elseif ($url === null)
     <p class="text-ink-2 italic">{{ $message->created_at?->gt(now()->subMinutes(2)) ? 'Carregando mídia…' : 'Mídia indisponível' }}</p>
 @elseif (str_starts_with($mime, 'image/'))

@@ -9,17 +9,15 @@ use App\Actions\Inbox\TakeoverTicket;
 use App\Actions\Inbox\TransferTicket;
 use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
-use App\Jobs\SendTicketMessageJob;
+use App\Livewire\Inbox\Concerns\ComposesMessages;
 use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Inbox\ResendTicketMessage;
-use App\Services\Inbox\SendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -31,6 +29,8 @@ use Livewire\Component;
 #[Layout('layouts::inbox')]
 class Inbox extends Component
 {
+    use ComposesMessages;
+
     /** Prévia da lista: o texto ou, quando não há, o nome do tipo de conteúdo. */
     private const PREVIEW_SQL = "case when type = 'location' then 'Localização' when type = 'contact' then 'Contato' "
         ."when body <> '' then body when type = 'view_once' then 'Visualização única' "
@@ -42,8 +42,6 @@ class Inbox extends Component
 
     #[Url]
     public string $tab = 'todos';
-
-    public string $draft = '';
 
     public ?string $notice = null;
 
@@ -62,6 +60,7 @@ class Inbox extends Component
 
         $this->ticketId = $ticketId;
         $this->notice = null;
+        $this->discardAttachments();
         $this->closePanel();
     }
 
@@ -146,32 +145,6 @@ class Inbox extends Component
         $this->authorize('close', $ticket);
 
         (new CloseTicket)($ticket, $this->user());
-    }
-
-    public function send(): void
-    {
-        $ticket = $this->selected();
-        $this->authorize('reply', $ticket);
-
-        $this->draft = trim($this->draft);
-        $this->validate(['draft' => ['required', 'string', 'max:4096']], [
-            'draft.required' => 'Escreva uma mensagem.',
-            'draft.max' => 'A mensagem passa de 4096 caracteres.',
-        ]);
-
-        // Freio contra conta comprometida ou laço no navegador. Só o envio conta; indicadores de digitação, que são
-        // bem mais frequentes, terão limite próprio quando existirem.
-        $allowed = RateLimiter::attempt('send-message:'.$this->user()->id, config()->integer('security.send_message_per_minute'), fn () => true, 60);
-
-        if (! $allowed) {
-            $this->addError('draft', 'Você está enviando mensagens rápido demais. Aguarde alguns segundos.');
-
-            return;
-        }
-
-        SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $this->draft)->id);
-
-        $this->reset('draft');
     }
 
     /**

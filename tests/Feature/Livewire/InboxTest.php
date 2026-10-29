@@ -45,6 +45,21 @@ class InboxTest extends TestCase
         ]);
     }
 
+    public function test_contato_sem_nome_aparece_com_telefone_legivel(): void
+    {
+        $me = $this->user();
+        $ticket = Ticket::factory()->create([
+            'channel_id' => $this->channel->id,
+            'contact_id' => Contact::factory()->create(['name' => null, 'wa_id' => '5516997524950@c.us']),
+            'status' => TicketStatus::AGUARDANDO,
+        ]);
+
+        Livewire::actingAs($me)->test(Inbox::class)
+            ->call('select', $ticket->id)
+            ->assertSee('(16) 99752-4950')
+            ->assertDontSee('@c.us');
+    }
+
     public function test_visitante_vai_para_o_login(): void
     {
         $this->get(route('inbox'))->assertRedirect(route('login'));

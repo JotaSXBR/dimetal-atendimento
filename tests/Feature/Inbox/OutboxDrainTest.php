@@ -16,8 +16,10 @@ use App\Models\WahaEvent;
 use App\Services\Inbox\DrainOutbox;
 use App\Services\Inbox\SendFailure;
 use App\Services\Inbox\SendTicketMessage;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
@@ -74,6 +76,45 @@ class OutboxDrainTest extends TestCase
     private function sendTextCount(): int
     {
         return Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/sendText'))->count();
+    }
+
+    public function test_estaciona_com_o_canal_working_reagenda_em_10_segundos(): void
+    {
+        $this->fakeWaha(fn () => Http::response(['message' => 'Session status is not as expected'], 422));
+        $this->queued('primeira');
+
+        (new DrainOutboxJob($this->channel->id))->handle(app(DrainOutbox::class));
+
+        Queue::assertPushed(DrainOutboxJob::class, fn (DrainOutboxJob $job) => $job->channelId === $this->channel->id
+            && $job->delay instanceof \DateTimeInterface
+            && abs(now()->diffInSeconds($job->delay, false) - DrainOutboxJob::RETRY_SECONDS) <= 1);
+    }
+
+    public function test_reagendamento_para_depois_do_limite_de_tentativas(): void
+    {
+        $this->fakeWaha(fn () => Http::response(['message' => 'Session status is not as expected'], 422));
+        $this->queued('primeira');
+        Cache::put('outbox:retries:'.$this->channel->id, DrainOutboxJob::MAX_RETRIES, now()->addMinutes(5));
+
+        (new DrainOutboxJob($this->channel->id))->handle(app(DrainOutbox::class));
+
+        Queue::assertNotPushed(DrainOutboxJob::class);
+    }
+
+    public function test_esvaziou_tudo_nao_reagenda(): void
+    {
+        $this->fakeWaha(fn (Request $r, int $n) => Http::response(['id' => "true_5516997524950@c.us_ID{$n}"], 201));
+        $this->queued('primeira');
+
+        (new DrainOutboxJob($this->channel->id))->handle(app(DrainOutbox::class));
+
+        Queue::assertNotPushed(DrainOutboxJob::class);
+    }
+
+    /** O worker solta o bloqueio de unicidade antes de rodar o job; chamando `handle` direto, soltamos à mão. */
+    private function releaseUniqueLock(): void
+    {
+        Cache::lock('laravel_unique_job:'.DrainOutboxJob::class.$this->channel->id)->forceRelease();
     }
 
     public function test_envia_as_aguardando_em_ordem_e_marca_enviadas(): void
@@ -217,5 +258,25 @@ class OutboxDrainTest extends TestCase
         ]);
 
         (new HandleWahaEvent($event->id))->handle();
+    }
+
+    public function test_depois_do_orcamento_de_tempo_nao_comeca_outro_envio_e_pede_nova_rodada(): void
+    {
+        $this->fakeWaha(function (Request $r, int $n) {
+            Carbon::setTestNow(now()->addSeconds(DrainOutbox::TIME_BUDGET_SECONDS + 1));
+
+            return Http::response(['id' => "true_5516997524950@c.us_ID{$n}"], 201);
+        });
+        $first = $this->queued('primeira');
+        $second = $this->queued('segunda');
+
+        $more = app(DrainOutbox::class)($this->channel);
+
+        $this->assertTrue($more);
+        $this->assertSame(DeliveryStatus::SENT, $first->fresh()?->delivery_status);
+        $this->assertSame(DeliveryStatus::QUEUED, $second->fresh()?->delivery_status);
+        $this->assertSame(1, $this->sendTextCount());
+
+        Carbon::setTestNow();
     }
 }

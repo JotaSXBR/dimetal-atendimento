@@ -24,6 +24,9 @@ class DrainOutbox
 
     public const EXPIRES_AFTER_HOURS = 24;
 
+    /** Depois disto uma rodada não começa novos envios (sobrando mensagens, o job se agenda de novo). */
+    public const TIME_BUDGET_SECONDS = 10;
+
     public function __construct(private readonly SendTicketMessage $send) {}
 
     /**
@@ -38,8 +41,15 @@ class DrainOutbox
         }
 
         $waiting = $this->waiting($channel)->limit(self::BATCH)->get();
+        $started = now();
 
-        foreach ($waiting as $message) {
+        foreach ($waiting as $position => $message) {
+            // Um anexo pode levar até 90 s para subir: depois de 10 s de trabalho não se começa outro envio. Se o
+            // worker matasse o job no meio de um envio, a linha ainda estaria aguardando e o cliente receberia o arquivo duas vezes.
+            if ($position > 0 && $started->diffInSeconds(now()) > self::TIME_BUDGET_SECONDS) {
+                return true;
+            }
+
             try {
                 $this->send->deliver($message);
             } catch (Throwable) {
@@ -52,6 +62,12 @@ class DrainOutbox
         }
 
         return $this->waiting($channel)->exists();
+    }
+
+    /** O canal consta conectado e ainda há mensagem aguardando: o envio estacionou (sessão sincronizando). */
+    public function stuckWhileConnected(Channel $channel): bool
+    {
+        return $channel->refresh()->status === ChannelStatus::WORKING && $this->waiting($channel)->exists();
     }
 
     /** Falha as que esperaram demais (ou todas, quando o canal é omitido). */

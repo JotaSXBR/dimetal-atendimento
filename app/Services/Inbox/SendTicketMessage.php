@@ -14,7 +14,9 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaMedia;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -36,18 +38,29 @@ class SendTicketMessage
         return $message;
     }
 
-    public function create(Ticket $ticket, User $author, string $text): Message
+    public function create(Ticket $ticket, ?User $author, string $text, MessageOrigin $origin = MessageOrigin::PAINEL): Message
+    {
+        return $this->record($ticket, $author, 'text', $text, $origin);
+    }
+
+    /**
+     * Grava a linha de saída (texto ou anexo) e avisa a tela. O envio em si é de `deliver`.
+     *
+     * @param  array<string, mixed>  $extra  colunas de mídia (`media_mime`, `media_name`, `media_size`, `local_path`)
+     */
+    public function record(Ticket $ticket, ?User $author, string $type, string $body, MessageOrigin $origin = MessageOrigin::PAINEL, array $extra = []): Message
     {
         $message = Message::create([
             'ticket_id' => $ticket->id,
             'channel_id' => $ticket->channel_id,
             'contact_id' => $ticket->contact_id,
             'direction' => MessageDirection::OUT,
-            'type' => 'text',
-            'body' => $text,
-            'origin' => MessageOrigin::PAINEL,
-            'author_user_id' => $author->id,
+            'type' => $type,
+            'body' => $body,
+            'origin' => $origin,
+            'author_user_id' => $author?->id,
             'sent_at' => now(),
+            ...$extra,
         ]);
 
         MessageCreated::dispatch($message);
@@ -69,14 +82,26 @@ class SendTicketMessage
             return;
         }
 
+        $file = $message->type === 'media' ? $this->readAttachment($message) : null;
+
+        if ($message->type === 'media' && $file === null) {
+            $this->fileGone($message);
+
+            return;
+        }
+
         // Começa a janela em que o eco `fromMe` ainda pode casar com esta linha.
         $message->touch();
 
         $client = new WahaClient($channel);
-        $this->presence->before($client, $ticket, $contact, $message->body);
+
+        // Resposta automática não finge leitura nem digitação: seria o cliente vendo "digitando…" de um robô às 22h.
+        if ($message->origin !== MessageOrigin::BOT) {
+            $this->presence->before($client, $ticket, $contact, $message->body);
+        }
 
         try {
-            $response = $client->sendText($contact->wa_id ?? (string) $contact->lid, $message->body);
+            $response = $this->transmit($client, $message, $contact->wa_id ?? (string) $contact->lid, $file);
         } catch (Throwable $e) {
             $this->failed($message, $e);
 
@@ -84,7 +109,33 @@ class SendTicketMessage
         }
 
         $this->presence->scheduleOffline($channel);
+        $this->markSent($message, $ticket, $response);
+    }
 
+    /**
+     * @return array<string, mixed> a resposta do WAHA ao envio
+     */
+    private function transmit(WahaClient $client, Message $message, string $chatId, ?string $file): array
+    {
+        if ($file === null) {
+            return $client->sendText($chatId, $message->body);
+        }
+
+        return (new WahaMedia($client))->send(
+            AttachmentRules::kindOfStored((string) $message->media_mime),
+            $chatId,
+            (string) $message->media_mime,
+            (string) ($message->media_name ?? 'arquivo'),
+            base64_encode($file),
+            $message->body,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    private function markSent(Message $message, Ticket $ticket, array $response): void
+    {
         $message->refresh();
 
         $waId = $response['id'] ?? null;
@@ -102,7 +153,11 @@ class SendTicketMessage
 
         $message->save();
 
-        $ticket->recordOutbound($message->sent_at);
+        // A resposta automática não é trabalho humano: não marca a primeira resposta nem adia o encerramento por inatividade.
+        if ($message->origin !== MessageOrigin::BOT) {
+            $ticket->recordOutbound($message->sent_at);
+        }
+
         MessageStatusChanged::dispatch($message);
         TicketUpdated::dispatch($ticket);
 
@@ -112,6 +167,29 @@ class SendTicketMessage
             'actor_user_id' => $message->author_user_id,
             'payload' => ['message_id' => $message->id],
         ]);
+    }
+
+    /** Os bytes do anexo na cópia local, ou `null` quando a cópia sumiu (apagada pela retenção ou pelo disco). */
+    private function readAttachment(Message $message): ?string
+    {
+        if ($message->local_path === null) {
+            return null;
+        }
+
+        $disk = Storage::disk('local');
+
+        return $disk->exists($message->local_path) ? $disk->get($message->local_path) : null;
+    }
+
+    /** Sem a cópia local não há o que enviar: falha com motivo (sem laço de reenvio) em vez de ficar esperando. */
+    private function fileGone(Message $message): void
+    {
+        $message->update([
+            'delivery_status' => DeliveryStatus::FAILED,
+            'failure_code' => SendFailure::REFUSED,
+            'failure_reason' => 'O arquivo deste anexo não está mais disponível no servidor. Envie-o de novo.',
+        ]);
+        MessageStatusChanged::dispatch($message);
     }
 
     private function waitingAhead(Message $message): bool
