@@ -5,6 +5,7 @@ namespace Tests\Feature\Inbox;
 use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
+use App\Jobs\SendTicketMessageJob;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
@@ -49,6 +50,35 @@ class SendTicketMessageTest extends TestCase
     private function send(string $text = 'Segue o orcamento'): Message
     {
         return app(SendTicketMessage::class)($this->ticket, $this->author, $text);
+    }
+
+    public function test_create_grava_a_linha_sem_chamar_o_waha(): void
+    {
+        Http::fake();
+
+        $message = app(SendTicketMessage::class)->create($this->ticket, $this->author, 'oi');
+
+        Http::assertNothingSent();
+        $this->assertSame('oi', $message->body);
+        $this->assertNull($message->delivery_status);
+        $this->assertNull($message->wa_message_id);
+        $this->assertSame($this->author->id, $message->author_user_id);
+    }
+
+    public function test_deliver_envia_uma_linha_ja_criada(): void
+    {
+        Http::fake(['*/api/sendText' => Http::response(['id' => self::SENT_ID], 201)]);
+        $message = app(SendTicketMessage::class)->create($this->ticket, $this->author, 'oi');
+
+        app(SendTicketMessage::class)->deliver($message);
+
+        $this->assertSame(DeliveryStatus::SENT, $message->fresh()?->delivery_status);
+        $this->assertSame(Message::waKey(self::SENT_ID), $message->fresh()?->wa_message_id);
+    }
+
+    public function test_fila_de_saida_espera_mais_que_o_timeout_do_job(): void
+    {
+        $this->assertGreaterThan((new SendTicketMessageJob(1))->timeout, config()->integer('queue.connections.redis.retry_after'));
     }
 
     public function test_grava_a_linha_antes_de_chamar_o_waha(): void
