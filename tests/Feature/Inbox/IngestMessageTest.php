@@ -328,6 +328,51 @@ class IngestMessageTest extends TestCase
         $this->assertSame('', $message?->body);
     }
 
+    public function test_midia_com_filename_guarda_a_referencia(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_AUD', [
+            'hasMedia' => true,
+            'media' => ['filename' => 'abc.ogg', 'mimetype' => 'audio/ogg; codecs=opus', 'url' => 'http://localhost:3000/api/files/abc.ogg'],
+        ])));
+
+        $this->assertSame('media', $message?->type);
+        $this->assertSame('abc.ogg', $message->media_ref);
+        $this->assertSame('abc.ogg', $message->media_name);
+        $this->assertSame('audio/ogg', $message->media_mime);
+    }
+
+    public function test_midia_so_com_url_enc_fica_sem_referencia(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_ENC', [
+            'hasMedia' => true,
+            'media' => ['url' => 'https://mmg.whatsapp.net/x.enc', 'mimetype' => 'image/jpeg'],
+        ])));
+
+        $this->assertSame('media', $message?->type);
+        $this->assertNull($message->media_ref);
+        $this->assertSame('image/jpeg', $message->media_mime);
+    }
+
+    public function test_filename_com_barra_ou_ponto_ponto_e_descartado(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_EVIL', [
+            'hasMedia' => true,
+            'media' => ['filename' => '../../etc/passwd'],
+        ])));
+
+        $this->assertNull($message?->media_ref);
+    }
+
+    public function test_visualizacao_unica_vira_mensagem_marcada(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_ONCE', [
+            'body' => '',
+            '_data' => ['Info' => ['PushName' => 'Maria Souza'], 'Message' => ['viewOnceMessageV2' => ['message' => []]]],
+        ])));
+
+        $this->assertSame('view_once', $message?->type);
+    }
+
     public function test_apos_encerrar_mensagem_nova_abre_ticket_novo(): void
     {
         $this->ingest($this->event($this->inbound('false_5516997524950@c.us_ONE')));
