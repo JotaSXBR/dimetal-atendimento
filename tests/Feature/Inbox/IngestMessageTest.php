@@ -213,7 +213,7 @@ class IngestMessageTest extends TestCase
             'origin' => MessageOrigin::PAINEL,
             'body' => 'Segue o orcamento',
         ]);
-        $old->forceFill(['created_at' => now()->subMinutes(5)])->save();
+        $old->forceFill(['created_at' => now()->subMinutes(5), 'updated_at' => now()->subMinutes(5)])->save();
 
         $result = $this->ingest($this->event($this->fromPhone('true_5516997524950@c.us_ECO'), 'message.any'));
 

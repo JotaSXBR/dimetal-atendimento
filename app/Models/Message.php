@@ -31,6 +31,7 @@ use Illuminate\Support\Str;
  * @property CarbonImmutable|null $delivered_at
  * @property CarbonImmutable|null $read_at
  * @property string|null $failure_reason
+ * @property string|null $failure_code
  * @property string|null $media_ref
  * @property string|null $media_mime
  * @property string|null $media_name
@@ -53,6 +54,7 @@ use Illuminate\Support\Str;
     'delivered_at',
     'read_at',
     'failure_reason',
+    'failure_code',
     'media_ref',
     'media_mime',
     'media_name',

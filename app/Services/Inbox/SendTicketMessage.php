@@ -2,6 +2,7 @@
 
 namespace App\Services\Inbox;
 
+use App\Enums\ChannelStatus;
 use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
@@ -14,7 +15,6 @@ use App\Models\TicketEvent;
 use App\Models\User;
 use App\Services\Waha\WahaClient;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -61,19 +61,26 @@ class SendTicketMessage
         $contact = $ticket->contact()->firstOrFail();
         $channel = $ticket->channel()->firstOrFail();
 
+        // Sessão fora de WORKING, ou mensagem mais antiga ainda esperando (a ordem da conversa não se perde): fica na fila
+        // e a caixa de saída envia quando a conexão voltar.
+        if ($channel->status !== ChannelStatus::WORKING || $this->waitingAhead($message)) {
+            $this->park($message);
+
+            return;
+        }
+
+        // Começa a janela em que o eco `fromMe` ainda pode casar com esta linha.
+        $message->touch();
+
         $client = new WahaClient($channel);
         $this->presence->before($client, $ticket, $contact, $message->body);
 
         try {
             $response = $client->sendText($contact->wa_id ?? (string) $contact->lid, $message->body);
         } catch (Throwable $e) {
-            // Se o eco do celular já casou com a linha (ela ganhou o id), a mensagem saiu: não é falha.
-            if ($message->refresh()->wa_message_id === null) {
-                $message->update(['delivery_status' => DeliveryStatus::FAILED, 'failure_reason' => $this->failureReason($e)]);
-                MessageStatusChanged::dispatch($message);
-            }
+            $this->failed($message, $e);
 
-            throw $e;
+            return;
         }
 
         $this->presence->scheduleOffline($channel);
@@ -86,7 +93,13 @@ class SendTicketMessage
             $message->wa_message_id = Message::waKey($waId);
         }
 
-        $message->delivery_status ??= DeliveryStatus::SENT;
+        // Aguardando e falha viram enviada; entregue e lida (que o ack pode ter adiantado) ficam como estão.
+        if (in_array($message->delivery_status, [null, DeliveryStatus::QUEUED, DeliveryStatus::FAILED], true)) {
+            $message->delivery_status = DeliveryStatus::SENT;
+            $message->failure_reason = null;
+            $message->failure_code = null;
+        }
+
         $message->save();
 
         $ticket->recordOutbound($message->sent_at);
@@ -101,17 +114,54 @@ class SendTicketMessage
         ]);
     }
 
-    /**
-     * Erros 463 (timelock) e 475 (limite de mensagens) pedem pausa: tentar de novo ou reparear a sessão só piora.
-     */
-    private function failureReason(Throwable $e): string
+    private function waitingAhead(Message $message): bool
     {
-        if (preg_match('/\b(463|475)\b/', $e->getMessage()) === 1) {
-            Log::warning('WhatsApp limitou o envio (463/475): pausar, sem reiniciar nem repareiar a sessão', ['erro' => $e->getMessage()]);
+        return Message::query()
+            ->where('channel_id', $message->channel_id)
+            ->where('delivery_status', DeliveryStatus::QUEUED->value)
+            ->where('id', '<', $message->id)
+            ->exists();
+    }
 
-            return 'Limite do WhatsApp (463/475): aguarde antes de enviar de novo; não reinicie a sessão.';
+    /** Aguardando conexão: nada saiu, e é para a caixa de saída enviar depois. */
+    private function park(Message $message): void
+    {
+        if ($message->delivery_status !== DeliveryStatus::QUEUED) {
+            $message->update(['delivery_status' => DeliveryStatus::QUEUED, 'failure_reason' => null, 'failure_code' => null]);
+            MessageStatusChanged::dispatch($message);
+        }
+    }
+
+    /**
+     * O que fazer com um envio que falhou depende de a mensagem poder ter saído (ver `SendFailure`): a que certamente não
+     * saiu volta para a fila; as demais viram falha com o motivo, e só o tipo certo ganha botão de reenvio.
+     */
+    private function failed(Message $message, Throwable $e): void
+    {
+        // Se o eco do celular já casou com a linha (ela ganhou o id), a mensagem saiu: não é falha.
+        if ($message->refresh()->wa_message_id !== null) {
+            throw $e;
         }
 
-        return Str::limit($e->getMessage(), 250);
+        $kind = SendFailure::kind($e);
+
+        if ($kind === SendFailure::SESSION_DOWN) {
+            $this->park($message);
+
+            return;
+        }
+
+        if ($kind === SendFailure::RATE_LIMIT) {
+            Log::warning('WhatsApp limitou o envio (463/475): pausar, sem reiniciar nem repareiar a sessão', ['erro' => $e->getMessage()]);
+        }
+
+        $message->update([
+            'delivery_status' => DeliveryStatus::FAILED,
+            'failure_code' => $kind,
+            'failure_reason' => SendFailure::reason($kind, $e),
+        ]);
+        MessageStatusChanged::dispatch($message);
+
+        throw $e;
     }
 }
