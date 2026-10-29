@@ -1,6 +1,6 @@
 @php
     $mime = (string) $message->media_mime;
-    $url = $message->media_ref !== null ? route('midia', $message) : null;
+    $url = $message->media_ref !== null || $message->local_path !== null ? route('midia', $message) : null;
     $kind = match (true) {
         str_starts_with($mime, 'image/') => 'Foto',
         str_starts_with($mime, 'video/') => 'Vídeo',

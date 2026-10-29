@@ -36,6 +36,8 @@ use Illuminate\Support\Str;
  * @property string|null $media_mime
  * @property string|null $media_name
  * @property int|null $media_size
+ * @property string|null $local_path
+ * @property CarbonImmutable|null $media_purged_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -59,6 +61,8 @@ use Illuminate\Support\Str;
     'media_mime',
     'media_name',
     'media_size',
+    'local_path',
+    'media_purged_at',
 ])]
 class Message extends Model
 {
@@ -91,6 +95,7 @@ class Message extends Model
             'sent_at' => 'datetime',
             'delivered_at' => 'datetime',
             'read_at' => 'datetime',
+            'media_purged_at' => 'datetime',
         ];
     }
 

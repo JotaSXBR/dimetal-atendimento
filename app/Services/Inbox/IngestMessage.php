@@ -45,7 +45,7 @@ class IngestMessage
 
         $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
 
-        if ($incoming->fromMe && $incoming->type === 'text' && ($pending = $this->matchPending($channel, $contact, $incoming->body)) !== null) {
+        if ($incoming->fromMe && in_array($incoming->type, ['text', 'media'], true) && ($pending = $this->matchPending($channel, $contact, $incoming)) !== null) {
             return $this->adoptEcho($pending, $incoming);
         }
 
@@ -91,7 +91,11 @@ class IngestMessage
         }
     }
 
-    private function matchPending(Channel $channel, Contact $contact, string $body): ?Message
+    /**
+     * A linha do painel que este eco `fromMe` representa. Anexo casa por tipo e legenda, não pelo tipo do arquivo: o
+     * WhatsApp recomprime imagens e converte a voz, então o `mimetype` do eco não é o que enviamos.
+     */
+    private function matchPending(Channel $channel, Contact $contact, IncomingMessage $incoming): ?Message
     {
         return Message::query()
             ->where('channel_id', $channel->id)
@@ -102,7 +106,8 @@ class IngestMessage
             ->where(fn ($q) => $q->whereNull('delivery_status')
                 // Só a falha "sem resposta" pode ter saído; as recusadas pelo WAHA não são engolidas pelo eco do celular.
                 ->orWhere(fn ($failed) => $failed->where('delivery_status', DeliveryStatus::FAILED->value)->where('failure_code', SendFailure::UNKNOWN)))
-            ->where('body', $body)
+            ->where('type', $incoming->type)
+            ->where('body', $incoming->body)
             ->where('updated_at', '>=', now()->subSeconds(self::ECHO_WINDOW_SECONDS))
             ->oldest('id')
             ->first();

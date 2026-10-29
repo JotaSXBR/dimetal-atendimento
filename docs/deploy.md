@@ -10,8 +10,8 @@ Projeto `dimetal-main` (produção) e projeto `dimetal-beta` (teste), cada um co
 | Recurso | Tipo no Coolify | Domínio | Volume |
 |---|---|---|---|
 | `app` | Application (Git, `/docker/Dockerfile`) | **sim**, HTTPS | `/var/www/html/storage/app` |
-| `worker` | Application (mesmo Dockerfile, `queue:work`) | não | — |
-| `scheduler` | Application (mesmo Dockerfile, `schedule:work`) | não | — |
+| `worker` | Application (mesmo Dockerfile, `queue:work`) | não | **o mesmo** `/var/www/html/storage/app` do `app` |
+| `scheduler` | Application (mesmo Dockerfile, `schedule:work`) | não | **o mesmo** `/var/www/html/storage/app` do `app` |
 | `pg` | Database PostgreSQL 18 | não | gerenciado pelo Coolify |
 | `redis` | Database Redis 8 | não | gerenciado pelo Coolify |
 | `waha` | Application (imagem `devlikeapro/waha:gows-2026.10.1`) | não | `/app/.sessions`, `/app/.media` |
@@ -92,9 +92,15 @@ Só o `app` recebe domínio. O Coolify cuida do certificado; `bootstrap/app.php`
 O volume `/app/.sessions` do `waha` é o que faz o QR sobreviver a redeploy. `/app/.media` é mídia
 temporária do WAHA — o app guarda a própria cópia, então não é backup.
 
-`app` guarda mídia do painel em `/var/www/html/storage/app`. Worker e scheduler **não** montam esse
-volume: nada em Fase 0 escreve ali. Quando a mídia entrar, decidir entre montar o mesmo volume nos
-três ou usar storage externo.
+`app` guarda em `/var/www/html/storage/app` a cópia local dos anexos enviados pelo painel (pasta
+`private/outbound`). O upload acontece no `app`, mas quem envia ao WAHA é o `worker` (fila `outbound`) e
+quem apaga as cópias com mais de 90 dias é o `scheduler` (`app:purge-media`): **os três precisam montar o
+mesmo volume nomeado em `/var/www/html/storage/app`**. Sem isso o anexo sobe, mas o worker não acha o
+arquivo e a mensagem falha com "O arquivo deste anexo não está mais disponível no servidor".
+
+Upload de anexo: o nginx do `app` precisa aceitar corpo de até 20 MB (`client_max_body_size 20m`) e o PHP
+`upload_max_filesize=16M` / `post_max_size=20M`; já vêm configurados na imagem. O worker usa o
+`PHP_MEMORY_LIMIT=256M` da imagem: um anexo de 16 MB em base64 cabe com folga.
 
 ## 5. Fluxo de branches
 

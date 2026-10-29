@@ -32,7 +32,7 @@ class ResendTicketMessage
             && $message->wa_message_id === null
             && $message->direction === MessageDirection::OUT
             && $message->origin === MessageOrigin::PAINEL
-            && $message->type === 'text'
+            && ($message->type === 'text' || ($message->type === 'media' && $message->local_path !== null))
             && $mine;
 
         return $eligible ? SendFailure::resend($message->failure_code) : self::NONE;
