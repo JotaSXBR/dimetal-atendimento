@@ -22,4 +22,9 @@ class ContactFactory extends Factory
             'nickname' => null,
         ];
     }
+
+    public function edited(): static
+    {
+        return $this->state(fn (): array => ['edited_at' => now()]);
+    }
 }
