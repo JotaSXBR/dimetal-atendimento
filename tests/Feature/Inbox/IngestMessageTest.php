@@ -345,12 +345,13 @@ class IngestMessageTest extends TestCase
         $this->assertSame('audio/ogg', $message->media_mime);
     }
 
-    public function test_midia_sem_referencia_pede_a_busca_e_com_referencia_nao(): void
+    public function test_toda_midia_pede_a_confirmacao_do_arquivo_mesmo_com_nome_no_evento(): void
     {
         $this->ingest($this->event($this->inbound('false_5516997524950@c.us_NOREF', ['hasMedia' => true])));
         $this->ingest($this->event($this->inbound('false_5516997524950@c.us_REF', ['hasMedia' => true, 'media' => ['filename' => 'r.jpg']])));
+        $this->ingest($this->event($this->inbound('false_5516997524950@c.us_TXT')));
 
-        Queue::assertPushed(ResolveMessageMediaJob::class, 1);
+        Queue::assertPushed(ResolveMessageMediaJob::class, 2);
     }
 
     public function test_midia_so_com_url_enc_fica_sem_referencia(): void
@@ -373,6 +374,16 @@ class IngestMessageTest extends TestCase
         ])));
 
         $this->assertNull($message?->media_ref);
+    }
+
+    public function test_mensagem_indisponivel_de_visualizacao_unica_pelo_tipo_do_payload_vira_marcada(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_UNAV', [
+            'body' => '',
+            '_data' => ['Info' => ['PushName' => 'Maria Souza'], 'IsUnavailable' => true, 'UnavailableType' => 'view_once'],
+        ])));
+
+        $this->assertSame('view_once', $message?->type);
     }
 
     public function test_visualizacao_unica_vira_mensagem_marcada(): void

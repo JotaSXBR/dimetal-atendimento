@@ -80,7 +80,7 @@ class InboxMediaTest extends TestCase
 
     public function test_visualizacao_unica_mostra_o_aviso(): void
     {
-        $this->screen(['type' => 'view_once'])->assertSee('enviou uma mensagem de visualização única; abra no celular');
+        $this->screen(['type' => 'view_once'])->assertSee('Mensagem de visualização única')->assertSee('peça ao cliente que reenvie');
     }
 
     public function test_legenda_continua_visivel_junto_da_midia(): void
