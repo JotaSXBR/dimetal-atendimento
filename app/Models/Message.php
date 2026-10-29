@@ -31,6 +31,10 @@ use Illuminate\Support\Str;
  * @property CarbonImmutable|null $delivered_at
  * @property CarbonImmutable|null $read_at
  * @property string|null $failure_reason
+ * @property string|null $media_ref
+ * @property string|null $media_mime
+ * @property string|null $media_name
+ * @property int|null $media_size
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -49,6 +53,10 @@ use Illuminate\Support\Str;
     'delivered_at',
     'read_at',
     'failure_reason',
+    'media_ref',
+    'media_mime',
+    'media_name',
+    'media_size',
 ])]
 class Message extends Model
 {
@@ -59,6 +67,11 @@ class Message extends Model
     public static function waKey(string $waId): string
     {
         return Str::afterLast($waId, '_');
+    }
+
+    public function hasMedia(): bool
+    {
+        return $this->type === 'media';
     }
 
     /** @use HasFactory<MessageFactory> */
