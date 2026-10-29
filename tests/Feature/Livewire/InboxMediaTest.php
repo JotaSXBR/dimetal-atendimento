@@ -51,9 +51,16 @@ class InboxMediaTest extends TestCase
             ->assertSeeHtml(route('midia', $message));
     }
 
-    public function test_audio_aparece_com_controles(): void
+    public function test_audio_aparece_no_player_proprio_com_velocidade(): void
     {
-        $this->screen(['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg'])->assertSeeHtml('<audio controls');
+        $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'body' => '', 'media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg']);
+
+        Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)
+            ->assertSeeHtml('data-audio-player')
+            ->assertSeeHtml(route('midia', $message))
+            ->assertSeeHtml('aria-label="Velocidade de reprodução"')
+            ->assertSeeHtml('role="slider"')
+            ->assertDontSeeHtml('<audio controls');
     }
 
     public function test_video_aparece_com_controles(): void
