@@ -42,16 +42,14 @@ class CreateUser extends Command
             return self::FAILURE;
         }
 
-        User::updateOrCreate(
-            ['email' => $email],
-            [
-                'name' => (string) $this->argument('name'),
-                'password' => $password,
-                'role' => $role,
-                'active' => true,
-                'email_verified_at' => now(),
-            ],
-        );
+        // forceFill: `email_verified_at` não é preenchível em massa, e o updateOrCreate o descartava em silêncio.
+        User::firstOrNew(['email' => $email])->forceFill([
+            'name' => (string) $this->argument('name'),
+            'password' => $password,
+            'role' => $role,
+            'active' => true,
+            'email_verified_at' => now(),
+        ])->save();
 
         $this->info("Usuário {$email} salvo como {$role->label()}.");
 
