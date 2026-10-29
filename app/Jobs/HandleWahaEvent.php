@@ -40,7 +40,7 @@ class HandleWahaEvent implements ShouldQueue
 
         match ($event->event) {
             'session.status' => $this->applyStatus($event),
-            'message', 'message.any' => app(IngestMessage::class)($event),
+            'message', 'message.any', 'message.waiting' => app(IngestMessage::class)($event),
             'message.ack' => $this->applyAck($event),
             default => null,
         };

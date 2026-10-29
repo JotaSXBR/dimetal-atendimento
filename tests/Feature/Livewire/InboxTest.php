@@ -116,6 +116,26 @@ class InboxTest extends TestCase
         Queue::assertPushedOn('outbound', SendTicketMessageJob::class, fn ($job) => $job->messageId === $message->id);
     }
 
+    public function test_previa_da_lista_nomeia_midia_e_visualizacao_unica(): void
+    {
+        $me = $this->user();
+        $ticket = $this->ticket(TicketStatus::EM_ATENDIMENTO, $me);
+
+        foreach ([
+            [['type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg'], 'Foto'],
+            [['type' => 'media', 'body' => '', 'media_mime' => 'image/webp'], 'Figurinha'],
+            [['type' => 'media', 'body' => '', 'media_mime' => 'audio/ogg'], 'Áudio'],
+            [['type' => 'media', 'body' => '', 'media_mime' => 'video/mp4'], 'Vídeo'],
+            [['type' => 'media', 'body' => '', 'media_mime' => 'application/pdf'], 'Arquivo'],
+            [['type' => 'view_once', 'body' => ''], 'Visualização única'],
+            [['type' => 'media', 'body' => 'a legenda', 'media_mime' => 'image/jpeg'], 'a legenda'],
+        ] as [$attributes, $expected]) {
+            Message::factory()->for($ticket)->create($attributes);
+
+            Livewire::actingAs($me)->test(Inbox::class)->assertSee($expected);
+        }
+    }
+
     public function test_enviar_texto_vazio_e_rejeitado(): void
     {
         Queue::fake();

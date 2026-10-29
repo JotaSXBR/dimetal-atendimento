@@ -45,7 +45,7 @@ class IngestMessage
 
         $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
 
-        if ($incoming->fromMe && ($pending = $this->matchPending($channel, $contact, $incoming->body)) !== null) {
+        if ($incoming->fromMe && $incoming->type === 'text' && ($pending = $this->matchPending($channel, $contact, $incoming->body)) !== null) {
             return $this->adoptEcho($pending, $incoming);
         }
 
@@ -112,7 +112,7 @@ class IngestMessage
             'body' => $incoming->body,
             'media_ref' => $incoming->media?->ref,
             'media_mime' => $incoming->media?->mime,
-            'media_name' => $incoming->media?->ref,
+            'media_name' => $incoming->media?->name,
             'media_size' => $incoming->media?->size,
             'origin' => $incoming->fromMe ? MessageOrigin::FORA_DO_PAINEL : MessageOrigin::CONTATO,
             'sent_at' => $incoming->sentAt,

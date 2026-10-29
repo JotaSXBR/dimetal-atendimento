@@ -170,13 +170,13 @@
                                     <p class="mb-0.5 font-mono text-[10px] tracking-wide text-warn uppercase">Celular · fora do painel</p>
                                 @endif
 
-                                @if ($message->hasMedia() || $message->type === 'view_once')
+                                @if ($message->hasMedia() || in_array($message->type, ['view_once', 'location'], true))
                                     @include('livewire.inbox.media', ['message' => $message])
                                 @endif
 
-                                @if ($message->body !== '')
+                                @if ($message->body !== '' && $message->type !== 'location')
                                     <p class="break-words whitespace-pre-wrap">{{ $message->body }}</p>
-                                @elseif (! $message->hasMedia() && $message->type !== 'view_once')
+                                @elseif ($message->body === '' && ! $message->hasMedia() && $message->type !== 'view_once')
                                     <p class="break-words whitespace-pre-wrap">[{{ $message->type }}]</p>
                                 @endif
 

@@ -58,7 +58,7 @@ class WahaClient
     {
         return ['webhooks' => [[
             'url' => WahaSettings::webhookUrl(),
-            'events' => ['session.status', 'message', 'message.any', 'message.ack', 'message.reaction', 'message.revoked', 'presence.update'],
+            'events' => ['session.status', 'message', 'message.any', 'message.waiting', 'message.ack', 'message.reaction', 'message.revoked', 'presence.update'],
             'hmac' => ['key' => WahaSettings::webhookSecret()],
             'retries' => ['policy' => 'exponential', 'delaySeconds' => 3, 'attempts' => 8],
         ]]];

@@ -321,7 +321,7 @@ class IngestMessageTest extends TestCase
         $this->assertGreaterThanOrEqual(2, count($locks), 'contato e ticket devem ser serializados');
     }
 
-    public function test_midia_grava_a_mensagem_sem_corpo_e_sem_baixar_arquivo(): void
+    public function test_midia_grava_a_legenda_e_nao_baixa_o_arquivo_na_ingestao(): void
     {
         $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_IMG', [
             'hasMedia' => true,
@@ -329,7 +329,7 @@ class IngestMessageTest extends TestCase
         ])));
 
         $this->assertSame('media', $message?->type);
-        $this->assertSame('', $message?->body);
+        $this->assertSame('legenda', $message?->body);
     }
 
     public function test_midia_com_filename_guarda_a_referencia(): void
@@ -397,10 +397,82 @@ class IngestMessageTest extends TestCase
 
             $this->assertSame('view_once', $message?->type, $flag);
             $this->assertNull($message->media_ref, $flag);
-            $this->assertNull($message->media_mime, $flag);
+            $this->assertSame('image/jpeg', $message->media_mime, $flag);
         }
 
         Queue::assertNotPushed(ResolveMessageMediaJob::class);
+    }
+
+    public function test_legenda_da_midia_e_guardada_no_corpo(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_CAP', [
+            'hasMedia' => true,
+            'body' => 'segue a foto do orçamento',
+            'media' => ['filename' => null, 'mimetype' => 'image/jpeg'],
+        ])));
+
+        $this->assertSame('media', $message?->type);
+        $this->assertSame('segue a foto do orçamento', $message->body);
+    }
+
+    public function test_documento_guarda_o_nome_original_mesmo_com_espaco_e_acento(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_DOC', [
+            'hasMedia' => true,
+            'media' => ['filename' => 'Orçamento outubro.pdf', 'mimetype' => 'application/pdf'],
+        ])));
+
+        $this->assertSame('Orçamento outubro.pdf', $message?->media_name);
+        $this->assertNull($message->media_ref);
+    }
+
+    public function test_eco_de_midia_com_legenda_igual_ao_texto_pendente_nao_adota_a_linha_do_painel(): void
+    {
+        $contact = Contact::factory()->create(['wa_id' => self::PEER]);
+        $ticket = Ticket::factory()->for($contact)->for($this->channel)->create();
+        $pending = Message::factory()->for($ticket)->create([
+            'direction' => MessageDirection::OUT, 'origin' => MessageOrigin::PAINEL, 'body' => 'oi',
+            'wa_message_id' => null, 'delivery_status' => null,
+        ]);
+
+        $this->ingest($this->event($this->fromPhone('true_5516997524950@c.us_MED', [
+            'hasMedia' => true, 'body' => 'oi', 'media' => ['mimetype' => 'image/jpeg'],
+        ]), 'message.any'));
+
+        $this->assertNull($pending->fresh()?->wa_message_id);
+        $this->assertSame(2, Message::query()->count());
+    }
+
+    public function test_localizacao_vira_mensagem_com_coordenadas_e_nome_do_local(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_LOC', [
+            'body' => null,
+            'location' => ['latitude' => -21.17, 'longitude' => -47.81, 'name' => 'Loja Centro'],
+        ])));
+
+        $this->assertSame('location', $message?->type);
+        $this->assertSame('-21.17,-47.81', $message->body);
+        $this->assertSame('Loja Centro', $message->media_name);
+    }
+
+    public function test_localizacao_com_coordenada_invalida_e_ignorada(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_BADLOC', [
+            'body' => null,
+            'location' => ['latitude' => 'javascript:alert(1)', 'longitude' => 5],
+        ])));
+
+        $this->assertNull($message);
+    }
+
+    public function test_evento_message_waiting_de_visualizacao_unica_vira_aviso(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_WAIT', [
+            'body' => null,
+            '_data' => ['Info' => ['PushName' => 'Maria Souza'], 'IsViewOnceV2' => true],
+        ]), 'message.waiting'));
+
+        $this->assertSame('view_once', $message?->type);
     }
 
     public function test_contato_vcard_vira_mensagem_com_nome_e_telefone(): void

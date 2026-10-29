@@ -90,6 +90,28 @@ class InboxMediaTest extends TestCase
         $this->screen(['type' => 'view_once'])->assertSee('Mensagem de visualização única')->assertSee('peça ao cliente que reenvie');
     }
 
+    public function test_aviso_de_visualizacao_unica_nomeia_o_tipo_da_midia(): void
+    {
+        $this->screen(['type' => 'view_once', 'media_mime' => 'image/jpeg'])->assertSee('Foto de visualização única');
+    }
+
+    public function test_figurinha_aparece_menor_que_uma_foto(): void
+    {
+        $this->screen(['media_ref' => 's.webp', 'media_mime' => 'image/webp'])->assertSeeHtml('max-h-40')->assertDontSeeHtml('max-h-72');
+    }
+
+    public function test_localizacao_vira_link_para_o_mapa_com_o_nome_do_local(): void
+    {
+        $this->screen(['type' => 'location', 'body' => '-21.17,-47.81', 'media_name' => 'Loja Centro'])
+            ->assertSeeHtml('https://www.google.com/maps?q=-21.17%2C-47.81')
+            ->assertSee('Loja Centro');
+    }
+
+    public function test_documento_mostra_o_nome_original(): void
+    {
+        $this->screen(['media_ref' => 'abc.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'Orçamento outubro.pdf'])->assertSee('Orçamento outubro.pdf');
+    }
+
     public function test_legenda_continua_visivel_junto_da_midia(): void
     {
         $this->screen(['body' => 'segue a foto', 'media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg'])->assertSee('segue a foto');

@@ -102,3 +102,23 @@ com um atraso próprio deixa B ultrapassar A.
 pode consumir `--queue=broadcasts,default` para atender o tempo real primeiro. Não é necessário agora; entra se a ingestão pesar.
 
 **Decisão registrada para a spec de mídia e presença:** opção A, com ordem por conversa como critério de desempate.
+
+## Tipos de mensagem recebidos no GOWS (confirmados no beta em 29/10/2026)
+
+O log de diagnóstico do `HandleWahaEvent` (warning, só tipo e nomes de campos) mostrou o que o WAHA entrega:
+
+| O cliente manda | Como chega | Como o app trata |
+|---|---|---|
+| Foto, vídeo, áudio, figurinha, documento | `message` com `hasMedia: true` e `media.{url,mimetype,filename}`; o arquivo fica no WAHA (`/api/files/...`) | `type=media`; o job `ResolveMessageMediaJob` testa os nomes candidatos no WAHA e grava o que existe |
+| Legenda de foto, vídeo ou documento | `body` (a doc do WAHA: em mídia o `body` é a legenda) | gravada em `messages.body` |
+| Documento | `media.filename` é o nome original | mostrado ao atendente (`media_name`); `media_ref` é o nome guardado no WAHA |
+| Figurinha | `image/webp` | imagem menor; prévia "Figurinha" |
+| Contato | `message` sem `body`, com `vCards` (lista de textos vCard) | `type=contact`, "Contato: Nome (telefone)", um por linha |
+| Localização | campo `location` (formato do GOWS não documentado; aceita `latitude`/`longitude`, `lat`/`lng`, `degreesLatitude`/`degreesLongitude`) | `type=location`, link para o mapa; coordenada inválida é ignorada |
+| Visualização única | `_data.IsViewOnce`, `IsViewOnceV2` ou `IsViewOnceV2Extension`; o WhatsApp não entrega o conteúdo a aparelhos vinculados (log do WAHA: `Undecryptable ... view_once ... content lost`) | `type=view_once`: só o aviso "Foto/Vídeo/Áudio de visualização única"; o arquivo não é lido nem guardado |
+
+Outros eventos da doc: `message.waiting` (aguardando mensagem; agora assinado e tratado como `message`),
+`message.edited` e `message.revoked` (assinado, ainda ignorado). Falhas de presença (visto, digitando, offline) são
+registradas em warning, porque o beta roda com `LOG_LEVEL=warning`.
+
+Eco de mídia enviada pelo celular não adota a linha pendente do painel: só texto casa por conteúdo.

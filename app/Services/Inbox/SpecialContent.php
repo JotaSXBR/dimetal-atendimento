@@ -14,6 +14,63 @@ final class SpecialContent
     private const VIEW_ONCE_WRAPPERS = ['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension'];
 
     /**
+     * Conteúdo que não é texto nem arquivo, ou `null` quando a mensagem segue o caminho normal. Visualização única
+     * vem primeiro e vale mesmo com `hasMedia`: o arquivo nunca é lido, só o tipo (para o aviso dizer "foto", "vídeo").
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return array{type: string, body: string, media: IncomingMedia}|null
+     */
+    public static function classify(array $data, bool $hasMedia): ?array
+    {
+        if (self::isViewOnce($data)) {
+            $mime = data_get($data, 'media.mimetype');
+
+            return ['type' => 'view_once', 'body' => '', 'media' => new IncomingMedia(null, is_string($mime) ? trim(explode(';', $mime)[0]) : null, null)];
+        }
+
+        if ($hasMedia || (is_string($data['body'] ?? null) && $data['body'] !== '')) {
+            return null;
+        }
+
+        $contact = self::contactSummary($data);
+
+        if ($contact !== '') {
+            return ['type' => 'contact', 'body' => $contact, 'media' => new IncomingMedia(null, null, null)];
+        }
+
+        $location = self::location($data);
+
+        return $location === null ? null : ['type' => 'location', 'body' => $location['coordinates'], 'media' => new IncomingMedia(null, null, null, $location['name'])];
+    }
+
+    /**
+     * Coordenadas validadas (viram um link de mapa na tela) e o nome do local. O formato do GOWS não está documentado:
+     * aceita `latitude`/`longitude`, `lat`/`lng` e os nomes do protocolo (`degreesLatitude`/`degreesLongitude`).
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return array{coordinates: string, name: ?string}|null
+     */
+    public static function location(array $data): ?array
+    {
+        $location = $data['location'] ?? null;
+
+        if (! is_array($location)) {
+            return null;
+        }
+
+        $lat = $location['latitude'] ?? $location['lat'] ?? $location['degreesLatitude'] ?? null;
+        $lng = $location['longitude'] ?? $location['lng'] ?? $location['degreesLongitude'] ?? null;
+
+        if (! is_numeric($lat) || ! is_numeric($lng) || abs((float) $lat) > 90 || abs((float) $lng) > 180) {
+            return null;
+        }
+
+        $label = $location['name'] ?? $location['address'] ?? null;
+
+        return ['coordinates' => (float) $lat.','.(float) $lng, 'name' => is_string($label) && $label !== '' ? Str::limit($label, 255, '') : null];
+    }
+
+    /**
      * Visualização única: o conteúdo nunca é lido nem guardado, só o aviso. O GOWS marca em `_data` (`IsViewOnce*`);
      * quando o WhatsApp não entrega o conteúdo a aparelhos vinculados, chega um aviso "indisponível".
      *

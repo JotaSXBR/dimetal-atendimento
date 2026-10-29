@@ -6,6 +6,7 @@ use App\Models\Message;
 use App\Models\WahaEvent;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Uma mensagem do WAHA já lida e validada: só existe quando há o que gravar.
@@ -92,18 +93,14 @@ final readonly class IncomingMessage
     private static function content(array $data, WahaEvent $event): ?array
     {
         $hasMedia = (bool) ($data['hasMedia'] ?? false);
+        $special = SpecialContent::classify($data, $hasMedia);
 
-        if (SpecialContent::isViewOnce($data)) {
-            return ['type' => 'view_once', 'body' => '', 'media' => null];
+        if ($special !== null) {
+            return $special;
         }
 
-        $body = ! $hasMedia && is_string($data['body'] ?? null) ? $data['body'] : '';
-        $contact = ! $hasMedia && $body === '' ? SpecialContent::contactSummary($data) : '';
-
-        if ($contact !== '') {
-            return ['type' => 'contact', 'body' => $contact, 'media' => null];
-        }
-
+        // Em mídia, o `body` do WAHA é a legenda.
+        $body = is_string($data['body'] ?? null) ? $data['body'] : '';
         $type = self::typeFor($data, $hasMedia, $body);
 
         if ($type !== null) {
@@ -138,6 +135,7 @@ final readonly class IncomingMessage
             ref: IncomingMedia::safeRef($filename),
             mime: $mime === null ? null : trim(explode(';', $mime)[0]),
             size: is_int($size) && $size >= 0 ? $size : null,
+            name: $filename === null || trim($filename) === '' ? null : Str::limit(trim($filename), 255, ''),
         );
     }
 

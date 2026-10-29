@@ -80,7 +80,7 @@ class Presence
         try {
             $action();
         } catch (Throwable $e) {
-            Log::info("Presença ({$step}) falhou e foi ignorada", ['erro' => $e->getMessage()]);
+            Log::warning("Presença ({$step}) falhou e foi ignorada", ['erro' => $e->getMessage()]);
         }
     }
 
