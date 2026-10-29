@@ -130,6 +130,24 @@ Recursos do beta hoje:
 | `pg-beta` | `m3kcov2jn01utd97jjho2lox` |
 | `redis-beta` | `vp3u0qyz2tsmyveqrb6ml2zi` |
 
+### Fila de saída (`outbound-beta`)
+
+Application do mesmo Dockerfile, estágio `worker-outbound` (`queue:work --queue=outbound --tries=1 --timeout=120`),
+**um único processo**: o envio humanizado (visto, digitando, pausa, envio) leva segundos, e um só consumidor garante
+que as mensagens de cada conversa saiam na ordem. O `worker-beta` consome só `default`. Sem este recurso as
+respostas do painel ficam paradas na fila (não se perdem). Crie como o `worker-beta` (mesmas variáveis, sem
+`domains`, `dockerfile_target_build` `worker-outbound` via `PATCH`, healthcheck `cmd` `healthcheck-queue`) e
+inclua o uuid no `deploy-beta.yml`. O `retry_after` da fila (`REDIS_QUEUE_RETRY_AFTER`, padrão 180) fica acima do
+timeout do job (120).
+
+### Mídia no WAHA
+
+O WAHA guarda os arquivos (entrada e saída) no volume `/app/.media`; o Laravel guarda só a referência e serve o
+arquivo por `GET /midia/{mensagem}` (autorizado pelo ticket). Retenção de 90 dias:
+`WHATSAPP_FILES_FOLDER=/app/.media`, `WHATSAPP_FILES_LIFETIME=7776000` (a limpeza usa temporizador interno do WAHA;
+o teto antigo de ~24 dias foi corrigido na 2026.4.1). O volume não tem backup. Conferir depois de reiniciar o WAHA
+que arquivos antigos ainda expiram; se não, plano B: `find /app/.media -mtime +90 -delete` por cron no host.
+
 ### Tarefas agendadas
 
 O `scheduler-beta` roda `schedule:work`. Hoje há uma tarefa: `app:close-inactive-tickets`, a cada 10 minutos

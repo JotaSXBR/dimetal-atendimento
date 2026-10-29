@@ -63,6 +63,14 @@ Todo o tráfego do WAHA chega do mesmo IP interno, então o teto do webhook é u
 só mensagens: o indicador "digitando" e a gravação de áudio, quando existirem, terão limite próprio e mais folgado
 (ver `docs/superpowers/notes/2026-10-28-waha-presenca-e-midia.md`).
 
+## Rota de mídia
+
+`GET /midia/{mensagem}` exige login e a mesma permissão do ticket (`TicketPolicy::view`). O Laravel busca o arquivo no
+WAHA com a chave de API e repassa em stream, então o navegador nunca fala com o WAHA nem vê a chave. O nome do arquivo
+vem de um evento externo: só `[A-Za-z0-9._-]` sem `..` chega ao WAHA. `Content-Type` sai de uma lista (imagem, áudio,
+vídeo, PDF); o resto baixa como `application/octet-stream` com `Content-Disposition: attachment`. Sempre com
+`X-Content-Type-Options: nosniff` e `Cache-Control: private`.
+
 ## Decisões em aberto
 
 - **2FA obrigatório** para admin e supervisor: o recurso (2FA e passkey) existe e está disponível, mas **não é exigido**

@@ -79,7 +79,16 @@ FROM runtime AS worker
 
 STOPSIGNAL SIGTERM
 
-CMD ["php", "/var/www/html/artisan", "queue:work", "--tries=3", "--timeout=120", "--max-time=3600"]
+CMD ["php", "/var/www/html/artisan", "queue:work", "--queue=default", "--tries=3", "--timeout=120", "--max-time=3600"]
+
+
+# Fila de saída: um único processo, para as mensagens de cada conversa saírem na ordem. O worker acima consome só
+# `default` (ingestão, acks, tempo real) e nunca fica preso na espera do "digitando".
+FROM runtime AS worker-outbound
+
+STOPSIGNAL SIGTERM
+
+CMD ["php", "/var/www/html/artisan", "queue:work", "--queue=outbound", "--tries=1", "--timeout=120", "--max-time=3600"]
 
 
 FROM runtime AS reverb
