@@ -1,0 +1,60 @@
+name: security-scan
+
+# Varreduras pesadas: imagem Docker e scan dinâmico contra o beta. Rodam por agendamento (segunda de manhã), sob demanda
+# (`gh workflow run security-scan`) e, no PR, só quando mudam o que elas olham. Separadas do `tests` para nunca travar o deploy.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/security-scan.yml'
+      - 'docker/**'
+      - 'composer.lock'
+      - 'package-lock.json'
+  schedule:
+    - cron: '41 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the runtime image
+        run: docker build --target runtime -f docker/Dockerfile -t dimetal-scan:ci .
+
+      # Falha só com vulnerabilidade CRÍTICA ou ALTA que já tenha correção: o que não tem correção publicada
+      # não é acionável e deixaria o job vermelho para sempre.
+      - name: Scan the image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: dimetal-scan:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+
+  dynamic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # Varredura passiva (baseline do OWASP ZAP) contra o beta, que roda o código da main. Só relata: abrir issue
+      # e reprovar o job ficam desligados até a primeira rodada ser triada.
+      - name: ZAP baseline scan of the beta
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: 'https://dimetal-beta.fluxie.com.br'
+          allow_issue_writing: false
+          fail_action: false
