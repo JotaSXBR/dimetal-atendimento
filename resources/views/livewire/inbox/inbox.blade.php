@@ -220,15 +220,56 @@
                 @endif
 
                 @if ($canReply)
-                    <form wire:submit="send" class="flex items-end gap-2">
-                        <div class="flex-1">
-                            <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }" />
-                            @error('draft')
-                                <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" />
-                    </form>
+                    <div
+                        x-data="attachTray($wire)"
+                        x-on:dragover.prevent="dragging = true"
+                        x-on:dragleave.prevent="dragging = false"
+                        x-on:drop.prevent="drop($event)"
+                        x-on:paste="paste($event)"
+                        x-bind:class="dragging ? 'rounded-md ring-2 ring-accent' : ''"
+                    >
+                        @if ($attachments !== [])
+                            <ul class="mb-2 flex flex-wrap gap-2" aria-label="Arquivos para enviar">
+                                @foreach ($attachments as $index => $file)
+                                    <li wire:key="attachment-{{ $index }}-{{ $file->getFilename() }}" class="flex items-center gap-2 rounded-md border border-line bg-canvas px-2 py-1 text-xs">
+                                        <flux:icon.paper-clip class="size-3.5 text-ink-3" />
+                                        <span class="max-w-40 truncate text-ink">{{ $file->getClientOriginalName() }}</span>
+                                        <span class="font-mono text-ink-3">{{ \Illuminate\Support\Number::fileSize($file->getSize(), 1) }}</span>
+                                        <button type="button" wire:click="removeAttachment({{ $index }})" class="text-ink-3 hover:text-danger" aria-label="Remover {{ $file->getClientOriginalName() }}">
+                                            <flux:icon.x-mark class="size-3.5" />
+                                        </button>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+
+                        <p x-show="uploading > 0" x-cloak class="mb-2 text-xs text-ink-3" role="status">Enviando arquivo…</p>
+                        <p x-show="notice" x-cloak x-text="notice" class="mb-2 text-xs text-danger" role="alert"></p>
+                        @error('attachments')
+                            <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
+                        @enderror
+
+                        <form wire:submit="send" class="flex items-end gap-2">
+                            <input
+                                type="file"
+                                multiple
+                                class="hidden"
+                                x-ref="picker"
+                                aria-label="Escolher arquivos"
+                                accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.mp3,.ogg,.m4a,.mp4"
+                                x-on:change="addFiles($event.target.files); $event.target.value = ''"
+                            >
+                            <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-on:click="$refs.picker.click()" />
+
+                            <div class="flex-1">
+                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />
+                                @error('draft')
+                                    <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-bind:disabled="uploading > 0" />
+                        </form>
+                    </div>
                 @elseif ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                     <p class="text-center text-sm text-ink-3">Ticket encerrado. Somente leitura.</p>
                 @elseif ($ticket->assigned_user_id === null)

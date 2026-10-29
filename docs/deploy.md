@@ -98,8 +98,9 @@ quem apaga as cópias com mais de 90 dias é o `scheduler` (`app:purge-media`): 
 mesmo volume nomeado em `/var/www/html/storage/app`**. Sem isso o anexo sobe, mas o worker não acha o
 arquivo e a mensagem falha com "O arquivo deste anexo não está mais disponível no servidor".
 
-Upload de anexo: o nginx do `app` precisa aceitar corpo de até 20 MB (`client_max_body_size 20m`) e o PHP
-`upload_max_filesize=16M` / `post_max_size=20M`; já vêm configurados na imagem. O worker usa o
+Upload de anexo: cada arquivo (até 16 MB) sobe numa requisição própria. A imagem base já aceita 100 MB
+(`NGINX_CLIENT_MAX_BODY_SIZE`, `PHP_UPLOAD_MAX_FILE_SIZE` e `PHP_POST_MAX_SIZE` valem 100M), então nada a
+ajustar; se algum dia essas variáveis forem reduzidas, mantenha ao menos 20 MB. O worker usa o
 `PHP_MEMORY_LIMIT=256M` da imagem: um anexo de 16 MB em base64 cabe com folga.
 
 ## 5. Fluxo de branches

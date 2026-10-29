@@ -14,23 +14,30 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\AttachmentRules;
 use App\Services\Inbox\ResendTicketMessage;
+use App\Services\Inbox\SendTicketMedia;
 use App\Services\Inbox\SendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 #[Title('Atendimento')]
 #[Layout('layouts::inbox')]
 class Inbox extends Component
 {
+    use WithFileUploads;
+
     /** Prévia da lista: o texto ou, quando não há, o nome do tipo de conteúdo. */
     private const PREVIEW_SQL = "case when type = 'location' then 'Localização' when type = 'contact' then 'Contato' "
         ."when body <> '' then body when type = 'view_once' then 'Visualização única' "
@@ -38,12 +45,21 @@ class Inbox extends Component
         ."when media_mime like 'audio/%' then 'Áudio' when media_mime like 'video/%' then 'Vídeo' "
         ."when type = 'media' then 'Arquivo' else '['||type||']' end";
 
+    /** Legenda de mídia no WhatsApp: acima disto o texto sai como mensagem separada. */
+    private const CAPTION_LIMIT = 1024;
+
     public ?int $ticketId = null;
 
     #[Url]
     public string $tab = 'todos';
 
     public string $draft = '';
+
+    /** O arquivo que acabou de subir; `commitUpload` o move para a bandeja ou o descarta. */
+    public ?TemporaryUploadedFile $upload = null;
+
+    /** @var array<int, TemporaryUploadedFile> Bandeja: arquivos aceitos, na ordem de envio. */
+    public array $attachments = [];
 
     public ?string $notice = null;
 
@@ -62,6 +78,7 @@ class Inbox extends Component
 
         $this->ticketId = $ticketId;
         $this->notice = null;
+        $this->discardAttachments();
         $this->closePanel();
     }
 
@@ -148,30 +165,129 @@ class Inbox extends Component
         (new CloseTicket)($ticket, $this->user());
     }
 
+    /** Entra na bandeja o arquivo que acabou de subir (um por requisição); o servidor decide se ele fica. */
+    public function commitUpload(): void
+    {
+        $this->authorize('reply', $this->selected());
+        $this->resetErrorBag('attachments');
+
+        $file = $this->upload;
+        $this->upload = null;
+
+        if ($file === null) {
+            return;
+        }
+
+        $error = count($this->attachments) >= AttachmentRules::MAX_FILES
+            ? 'No máximo '.AttachmentRules::MAX_FILES.' arquivos por envio.'
+            : AttachmentRules::validate($file);
+
+        if ($error !== null) {
+            $this->addError('attachments', $error);
+            $file->delete();
+
+            return;
+        }
+
+        $this->attachments[] = $file;
+    }
+
+    public function removeAttachment(int $index): void
+    {
+        $file = $this->attachments[$index] ?? null;
+
+        if ($file !== null) {
+            $file->delete();
+            unset($this->attachments[$index]);
+            $this->attachments = array_values($this->attachments);
+        }
+    }
+
+    /**
+     * Envia o texto e/ou os arquivos da bandeja. Cada arquivo é uma mensagem; o texto vira a legenda do primeiro, exceto
+     * quando o primeiro é áudio (voz não tem legenda) ou a legenda passa de 1024 caracteres: nesses casos sai antes, como
+     * mensagem própria. A ordem final é a da fila de saída.
+     */
     public function send(): void
     {
         $ticket = $this->selected();
         $this->authorize('reply', $ticket);
 
         $this->draft = trim($this->draft);
-        $this->validate(['draft' => ['required', 'string', 'max:4096']], [
-            'draft.required' => 'Escreva uma mensagem.',
-            'draft.max' => 'A mensagem passa de 4096 caracteres.',
-        ]);
+        $this->resetErrorBag();
 
-        // Freio contra conta comprometida ou laço no navegador. Só o envio conta; indicadores de digitação, que são
-        // bem mais frequentes, terão limite próprio quando existirem.
-        $allowed = RateLimiter::attempt('send-message:'.$this->user()->id, config()->integer('security.send_message_per_minute'), fn () => true, 60);
+        if ($this->attachments === []) {
+            $this->validate(['draft' => ['required', 'string', 'max:4096']], [
+                'draft.required' => 'Escreva uma mensagem.',
+                'draft.max' => 'A mensagem passa de 4096 caracteres.',
+            ]);
+        } else {
+            $this->validate(['draft' => ['nullable', 'string', 'max:4096']], ['draft.max' => 'A mensagem passa de 4096 caracteres.']);
+        }
 
-        if (! $allowed) {
+        $captioned = $this->attachments !== [] && $this->draft !== '' && $this->captionFits($this->attachments[0]);
+        $cost = count($this->attachments) + ($this->draft !== '' && ! $captioned ? 1 : 0);
+
+        // Freio contra conta comprometida ou laço no navegador: cada mensagem enviada conta, arquivo inclusive.
+        if (! $this->reserveSends($cost)) {
             $this->addError('draft', 'Você está enviando mensagens rápido demais. Aguarde alguns segundos.');
 
             return;
         }
 
-        SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $this->draft)->id);
+        if ($this->draft !== '' && ! $captioned) {
+            SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $this->draft)->id);
+        }
 
-        $this->reset('draft');
+        $failures = [];
+
+        foreach ($this->attachments as $position => $file) {
+            try {
+                app(SendTicketMedia::class)($ticket, $this->user(), $file, $captioned && $position === 0 ? $this->draft : '');
+            } catch (InvalidArgumentException $e) {
+                $failures[] = $e->getMessage();
+            }
+
+            $file->delete();
+        }
+
+        $this->reset('draft', 'attachments');
+
+        foreach ($failures as $failure) {
+            $this->addError('attachments', $failure);
+        }
+    }
+
+    private function discardAttachments(): void
+    {
+        foreach ($this->attachments as $file) {
+            $file->delete();
+        }
+
+        $this->reset('attachments', 'upload');
+    }
+
+    private function captionFits(TemporaryUploadedFile $first): bool
+    {
+        $info = AttachmentRules::inspect($first);
+
+        return is_array($info) && $info['kind'] !== 'audio' && mb_strlen($this->draft) <= self::CAPTION_LIMIT;
+    }
+
+    private function reserveSends(int $count): bool
+    {
+        $key = 'send-message:'.$this->user()->id;
+        $max = config()->integer('security.send_message_per_minute');
+
+        if (RateLimiter::remaining($key, $max) < $count) {
+            return false;
+        }
+
+        for ($i = 0; $i < $count; $i++) {
+            RateLimiter::hit($key, 60);
+        }
+
+        return true;
     }
 
     /**

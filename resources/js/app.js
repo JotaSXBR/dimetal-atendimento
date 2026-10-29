@@ -6,3 +6,4 @@
 
 import './echo';
 import './audio-player';
+import './attach-tray';
