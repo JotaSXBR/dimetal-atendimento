@@ -54,16 +54,21 @@ class Presence
 
     private function markSeen(WahaClient $client, Ticket $ticket, string $chatId): void
     {
-        $ids = Message::query()
+        $received = Message::query()
             ->where('ticket_id', $ticket->id)
             ->where('direction', 'in')
             ->whereNotNull('wa_message_id')
             ->latest('sent_at')
             ->limit(self::LAST_SEEN_IDS)
-            ->pluck('wa_message_id')
-            ->map(fn (mixed $id): string => (string) $id)
-            ->values()
-            ->all();
+            ->get();
+
+        $ids = [];
+
+        foreach ($received as $message) {
+            if ($message->wa_message_id !== null) {
+                $ids[] = $message->wa_message_id;
+            }
+        }
 
         if ($ids !== []) {
             $client->sendSeen($chatId, $ids);
