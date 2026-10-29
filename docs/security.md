@@ -77,11 +77,17 @@ deploy. Ações fixadas por SHA de commit e permissão mínima (`contents: read`
 | Varredura | Quando roda | O que reprova |
 |---|---|---|
 | Segredos no histórico do git (gitleaks, imagem fixada por digest) | todo PR, push na `main`, semanal | qualquer achado. **Segredo real: parar, rotacionar e avisar. Nunca liberar.** Falso positivo só por impressão digital, em `.gitleaksignore` |
-| Revisão de dependências (`dependency-review-action`) | todo PR | vulnerabilidade `high` ou acima introduzida pelo PR |
 | Imagem Docker (Trivy, alvo `runtime`) | semanal, sob demanda e PR que mexe em `docker/` ou nos lockfiles | CRÍTICA ou ALTA **com correção publicada** (o que não tem correção não é acionável) |
 | Scan dinâmico passivo (OWASP ZAP baseline) contra o beta | semanal e sob demanda | nada por enquanto: só relata, até a primeira rodada ser triada |
 
 Rodar na hora: `gh workflow run security` e `gh workflow run security-scan`.
+
+**Pendente, depende do dono do repositório:** a revisão de dependências nos PRs (`actions/dependency-review-action`, reprovando
+`high`) exige o **Dependency graph** ativado no GitHub (Settings → Advanced Security). Está desligado, e a action reprova com
+"Dependency review is not supported on this repository". Depois de ativar, acrescentar ao `security.yml` um job com
+`if: github.event_name == 'pull_request'`, `actions/checkout` e `actions/dependency-review-action` com
+`fail-on-severity: high`. Enquanto isso, vulnerabilidade conhecida em dependência é coberta pelo `composer audit`, pelo
+`npm audit` (job `audit`) e pelo Dependabot.
 
 **Estado da imagem em 28/10/2026:** 0 vulnerabilidades críticas ou altas com correção publicada (Debian 12.15 e pacotes do
 Composer). Existem 296 críticas ou altas **sem correção** no Debian base (por exemplo `bsdutils`); o job as ignora de propósito e
