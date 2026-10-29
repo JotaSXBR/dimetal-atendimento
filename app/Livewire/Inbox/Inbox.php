@@ -174,15 +174,23 @@ class Inbox extends Component
     }
 
     /** Entra na bandeja o arquivo que acabou de subir (um por requisição); o servidor decide se ele fica. */
-    public function commitUpload(): void
+    public function commitUpload(int $ticketId): void
     {
-        $this->authorize('reply', $this->selected());
+        $ticket = $this->selected();
+        $this->authorize('reply', $ticket);
         $this->resetErrorBag('attachments');
 
         $file = $this->upload;
         $this->upload = null;
 
         if ($file === null) {
+            return;
+        }
+
+        // O arquivo subiu enquanto o atendente estava em outra conversa: não entra na bandeja desta.
+        if ($ticketId !== $ticket->id) {
+            $file->delete();
+
             return;
         }
 
@@ -279,9 +287,16 @@ class Inbox extends Component
      * O atendente começou ou parou de gravar áudio: o cliente vê "gravando áudio…". Chega a cada poucos segundos
      * enquanto grava, então tem limite próprio (separado do de envio) e nunca devolve erro ao navegador.
      */
-    public function recording(bool $on): void
+    public function recording(bool $on, int $ticketId): void
     {
-        $ticket = $this->selected();
+        // O ticket vem do gravador (o da conversa em que ele nasceu), não da seleção atual: ao trocar de conversa, o aviso de
+        // "parou" ainda precisa chegar ao cliente certo.
+        $ticket = Ticket::query()->visibleTo($this->user())->findOrFail($ticketId);
+
+        if (! $on && ! $this->user()->can('reply', $ticket)) {
+            return;
+        }
+
         $this->authorize('reply', $ticket);
 
         $key = 'presence:'.$this->user()->id;
@@ -306,7 +321,7 @@ class Inbox extends Component
     }
 
     /** Envia a gravação que o navegador acabou de subir (`voice`) como mensagem de voz do WhatsApp. */
-    public function sendVoice(): void
+    public function sendVoice(int $ticketId): void
     {
         $ticket = $this->selected();
         $this->authorize('reply', $ticket);
@@ -316,6 +331,13 @@ class Inbox extends Component
         $this->voice = null;
 
         if ($file === null) {
+            return;
+        }
+
+        // A gravação nasceu em outra conversa (o atendente trocou de ticket no meio): nunca vai para a que está na tela.
+        if ($ticketId !== $ticket->id) {
+            $file->delete();
+
             return;
         }
 

@@ -18,7 +18,7 @@ function extensionFor(mime) {
 }
 
 document.addEventListener('alpine:init', () => {
-    window.Alpine.data('voiceRecorder', ($wire) => ({
+    window.Alpine.data('voiceRecorder', ($wire, ticketId) => ({
         phase: 'idle',
         seconds: 0,
         url: null,
@@ -86,8 +86,8 @@ document.addEventListener('alpine:init', () => {
                     this.stop();
                 }
             }, 1000);
-            $wire.recording(true);
-            this.beat = setInterval(() => $wire.recording(true), HEARTBEAT_MS);
+            $wire.recording(true, ticketId);
+            this.beat = setInterval(() => $wire.recording(true, ticketId), HEARTBEAT_MS);
         },
 
         stop() {
@@ -110,7 +110,7 @@ document.addEventListener('alpine:init', () => {
             this.blob = new Blob(this.chunks, { type: this.mime });
             this.url = URL.createObjectURL(this.blob);
             this.setPhase('preview');
-            $wire.recording(false);
+            $wire.recording(false, ticketId);
         },
 
         discard() {
@@ -136,7 +136,7 @@ document.addEventListener('alpine:init', () => {
             this.setPhase('idle');
 
             if (wasRecording) {
-                $wire.recording(false);
+                $wire.recording(false, ticketId);
             }
         },
 
@@ -159,7 +159,7 @@ document.addEventListener('alpine:init', () => {
                 'voice',
                 file,
                 async () => {
-                    await $wire.sendVoice();
+                    await $wire.sendVoice(ticketId);
                     this.discard();
                 },
                 () => {

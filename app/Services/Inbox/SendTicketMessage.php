@@ -97,7 +97,11 @@ class SendTicketMessage
         $message->touch();
 
         $client = new WahaClient($channel);
-        $this->presence->before($client, $ticket, $contact, $message->body);
+        // Resposta automática não finge leitura nem digitação: seria o cliente vendo "digitando…" de um robô às 22h.
+        if ($message->origin !== MessageOrigin::BOT) {
+            $this->presence->before($client, $ticket, $contact, $message->body);
+        }
+
         $chatId = $contact->wa_id ?? (string) $contact->lid;
 
         try {

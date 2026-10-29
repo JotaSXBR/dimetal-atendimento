@@ -7,7 +7,7 @@
 const MAX_BYTES = 16 * 1024 * 1024;
 
 document.addEventListener('alpine:init', () => {
-    window.Alpine.data('attachTray', ($wire) => ({
+    window.Alpine.data('attachTray', ($wire, ticketId) => ({
         uploading: 0,
         dragging: false,
         voiceBusy: false,
@@ -27,7 +27,7 @@ document.addEventListener('alpine:init', () => {
 
                 try {
                     await new Promise((resolve) => {
-                        $wire.$upload('upload', file, () => resolve($wire.commitUpload()), () => resolve(), () => {});
+                        $wire.$upload('upload', file, () => resolve($wire.commitUpload(ticketId)), () => resolve(), () => {});
                     });
                 } finally {
                     this.uploading -= 1;

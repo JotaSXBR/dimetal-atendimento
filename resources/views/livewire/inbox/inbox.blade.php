@@ -221,7 +221,8 @@
 
                 @if ($canReply)
                     <div
-                        x-data="attachTray($wire)"
+                        wire:key="composer-{{ $ticket->id }}"
+                        x-data="attachTray($wire, {{ $ticket->id }})"
                         x-on:dragover.prevent="dragging = true"
                         x-on:dragleave.prevent="dragging = false"
                         x-on:drop.prevent="drop($event)"
@@ -251,7 +252,7 @@
                         @enderror
 
                         {{-- Gravador de voz: o estado vive no Alpine (wire:ignore); ver resources/js/voice-recorder.js --}}
-                        <div wire:ignore x-data="voiceRecorder($wire)" x-on:voice-start.window="start()">
+                        <div wire:ignore x-data="voiceRecorder($wire, {{ $ticket->id }})" x-on:voice-start.window="start()">
                             <p x-show="error" x-cloak x-text="error" class="mb-2 text-xs text-danger" role="alert"></p>
 
                             <div x-show="phase === 'recording'" x-cloak class="flex items-center gap-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2">

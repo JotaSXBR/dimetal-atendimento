@@ -73,7 +73,7 @@ class InboxVoiceTest extends TestCase
     {
         Http::fake(['*' => Http::response([], 201)]);
 
-        $this->inbox()->call('recording', true)->call('recording', false);
+        $this->inbox()->call('recording', true, $this->ticket->id)->call('recording', false, $this->ticket->id);
 
         $presences = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && isset($r['chatId']))
             ->map(fn (array $pair): string => $pair[0]['presence'])->values()->all();
@@ -86,7 +86,7 @@ class InboxVoiceTest extends TestCase
         $component = $this->inbox();
 
         foreach (range(1, 25) as $ignored) {
-            $component->call('recording', true)->assertHasNoErrors();
+            $component->call('recording', true, $this->ticket->id)->assertHasNoErrors();
         }
 
         $this->assertSame(20, $this->presenceRequests());
@@ -98,10 +98,10 @@ class InboxVoiceTest extends TestCase
         $component = $this->inbox();
 
         foreach (range(1, 20) as $ignored) {
-            $component->call('recording', true);
+            $component->call('recording', true, $this->ticket->id);
         }
 
-        $component->call('recording', false);
+        $component->call('recording', false, $this->ticket->id);
 
         $this->assertSame(21, $this->presenceRequests());
     }
@@ -110,7 +110,7 @@ class InboxVoiceTest extends TestCase
     {
         Http::fake(['*' => Http::response(['message' => 'boom'], 500)]);
 
-        $this->inbox()->call('recording', true)->assertHasNoErrors();
+        $this->inbox()->call('recording', true, $this->ticket->id)->assertHasNoErrors();
     }
 
     public function test_canal_desconectado_nao_chama_o_waha(): void
@@ -118,7 +118,7 @@ class InboxVoiceTest extends TestCase
         Http::fake();
         $this->channel->update(['status' => ChannelStatus::STOPPED]);
 
-        $this->inbox()->call('recording', true);
+        $this->inbox()->call('recording', true, $this->ticket->id);
 
         Http::assertNothingSent();
     }
@@ -128,7 +128,7 @@ class InboxVoiceTest extends TestCase
         Http::fake();
         $this->ticket->update(['assigned_user_id' => null, 'status' => TicketStatus::AGUARDANDO]);
 
-        Livewire::actingAs($this->me)->test(Inbox::class)->set('ticketId', $this->ticket->id)->call('recording', true)->assertForbidden();
+        Livewire::actingAs($this->me)->test(Inbox::class)->set('ticketId', $this->ticket->id)->call('recording', true, $this->ticket->id)->assertForbidden();
 
         Http::assertNothingSent();
     }
@@ -139,7 +139,7 @@ class InboxVoiceTest extends TestCase
 
         $this->inbox()
             ->set('voice', UploadedFile::fake()->createWithContent('audio.webm', self::WEBM))
-            ->call('sendVoice')
+            ->call('sendVoice', $this->ticket->id)
             ->assertHasNoErrors();
 
         $message = Message::query()->where('direction', MessageDirection::OUT->value)->sole();
@@ -161,7 +161,7 @@ class InboxVoiceTest extends TestCase
     {
         $this->inbox()
             ->set('voice', UploadedFile::fake()->createWithContent('audio.webm', "MZ\x90\x00\x03\x00\x00\x00"))
-            ->call('sendVoice')
+            ->call('sendVoice', $this->ticket->id)
             ->assertHasErrors('voice');
 
         $this->assertSame(0, Message::query()->where('direction', MessageDirection::OUT->value)->count());
@@ -174,7 +174,53 @@ class InboxVoiceTest extends TestCase
         Livewire::actingAs($this->me)->test(Inbox::class)
             ->set('ticketId', $this->ticket->id)
             ->set('voice', UploadedFile::fake()->createWithContent('audio.webm', self::WEBM))
-            ->call('sendVoice')
+            ->call('sendVoice', $this->ticket->id)
             ->assertForbidden();
+    }
+
+    public function test_gravacao_de_outra_conversa_nunca_vai_para_a_que_esta_na_tela(): void
+    {
+        Http::fake(['*' => Http::response([], 201)]);
+        $other = Ticket::factory()->create([
+            'channel_id' => $this->channel->id,
+            'contact_id' => Contact::factory()->create(['wa_id' => '5516999990002@c.us'])->id,
+            'status' => TicketStatus::EM_ATENDIMENTO,
+            'assigned_user_id' => $this->me->id,
+        ]);
+
+        // A gravação nasceu na conversa de $other; o atendente já está na conversa de $this->ticket.
+        $this->inbox()
+            ->set('voice', UploadedFile::fake()->createWithContent('audio.webm', self::WEBM))
+            ->call('sendVoice', $other->id);
+
+        $this->assertSame(0, Message::query()->where('direction', MessageDirection::OUT->value)->count());
+        Queue::assertNothingPushed();
+    }
+
+    public function test_aviso_de_que_parou_de_gravar_chega_ao_cliente_da_conversa_de_origem(): void
+    {
+        Http::fake(['*' => Http::response([], 201)]);
+        $other = Ticket::factory()->create([
+            'channel_id' => $this->channel->id,
+            'contact_id' => Contact::factory()->create(['wa_id' => '5516999990002@c.us'])->id,
+            'status' => TicketStatus::EM_ATENDIMENTO,
+            'assigned_user_id' => $this->me->id,
+        ]);
+
+        // O atendente trocou para $this->ticket no meio da gravação de $other; ao desmontar, o gravador avisa que parou.
+        $this->inbox()->call('recording', false, $other->id);
+
+        $stopped = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && ($r['chatId'] ?? null) === '5516999990002@c.us' && $r['presence'] === 'paused');
+        $this->assertCount(1, $stopped);
+    }
+
+    public function test_parar_de_gravar_em_conversa_que_nao_aceita_mais_resposta_e_ignorado_em_silencio(): void
+    {
+        Http::fake();
+        $this->ticket->update(['status' => TicketStatus::ENCERRADO]);
+
+        Livewire::actingAs($this->me)->test(Inbox::class)->call('recording', false, $this->ticket->id)->assertHasNoErrors();
+
+        Http::assertNothingSent();
     }
 }

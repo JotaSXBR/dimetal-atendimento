@@ -16,6 +16,7 @@ use App\Models\WahaEvent;
 use App\Services\Inbox\DrainOutbox;
 use App\Services\Inbox\SendFailure;
 use App\Services\Inbox\SendTicketMessage;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
@@ -257,5 +258,25 @@ class OutboxDrainTest extends TestCase
         ]);
 
         (new HandleWahaEvent($event->id))->handle();
+    }
+
+    public function test_depois_do_orcamento_de_tempo_nao_comeca_outro_envio_e_pede_nova_rodada(): void
+    {
+        $this->fakeWaha(function (Request $r, int $n) {
+            Carbon::setTestNow(now()->addSeconds(DrainOutbox::TIME_BUDGET_SECONDS + 1));
+
+            return Http::response(['id' => "true_5516997524950@c.us_ID{$n}"], 201);
+        });
+        $first = $this->queued('primeira');
+        $second = $this->queued('segunda');
+
+        $more = app(DrainOutbox::class)($this->channel);
+
+        $this->assertTrue($more);
+        $this->assertSame(DeliveryStatus::SENT, $first->fresh()?->delivery_status);
+        $this->assertSame(DeliveryStatus::QUEUED, $second->fresh()?->delivery_status);
+        $this->assertSame(1, $this->sendTextCount());
+
+        Carbon::setTestNow();
     }
 }

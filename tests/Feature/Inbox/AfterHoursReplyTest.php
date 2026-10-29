@@ -17,6 +17,7 @@ use App\Services\Inbox\IngestMessage;
 use App\Services\Inbox\SendTicketMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
@@ -34,6 +35,7 @@ class AfterHoursReplyTest extends TestCase
     {
         parent::setUp();
 
+        config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
         Queue::fake();
         Sleep::fake();
 
@@ -192,6 +194,10 @@ class AfterHoursReplyTest extends TestCase
         $reply = Message::query()->where('origin', MessageOrigin::BOT->value)->sole();
 
         app(SendTicketMessage::class)->deliver($reply);
+
+        // Sem "visto" nem "digitando…": quem responde é um robô.
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'startTyping') || str_contains($request->url(), 'sendSeen'));
+        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/api/sendText'));
 
         $ticket = $reply->ticket->fresh();
         $this->assertNull($ticket?->first_human_reply_at);

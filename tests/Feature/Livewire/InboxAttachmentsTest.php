@@ -69,7 +69,7 @@ class InboxAttachmentsTest extends TestCase
     private function attach(object $component, array $files): object
     {
         foreach ($files as $name => $bytes) {
-            $component->set('upload', $this->upload($name, $bytes))->call('commitUpload');
+            $component->set('upload', $this->upload($name, $bytes))->call('commitUpload', $this->ticket->id);
         }
 
         return $component;
@@ -201,7 +201,7 @@ class InboxAttachmentsTest extends TestCase
 
         $component = Livewire::actingAs($this->me)->test(Inbox::class);
         $component->set('ticketId', $this->ticket->id);
-        $component->set('upload', $this->upload('foto.jpg', self::JPEG))->call('commitUpload')->assertForbidden();
+        $component->set('upload', $this->upload('foto.jpg', self::JPEG))->call('commitUpload', $this->ticket->id)->assertForbidden();
     }
 
     public function test_mensagem_de_anexo_aparece_como_enviada_depois_do_job(): void
@@ -212,5 +212,20 @@ class InboxAttachmentsTest extends TestCase
 
         $this->assertNull($this->sent()->sole()->delivery_status);
         $this->assertNotSame(DeliveryStatus::FAILED, $this->sent()->sole()->delivery_status);
+    }
+
+    public function test_arquivo_que_subiu_para_outra_conversa_nao_entra_na_bandeja_desta(): void
+    {
+        $other = Ticket::factory()->create([
+            'channel_id' => $this->ticket->channel_id,
+            'contact_id' => Contact::factory()->create()->id,
+            'status' => TicketStatus::EM_ATENDIMENTO,
+            'assigned_user_id' => $this->me->id,
+        ]);
+
+        $component = $this->inbox();
+        $component->set('upload', $this->upload('foto.jpg', self::JPEG))->call('commitUpload', $other->id);
+
+        $component->assertCount('attachments', 0);
     }
 }
