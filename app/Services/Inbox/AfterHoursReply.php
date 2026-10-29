@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\Setting;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -75,11 +76,18 @@ class AfterHoursReply
     private function text(Message $incoming): string
     {
         $template = Setting::get('after_hours_message');
-        $template = is_string($template) && trim($template) !== '' ? $template : self::DEFAULT_MESSAGE;
+
+        return $this->render(is_string($template) ? $template : null, $incoming->sent_at);
+    }
+
+    /** O texto com as variáveis preenchidas; o padrão vale quando o modelo está vazio. Usado também na prévia da tela. */
+    public function render(?string $template, CarbonInterface $at): string
+    {
+        $template = $template !== null && trim($template) !== '' ? $template : self::DEFAULT_MESSAGE;
 
         return str_replace(
             ['{{horario}}', '{{proximo_horario}}'],
-            [$this->hours->summary(), $this->hours->nextOpeningLabel($incoming->sent_at)],
+            [$this->hours->summary(), $this->hours->nextOpeningLabel($at)],
             $template,
         );
     }

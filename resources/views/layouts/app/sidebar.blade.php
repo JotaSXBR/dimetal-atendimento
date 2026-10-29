@@ -20,13 +20,19 @@
                         Meus tickets
                     </flux:sidebar.item>
 
-                    @can('admin')
+                </flux:sidebar.group>
+
+                @can('admin')
+                    <flux:sidebar.group heading="Configurações" class="grid">
                         <flux:sidebar.item icon="chat-bubble-left-right" :href="route('configuracoes.canais')" :current="request()->routeIs('configuracoes.canais')" wire:navigate>
                             Canais
                         </flux:sidebar.item>
 
-                    @endcan
-                </flux:sidebar.group>
+                        <flux:sidebar.item icon="clock" :href="route('configuracoes.horario')" :current="request()->routeIs('configuracoes.horario')" wire:navigate>
+                            Horário
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endcan
             </flux:sidebar.nav>
 
             <flux:spacer />
