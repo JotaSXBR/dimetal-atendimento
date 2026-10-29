@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Message;
 use App\Services\Inbox\IncomingMedia;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaMedia;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -29,7 +30,7 @@ class MessageMediaController extends Controller
         Gate::authorize('view', $message->ticket()->firstOrFail());
 
         $ref = $this->safeRef($message);
-        $upstream = (new WahaClient($message->channel()->firstOrFail()))->streamFile($ref, $request->header('Range'));
+        $upstream = (new WahaMedia(new WahaClient($message->channel()->firstOrFail())))->streamFile($ref, $request->header('Range'));
 
         abort_if($upstream === null, 404);
 

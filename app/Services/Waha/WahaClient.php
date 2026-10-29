@@ -132,54 +132,6 @@ class WahaClient
     }
 
     /**
-     * Pede ao WAHA que baixe a mídia da mensagem e devolve o nome do arquivo guardado. O `media.url` do GOWS não
-     * serve (CDN cifrado ou endereço interno); o nome em `media.filename` é o que a rota de mídia lê depois.
-     *
-     * @return array{filename: string, mimetype: ?string}|null `null` enquanto o WAHA não tem o arquivo
-     */
-    public function downloadMessageMedia(string $chatId, string $waId): ?array
-    {
-        $response = $this->request()->get(
-            $this->sessionPath('/chats/'.rawurlencode($chatId).'/messages/'.rawurlencode($waId)),
-            ['downloadMedia' => 'true'],
-        );
-        $this->ensureOk($response);
-
-        $filename = $response->json('media.filename');
-        $mimetype = $response->json('media.mimetype');
-
-        return is_string($filename) && $filename !== ''
-            ? ['filename' => $filename, 'mimetype' => is_string($mimetype) ? $mimetype : null]
-            : null;
-    }
-
-    /**
-     * Lê um arquivo guardado no WAHA, repassando o `Range` do navegador (o Safari exige para tocar áudio e vídeo).
-     * O WAHA serve `/api/files/{sessão}/{arquivo}`; a rota sem a sessão é a tentativa de reserva.
-     * Devolve `null` quando o arquivo não existe.
-     */
-    public function streamFile(string $ref, ?string $range = null): ?Response
-    {
-        foreach (['/api/files/'.rawurlencode($this->sessionName()).'/'.rawurlencode($ref), '/api/files/'.rawurlencode($ref)] as $path) {
-            // `identity`: com o corpo comprimido, o `Content-Length` repassado não bateria com os bytes entregues.
-            $request = $this->request()->withOptions(['stream' => true])->withHeaders(['Accept-Encoding' => 'identity'] + ($range === null ? [] : ['Range' => $range]));
-            $response = $request->get($path);
-
-            if ($response->status() === 404) {
-                continue;
-            }
-
-            if ($response->status() !== 416) {
-                $this->ensureOk($response);
-            }
-
-            return $response;
-        }
-
-        return null;
-    }
-
-    /**
      * @param  list<string>  $messageIds  ids das mensagens do cliente; o GOWS só marca como lida com eles
      */
     public function sendSeen(string $chatId, array $messageIds = []): void
@@ -214,17 +166,30 @@ class WahaClient
         ]));
     }
 
+    /**
+     * Requisição já autenticada, para as classes que falam com o WAHA em nome deste canal (ex.: `WahaMedia`).
+     */
+    public function http(): PendingRequest
+    {
+        return $this->request();
+    }
+
+    public function sessionName(): string
+    {
+        return $this->channel->waha_session;
+    }
+
+    public function check(Response $response): void
+    {
+        $this->ensureOk($response);
+    }
+
     private function request(): PendingRequest
     {
         return Http::baseUrl(WahaSettings::baseUrl())
             ->withHeaders(['X-Api-Key' => WahaSettings::apiKey()])
             ->acceptJson()
             ->timeout(self::TIMEOUT_SECONDS);
-    }
-
-    private function sessionName(): string
-    {
-        return $this->channel->waha_session;
     }
 
     private function sessionPath(string $suffix, bool $management = false): string

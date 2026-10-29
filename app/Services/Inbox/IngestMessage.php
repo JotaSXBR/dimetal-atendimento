@@ -128,7 +128,7 @@ class IngestMessage
         MessageCreated::dispatch($message);
         TicketUpdated::dispatch($ticket);
 
-        if ($message->hasMedia() && $message->media_ref === null) {
+        if ($message->hasMedia()) {
             ResolveMessageMediaJob::dispatch($message->id)->afterCommit();
         }
 

@@ -4,7 +4,13 @@
 @endphp
 
 @if ($message->type === 'view_once')
-    <p class="text-ink-2 italic">O cliente enviou uma mensagem de visualização única; abra no celular.</p>
+    <div class="flex items-start gap-2 text-ink-2">
+        <flux:icon.eye-slash class="mt-0.5 size-4 shrink-0" />
+        <p>
+            <span class="font-medium">Mensagem de visualização única.</span>
+            O WhatsApp não entrega esse conteúdo ao atendimento: abra no celular ou peça ao cliente que reenvie como foto ou vídeo normal.
+        </p>
+    </div>
 @elseif ($url === null)
     <p class="text-ink-2 italic">{{ $message->created_at?->gt(now()->subMinutes(2)) ? 'Carregando mídia…' : 'Mídia indisponível' }}</p>
 @elseif (str_starts_with($mime, 'image/'))

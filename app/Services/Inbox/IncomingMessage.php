@@ -99,7 +99,14 @@ final readonly class IncomingMessage
             return ['type' => $type, 'body' => $body, 'media' => $type === 'media' ? self::media($data) : null];
         }
 
-        Log::info('Mensagem do WAHA sem conteúdo ignorada', ['id' => $data['id'] ?? null, 'event' => $event->waha_event_id]);
+        // Warning (e não info) porque o beta roda com LOG_LEVEL=warning e é aqui que se descobre um tipo novo de evento.
+        Log::warning('Mensagem do WAHA sem conteúdo ignorada', [
+            'id' => $data['id'] ?? null,
+            'event' => $event->waha_event_id,
+            'type' => $data['type'] ?? null,
+            'campos' => array_keys($data),
+            'campos_data' => array_keys(is_array($data['_data'] ?? null) ? $data['_data'] : []),
+        ]);
 
         return null;
     }
@@ -129,8 +136,12 @@ final readonly class IncomingMessage
     private static function isViewOnce(array $data): bool
     {
         $message = data_get($data, '_data.Message');
+        $wrapped = is_array($message) && array_intersect(array_keys($message), ['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension']) !== [];
 
-        return is_array($message) && array_intersect(array_keys($message), ['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension']) !== [];
+        // O WhatsApp não entrega o conteúdo de visualização única a aparelhos vinculados: chega um aviso "indisponível".
+        $unavailable = data_get($data, '_data.UnavailableType') === 'view_once' || data_get($data, '_data.Info.UnavailableType') === 'view_once';
+
+        return $wrapped || $unavailable || data_get($data, '_data.IsViewOnce') === true;
     }
 
     private static function string(mixed $value): ?string
