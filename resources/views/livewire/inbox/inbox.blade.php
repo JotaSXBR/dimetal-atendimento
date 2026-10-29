@@ -160,8 +160,10 @@
                                 \App\Enums\DeliveryStatus::READ => ['Lida', '✓✓', 'text-sky-600'],
                                 \App\Enums\DeliveryStatus::DELIVERED => ['Entregue', '✓✓', ''],
                                 \App\Enums\DeliveryStatus::SENT => ['Enviada', '✓', ''],
+                                \App\Enums\DeliveryStatus::QUEUED => ['Aguardando conexão', '⏳', 'text-warn'],
                                 default => ['Enviando', '…', ''],
                             };
+                            $resend = $out ? app(\App\Services\Inbox\ResendTicketMessage::class)->kind($message, auth()->user()) : 'none';
                         @endphp
 
                         <div wire:key="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
@@ -184,6 +186,16 @@
                                     <p class="mt-1 text-xs text-danger">{{ $message->failure_reason }}</p>
                                 @endif
 
+                                @if ($message->delivery_status === \App\Enums\DeliveryStatus::QUEUED)
+                                    <p class="mt-1 text-xs text-warn">Aguardando o WhatsApp reconectar. A mensagem sai sozinha quando a conexão voltar.</p>
+                                @endif
+
+                                @if ($resend === 'safe')
+                                    <button type="button" wire:click="resend({{ $message->id }}, true)" class="mt-1 text-xs text-accent underline">Reenviar</button>
+                                @elseif ($resend === 'confirm')
+                                    <button type="button" wire:click="resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent underline">Reenviar</button>
+                                @endif
+
                                 <p class="mt-1 flex items-center justify-end gap-1 font-mono text-[10px] text-ink-3">
                                     {{ $message->sent_at->timezone($tz)->format('H:i') }}
                                     @if ($out)
@@ -197,6 +209,12 @@
             </div>
 
             <footer class="border-t border-line bg-surface p-3">
+                @if ($canReply && $ticket->channel->status !== \App\Enums\ChannelStatus::WORKING)
+                    <p class="mb-2 rounded-md bg-warn/10 px-3 py-2 text-xs text-warn" role="status">
+                        O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).
+                    </p>
+                @endif
+
                 @if ($canReply)
                     <form wire:submit="send" class="flex items-end gap-2">
                         <div class="flex-1">

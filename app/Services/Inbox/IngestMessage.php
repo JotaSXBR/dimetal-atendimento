@@ -64,7 +64,13 @@ class IngestMessage
     {
         $ticket = $pending->ticket()->firstOrFail();
 
-        $pending->update(['wa_message_id' => $incoming->waId]);
+        // O eco prova que saiu: uma linha que tinha falhado (ex.: timeout sem resposta) volta a "enviada".
+        $pending->update([
+            'wa_message_id' => $incoming->waId,
+            'delivery_status' => $pending->delivery_status === DeliveryStatus::FAILED ? DeliveryStatus::SENT : $pending->delivery_status,
+            'failure_reason' => null,
+            'failure_code' => null,
+        ]);
         $ticket->recordOutbound($incoming->sentAt);
         TicketUpdated::dispatch($ticket);
 
@@ -89,9 +95,11 @@ class IngestMessage
             ->where('direction', MessageDirection::OUT->value)
             ->where('origin', MessageOrigin::PAINEL->value)
             ->whereNull('wa_message_id')
-            ->whereNull('delivery_status')
+            ->where(fn ($q) => $q->whereNull('delivery_status')
+                // Só a falha "sem resposta" pode ter saído; as recusadas pelo WAHA não são engolidas pelo eco do celular.
+                ->orWhere(fn ($failed) => $failed->where('delivery_status', DeliveryStatus::FAILED->value)->where('failure_code', SendFailure::UNKNOWN)))
             ->where('body', $body)
-            ->where('created_at', '>=', now()->subSeconds(self::ECHO_WINDOW_SECONDS))
+            ->where('updated_at', '>=', now()->subSeconds(self::ECHO_WINDOW_SECONDS))
             ->oldest('id')
             ->first();
     }

@@ -2,12 +2,12 @@
 
 namespace App\Jobs;
 
-use App\Enums\DeliveryStatus;
 use App\Models\Message;
+use App\Services\Inbox\OutboxRecovery;
 use App\Services\Inbox\SendTicketMessage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class SendTicketMessageJob implements ShouldQueue
 {
@@ -32,14 +32,13 @@ class SendTicketMessageJob implements ShouldQueue
 
     /**
      * Morte fora do `try` do envio (worker derrubado no deploy, erro antes do WAHA): sem isto a linha ficaria "enviando"
-     * para sempre. Se a mensagem já tem id ou estado, o envio aconteceu e nada muda.
+     * para sempre. Pode ter saído antes da morte, então é falha "sem resposta" (confirmar antes de reenviar). Se a mensagem
+     * já tem id ou estado, o envio aconteceu e nada muda.
      */
     public function failed(\Throwable $e): void
     {
-        Message::query()
-            ->whereKey($this->messageId)
-            ->whereNull('wa_message_id')
-            ->whereNull('delivery_status')
-            ->update(['delivery_status' => DeliveryStatus::FAILED, 'failure_reason' => Str::limit($e->getMessage(), 250)]);
+        Log::warning('Envio morreu antes de confirmar', ['message' => $this->messageId, 'erro' => $e->getMessage()]);
+
+        app(OutboxRecovery::class)->markUnknown(Message::query()->whereKey($this->messageId));
     }
 }

@@ -14,6 +14,7 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\ResendTicketMessage;
 use App\Services\Inbox\SendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -171,6 +172,24 @@ class Inbox extends Component
         SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $this->draft)->id);
 
         $this->reset('draft');
+    }
+
+    /**
+     * Reenvia, na mesma linha, uma mensagem que falhou. Falha que pode ter saído exige confirmação (o botão pede e chama de
+     * novo com `$confirmed`); o servidor confere de novo, porque a tela sozinha não protege contra mensagem em dobro.
+     */
+    public function resend(int $messageId, bool $confirmed = false): void
+    {
+        $ticket = $this->selected();
+        $this->authorize('reply', $ticket);
+
+        $message = Message::query()->where('ticket_id', $ticket->id)->findOrFail($messageId);
+
+        $this->notice = match ((new ResendTicketMessage)($message, $this->user(), $confirmed)) {
+            ResendTicketMessage::CONFIRM => 'Confirme antes de reenviar: a mensagem pode já ter sido enviada.',
+            ResendTicketMessage::NONE => 'Esta mensagem não pode ser reenviada.',
+            default => null,
+        };
     }
 
     /**

@@ -100,8 +100,15 @@ class HandleWahaEvent implements ShouldQueue
             return;
         }
 
+        $reconnected = $status === ChannelStatus::WORKING && $channel->status !== ChannelStatus::WORKING;
+
         $channel->status = $status;
         $channel->last_event_at = $event->received_at;
         $channel->save();
+
+        // A sessão voltou: o que ficou aguardando a conexão sai agora, sem esperar a rotina de minuto em minuto.
+        if ($reconnected) {
+            DrainOutboxJob::dispatch($channel->id);
+        }
     }
 }
