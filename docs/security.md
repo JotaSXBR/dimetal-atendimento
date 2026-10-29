@@ -82,12 +82,7 @@ deploy. Ações fixadas por SHA de commit e permissão mínima (`contents: read`
 
 Rodar na hora: `gh workflow run security` e `gh workflow run security-scan`.
 
-**Pendente, depende do dono do repositório:** a revisão de dependências nos PRs (`actions/dependency-review-action`, reprovando
-`high`) exige o **Dependency graph** ativado no GitHub (Settings → Advanced Security). Está desligado, e a action reprova com
-"Dependency review is not supported on this repository". Depois de ativar, acrescentar ao `security.yml` um job com
-`if: github.event_name == 'pull_request'`, `actions/checkout` e `actions/dependency-review-action` com
-`fail-on-severity: high`. Enquanto isso, vulnerabilidade conhecida em dependência é coberta pelo `composer audit`, pelo
-`npm audit` (job `audit`) e pelo Dependabot.
+**Revisão de dependências nos PRs:** o job `dependency-review` do `security.yml` (`actions/dependency-review-action`, reprova `high`) depende do Dependency graph, ativado no GitHub (Settings → Advanced Security). Se for desligado, o job passa a reprovar com "Dependency review is not supported on this repository".
 
 **Estado da imagem em 28/10/2026:** 0 vulnerabilidades críticas ou altas com correção publicada (Debian 12.15 e pacotes do
 Composer). Existem 296 críticas ou altas **sem correção** no Debian base (por exemplo `bsdutils`); o job as ignora de propósito e
