@@ -61,3 +61,44 @@ corpo, então falta só o texto de aviso na tela.
 5. **Tratar 463/475** no envio: motivo de falha específico e alerta no canal, sem retentar.
 6. **Mensagem de visualização única**: aviso no lugar do conteúdo vazio.
 7. **Áudio e imagem gravados no painel**: conversão para OGG/OPUS (`convert: true`) e JPEG antes de enviar.
+
+## Envio humanizado sem travar a fila (decisão de desenho)
+
+**Problema.** O envio com presença leva de 1 a 6 s de espera (digitando) dentro do job. Hoje existe **um** worker e ele
+também processa a ingestão do webhook, os acks e os **broadcasts** do tempo real (`InboxEvent` é `ShouldBroadcast`, que
+roda na fila `default`). Um `sleep` de 6 s no meio atrasa mensagens recebidas, ticks e a tela em tempo real, que é
+justamente o motivo de o projeto usar o Reverb.
+
+**Restrição que decide.** A **ordem das mensagens de uma conversa**. O atendente manda A (longa) e logo B (curta): têm de
+chegar A e depois B. Como o tempo de digitação cresce com o tamanho do texto, qualquer desenho que despache cada envio
+com um atraso próprio deixa B ultrapassar A.
+
+| Opção | Ordem por conversa | Custo | Veredito |
+|---|---|---|---|
+| **A. Fila `outbound` com worker próprio, um processo** | Garantida: a fila é FIFO e só há um consumidor | Um recurso novo no Coolify (estágio `worker-outbound` no Dockerfile) | **Recomendada** |
+| B. Jobs encadeados sem bloquear (job 1: visto + digitando; job 2 com `delay`: para de digitar + envia + offline) | Precisa de serialização por conversa (`WithoutOverlapping` com chave do chat, ou "próximo envio em" por conversa) | Código mais complexo; a documentação do Laravel não confirma que o `delay` de um job dentro de `Bus::chain` seja respeitado, então exige teste | Só se um único worker de saída virar gargalo |
+| C. Vários processos no worker atual | Perde a ordem: dois envios seguidos caem em processos diferentes | Nenhum | Descartada |
+
+**Detalhes da opção A.**
+- Worker próprio: `php artisan queue:work --queue=outbound --tries=1 --timeout=120`. O `SendTicketMessageJob` passa a ir para
+  `onQueue('outbound')`. Ingestão, acks e broadcasts continuam no worker `default`, sem espera.
+- **Um processo só.** Com cinco atendentes, a vazão de um worker de saída (alguns segundos por mensagem) basta. Se não bastar,
+  a saída é a opção B, e não mais processos.
+- **Timeout.** Cada envio faz até 5 chamadas ao WAHA (visto, digitando, parar, enviar, offline), cada uma com timeout de HTTP de 15 s.
+  O pior caso passa de 60 s, o timeout padrão do job. Subir o timeout do job para 120 s e manter o `retry_after` da fila acima disso
+  (a documentação do Laravel exige timeout menor que `retry_after`). Cliente HTTP com timeout próprio, porque I/O bloqueante pode
+  ignorar o timeout do worker.
+- **`tries = 1` continua valendo**: o serviço grava a linha antes de chamar o WAHA e repetir duplicaria a mensagem. Falha de
+  presença (visto, digitando, offline) é melhor esforço e não derruba o envio.
+- **Mensagem aparece na hora.** Hoje a linha só nasce quando o job roda. Com fila de saída com atraso, o atendente ficaria sem ver a
+  própria mensagem. Criar a linha (estado "enviando") no momento do clique e deixar o job só enviar. O eco do celular continua
+  casando com essa linha pelo texto, como já faz.
+- **`offline` com debounce.** Mandar `offline` depois de cada mensagem faz a presença oscilar numa conversa rápida. Mandar uma vez,
+  depois de um período sem envio, cobre o objetivo (devolver o push ao celular).
+- **Limite de envio**: o teto de 30 mensagens por minuto por usuário já existe no painel. Para a saúde da conta, um teto por sessão do
+  WhatsApp na fila de saída (`RateLimited`) é a próxima camada, e a documentação do WAHA recomenda ritmo, não rajada.
+
+**Broadcasts.** Separar o tempo real da ingestão é barato: o Laravel 13 aceita o atributo `#[Queue('broadcasts')]` no evento, e o worker
+pode consumir `--queue=broadcasts,default` para atender o tempo real primeiro. Não é necessário agora; entra se a ingestão pesar.
+
+**Decisão registrada para a spec de mídia e presença:** opção A, com ordem por conversa como critério de desempate.
