@@ -138,3 +138,14 @@ Eco de mídia enviada pelo celular não adota a linha pendente do painel: só te
 - **Próxima fatia (pedido do dono):** presença "gravando áudio", nos dois sentidos: o atendente gravando para o cliente
   (`presence` com `recording`) e o cliente gravando para o atendente (assinar `presence/{chat}/subscribe` e tratar o
   webhook `presence.update`).
+
+### Achados do segundo teste e ideias anotadas (29/10/2026)
+
+- **Documento com legenda chegava só como `message.any`** (sem `message` correspondente) e o app descartava todo
+  `message.any` do cliente. Agora os dois eventos são aceitos; o id repetido é descartado na ingestão, então não duplica.
+- **Localização e contato têm cartão próprio** no inbox: a localização é um mapa ilustrativo com pino (sem mapa de
+  terceiros) que abre o Google Maps (`maps/search/?api=1&query=lat,lng`); o contato mostra iniciais, nome, telefones e
+  "Conversar no WhatsApp" (`wa.me`, só com telefone de 10 dígitos ou mais). A prévia da lista diz "Localização" e "Contato".
+- **Ideia futura (pedido do dono): adicionar o contato compartilhado aos contatos do app.** O cartão já tem nome e
+  telefones estruturados (`SpecialContent::contacts`); falta um botão "Adicionar aos contatos" que crie/atualize o `Contact`
+  pelo telefone (usando a mesma resolução de `ResolveContact`, que une `@lid` e `@c.us`).

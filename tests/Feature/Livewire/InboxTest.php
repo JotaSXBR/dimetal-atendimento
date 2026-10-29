@@ -128,6 +128,8 @@ class InboxTest extends TestCase
             [['type' => 'media', 'body' => '', 'media_mime' => 'video/mp4'], 'Vídeo'],
             [['type' => 'media', 'body' => '', 'media_mime' => 'application/pdf'], 'Arquivo'],
             [['type' => 'view_once', 'body' => ''], 'Visualização única'],
+            [['type' => 'location', 'body' => '-21.17,-47.81'], 'Localização'],
+            [['type' => 'contact', 'body' => 'Contato: Maria (+55 16 99999-0001)'], 'Contato'],
             [['type' => 'media', 'body' => 'a legenda', 'media_mime' => 'image/jpeg'], 'a legenda'],
         ] as [$attributes, $expected]) {
             Message::factory()->for($ticket)->create($attributes);

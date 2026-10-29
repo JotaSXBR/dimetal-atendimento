@@ -66,8 +66,9 @@ final readonly class IncomingMessage
             return null;
         }
 
-        // `message.any` repete as recebidas, que já entram por `message`; só interessa a enviada por outro aparelho.
-        return $event->event === 'message.any' && ! ($data['fromMe'] ?? false) ? null : $data;
+        // `message.any` repete as recebidas, mas há mensagens (documento com legenda) que só chegam por ele; o id repetido é
+        // descartado na ingestão, então aceitar os dois eventos não duplica.
+        return $data;
     }
 
     /**
