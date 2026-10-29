@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\MessageDirection;
 use App\Events\MessageStatusChanged;
+use App\Models\Contact;
 use App\Models\Message;
 use App\Services\Waha\WahaClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,16 +28,17 @@ class ResolveMessageMediaJob implements ShouldQueue
 
     public function handle(): void
     {
-        $message = Message::query()->with(['channel', 'contact'])->find($this->messageId);
+        $message = Message::query()->find($this->messageId);
 
         if ($message === null || ! $message->hasMedia() || $message->media_ref !== null) {
             return;
         }
 
-        $chatId = $message->contact?->wa_id ?? (string) $message->contact?->lid;
+        $contact = Contact::findOrFail($message->contact_id);
+        $chatId = $contact->wa_id ?? (string) $contact->lid;
         $serialized = ($message->direction === MessageDirection::OUT ? 'true' : 'false').'_'.$chatId.'_'.$message->wa_message_id;
 
-        $file = (new WahaClient($message->channel))->downloadMessageMedia($chatId, $serialized);
+        $file = (new WahaClient($message->channel()->firstOrFail()))->downloadMessageMedia($chatId, $serialized);
 
         if ($file === null) {
             throw new RuntimeException('O WAHA ainda não tem o arquivo da mensagem '.$message->id);
