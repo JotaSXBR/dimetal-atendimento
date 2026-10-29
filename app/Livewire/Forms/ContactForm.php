@@ -102,7 +102,11 @@ class ContactForm extends Form
         ];
     }
 
-    /** Só http(s), sem usuário e senha na URL. */
+    /**
+     * Só http(s), sem usuário e senha na URL. A assinatura da regra em closure traz o atributo.
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
+     */
     private function plainWebAddress(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value) || trim($value) === '') {

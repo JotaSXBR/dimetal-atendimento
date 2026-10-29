@@ -11,6 +11,11 @@ class NoControlChars implements ValidationRule
     /** @param  bool  $allowNewlines  tab, LF e CR passam (endereço e observações) */
     public function __construct(private readonly bool $allowNewlines = false) {}
 
+    /**
+     * O nome do atributo é exigido pela interface.
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
+     */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value)) {

@@ -16,12 +16,12 @@ class SaveContact
     {
         foreach (self::FIELDS as $field) {
             if (array_key_exists($field, $data)) {
-                $contact->{$field} = $this->clean($data[$field]);
+                $contact->setAttribute($field, $this->clean($data[$field]));
             }
         }
 
         if (array_key_exists('urls', $data)) {
-            $contact->urls = $this->cleanUrls($data['urls']);
+            $contact->setAttribute('urls', $this->cleanUrls($data['urls']));
         }
 
         $contact->edited_at ??= now();
