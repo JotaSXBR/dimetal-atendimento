@@ -92,7 +92,18 @@ final readonly class IncomingMessage
     private static function content(array $data, WahaEvent $event): ?array
     {
         $hasMedia = (bool) ($data['hasMedia'] ?? false);
+
+        if (SpecialContent::isViewOnce($data)) {
+            return ['type' => 'view_once', 'body' => '', 'media' => null];
+        }
+
         $body = ! $hasMedia && is_string($data['body'] ?? null) ? $data['body'] : '';
+        $contact = ! $hasMedia && $body === '' ? SpecialContent::contactSummary($data) : '';
+
+        if ($contact !== '') {
+            return ['type' => 'contact', 'body' => $contact, 'media' => null];
+        }
+
         $type = self::typeFor($data, $hasMedia, $body);
 
         if ($type !== null) {
@@ -130,20 +141,6 @@ final readonly class IncomingMessage
         );
     }
 
-    /**
-     * @param  array<array-key, mixed>  $data
-     */
-    private static function isViewOnce(array $data): bool
-    {
-        $message = data_get($data, '_data.Message');
-        $wrapped = is_array($message) && array_intersect(array_keys($message), ['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension']) !== [];
-
-        // O WhatsApp não entrega o conteúdo de visualização única a aparelhos vinculados: chega um aviso "indisponível".
-        $unavailable = data_get($data, '_data.UnavailableType') === 'view_once' || data_get($data, '_data.Info.UnavailableType') === 'view_once';
-
-        return $wrapped || $unavailable || data_get($data, '_data.IsViewOnce') === true;
-    }
-
     private static function string(mixed $value): ?string
     {
         return is_string($value) ? $value : null;
@@ -167,10 +164,6 @@ final readonly class IncomingMessage
 
         if ($body !== '') {
             return 'text';
-        }
-
-        if (self::isViewOnce($data)) {
-            return 'view_once';
         }
 
         $type = $data['type'] ?? null;

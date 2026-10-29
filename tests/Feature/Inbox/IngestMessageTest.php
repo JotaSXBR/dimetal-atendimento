@@ -386,6 +386,57 @@ class IngestMessageTest extends TestCase
         $this->assertSame('view_once', $message?->type);
     }
 
+    public function test_imagem_de_visualizacao_unica_vira_aviso_sem_guardar_o_conteudo(): void
+    {
+        foreach (['IsViewOnce', 'IsViewOnceV2', 'IsViewOnceV2Extension'] as $i => $flag) {
+            $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_VO'.$i, [
+                'hasMedia' => true,
+                'media' => ['filename' => 'vo'.$i.'.jpeg', 'mimetype' => 'image/jpeg'],
+                '_data' => ['Info' => ['PushName' => 'Maria Souza'], 'IsViewOnce' => false, $flag => true],
+            ])));
+
+            $this->assertSame('view_once', $message?->type, $flag);
+            $this->assertNull($message->media_ref, $flag);
+            $this->assertNull($message->media_mime, $flag);
+        }
+
+        Queue::assertNotPushed(ResolveMessageMediaJob::class);
+    }
+
+    public function test_contato_vcard_vira_mensagem_com_nome_e_telefone(): void
+    {
+        $vcard = 'BEGIN:VCARD
+VERSION:3.0
+FN:Maria Souza
+TEL;type=CELL;waid=5516999990001:+55 16 99999-0001
+END:VCARD';
+
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_VC', ['body' => null, 'vCards' => [$vcard]])));
+
+        $this->assertSame('contact', $message?->type);
+        $this->assertStringContainsString('Maria Souza', $message->body);
+        $this->assertStringContainsString('+55 16 99999-0001', $message->body);
+    }
+
+    public function test_varios_contatos_no_mesmo_envio_aparecem_todos(): void
+    {
+        $cards = [
+            'BEGIN:VCARD
+FN:Ana
+TEL:+55 11 90000-0001
+END:VCARD',
+            'BEGIN:VCARD
+FN:Beto
+TEL:+55 11 90000-0002
+END:VCARD',
+        ];
+
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_VC2', ['body' => null, 'vCards' => $cards])));
+
+        $this->assertStringContainsString('Ana', (string) $message?->body);
+        $this->assertStringContainsString('Beto', (string) $message->body);
+    }
+
     public function test_visualizacao_unica_vira_mensagem_marcada(): void
     {
         $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_ONCE', [
