@@ -43,11 +43,11 @@
                             wire:key="ticket-{{ $item->id }}"
                             class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
                         >
-                            <flux:avatar :name="$item->contact->name ?? $item->contact->wa_id" size="sm" />
+                            <flux:avatar :name="$item->contact->label()" size="sm" />
 
                             <span class="min-w-0 flex-1">
                                 <span class="flex items-baseline justify-between gap-2">
-                                    <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->name ?? $item->contact->wa_id }}</span>
+                                    <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
                                     <span class="font-mono text-[10px] text-ink-3">
                                         {{ ($item->last_inbound_at ?? $item->opened_at)->timezone($tz)->format('H:i') }}
                                     </span>
@@ -69,7 +69,7 @@
     <section class="flex min-h-0 flex-col bg-canvas {{ $ticket ? '' : 'hidden lg:flex' }}">
         @if ($ticket)
             @php
-                $name = $ticket->contact->name ?? $ticket->contact->wa_id;
+                $name = $ticket->contact->label();
             @endphp
 
             <header class="flex items-center gap-3 border-b border-line bg-surface px-4 py-3">
@@ -82,7 +82,7 @@
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
                     </p>
                     <p class="truncate font-mono text-[11px] text-ink-3">
-                        {{ $ticket->protocol }} · {{ $ticket->contact->wa_id ?? $ticket->contact->lid }} · {{ $ticket->channel->name }}
+                        {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}
                     </p>
                 </div>
 

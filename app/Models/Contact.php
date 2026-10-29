@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PhoneFormat;
 use Carbon\CarbonImmutable;
 use Database\Factories\ContactFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -23,6 +24,19 @@ class Contact extends Model
 {
     /** @use HasFactory<ContactFactory> */
     use HasFactory;
+
+    /** Nome do contato ou, sem nome, o telefone em formato humano. */
+    public function label(): string
+    {
+        $name = trim((string) $this->name);
+
+        return $name !== '' ? $name : $this->phoneLabel();
+    }
+
+    public function phoneLabel(): string
+    {
+        return PhoneFormat::display($this->wa_id, $this->lid);
+    }
 
     /**
      * @return HasMany<Ticket, $this>
