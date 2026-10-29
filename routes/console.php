@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('app:close-inactive-tickets')->everyTenMinutes()->withoutOverlapping();
+Schedule::command('app:drain-outbox')->everyMinute()->withoutOverlapping();
