@@ -16,7 +16,7 @@
 @elseif (str_starts_with($mime, 'image/'))
     <a href="{{ $url }}" target="_blank" rel="noopener"><img src="{{ $url }}" alt="Imagem recebida" loading="lazy" class="max-h-72 rounded-lg"></a>
 @elseif (str_starts_with($mime, 'audio/'))
-    <audio controls preload="metadata" src="{{ $url }}" class="w-64 max-w-full"></audio>
+    @include('livewire.inbox.audio-player', ['url' => $url])
 @elseif (str_starts_with($mime, 'video/'))
     <video controls preload="metadata" src="{{ $url }}" class="max-h-72 max-w-full rounded-lg"></video>
 @else
