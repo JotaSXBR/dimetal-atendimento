@@ -66,8 +66,7 @@ ordem das mensagens por conversa). Jobs encadeados com atraso e vários processo
 `sendSeen` com os ids do cliente → `startTyping` → espera aleatória de 1 a 6 s proporcional ao texto → `stopTyping` →
 `sendText`; `offline` com debounce depois de um período sem envio. Falha de presença é melhor esforço. A linha da mensagem
 nasce no clique ("enviando"). Erros 463/475: motivo próprio, alerta no canal, sem retentar e sem reparear a sessão. Job com
-`--tries=1 --timeout=120`, `retry_after` maior. Infra: estágio `worker-outbound` no Dockerfile e recurso `outbound-beta` no
-Coolify, incluído na ordem do `deploy-beta`.
+`--tries=1 --timeout=120`, `retry_after` maior. Infra (decisão do dono): sem recurso novo no Coolify; o `worker-beta` roda `docker/worker.sh`, com um processo para `outbound` e outro para `default`.
 
 ## Testes
 

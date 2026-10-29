@@ -160,12 +160,12 @@
 ### Task 8: Worker de saída, WAHA com retenção e documentação
 
 **Files:**
-- Modify: `docker/Dockerfile` (estágio novo `worker-outbound`: `queue:work --queue=outbound --tries=1 --timeout=120 --max-time=3600`; manter o `worker` atual consumindo `default`), `.github/workflows/deploy-beta.yml` (uuid do `outbound-beta` junto de worker/scheduler/reverb), `docs/deploy.md`, `docs/superpowers/specs/waha-config.md` §7 (hoje diz que o app baixa e guarda o arquivo: trocar pela decisão atual), `docs/security.md` (rota de mídia)
+- Modify: `docker/Dockerfile` (`worker` passa a rodar `docker/worker.sh` (dois processos: `outbound` x1 e `default`; decisão do dono, sem container novo)), `docs/deploy.md`, `docs/superpowers/specs/waha-config.md` §7 (hoje diz que o app baixa e guarda o arquivo: trocar pela decisão atual), `docs/security.md` (rota de mídia)
 
 **Interfaces:**
 - Consumes: Tasks 4 e 6.
 
-- [ ] **Step 1:** Criar o recurso `outbound-beta` na API do Coolify (mesmo repositório, `dockerfile_target_build=worker-outbound`, mesmas variáveis do `worker-beta`) e anotar o uuid em `docs/deploy.md`.
+- [x] **Step 1:** (substituído) sem recurso novo: `docker/worker.sh` no `worker-beta`.
 - [ ] **Step 2:** No `waha-beta`, definir `WHATSAPP_FILES_LIFETIME=7776000` e reiniciar o WAHA; confirmar que a sessão continua `WORKING`.
 - [ ] **Step 3:** Editar Dockerfile, workflow e docs; `docker build --target worker-outbound -f docker/Dockerfile .` conclui sem erro.
 - [ ] **Step 4:** Rodar `vendor/bin/pint`, `vendor/bin/phpstan`, `vendor/bin/phpmd` conforme o CI e `php artisan test` completo.
