@@ -132,20 +132,27 @@ class IngestMessageTest extends TestCase
 
     public function test_message_e_message_any_da_mesma_mensagem_nao_duplicam(): void
     {
-        $this->ingest($this->event($this->inbound(), 'message'));
+        $first = $this->ingest($this->event($this->inbound(), 'message'));
         $second = $this->ingest($this->event($this->inbound(), 'message.any'));
 
-        $this->assertNull($second);
+        $this->assertSame($first?->id, $second?->id);
         $this->assertSame(1, Message::query()->count());
     }
 
-    public function test_message_any_recebida_e_ignorada_mas_from_me_e_gravada(): void
+    public function test_message_any_recebida_tambem_e_gravada_pois_documento_com_legenda_so_chega_por_ela(): void
     {
-        $this->assertNull($this->ingest($this->event($this->inbound(), 'message.any')));
-        $this->assertSame(0, Message::query()->count());
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_DOCCAP', [
+            'hasMedia' => true,
+            'body' => 'segue a proposta em anexo',
+            'media' => ['filename' => null, 'mimetype' => 'application/pdf'],
+        ]), 'message.any'));
+
+        $this->assertSame('media', $message?->type);
+        $this->assertSame('segue a proposta em anexo', $message->body);
+        $this->assertSame(1, Message::query()->count());
 
         $this->assertNotNull($this->ingest($this->event($this->fromPhone(), 'message.any')));
-        $this->assertSame(1, Message::query()->count());
+        $this->assertSame(2, Message::query()->count());
     }
 
     public function test_from_me_vira_fora_do_painel_no_ticket_aberto_sem_criar_outro(): void
@@ -453,6 +460,27 @@ class IngestMessageTest extends TestCase
         $this->assertSame('location', $message?->type);
         $this->assertSame('-21.17,-47.81', $message->body);
         $this->assertSame('Loja Centro', $message->media_name);
+    }
+
+    public function test_coordenadas_longas_sao_arredondadas_para_seis_casas(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_LOC2', [
+            'body' => null,
+            'location' => ['latitude' => -21.161800384521, 'longitude' => -47.795787811279],
+        ])));
+
+        $this->assertSame('-21.1618,-47.795788', $message?->body);
+    }
+
+    public function test_documento_sem_filename_no_evento_usa_o_nome_do_proto_do_gows(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_DOC2', [
+            'hasMedia' => true,
+            'media' => ['filename' => null, 'mimetype' => 'application/pdf'],
+            '_data' => ['Info' => ['PushName' => 'Maria Souza'], 'Message' => ['documentMessage' => ['fileName' => 'Proposta final.pdf']]],
+        ])));
+
+        $this->assertSame('Proposta final.pdf', $message?->media_name);
     }
 
     public function test_localizacao_com_coordenada_invalida_e_ignorada(): void

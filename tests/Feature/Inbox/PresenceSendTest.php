@@ -67,7 +67,8 @@ class PresenceSendTest extends TestCase
         $this->send();
 
         Http::assertSentInOrder([
-            fn (Request $r) => str_ends_with($r->url(), '/api/sendSeen') && count($r['messageIds']) === 2,
+            fn (Request $r) => str_ends_with($r->url(), '/api/sendSeen') && count($r['messageIds']) === 2
+                && collect($r['messageIds'])->every(fn (string $id) => preg_match('/^false_'.preg_quote(self::PEER, '/').'_IN[12]$/', $id) === 1),
             fn (Request $r) => str_ends_with($r->url(), '/api/startTyping'),
             fn (Request $r) => str_ends_with($r->url(), '/api/stopTyping'),
             fn (Request $r) => str_ends_with($r->url(), '/api/sendText'),

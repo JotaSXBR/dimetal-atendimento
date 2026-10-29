@@ -66,8 +66,9 @@ final readonly class IncomingMessage
             return null;
         }
 
-        // `message.any` repete as recebidas, que já entram por `message`; só interessa a enviada por outro aparelho.
-        return $event->event === 'message.any' && ! ($data['fromMe'] ?? false) ? null : $data;
+        // `message.any` repete as recebidas, mas há mensagens (documento com legenda) que só chegam por ele; o id repetido é
+        // descartado na ingestão, então aceitar os dois eventos não duplica.
+        return $data;
     }
 
     /**
@@ -128,6 +129,7 @@ final readonly class IncomingMessage
     private static function media(array $data): IncomingMedia
     {
         $filename = self::string(data_get($data, 'media.filename'));
+        $displayName = $filename ?? self::documentNameFromProto($data);
         $mime = self::string(data_get($data, 'media.mimetype'));
         $size = data_get($data, 'media.size');
 
@@ -135,8 +137,27 @@ final readonly class IncomingMessage
             ref: IncomingMedia::safeRef($filename),
             mime: $mime === null ? null : trim(explode(';', $mime)[0]),
             size: is_int($size) && $size >= 0 ? $size : null,
-            name: $filename === null || trim($filename) === '' ? null : Str::limit(trim($filename), 255, ''),
+            name: $displayName === null || trim($displayName) === '' ? null : Str::limit(trim($displayName), 255, ''),
         );
+    }
+
+    /**
+     * O GOWS nem sempre preenche `media.filename` em documento; o nome original está no proto da mensagem (a chave
+     * varia entre camelCase e PascalCase, e o documento com legenda vem embrulhado).
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    private static function documentNameFromProto(array $data): ?string
+    {
+        foreach (['documentMessage.fileName', 'DocumentMessage.FileName', 'documentWithCaptionMessage.message.documentMessage.fileName', 'DocumentWithCaptionMessage.Message.DocumentMessage.FileName'] as $path) {
+            $name = data_get($data, '_data.Message.'.$path);
+
+            if (is_string($name) && $name !== '') {
+                return $name;
+            }
+        }
+
+        return null;
     }
 
     private static function string(mixed $value): ?string

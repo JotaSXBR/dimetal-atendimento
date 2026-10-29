@@ -31,10 +31,11 @@ use Livewire\Component;
 class Inbox extends Component
 {
     /** Prévia da lista: o texto ou, quando não há, o nome do tipo de conteúdo. */
-    private const PREVIEW_SQL = "case when body <> '' then body when type = 'view_once' then 'Visualização única' "
+    private const PREVIEW_SQL = "case when type = 'location' then 'Localização' when type = 'contact' then 'Contato' "
+        ."when body <> '' then body when type = 'view_once' then 'Visualização única' "
         ."when media_mime = 'image/webp' then 'Figurinha' when media_mime like 'image/%' then 'Foto' "
         ."when media_mime like 'audio/%' then 'Áudio' when media_mime like 'video/%' then 'Vídeo' "
-        ."when type = 'media' then 'Arquivo' when type = 'location' then 'Localização' else '['||type||']' end";
+        ."when type = 'media' then 'Arquivo' else '['||type||']' end";
 
     public ?int $ticketId = null;
 

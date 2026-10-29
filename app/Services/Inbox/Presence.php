@@ -66,7 +66,8 @@ class Presence
 
         foreach ($received as $message) {
             if ($message->wa_message_id !== null) {
-                $ids[] = $message->wa_message_id;
+                // O WAHA só aceita o id completo `false_{chat}_{id}` (mensagem do cliente); só o final dá 500.
+                $ids[] = 'false_'.$chatId.'_'.$message->wa_message_id;
             }
         }
 

@@ -67,7 +67,7 @@ final class SpecialContent
 
         $label = $location['name'] ?? $location['address'] ?? null;
 
-        return ['coordinates' => (float) $lat.','.(float) $lng, 'name' => is_string($label) && $label !== '' ? Str::limit($label, 255, '') : null];
+        return ['coordinates' => round((float) $lat, 6).','.round((float) $lng, 6), 'name' => is_string($label) && $label !== '' ? Str::limit($label, 255, '') : null];
     }
 
     /**
@@ -107,6 +107,42 @@ final class SpecialContent
         }
 
         return Str::limit(implode("\n", $lines), 1000, '…');
+    }
+
+    /**
+     * Lê de volta o texto gravado por `contactSummary` para a tela montar um cartão por contato.
+     *
+     * @return list<array{name: string, initials: string, phones: list<string>}>
+     */
+    public static function contacts(string $body): array
+    {
+        $contacts = [];
+
+        foreach (preg_split('/\R/', $body) ?: [] as $line) {
+            if (preg_match('/^Contato: (.*?)(?: \(([^()]*)\))?$/u', trim($line), $match) !== 1) {
+                continue;
+            }
+
+            $name = trim($match[1]);
+            $phones = array_values(array_filter(array_map('trim', explode(',', $match[2] ?? '')), fn (string $phone): bool => preg_match('/\d/', $phone) === 1));
+
+            // "(Vendas)" no fim do nome não é telefone: sem dígito, volta para o nome.
+            if (isset($match[2]) && $match[2] !== '' && $phones === []) {
+                $name .= ' ('.$match[2].')';
+            }
+
+            $contacts[] = ['name' => $name, 'initials' => self::initials($name), 'phones' => $phones];
+        }
+
+        return $contacts;
+    }
+
+    private static function initials(string $name): string
+    {
+        // Primeira letra de cada uma das duas primeiras palavras; "(Vendas)" conta como "V", não como "(".
+        preg_match_all('/(?<![\p{L}\p{N}])\p{L}/u', $name, $letters);
+
+        return mb_strtoupper(implode('', array_slice($letters[0], 0, 2))) ?: '?';
     }
 
     private static function describe(string $card): string

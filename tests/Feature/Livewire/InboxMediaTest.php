@@ -100,11 +100,40 @@ class InboxMediaTest extends TestCase
         $this->screen(['media_ref' => 's.webp', 'media_mime' => 'image/webp'])->assertSeeHtml('max-h-40')->assertDontSeeHtml('max-h-72');
     }
 
-    public function test_localizacao_vira_link_para_o_mapa_com_o_nome_do_local(): void
+    public function test_localizacao_e_um_cartao_de_mapa_que_abre_o_google_maps(): void
     {
         $this->screen(['type' => 'location', 'body' => '-21.17,-47.81', 'media_name' => 'Loja Centro'])
-            ->assertSeeHtml('https://www.google.com/maps?q=-21.17%2C-47.81')
-            ->assertSee('Loja Centro');
+            ->assertSeeHtml('data-location-card')
+            ->assertSeeHtml('https://www.google.com/maps/search/?api=1&amp;query=-21.17%2C-47.81')
+            ->assertSee('Loja Centro')
+            ->assertSee('Abrir no Google Maps')
+            ->assertDontSee('-21.17,-47.81');
+    }
+
+    public function test_localizacao_sem_nome_mostra_titulo_padrao(): void
+    {
+        $this->screen(['type' => 'location', 'body' => '-21.17,-47.81'])->assertSee('Localização');
+    }
+
+    public function test_contato_e_um_cartao_com_iniciais_telefone_e_link_para_conversar(): void
+    {
+        $this->screen(['type' => 'contact', 'body' => 'Contato: Maria Souza (+55 16 99999-0001)
+Contato: Beto (+55 11 90000-0002, +55 11 3000-0000)'])
+            ->assertSeeHtml('data-contact-card')
+            ->assertSee('Maria Souza')
+            ->assertSee('MS')
+            ->assertSee('+55 16 99999-0001')
+            ->assertSee('Beto')
+            ->assertSee('+55 11 3000-0000')
+            ->assertSeeHtml('https://wa.me/5516999990001')
+            ->assertDontSee('Contato: Maria');
+    }
+
+    public function test_contato_sem_telefone_nao_tem_link_para_conversar(): void
+    {
+        $this->screen(['type' => 'contact', 'body' => 'Contato: Sem Fone'])
+            ->assertSee('Sem Fone')
+            ->assertDontSeeHtml('wa.me');
     }
 
     public function test_documento_mostra_o_nome_original(): void

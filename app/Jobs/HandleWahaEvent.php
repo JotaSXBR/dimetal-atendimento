@@ -64,6 +64,7 @@ class HandleWahaEvent implements ShouldQueue
             'viewOnce' => [data_get($data, '_data.IsViewOnce'), data_get($data, '_data.IsViewOnceV2'), data_get($data, '_data.IsViewOnceV2Extension')],
             'campos' => array_keys($data),
             'campos_data' => array_keys(is_array($data['_data'] ?? null) ? $data['_data'] : []),
+            'campos_message' => array_keys(is_array(data_get($data, '_data.Message')) ? data_get($data, '_data.Message') : []),
         ]);
     }
 

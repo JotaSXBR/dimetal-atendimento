@@ -18,10 +18,9 @@
         </p>
     </div>
 @elseif ($message->type === 'location')
-    <a href="https://www.google.com/maps?q={{ urlencode($message->body) }}" target="_blank" rel="noopener" class="flex items-center gap-2 text-accent underline">
-        <flux:icon.map-pin class="size-4 shrink-0" />
-        <span>{{ $message->media_name ?? 'Localização' }}<span class="block font-mono text-[10px] text-ink-3 no-underline">{{ $message->body }}</span></span>
-    </a>
+    @include('livewire.inbox.location', ['message' => $message])
+@elseif ($message->type === 'contact')
+    @include('livewire.inbox.contact', ['message' => $message])
 @elseif ($url === null)
     <p class="text-ink-2 italic">{{ $message->created_at?->gt(now()->subMinutes(2)) ? 'Carregando mídia…' : 'Mídia indisponível' }}</p>
 @elseif (str_starts_with($mime, 'image/'))
