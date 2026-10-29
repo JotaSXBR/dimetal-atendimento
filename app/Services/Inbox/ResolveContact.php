@@ -2,7 +2,10 @@
 
 namespace App\Services\Inbox;
 
+use App\Enums\TicketStatus;
 use App\Models\Contact;
+use App\Models\Message;
+use App\Models\Ticket;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -31,13 +34,12 @@ class ResolveContact
 
             $contact->wa_id ??= $waId;
 
-            // O mesmo lid pode já pertencer a outro registro (contato criado antes de o telefone aparecer):
-            // não o reatribui, para não violar o índice único e travar toda a ingestão desse remetente.
-            if ($lid !== null && $contact->lid === null && ! $this->lidTaken($lid)) {
-                $contact->lid = $lid;
+            if ($lid !== null && $contact->lid === null) {
+                $this->claimLid($contact, $lid);
             }
 
-            if ($name !== null && $name !== '') {
+            // O push name é o que o cliente escolheu no WhatsApp: serve de nome até alguém editar o contato; depois, nunca.
+            if ($name !== null && $name !== '' && $contact->edited_at === null) {
                 $contact->name = $name;
             }
 
@@ -54,9 +56,50 @@ class ResolveContact
         return $byPhone ?? ($lid === null ? null : Contact::query()->where('lid', $lid)->first());
     }
 
-    private function lidTaken(string $lid): bool
+    /**
+     * O lid pode já pertencer a outro registro (criado antes de o telefone aparecer). Se for um registro só de lid, ele é
+     * fundido neste; se a fusão for recusada, o lid fica onde está, sem violar o índice único e travar a ingestão.
+     */
+    private function claimLid(Contact $contact, string $lid): void
     {
-        return Contact::query()->where('lid', $lid)->exists();
+        $owner = Contact::query()->where('lid', $lid)->first();
+
+        if ($owner === null) {
+            $contact->lid = $lid;
+
+            return;
+        }
+
+        if ($contact->exists && $owner->wa_id === null && $this->mergeLidContact($contact, $owner)) {
+            $contact->lid = $lid;
+        }
+    }
+
+    /** Reaponta tickets e mensagens do registro do lid para o do telefone e remove o do lid; recusa se isso dobrar um ticket aberto. */
+    private function mergeLidContact(Contact $phone, Contact $lid): bool
+    {
+        if ($this->bothHaveOpenTicketOnSameChannel($phone, $lid)) {
+            return false;
+        }
+
+        Ticket::query()->where('contact_id', $lid->id)->update(['contact_id' => $phone->id]);
+        Message::query()->where('contact_id', $lid->id)->update(['contact_id' => $phone->id]);
+
+        // O que só o registro do lid tinha (nome editado, apelido, perfil) não se perde.
+        foreach (['name', 'nickname', 'phone2', 'email', 'company', 'job_title', 'address', 'notes', 'birthday', 'urls', 'edited_at'] as $field) {
+            $phone->{$field} ??= $lid->{$field};
+        }
+
+        $lid->delete();
+
+        return true;
+    }
+
+    private function bothHaveOpenTicketOnSameChannel(Contact $phone, Contact $lid): bool
+    {
+        $open = fn (Contact $contact) => Ticket::query()->where('contact_id', $contact->id)->where('status', '<>', TicketStatus::ENCERRADO->value);
+
+        return $open($lid)->whereIn('channel_id', $open($phone)->select('channel_id'))->exists();
     }
 
     private function phoneFromSenderAlt(?string $senderAlt): ?string

@@ -2,7 +2,11 @@
 
 namespace Tests\Feature\Inbox;
 
+use App\Enums\TicketStatus;
+use App\Models\Channel;
 use App\Models\Contact;
+use App\Models\Message;
+use App\Models\Ticket;
 use App\Services\Inbox\ResolveContact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -81,16 +85,73 @@ class ResolveContactTest extends TestCase
         $this->assertSame(1, Contact::query()->count());
     }
 
-    public function test_lid_que_pertence_a_outro_contato_nao_e_reatribuido_nem_quebra(): void
+    public function test_contato_editado_mantem_o_nome_quando_chega_push_name(): void
     {
+        $contact = Contact::factory()->edited()->create(['wa_id' => '5511999888777@c.us', 'name' => 'Maria Silva']);
+
+        $this->resolve('5511999888777@c.us', null, '😎');
+
+        $this->assertSame('Maria Silva', $contact->fresh()?->name);
+    }
+
+    public function test_contato_nunca_editado_recebe_o_novo_push_name(): void
+    {
+        $contact = Contact::factory()->create(['wa_id' => '5511999888777@c.us', 'name' => 'Maria']);
+
+        $this->resolve('5511999888777@c.us', null, 'Maria S.');
+
+        $this->assertSame('Maria S.', $contact->fresh()?->name);
+    }
+
+    public function test_lid_so_com_ticket_ganha_o_telefone_e_o_ticket_segue(): void
+    {
+        $channel = Channel::factory()->create();
+        $lidOnly = Contact::factory()->create(['wa_id' => null, 'lid' => self::LID]);
+        $ticket = Ticket::factory()->for($lidOnly)->for($channel)->create();
+
+        $resolved = $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
+
+        $this->assertTrue($resolved->is($lidOnly));
+        $this->assertSame('5516997524950@c.us', $resolved->wa_id);
+        $this->assertSame($lidOnly->id, $ticket->fresh()?->contact_id);
+    }
+
+    public function test_funde_o_registro_do_lid_no_do_telefone(): void
+    {
+        $channel = Channel::factory()->create();
+        $other = Channel::factory()->create(['waha_session' => 'other']);
+        $lidOnly = Contact::factory()->create(['wa_id' => null, 'lid' => self::LID, 'name' => 'Push', 'nickname' => 'Chapa']);
+        $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => null, 'nickname' => null]);
+        $lidTicket = Ticket::factory()->for($lidOnly)->for($channel)->create();
+        $phoneTicket = Ticket::factory()->for($phone)->for($other)->create();
+        $message = Message::factory()->for($lidTicket)->create(['contact_id' => $lidOnly->id]);
+
+        $resolved = $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
+
+        $this->assertTrue($resolved->is($phone));
+        $this->assertSame(self::LID, $phone->fresh()?->lid);
+        $this->assertSame('Chapa', $phone->fresh()?->nickname);
+        $this->assertNull(Contact::query()->find($lidOnly->id));
+        $this->assertSame($phone->id, $lidTicket->fresh()?->contact_id);
+        $this->assertSame($phone->id, $phoneTicket->fresh()?->contact_id);
+        $this->assertSame($phone->id, $message->fresh()?->contact_id);
+    }
+
+    public function test_nao_funde_quando_os_dois_tem_ticket_aberto_no_mesmo_canal(): void
+    {
+        $channel = Channel::factory()->create();
         $lidOnly = Contact::factory()->create(['wa_id' => null, 'lid' => self::LID]);
         $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => null]);
+        $lidTicket = Ticket::factory()->for($lidOnly)->for($channel)->create(['status' => TicketStatus::EM_ATENDIMENTO]);
+        $phoneTicket = Ticket::factory()->for($phone)->for($channel)->create(['status' => TicketStatus::EM_ATENDIMENTO]);
 
         $resolved = $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
 
         $this->assertTrue($resolved->is($phone));
         $this->assertNull($phone->fresh()?->lid);
         $this->assertSame(self::LID, $lidOnly->fresh()?->lid);
+        $this->assertSame($lidOnly->id, $lidTicket->fresh()?->contact_id);
+        $this->assertSame($phone->id, $phoneTicket->fresh()?->contact_id);
     }
 
     public function test_resolucao_e_serializada_por_remetente(): void
