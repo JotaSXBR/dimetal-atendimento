@@ -5,6 +5,7 @@ use App\Http\Controllers\Webhooks\WahaWebhookController;
 use App\Livewire\Inbox\Inbox;
 use App\Livewire\Settings\BusinessHoursPage;
 use App\Livewire\Settings\Channels;
+use App\Livewire\Settings\Sectors;
 use App\Livewire\Settings\Users;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,7 @@ Route::middleware(['auth', 'can:supervisor'])->group(function () {
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('configuracoes/canais', Channels::class)->name('configuracoes.canais');
     Route::get('configuracoes/horario', BusinessHoursPage::class)->name('configuracoes.horario');
+    Route::get('configuracoes/setores', Sectors::class)->name('configuracoes.setores');
 });
 
 require __DIR__.'/settings.php';

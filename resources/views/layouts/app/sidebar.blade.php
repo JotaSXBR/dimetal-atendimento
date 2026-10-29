@@ -37,6 +37,12 @@
                         <flux:sidebar.item icon="users" :href="route('configuracoes.usuarios')" :current="request()->routeIs('configuracoes.usuarios')" wire:navigate>
                             Usuários
                         </flux:sidebar.item>
+
+                        @can('admin')
+                            <flux:sidebar.item icon="squares-2x2" :href="route('configuracoes.setores')" :current="request()->routeIs('configuracoes.setores')" wire:navigate>
+                                Setores
+                            </flux:sidebar.item>
+                        @endcan
                     </flux:sidebar.group>
                 @endcan
             </flux:sidebar.nav>
