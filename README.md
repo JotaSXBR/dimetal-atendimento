@@ -32,11 +32,12 @@ composer setup
 php artisan db:seed
 npm run dev
 php artisan serve
-php artisan queue:work
+php artisan queue:work --queue=outbound,default
 ```
 
 A aplicação fica em `http://localhost:8000`. O `queue:work` é necessário para o webhook do WhatsApp:
-os eventos entram na fila do Redis antes de serem processados.
+os eventos entram na fila do Redis antes de serem processados. As respostas do painel vão para a fila `outbound`
+(em produção, um worker próprio com um único processo); localmente um worker só atende as duas.
 
 O `composer setup` instala dependências, cria o `.env`, gera a `APP_KEY`, roda as migrações e
 compila os assets. Os containers do `compose.yaml` criam `dimetal` e `dimetal_test`;

@@ -6,9 +6,11 @@ use App\Enums\MessageDirection;
 use App\Events\MessageStatusChanged;
 use App\Models\Contact;
 use App\Models\Message;
+use App\Services\Inbox\IncomingMedia;
 use App\Services\Waha\WahaClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -39,15 +41,16 @@ class ResolveMessageMediaJob implements ShouldQueue
         $serialized = ($message->direction === MessageDirection::OUT ? 'true' : 'false').'_'.$chatId.'_'.$message->wa_message_id;
 
         $file = (new WahaClient($message->channel()->firstOrFail()))->downloadMessageMedia($chatId, $serialized);
+        $ref = $file === null ? null : IncomingMedia::safeRef($file['filename']);
 
-        if ($file === null) {
-            throw new RuntimeException('O WAHA ainda não tem o arquivo da mensagem '.$message->id);
+        if ($file === null || $ref === null) {
+            throw new RuntimeException('O WAHA ainda não tem um arquivo válido para a mensagem '.$message->id);
         }
 
         $message->update([
-            'media_ref' => $file['filename'],
-            'media_name' => $file['filename'],
-            'media_mime' => $file['mimetype'] === null ? $message->media_mime : trim(explode(';', $file['mimetype'])[0]),
+            'media_ref' => $ref,
+            'media_name' => $ref,
+            'media_mime' => $file['mimetype'] === null ? $message->media_mime : Str::limit(trim(explode(';', $file['mimetype'])[0]), 100, ''),
         ]);
 
         MessageStatusChanged::dispatch($message);

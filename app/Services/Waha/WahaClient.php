@@ -161,14 +161,17 @@ class WahaClient
     public function streamFile(string $ref, ?string $range = null): ?Response
     {
         foreach (['/api/files/'.rawurlencode($this->sessionName()).'/'.rawurlencode($ref), '/api/files/'.rawurlencode($ref)] as $path) {
-            $request = $this->request()->withOptions(['stream' => true])->withHeaders($range === null ? [] : ['Range' => $range]);
+            // `identity`: com o corpo comprimido, o `Content-Length` repassado não bateria com os bytes entregues.
+            $request = $this->request()->withOptions(['stream' => true])->withHeaders(['Accept-Encoding' => 'identity'] + ($range === null ? [] : ['Range' => $range]));
             $response = $request->get($path);
 
             if ($response->status() === 404) {
                 continue;
             }
 
-            $this->ensureOk($response);
+            if ($response->status() !== 416) {
+                $this->ensureOk($response);
+            }
 
             return $response;
         }

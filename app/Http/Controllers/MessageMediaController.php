@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Message;
+use App\Services\Inbox\IncomingMedia;
 use App\Services\Waha\WahaClient;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
@@ -35,11 +36,14 @@ class MessageMediaController extends Controller
         $body = $upstream->toPsrResponse()->getBody();
 
         return response()->stream(function () use ($body): void {
+            // Vídeo grande em conexão lenta passa dos 30 s padrão do PHP; os bytes enviados contam contra o limite.
+            set_time_limit(0);
+
             while (! $body->eof()) {
                 echo $body->read(8192);
                 flush();
             }
-        }, $upstream->status() === 206 ? 206 : 200, $this->headersFor($message, $ref, $upstream));
+        }, in_array($upstream->status(), [206, 416], true) ? $upstream->status() : 200, $this->headersFor($message, $ref, $upstream));
     }
 
     /**
@@ -47,9 +51,9 @@ class MessageMediaController extends Controller
      */
     private function safeRef(Message $message): string
     {
-        $ref = $message->media_ref;
+        $ref = IncomingMedia::safeRef($message->media_ref);
 
-        abort_unless($message->hasMedia() && $ref !== null && preg_match('/^[A-Za-z0-9._-]{1,255}$/', $ref) === 1 && ! str_contains($ref, '..'), 404);
+        abort_unless($message->hasMedia() && $ref !== null, 404);
 
         return $ref;
     }

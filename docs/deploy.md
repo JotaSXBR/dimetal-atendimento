@@ -138,7 +138,9 @@ que as mensagens de cada conversa saiam na ordem. O `worker-beta` consome só `d
 respostas do painel ficam paradas na fila (não se perdem). Crie como o `worker-beta` (mesmas variáveis, sem
 `domains`, `dockerfile_target_build` `worker-outbound` via `PATCH`, healthcheck `cmd` `healthcheck-queue`) e
 inclua o uuid no `deploy-beta.yml`. O `retry_after` da fila (`REDIS_QUEUE_RETRY_AFTER`, padrão 180) fica acima do
-timeout do job (120).
+timeout do job (120). **Não escale réplicas** do `outbound-beta`: com mais de um processo, uma mensagem curta ultrapassa
+a longa que veio antes e a ordem da conversa se perde. Ao trocar o formato do `SendTicketMessageJob` (como na fatia de
+mídia), esvazie a fila `default` de envios antigos antes do deploy: um job serializado pelo código velho falha no worker novo.
 
 ### Mídia no WAHA
 

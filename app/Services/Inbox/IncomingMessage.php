@@ -117,7 +117,7 @@ final readonly class IncomingMessage
         $size = data_get($data, 'media.size');
 
         return new IncomingMedia(
-            ref: $filename !== null && preg_match('/^[A-Za-z0-9._-]{1,255}$/', $filename) === 1 && ! str_contains($filename, '..') ? $filename : null,
+            ref: IncomingMedia::safeRef($filename),
             mime: $mime === null ? null : trim(explode(';', $mime)[0]),
             size: is_int($size) && $size >= 0 ? $size : null,
         );

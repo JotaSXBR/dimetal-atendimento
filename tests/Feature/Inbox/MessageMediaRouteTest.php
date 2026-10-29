@@ -97,6 +97,26 @@ class MessageMediaRouteTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_referencia_so_de_pontos_ou_com_quebra_de_linha_da_404(): void
+    {
+        Http::fake();
+
+        foreach (['.', "abc.ogg\n"] as $ref) {
+            $this->actingAs($this->me)->get(route('midia', $this->media(['media_ref' => $ref])))->assertNotFound();
+        }
+
+        Http::assertNothingSent();
+    }
+
+    public function test_pede_o_arquivo_sem_compressao_e_range_invalido_vira_416(): void
+    {
+        Http::fake(['*' => Http::response('', 416)]);
+
+        $this->actingAs($this->me)->withHeaders(['Range' => 'bytes=999-'])->get(route('midia', $this->media()))->assertStatus(416);
+
+        Http::assertSent(fn ($r) => $r->hasHeader('Accept-Encoding', 'identity'));
+    }
+
     public function test_range_e_repassado_e_devolve_206(): void
     {
         Http::fake(['*' => Http::response('AB', 206, ['Content-Range' => 'bytes 0-1/10', 'Content-Type' => 'audio/ogg'])]);
