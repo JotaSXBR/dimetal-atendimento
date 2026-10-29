@@ -71,7 +71,11 @@ class IngestMessage
             'failure_reason' => null,
             'failure_code' => null,
         ]);
-        $ticket->recordOutbound($incoming->sentAt);
+        // O eco da resposta automática não é trabalho humano (ver `SendTicketMessage::deliver`).
+        if ($pending->origin !== MessageOrigin::BOT) {
+            $ticket->recordOutbound($incoming->sentAt);
+        }
+
         TicketUpdated::dispatch($ticket);
 
         return $pending;
@@ -93,7 +97,7 @@ class IngestMessage
             ->where('channel_id', $channel->id)
             ->where('contact_id', $contact->id)
             ->where('direction', MessageDirection::OUT->value)
-            ->where('origin', MessageOrigin::PAINEL->value)
+            ->whereIn('origin', [MessageOrigin::PAINEL->value, MessageOrigin::BOT->value])
             ->whereNull('wa_message_id')
             ->where(fn ($q) => $q->whereNull('delivery_status')
                 // Só a falha "sem resposta" pode ter saído; as recusadas pelo WAHA não são engolidas pelo eco do celular.
@@ -135,6 +139,11 @@ class IngestMessage
 
         MessageCreated::dispatch($message);
         TicketUpdated::dispatch($ticket);
+
+        if (! $incoming->fromMe) {
+            // Depois do commit: só uma mensagem realmente gravada pode gerar resposta (a que perdeu a corrida é descartada).
+            DB::afterCommit(fn () => app(AfterHoursReply::class)($message));
+        }
 
         if ($message->hasMedia()) {
             ResolveMessageMediaJob::dispatch($message->id)->afterCommit();

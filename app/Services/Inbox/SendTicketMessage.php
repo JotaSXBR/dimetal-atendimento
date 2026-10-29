@@ -36,7 +36,7 @@ class SendTicketMessage
         return $message;
     }
 
-    public function create(Ticket $ticket, User $author, string $text): Message
+    public function create(Ticket $ticket, ?User $author, string $text, MessageOrigin $origin = MessageOrigin::PAINEL): Message
     {
         $message = Message::create([
             'ticket_id' => $ticket->id,
@@ -45,8 +45,8 @@ class SendTicketMessage
             'direction' => MessageDirection::OUT,
             'type' => 'text',
             'body' => $text,
-            'origin' => MessageOrigin::PAINEL,
-            'author_user_id' => $author->id,
+            'origin' => $origin,
+            'author_user_id' => $author?->id,
             'sent_at' => now(),
         ]);
 
@@ -102,7 +102,11 @@ class SendTicketMessage
 
         $message->save();
 
-        $ticket->recordOutbound($message->sent_at);
+        // A resposta automática não é trabalho humano: não marca a primeira resposta nem adia o encerramento por inatividade.
+        if ($message->origin !== MessageOrigin::BOT) {
+            $ticket->recordOutbound($message->sent_at);
+        }
+
         MessageStatusChanged::dispatch($message);
         TicketUpdated::dispatch($ticket);
 

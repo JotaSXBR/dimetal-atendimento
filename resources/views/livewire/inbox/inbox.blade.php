@@ -168,6 +168,10 @@
 
                         <div wire:key="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
                             <div class="max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
+                                @if ($message->origin === \App\Enums\MessageOrigin::BOT)
+                                    <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
+                                @endif
+
                                 @if ($outside)
                                     <p class="mb-0.5 font-mono text-[10px] tracking-wide text-warn uppercase">Celular · fora do painel</p>
                                 @endif
