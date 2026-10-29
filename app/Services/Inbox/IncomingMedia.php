@@ -3,7 +3,8 @@
 namespace App\Services\Inbox;
 
 /**
- * O que o evento do WAHA diz sobre o anexo. `ref` é o nome do arquivo no WAHA e é nulo quando o evento não o traz.
+ * O que o evento do WAHA diz sobre o anexo. `ref` é o nome do arquivo no WAHA e é nulo quando o evento não o traz;
+ * `name` é o nome para mostrar ao atendente (o nome original do documento, ou o do local numa localização).
  */
 final readonly class IncomingMedia
 {
@@ -11,6 +12,7 @@ final readonly class IncomingMedia
         public ?string $ref,
         public ?string $mime,
         public ?int $size,
+        public ?string $name = null,
     ) {}
 
     /**

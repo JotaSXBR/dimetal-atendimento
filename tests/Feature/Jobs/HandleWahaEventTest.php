@@ -57,6 +57,23 @@ class HandleWahaEventTest extends TestCase
             && ! str_contains(json_encode($context) ?: '', 'segredo'))->once();
     }
 
+    public function test_evento_message_waiting_de_visualizacao_unica_entra_pelo_job(): void
+    {
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
+        $event = WahaEvent::create([
+            'waha_event_id' => 'evt_wait',
+            'channel_id' => $channel->id,
+            'event' => 'message.waiting',
+            'session' => 'main',
+            'payload' => ['payload' => ['id' => 'false_5516997524950@c.us_W', 'from' => '5516997524950@c.us', 'fromMe' => false, 'timestamp' => 1_793_000_000, '_data' => ['Info' => ['PushName' => 'Maria'], 'IsViewOnce' => true]]],
+            'received_at' => now(),
+        ]);
+
+        (new HandleWahaEvent($event->id))->handle();
+
+        $this->assertSame('view_once', Message::query()->sole()->type);
+    }
+
     public function test_evento_de_mensagem_vira_mensagem_no_inbox(): void
     {
         $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);

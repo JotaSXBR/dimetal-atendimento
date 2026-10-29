@@ -75,7 +75,7 @@ class ResolveMessageMediaJob implements ShouldQueue
             throw new RuntimeException('O WAHA ainda não tem o arquivo da mensagem '.$message->id);
         }
 
-        $message->update(['media_ref' => $ref, 'media_name' => $ref, 'media_mime' => $mime]);
+        $message->update(['media_ref' => $ref, 'media_name' => $message->media_name ?? $ref, 'media_mime' => $mime]);
 
         MessageStatusChanged::dispatch($message);
     }

@@ -6,6 +6,7 @@ use App\Models\Message;
 use App\Models\WahaEvent;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Uma mensagem do WAHA já lida e validada: só existe quando há o que gravar.
@@ -92,7 +93,14 @@ final readonly class IncomingMessage
     private static function content(array $data, WahaEvent $event): ?array
     {
         $hasMedia = (bool) ($data['hasMedia'] ?? false);
-        $body = ! $hasMedia && is_string($data['body'] ?? null) ? $data['body'] : '';
+        $special = SpecialContent::classify($data, $hasMedia);
+
+        if ($special !== null) {
+            return $special;
+        }
+
+        // Em mídia, o `body` do WAHA é a legenda.
+        $body = is_string($data['body'] ?? null) ? $data['body'] : '';
         $type = self::typeFor($data, $hasMedia, $body);
 
         if ($type !== null) {
@@ -127,21 +135,8 @@ final readonly class IncomingMessage
             ref: IncomingMedia::safeRef($filename),
             mime: $mime === null ? null : trim(explode(';', $mime)[0]),
             size: is_int($size) && $size >= 0 ? $size : null,
+            name: $filename === null || trim($filename) === '' ? null : Str::limit(trim($filename), 255, ''),
         );
-    }
-
-    /**
-     * @param  array<array-key, mixed>  $data
-     */
-    private static function isViewOnce(array $data): bool
-    {
-        $message = data_get($data, '_data.Message');
-        $wrapped = is_array($message) && array_intersect(array_keys($message), ['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension']) !== [];
-
-        // O WhatsApp não entrega o conteúdo de visualização única a aparelhos vinculados: chega um aviso "indisponível".
-        $unavailable = data_get($data, '_data.UnavailableType') === 'view_once' || data_get($data, '_data.Info.UnavailableType') === 'view_once';
-
-        return $wrapped || $unavailable || data_get($data, '_data.IsViewOnce') === true;
     }
 
     private static function string(mixed $value): ?string
@@ -167,10 +162,6 @@ final readonly class IncomingMessage
 
         if ($body !== '') {
             return 'text';
-        }
-
-        if (self::isViewOnce($data)) {
-            return 'view_once';
         }
 
         $type = $data['type'] ?? null;
