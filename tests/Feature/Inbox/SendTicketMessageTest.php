@@ -17,6 +17,8 @@ use App\Services\Inbox\SendTicketMessage;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Sleep;
 use Tests\TestCase;
 
 class SendTicketMessageTest extends TestCase
@@ -37,6 +39,9 @@ class SendTicketMessageTest extends TestCase
     {
         parent::setUp();
 
+        Sleep::fake();
+        Queue::fake();
+        Http::preventStrayRequests();
         config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
 
         $this->channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
@@ -107,7 +112,7 @@ class SendTicketMessageTest extends TestCase
         $this->assertSame(MessageOrigin::PAINEL, $message->origin);
         $this->assertSame($this->author->id, $message->author_user_id);
         $this->assertSame(DeliveryStatus::SENT, $message->fresh()?->delivery_status);
-        Http::assertSent(fn ($request) => $request['chatId'] === self::PEER && $request['text'] === 'Segue o orcamento');
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/api/sendText') && $request['chatId'] === self::PEER && $request['text'] === 'Segue o orcamento');
         $this->assertSame('message_out', $this->ticket->events()->latest('id')->value('type'));
     }
 
@@ -174,7 +179,11 @@ class SendTicketMessageTest extends TestCase
 
     public function test_eco_casado_antes_da_falha_http_nao_marca_a_mensagem_como_falha(): void
     {
-        Http::fake(function () {
+        Http::fake(function ($request) {
+            if (! str_ends_with($request->url(), '/api/sendText')) {
+                return Http::response([], 201);
+            }
+
             $echo = WahaEvent::create([
                 'waha_event_id' => 'evt_echo2',
                 'channel_id' => $this->channel->id,
@@ -205,7 +214,11 @@ class SendTicketMessageTest extends TestCase
 
     public function test_eco_chegando_antes_da_resposta_do_waha_nao_duplica(): void
     {
-        Http::fake(function () {
+        Http::fake(function ($request) {
+            if (! str_ends_with($request->url(), '/api/sendText')) {
+                return Http::response([], 201);
+            }
+
             $echo = WahaEvent::create([
                 'waha_event_id' => 'evt_echo',
                 'channel_id' => $this->channel->id,

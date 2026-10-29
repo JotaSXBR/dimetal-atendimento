@@ -13,6 +13,7 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
 use App\Services\Waha\WahaClient;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -25,6 +26,8 @@ use Throwable;
  */
 class SendTicketMessage
 {
+    public function __construct(private readonly Presence $presence) {}
+
     public function __invoke(Ticket $ticket, User $author, string $text): Message
     {
         $message = $this->create($ticket, $author, $text);
@@ -58,17 +61,22 @@ class SendTicketMessage
         $contact = $ticket->contact()->firstOrFail();
         $channel = $ticket->channel()->firstOrFail();
 
+        $client = new WahaClient($channel);
+        $this->presence->before($client, $ticket, $contact, $message->body);
+
         try {
-            $response = (new WahaClient($channel))->sendText($contact->wa_id ?? (string) $contact->lid, $message->body);
+            $response = $client->sendText($contact->wa_id ?? (string) $contact->lid, $message->body);
         } catch (Throwable $e) {
             // Se o eco do celular já casou com a linha (ela ganhou o id), a mensagem saiu: não é falha.
             if ($message->refresh()->wa_message_id === null) {
-                $message->update(['delivery_status' => DeliveryStatus::FAILED, 'failure_reason' => Str::limit($e->getMessage(), 250)]);
+                $message->update(['delivery_status' => DeliveryStatus::FAILED, 'failure_reason' => $this->failureReason($e)]);
                 MessageStatusChanged::dispatch($message);
             }
 
             throw $e;
         }
+
+        $this->presence->scheduleOffline($channel);
 
         $message->refresh();
 
@@ -91,5 +99,19 @@ class SendTicketMessage
             'actor_user_id' => $message->author_user_id,
             'payload' => ['message_id' => $message->id],
         ]);
+    }
+
+    /**
+     * Erros 463 (timelock) e 475 (limite de mensagens) pedem pausa: tentar de novo ou reparear a sessão só piora.
+     */
+    private function failureReason(Throwable $e): string
+    {
+        if (preg_match('/\b(463|475)\b/', $e->getMessage()) === 1) {
+            Log::warning('WhatsApp limitou o envio (463/475): pausar, sem reiniciar nem repareiar a sessão', ['erro' => $e->getMessage()]);
+
+            return 'Limite do WhatsApp (463/475): aguarde antes de enviar de novo; não reinicie a sessão.';
+        }
+
+        return Str::limit($e->getMessage(), 250);
     }
 }
