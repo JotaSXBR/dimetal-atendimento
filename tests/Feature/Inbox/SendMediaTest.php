@@ -140,6 +140,17 @@ class SendMediaTest extends TestCase
         $this->assertNull($voice['caption'] ?? null);
     }
 
+    public function test_audio_nao_manda_digitando_antes_da_voz(): void
+    {
+        $this->fakeWaha();
+
+        app(SendTicketMessage::class)->deliver($this->send('voz.mp3', self::MP3));
+        app(SendTicketMessage::class)->deliver($this->send('orcamento.pdf', self::PDF));
+
+        // Só o PDF passa pelo "digitando": uma vez, e não duas.
+        $this->assertCount(1, Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/startTyping')));
+    }
+
     public function test_tres_arquivos_saem_na_ordem_em_que_foram_criados(): void
     {
         $this->fakeWaha();

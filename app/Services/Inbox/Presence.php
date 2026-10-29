@@ -25,11 +25,17 @@ class Presence
 
     private const LAST_SEEN_IDS = 20;
 
-    public function before(WahaClient $client, Ticket $ticket, Contact $contact, string $text): void
+    /** `$typing` falso (áudio): o cliente já viu "gravando…", então "digitando…" antes da voz seria incoerente. */
+    public function before(WahaClient $client, Ticket $ticket, Contact $contact, string $text, bool $typing = true): void
     {
         $chatId = $contact->wa_id ?? (string) $contact->lid;
 
         $this->attempt('visto', fn () => $this->markSeen($client, $ticket, $chatId));
+
+        if (! $typing) {
+            return;
+        }
+
         $this->attempt('digitando', function () use ($client, $chatId, $text): void {
             $client->startTyping($chatId);
             Sleep::for(TypingDelay::milliseconds($text))->milliseconds();

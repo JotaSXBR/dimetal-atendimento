@@ -97,7 +97,8 @@ class SendTicketMessage
 
         // Resposta automática não finge leitura nem digitação: seria o cliente vendo "digitando…" de um robô às 22h.
         if ($message->origin !== MessageOrigin::BOT) {
-            $this->presence->before($client, $ticket, $contact, $message->body);
+            $isVoice = $file !== null && AttachmentRules::kindOfStored((string) $message->media_mime) === 'audio';
+            $this->presence->before($client, $ticket, $contact, $message->body, ! $isVoice);
         }
 
         try {
