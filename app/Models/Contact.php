@@ -6,6 +6,7 @@ use App\Support\PhoneFormat;
 use Carbon\CarbonImmutable;
 use Database\Factories\ContactFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -55,6 +56,35 @@ class Contact extends Model
             'google_synced_at' => 'datetime',
             'google_attempted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Busca por nome, apelido, e-mail, empresa e, se o termo parece telefone, pelos dígitos do `wa_id`.
+     * `%` e `_` digitados valem como texto, não como curinga.
+     *
+     * @param  Builder<Contact>  $query
+     */
+    public function scopeSearch(Builder $query, string $term): void
+    {
+        $term = trim($term);
+
+        if ($term === '') {
+            return;
+        }
+
+        $like = '%'.addcslashes($term, '%_\\').'%';
+        $digits = preg_match('/^[\d\s()+-]+$/', $term) === 1 ? (string) preg_replace('/\D/', '', $term) : '';
+
+        $query->where(function (Builder $query) use ($like, $digits): void {
+            $query->whereRaw('name ilike ?', [$like])
+                ->orWhereRaw('nickname ilike ?', [$like])
+                ->orWhereRaw('email ilike ?', [$like])
+                ->orWhereRaw('company ilike ?', [$like]);
+
+            if (strlen($digits) >= 3) {
+                $query->orWhereRaw('wa_id like ?', ['%'.$digits.'%']);
+            }
+        });
     }
 
     /** Nome do contato ou, sem nome, o telefone em formato humano. */

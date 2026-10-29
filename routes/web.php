@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MessageMediaController;
 use App\Http\Controllers\Webhooks\WahaWebhookController;
+use App\Livewire\Contacts\Index as ContactsIndex;
 use App\Livewire\Inbox\Inbox;
 use App\Livewire\Settings\BusinessHoursPage;
 use App\Livewire\Settings\Channels;
@@ -15,6 +16,7 @@ Route::post('webhooks/waha', WahaWebhookController::class)->middleware('throttle
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('inbox', Inbox::class)->name('inbox');
+    Route::get('contatos', ContactsIndex::class)->name('contatos');
     Route::get('midia/{message}', MessageMediaController::class)->name('midia');
 });
 

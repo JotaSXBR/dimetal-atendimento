@@ -19,6 +19,9 @@
                     <flux:sidebar.item icon="user" :href="route('inbox', ['tab' => 'meus'])" :current="request()->routeIs('inbox') && request('tab') === 'meus'" wire:navigate>
                         Meus tickets
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="user-group" :href="route('contatos')" :current="request()->routeIs('contatos')" wire:navigate>
+                        Contatos
+                    </flux:sidebar.item>
 
                 </flux:sidebar.group>
 
