@@ -67,7 +67,7 @@ final class SpecialContent
 
         $label = $location['name'] ?? $location['address'] ?? null;
 
-        return ['coordinates' => (float) $lat.','.(float) $lng, 'name' => is_string($label) && $label !== '' ? Str::limit($label, 255, '') : null];
+        return ['coordinates' => round((float) $lat, 6).','.round((float) $lng, 6), 'name' => is_string($label) && $label !== '' ? Str::limit($label, 255, '') : null];
     }
 
     /**

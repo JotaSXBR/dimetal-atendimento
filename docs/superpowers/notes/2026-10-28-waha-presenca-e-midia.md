@@ -122,3 +122,19 @@ Outros eventos da doc: `message.waiting` (aguardando mensagem; agora assinado e 
 registradas em warning, porque o beta roda com `LOG_LEVEL=warning`.
 
 Eco de mídia enviada pelo celular não adota a linha pendente do painel: só texto casa por conteúdo.
+
+### Resultado do teste no beta (29/10/2026, 15h)
+
+- **Funcionou:** foto, figurinha, PDF, áudio, contato, dois contatos e localização chegam e aparecem; digitando, parar de
+  digitar, envio e offline retornam 201 no WAHA.
+- **"Visto" falhava (500):** o WAHA exige `messageIds` no formato completo `{false|true}_{chat}_{id}`
+  (`Message id be in format ..._AAAAAAAAAAAAAAAAAAAA[_participant]`). Corrigido: o app manda `false_{chat}_{id}`.
+- **Visualização única não gera webhook no GOWS:** o log do WAHA registra `Undecryptable ... type: "view_once" ... content
+  lost`, e nenhum evento (`message`, `message.waiting`) chega ao app. As marcas `IsViewOnce*` vieram `false` em todos os
+  eventos recebidos. Sem webhook o app não tem como mostrar o aviso; o tratamento por marca fica para o caso de o WAHA
+  passar a entregar o evento. Se a visualização única precisar aparecer, é um pedido ao WAHA, não ao app.
+- **Documento:** `media.filename` vem nulo no GOWS; o app tenta o nome original no proto (`_data.Message.documentMessage`)
+  e o log de diagnóstico passou a registrar as chaves de `_data.Message` para confirmar o caminho.
+- **Próxima fatia (pedido do dono):** presença "gravando áudio", nos dois sentidos: o atendente gravando para o cliente
+  (`presence` com `recording`) e o cliente gravando para o atendente (assinar `presence/{chat}/subscribe` e tratar o
+  webhook `presence.update`).

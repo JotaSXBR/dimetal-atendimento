@@ -455,6 +455,27 @@ class IngestMessageTest extends TestCase
         $this->assertSame('Loja Centro', $message->media_name);
     }
 
+    public function test_coordenadas_longas_sao_arredondadas_para_seis_casas(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_LOC2', [
+            'body' => null,
+            'location' => ['latitude' => -21.161800384521, 'longitude' => -47.795787811279],
+        ])));
+
+        $this->assertSame('-21.1618,-47.795788', $message?->body);
+    }
+
+    public function test_documento_sem_filename_no_evento_usa_o_nome_do_proto_do_gows(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_DOC2', [
+            'hasMedia' => true,
+            'media' => ['filename' => null, 'mimetype' => 'application/pdf'],
+            '_data' => ['Info' => ['PushName' => 'Maria Souza'], 'Message' => ['documentMessage' => ['fileName' => 'Proposta final.pdf']]],
+        ])));
+
+        $this->assertSame('Proposta final.pdf', $message?->media_name);
+    }
+
     public function test_localizacao_com_coordenada_invalida_e_ignorada(): void
     {
         $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_BADLOC', [
