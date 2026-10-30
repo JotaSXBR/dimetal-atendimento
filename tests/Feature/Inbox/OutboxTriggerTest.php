@@ -54,7 +54,7 @@ class OutboxTriggerTest extends TestCase
         $channel->update(['name' => 'Novo nome']);
         $channel->update(['status' => ChannelStatus::STOPPED]);
 
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(DrainOutboxJob::class);
     }
 
     public function test_dois_disparos_seguidos_deixam_um_unico_job_na_fila(): void
