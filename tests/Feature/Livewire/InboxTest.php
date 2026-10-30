@@ -189,6 +189,9 @@ class InboxTest extends TestCase
 
         Livewire::actingAs($me)->test(Inbox::class)
             ->call('select', $ticket->id)
+            ->call('openPanel', 'close')
+            ->set('closeOutcome', 'resolvido')
+            ->set('closeSummary', 'Cotacao enviada')
             ->call('close')
             ->assertSee('Somente leitura')
             ->assertDontSee('Escreva uma resposta');

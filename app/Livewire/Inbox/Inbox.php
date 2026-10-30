@@ -7,6 +7,8 @@ use App\Actions\Inbox\CloseTicket;
 use App\Actions\Inbox\ReassignTicket;
 use App\Actions\Inbox\TakeoverTicket;
 use App\Actions\Inbox\TransferTicket;
+use App\Enums\ClosedReason;
+use App\Enums\CloseOutcome;
 use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
 use App\Livewire\Inbox\Concerns\ComposesMessages;
@@ -54,6 +56,10 @@ class Inbox extends Component
 
     public ?int $reassignUserId = null;
 
+    public string $closeOutcome = '';
+
+    public string $closeSummary = '';
+
     public function select(int $ticketId): void
     {
         $this->authorize('view', Ticket::findOrFail($ticketId));
@@ -91,15 +97,16 @@ class Inbox extends Component
     public function openPanel(string $panel): void
     {
         $ticket = $this->selected();
-        $this->authorize($panel === 'reassign' ? 'reassign' : 'transfer', $ticket);
+        $panel = in_array($panel, ['reassign', 'close'], true) ? $panel : 'transfer';
+        $this->authorize($panel, $ticket);
 
-        $this->panel = $panel === 'reassign' ? 'reassign' : 'transfer';
+        $this->panel = $panel;
         $this->resetErrorBag();
     }
 
     public function closePanel(): void
     {
-        $this->reset('panel', 'transferSectorId', 'transferNote', 'reassignUserId');
+        $this->reset('panel', 'transferSectorId', 'transferNote', 'reassignUserId', 'closeOutcome', 'closeSummary');
         $this->resetErrorBag();
     }
 
@@ -144,7 +151,19 @@ class Inbox extends Component
         $ticket = $this->selected();
         $this->authorize('close', $ticket);
 
-        (new CloseTicket)($ticket, $this->user());
+        $this->validate([
+            'closeOutcome' => ['required', Rule::enum(CloseOutcome::class)],
+            'closeSummary' => ['required', 'string', 'min:3', 'max:500'],
+        ], [
+            'closeOutcome.required' => 'Escolha o motivo do encerramento.',
+            'closeOutcome.enum' => 'Escolha o motivo do encerramento.',
+            'closeSummary.required' => 'Escreva um resumo do atendimento.',
+            'closeSummary.min' => 'O resumo precisa de ao menos 3 caracteres.',
+            'closeSummary.max' => 'O resumo passa de 500 caracteres.',
+        ]);
+
+        (new CloseTicket)($ticket, $this->user(), ClosedReason::MANUAL, CloseOutcome::from($this->closeOutcome), trim($this->closeSummary));
+        $this->closePanel();
     }
 
     /**

@@ -103,7 +103,7 @@
                 @endif
 
                 @if ($canClose)
-                    <flux:button size="sm" wire:click="close" wire:confirm="Encerrar este ticket? A próxima mensagem do cliente abre um ticket novo.">Encerrar</flux:button>
+                    <flux:button size="sm" wire:click="openPanel('close')">Encerrar</flux:button>
                 @endif
             </header>
 
@@ -127,6 +127,31 @@
                     </div>
                     <flux:button type="submit" variant="primary" size="sm">Transferir</flux:button>
                     <flux:button type="button" size="sm" variant="subtle" wire:click="closePanel">Cancelar</flux:button>
+                </form>
+            @elseif ($panel === 'close')
+                <form wire:submit="close" class="space-y-3 border-b border-line bg-surface px-4 py-3">
+                    <p class="text-xs text-ink-3">Encerrar {{ $ticket->protocol }}. A próxima mensagem do cliente abre um ticket novo.</p>
+                    <div class="w-56">
+                        <flux:select wire:model="closeOutcome" label="Motivo do encerramento" placeholder="Escolha o motivo">
+                            @foreach (\App\Enums\CloseOutcome::cases() as $outcome)
+                                <flux:select.option :value="$outcome->value">{{ $outcome->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        @error('closeOutcome')
+                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <flux:textarea wire:model="closeSummary" rows="3" label="Resumo do atendimento" placeholder="O que foi pedido e o que ficou combinado" maxlength="500" />
+                        <p class="mt-1 text-xs text-ink-3">Obrigatório. Aparece no histórico do contato e na auditoria.</p>
+                        @error('closeSummary')
+                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div class="flex gap-2">
+                        <flux:button type="submit" variant="primary" size="sm">Encerrar ticket</flux:button>
+                        <flux:button type="button" size="sm" variant="subtle" wire:click="closePanel">Cancelar</flux:button>
+                    </div>
                 </form>
             @elseif ($panel === 'reassign')
                 <form wire:submit="reassign" class="flex flex-wrap items-end gap-3 border-b border-line bg-surface px-4 py-3">
