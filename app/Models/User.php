@@ -61,6 +61,12 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 
+    /** Alertas em tempo real vão para o canal privado que a tela já escuta (`routes/channels.php`). */
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return 'users.'.$this->id;
+    }
+
     public function alertSettings(): AlertSettings
     {
         return AlertSettings::fromArray($this->alert_settings);
