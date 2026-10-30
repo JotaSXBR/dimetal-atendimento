@@ -42,7 +42,7 @@
                         <td class="px-4 py-2 text-ink">{{ $event->actor?->name ?? 'Sistema' }}</td>
                         <td class="px-4 py-2 text-ink">{{ \App\Livewire\Audit\Index::typeLabel($event->type) }}</td>
                         <td class="px-4 py-2 font-mono text-xs text-ink-2">{{ $event->ticket?->protocol ?? '—' }}</td>
-                        <td class="px-4 py-2 break-words text-ink-2">{{ \App\Livewire\Audit\Index::detail($event) }}</td>
+                        <td class="px-4 py-2 break-words text-ink-2">{{ $timeline->detail($event) }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="px-4 py-6 text-center text-ink-3">Nenhum evento no período.</td></tr>

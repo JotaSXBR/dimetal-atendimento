@@ -5,6 +5,7 @@ namespace App\Livewire\Audit;
 use App\Models\TicketEvent;
 use App\Models\User;
 use App\Support\TicketEventText;
+use App\Support\TicketTimeline;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Title;
@@ -55,11 +56,6 @@ class Index extends Component
         return TicketEventText::label($type);
     }
 
-    public static function detail(TicketEvent $event): string
-    {
-        return TicketEventText::detail($event);
-    }
-
     public function render(): View
     {
         $now = CarbonImmutable::now(config()->string('app.display_timezone'));
@@ -76,6 +72,7 @@ class Index extends Component
 
         return view('livewire.audit.index', [
             'events' => $events,
+            'timeline' => new TicketTimeline($events->getCollection()),
             'users' => User::query()->orderBy('name')->get(['id', 'name']),
             'types' => TicketEventText::TYPES,
         ]);

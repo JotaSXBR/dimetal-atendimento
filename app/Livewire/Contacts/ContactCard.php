@@ -23,10 +23,30 @@ class ContactCard extends Component
 
     public ContactForm $form;
 
-    public function mount(int $contactId): void
+    /** No Inbox a ficha abre em resumo; o formulário só aparece em "Editar". Em Contatos ela é sempre o formulário. */
+    public bool $compact = false;
+
+    public bool $editing = false;
+
+    /** Histórico: só leitura, sem o botão Editar. */
+    #[Locked]
+    public bool $readonly = false;
+
+    public function mount(int $contactId, bool $compact = false, bool $readonly = false): void
     {
         $this->contactId = $contactId;
+        $this->compact = $compact;
+        $this->readonly = $readonly;
         $this->form->fillFrom($this->contact());
+    }
+
+    public function toggleEdit(): void
+    {
+        abort_if($this->readonly, 403);
+
+        $this->editing = ! $this->editing;
+        $this->form->fillFrom($this->contact());
+        $this->resetErrorBag();
     }
 
     public function save(SaveContact $saveContact): void
@@ -34,6 +54,7 @@ class ContactCard extends Component
         $this->form->validate();
 
         $saveContact($this->contact(), $this->form->payload());
+        $this->editing = false;
 
         $this->dispatch('contact-saved', contactId: $this->contactId);
     }

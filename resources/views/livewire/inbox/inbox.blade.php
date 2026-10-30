@@ -8,7 +8,11 @@
     $tabs = ['todos' => 'Todos', 'aguardando' => 'Aguardando', 'meus' => 'Meus', 'encerrados' => 'Encerrados'];
 @endphp
 
-<div class="grid h-dvh grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)_280px]">
+<div
+    class="grid h-dvh grid-cols-1 bg-surface"
+    x-data="{ details: localStorage.getItem('ticketDetailsOpen') !== '0', sheet: false, toggle() { this.details = ! this.details; localStorage.setItem('ticketDetailsOpen', this.details ? '1' : '0') } }"
+    x-bind:class="details ? 'lg:grid-cols-[340px_minmax(0,1fr)_280px]' : 'lg:grid-cols-[340px_minmax(0,1fr)]'"
+>
     {{-- Lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
         <header class="border-b border-line p-4">
@@ -132,6 +136,9 @@
                         </p>
                     @endif
                 </div>
+
+                <flux:button size="sm" variant="subtle" icon="information-circle" class="lg:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
+                <flux:button size="sm" variant="subtle" icon="information-circle" class="max-lg:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
 
                 @if ($canClaim)
                     <flux:button variant="primary" size="sm" icon="check" wire:click="claim" wire:loading.attr="disabled">Assumir</flux:button>
@@ -339,36 +346,7 @@
     </section>
 
     {{-- Detalhes --}}
-    <aside class="hidden overflow-y-auto border-s border-line p-4 lg:block">
-        @if ($ticket)
-            <h2 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Detalhes do ticket</h2>
-
-            <dl class="mt-3 space-y-3 text-sm">
-                <div>
-                    <dt class="text-xs text-ink-3">Canal</dt>
-                    <dd class="text-ink">{{ $ticket->channel->name }}{{ $ticket->channel->phone ? ' · '.$ticket->channel->phone : '' }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-ink-3">Protocolo</dt>
-                    <dd class="font-mono text-ink">{{ $ticket->protocol }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-ink-3">Setor</dt>
-                    <dd class="text-ink">{{ $ticket->sector?->name ?? 'Fila geral' }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-ink-3">Responsável</dt>
-                    <dd class="text-ink">{{ $ticket->assignee?->name ?? 'Não atribuído' }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-ink-3">Aberto em</dt>
-                    <dd class="font-mono text-ink">{{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}</dd>
-                </div>
-            </dl>
-
-            <hr class="my-4 border-line">
-
-            <livewire:contacts.contact-card :contact-id="$ticket->contact_id" :key="'contact-'.$ticket->contact_id" />
-        @endif
-    </aside>
+    @if ($ticket)
+        <x-ticket-details :ticket="$ticket" :tz="$tz" />
+    @endif
 </div>
