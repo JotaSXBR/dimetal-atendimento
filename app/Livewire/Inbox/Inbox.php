@@ -296,6 +296,10 @@ class Inbox extends Component
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),
             'closed' => $this->recentlyClosed($user),
+            'tabCounts' => [
+                'aguardando' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::AGUARDANDO->value)->count(),
+                'meus' => Ticket::query()->open()->where('assigned_user_id', $user->id)->count(),
+            ],
             'ticket' => $ticket,
             'messages' => $ticket?->messages()->latest('id')->limit(200)->get()->reverse(),
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),

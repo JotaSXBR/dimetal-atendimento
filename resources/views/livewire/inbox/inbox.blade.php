@@ -27,7 +27,7 @@
                         wire:click="$set('tab', '{{ $key }}')"
                         class="rounded-full px-3 py-1 text-xs font-medium {{ $tab === $key ? 'bg-ink text-white' : 'text-ink-2 hover:bg-canvas' }}"
                     >
-                        {{ $label }}
+                        {{ $label }}@if (! empty($tabCounts[$key])) <span class="font-mono opacity-70">{{ $tabCounts[$key] }}</span>@endif
                     </button>
                 @endforeach
             </div>

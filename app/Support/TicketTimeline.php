@@ -69,7 +69,8 @@ final class TicketTimeline
             'reassigned', 'taken_over' => 'para '.$this->user($payload['to_user'] ?? null),
             'merged' => 'em outro ticket do mesmo cliente',
             'closed', 'sla_breached' => TicketEventText::detail($event),
-            default => '',
+            // Tipo que esta tela não conhece: a auditoria não esconde o dado, mostra o conteúdo como veio.
+            default => array_key_exists($event->type, TicketEventText::TYPES) || $payload === [] ? '' : (string) json_encode($payload, JSON_UNESCAPED_UNICODE),
         };
     }
 
