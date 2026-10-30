@@ -23,6 +23,12 @@
                         Contatos
                     </flux:sidebar.item>
 
+
+                    @can('supervisor')
+                        <flux:sidebar.item icon="chart-bar" :href="route('relatorios')" :current="request()->routeIs('relatorios')" wire:navigate>
+                            Relatórios
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
 
                 @can('supervisor')

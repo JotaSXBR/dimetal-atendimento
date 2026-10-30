@@ -5,6 +5,7 @@ use App\Http\Controllers\MessageMediaController;
 use App\Http\Controllers\Webhooks\WahaWebhookController;
 use App\Livewire\Contacts\Index as ContactsIndex;
 use App\Livewire\Inbox\Inbox;
+use App\Livewire\Reports\Index as ReportsIndex;
 use App\Livewire\Settings\BusinessHoursPage;
 use App\Livewire\Settings\Channels;
 use App\Livewire\Settings\Company;
@@ -25,6 +26,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'can:supervisor'])->group(function () {
+    Route::get('relatorios', ReportsIndex::class)->name('relatorios');
     Route::get('configuracoes/usuarios', Users::class)->name('configuracoes.usuarios');
     Route::get('configuracoes/respostas-rapidas', QuickReplies::class)->name('configuracoes.respostas');
 });
