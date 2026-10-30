@@ -87,18 +87,71 @@ class BusinessHours
     {
         $next = $this->nextOpening($at);
 
-        if ($next === null) {
-            return '';
-        }
+        return $next === null ? '' : $this->whenLabel($next, $at);
+    }
 
-        $days = (int) $this->local($at)->startOfDay()->diffInDays($next->startOfDay());
+    /** O instante `$at` como "hoje às 10h20", "amanhã às 8h10" ou "segunda-feira às 8h30", visto de `$now`; no fuso de exibição. */
+    public function whenLabel(CarbonInterface $at, CarbonInterface $now): string
+    {
+        $local = $this->local($at);
+        $days = (int) $this->local($now)->startOfDay()->diffInDays($local->startOfDay());
         $when = match (true) {
             $days === 0 => 'hoje',
             $days === 1 => 'amanhã',
-            default => self::LONG_NAMES[$next->dayOfWeek],
+            default => self::LONG_NAMES[$local->dayOfWeek],
         };
 
-        return $when.' às '.$this->hour($next->format('H:i:s'));
+        return $when.' às '.$this->hour($local->format('H:i:s'));
+    }
+
+    /**
+     * O instante em que se completam `$seconds` segundos de expediente a partir de `$from`. Fora do expediente (fechado, feriado)
+     * a conta começa na próxima abertura; esgotar uma faixa exata vence no fechamento dela. Sem nenhuma faixa cadastrada o
+     * atendimento conta como sempre aberto e os segundos são somados direto. Devolve no fuso do banco.
+     *
+     * shortcut: passados os 60 dias de busca devolve o fim da última faixa vista, sem somar o resto; subir se um calendário
+     * ficar tão vazio (um erro de cadastro) a ponto de importar.
+     */
+    public function addBusinessSeconds(CarbonInterface $from, int $seconds): CarbonImmutable
+    {
+        $windows = $this->windows();
+        $cursor = $this->local($from);
+        $databaseTimezone = config()->string('app.timezone');
+
+        if ($windows === []) {
+            return $cursor->addSeconds($seconds)->setTimezone($databaseTimezone);
+        }
+
+        $holidays = $this->holidays();
+        $left = $seconds;
+        $reached = $cursor;
+
+        for ($d = 0; $d <= self::LOOKAHEAD_DAYS; $d++) {
+            $day = $cursor->startOfDay()->addDays($d);
+
+            if (in_array($day->toDateString(), $holidays, true)) {
+                continue;
+            }
+
+            foreach ($windows[$day->dayOfWeek] ?? [] as $window) {
+                $begin = $day->setTimeFromTimeString($window->opens_at)->max($cursor);
+                $end = $day->setTimeFromTimeString($window->closes_at);
+                $available = $end->getTimestamp() - $begin->getTimestamp();
+
+                if ($available <= 0) {
+                    continue;
+                }
+
+                if ($left <= $available) {
+                    return $begin->addSeconds($left)->setTimezone($databaseTimezone);
+                }
+
+                $left -= $available;
+                $reached = $end;
+            }
+        }
+
+        return $reached->setTimezone($databaseTimezone);
     }
 
     /** "de segunda a sexta, das 8h às 12h e das 13h às 18h; sábado, das 8h às 12h". */

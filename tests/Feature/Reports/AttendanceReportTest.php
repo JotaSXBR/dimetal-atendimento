@@ -61,8 +61,9 @@ class AttendanceReportTest extends TestCase
         $this->ticket($this->a, '10:00', '10:05', TicketStatus::ENCERRADO, $this->ana);
         $this->ticket($this->a, '10:10', '10:30', TicketStatus::EM_ATENDIMENTO, $this->ana);
         $this->ticket($this->b, '11:00', '11:02', TicketStatus::ENCERRADO, $this->bia);
-        $this->ticket($this->b, '11:30', null, TicketStatus::AGUARDANDO);
-        $this->ticket($this->b, '11:55', null, TicketStatus::AGUARDANDO);
+        // 11h30 já estourou o SLA de 10 min (venceu 11h40); 11h55 ainda está dentro (vence 12h05).
+        $this->ticket($this->b, '11:30', null, TicketStatus::AGUARDANDO, null, ['waiting_since' => CarbonImmutable::parse('2026-10-30 11:30'), 'sla_warn_at' => CarbonImmutable::parse('2026-10-30 11:37:30'), 'sla_due_at' => CarbonImmutable::parse('2026-10-30 11:40')]);
+        $this->ticket($this->b, '11:55', null, TicketStatus::AGUARDANDO, null, ['waiting_since' => CarbonImmutable::parse('2026-10-30 11:55'), 'sla_warn_at' => CarbonImmutable::parse('2026-10-30 12:02:30'), 'sla_due_at' => CarbonImmutable::parse('2026-10-30 12:05')]);
         $this->ticket($this->a, '10:00', '10:01', TicketStatus::ENCERRADO, $this->ana, ['opened_at' => now()->subDays(20), 'first_human_reply_at' => now()->subDays(20)->addMinute()]);
     }
 
@@ -80,7 +81,7 @@ class AttendanceReportTest extends TestCase
         $this->assertSame(5, $report['opened']);
         $this->assertSame(300, $report['median_seconds']);
         $this->assertSame(66.7, $report['sla_percent']);
-        $this->assertSame(1, $report['overdue'], 'só o ticket sem resposta há 30 min passou do SLA de 10');
+        $this->assertSame(1, $report['overdue'], 'só o ticket que estourou o vencimento do SLA conta');
     }
 
     public function test_volume_por_setor_e_desempenho_por_atendente(): void
