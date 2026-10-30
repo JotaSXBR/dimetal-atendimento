@@ -28,6 +28,9 @@ class IngestMessage
     /** Janela para casar o eco `fromMe` com a mensagem que o painel gravou antes de enviar. */
     private const ECHO_WINDOW_SECONDS = 60;
 
+    /** A resposta automática tem texto fixo e ninguém a digita no celular: casa por mais tempo, para o eco tardio não virar "fora do painel" e parar o relógio de SLA. */
+    private const BOT_ECHO_WINDOW_SECONDS = 600;
+
     public function __construct(private readonly ResolveContact $resolveContact) {}
 
     public function __invoke(WahaEvent $event): ?Message
@@ -101,14 +104,15 @@ class IngestMessage
             ->where('channel_id', $channel->id)
             ->where('contact_id', $contact->id)
             ->where('direction', MessageDirection::OUT->value)
-            ->whereIn('origin', [MessageOrigin::PAINEL->value, MessageOrigin::BOT->value])
+            ->where(fn ($q) => $q
+                ->where(fn ($panel) => $panel->where('origin', MessageOrigin::PAINEL->value)->where('updated_at', '>=', now()->subSeconds(self::ECHO_WINDOW_SECONDS)))
+                ->orWhere(fn ($bot) => $bot->where('origin', MessageOrigin::BOT->value)->where('updated_at', '>=', now()->subSeconds(self::BOT_ECHO_WINDOW_SECONDS))))
             ->whereNull('wa_message_id')
             ->where(fn ($q) => $q->whereNull('delivery_status')
                 // Só a falha "sem resposta" pode ter saído; as recusadas pelo WAHA não são engolidas pelo eco do celular.
                 ->orWhere(fn ($failed) => $failed->where('delivery_status', DeliveryStatus::FAILED->value)->where('failure_code', SendFailure::UNKNOWN)))
             ->where('type', $incoming->type)
             ->where('body', $incoming->body)
-            ->where('updated_at', '>=', now()->subSeconds(self::ECHO_WINDOW_SECONDS))
             ->oldest('id')
             ->first();
     }

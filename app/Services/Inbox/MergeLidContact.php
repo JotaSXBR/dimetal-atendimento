@@ -84,7 +84,7 @@ class MergeLidContact
      * A espera do cliente na conversa única: vale a mais antiga, com as marcas de SLA dela, e só se nenhuma resposta humana
      * (de qualquer um dos dois tickets) veio depois dela. Sem isto, a espera do ticket que perdeu sumiria do painel.
      *
-     * @return array<string, CarbonImmutable|null>
+     * @return array<string, mixed>
      */
     private function mergedWait(Ticket $survivor, Ticket $loser): array
     {
@@ -92,8 +92,9 @@ class MergeLidContact
         $waiting = array_filter([$survivor, $loser], fn (Ticket $t): bool => $t->waiting_since !== null);
         usort($waiting, fn (Ticket $x, Ticket $y): int => $x->waiting_since <=> $y->waiting_since);
         $source = $waiting[0] ?? null;
+        $since = $source?->waiting_since;
 
-        if ($source === null || ($survivor->last_outbound_at !== null && $survivor->last_outbound_at->gte($source->waiting_since))) {
+        if ($source === null || $since === null || ($survivor->last_outbound_at !== null && $survivor->last_outbound_at->gte($since))) {
             return array_fill_keys($columns, null);
         }
 
