@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Audit;
 
-use App\Enums\CloseOutcome;
 use App\Models\TicketEvent;
 use App\Models\User;
+use App\Support\TicketEventText;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Title;
@@ -20,19 +20,6 @@ class Index extends Component
     public const PERIODS = ['hoje' => 'Hoje', '7' => '7 dias', '30' => '30 dias'];
 
     private const PER_PAGE = 25;
-
-    private const TYPES = [
-        'opened' => 'Ticket aberto',
-        'claimed' => 'Assumido',
-        'closed' => 'Encerrado',
-        'transferred' => 'Transferido',
-        'reassigned' => 'Reatribuído',
-        'taken_over' => 'Tomado',
-        'merged' => 'Mesclado',
-        'message_out' => 'Mensagem enviada',
-        'after_hours_reply' => 'Resposta fora do horário',
-        'media_purged' => 'Mídia apagada',
-    ];
 
     #[Url]
     public string $period = '7';
@@ -65,23 +52,12 @@ class Index extends Component
 
     public static function typeLabel(string $type): string
     {
-        return self::TYPES[$type] ?? $type;
+        return TicketEventText::label($type);
     }
 
-    /** O que aconteceu, em texto: motivo e resumo do encerramento; nos demais, o conteúdo bruto do evento. */
     public static function detail(TicketEvent $event): string
     {
-        $payload = $event->payload ?? [];
-
-        if ($event->type === 'closed') {
-            $outcome = is_string($payload['outcome'] ?? null) ? CloseOutcome::tryFrom($payload['outcome'])?->label() : null;
-            $reason = isset($payload['outcome']) || ! is_string($payload['reason'] ?? null) ? null : $payload['reason'];
-            $summary = is_string($payload['summary'] ?? null) ? $payload['summary'] : null;
-
-            return implode(' · ', array_filter([$outcome, $summary, $reason]));
-        }
-
-        return $payload === [] ? '' : (string) json_encode($payload, JSON_UNESCAPED_UNICODE);
+        return TicketEventText::detail($event);
     }
 
     public function render(): View
@@ -101,7 +77,7 @@ class Index extends Component
         return view('livewire.audit.index', [
             'events' => $events,
             'users' => User::query()->orderBy('name')->get(['id', 'name']),
-            'types' => self::TYPES,
+            'types' => TicketEventText::TYPES,
         ]);
     }
 }
