@@ -15,3 +15,9 @@
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+@auth
+    {{-- O servidor entrega as preferências; o módulo de alertas decide no navegador (resources/js/alerts.js). --}}
+    <meta name="alert-user" content="{{ auth()->id() }}">
+    <meta name="alert-settings" content="{{ json_encode(auth()->user()->alertSettings()->toArray(), JSON_THROW_ON_ERROR) }}">
+@endauth
