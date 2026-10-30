@@ -11,6 +11,7 @@ use App\Models\Ticket;
 use App\Services\Inbox\SlaClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
@@ -256,15 +257,20 @@ class SlaClockTest extends TestCase
         });
     }
 
-    public function test_resposta_durante_a_adocao_nao_deixa_uma_espera_falsa(): void
+    public function test_a_adocao_le_e_grava_numa_unica_instrucao_sem_intervalo_para_corrida(): void
     {
         $this->at('2026-10-30 10:00');
-        $ticket = $this->ticket(['last_inbound_at' => $this->sp('2026-10-30 09:50'), 'last_outbound_at' => null]);
-        $this->humanRepliesWhileTheRoundReads();
+        $this->ticket(['last_inbound_at' => $this->sp('2026-10-30 09:50'), 'last_outbound_at' => null]);
+        DB::flushQueryLog();
+        DB::enableQueryLog();
 
         $this->tick();
 
-        $this->assertNull($ticket->fresh()?->waiting_since, 'o atendente respondeu no meio da rodada');
+        $adoption = array_values(array_filter(DB::getQueryLog(), fn (array $q): bool => str_contains($q['query'], 'last_inbound_at')));
+        DB::disableQueryLog();
+
+        $this->assertCount(1, $adoption, 'selecionar os ids e gravar depois deixaria uma janela entre as duas consultas');
+        $this->assertStringStartsWith('update', strtolower($adoption[0]['query']));
     }
 
     public function test_resposta_durante_o_calculo_nao_deixa_vencimento_orfao(): void

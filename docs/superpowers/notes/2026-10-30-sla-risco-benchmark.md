@@ -46,3 +46,20 @@ Consultas iguais às do código (`status = 'encerrado'`, `closed_at` em janela, 
 Índice: 30 MB (cerca de 0,34 vez a tabela). **Conclusão:** o índice derruba as páginas em 100 a 600 vezes, mas a contagem do
 `paginate()` continua entre 24 e 51 ms e cresce em linha reta; por isso o Histórico passa a `simplePaginate`. Limites iguais aos da
 primeira rodada (sintético, em memória, sem concorrência); a subconsulta de setores do atendente foi medida como lista fixa.
+
+## Conferência com o SQL real do Laravel (implementação)
+
+Banco de teste com 300.300 tickets (300.000 encerrados em 3 anos e 300 abertos, 38 MB). Em vez de SQL escrito à mão, o script captura
+as consultas que o próprio código gera (`DB::listen`, SQL e parâmetros) e roda `EXPLAIN` em cada uma, porque o Eloquent envia
+`'encerrado'` como parâmetro e o Postgres só usa um índice parcial se provar que a consulta implica o predicado dele.
+
+| Consulta real | Plano |
+|---|---|
+| Rotina `app:check-sla`: adotar (`UPDATE` com subconsulta), calcular, avisar | `tickets_open_id` |
+| Rotina `app:check-sla`: estourar (`SELECT` e `UPDATE` por ticket) | `tickets_open_sla_due` |
+| Lista do Inbox (atendente e supervisor) | `tickets_open_id` |
+| Aba Encerrados (atendente, 7 dias) | `tickets_closed_at` |
+| Histórico (supervisor e atendente com setor, 30 dias, `simplePaginate`) | `tickets_closed_at` |
+
+Nenhuma varredura da tabela `tickets` apareceu; as únicas varreduras sequenciais são em `sector_user` e `sectors` (poucas linhas).
+Limite: planos, não tempos (o plano pode mudar com outras estatísticas ou outra memória); script descartável, não versionado.

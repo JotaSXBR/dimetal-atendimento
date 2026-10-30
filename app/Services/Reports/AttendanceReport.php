@@ -79,7 +79,7 @@ class AttendanceReport
             }
 
             $rows[] = [
-                'contact' => $ticket->contact->label(),
+                'contact' => $ticket->contact?->label() ?? '—',
                 'sector' => $ticket->sector?->name,
                 'agent' => $ticket->assignee?->name,
                 'since' => $ticket->waiting_since,

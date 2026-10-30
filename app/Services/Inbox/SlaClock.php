@@ -83,11 +83,12 @@ final class SlaClock
             ->where(fn (Builder $q) => $q->whereNull('last_outbound_at')->orWhereColumn('last_inbound_at', '>', 'last_outbound_at'));
     }
 
+    /** Uma única instrução (os ids saem de uma subconsulta): não há intervalo entre ler e gravar para uma resposta cair no meio. */
     private function adopt(): int
     {
-        $ids = $this->unregisteredWait()->orderBy('id')->limit(self::BATCH)->get(['id'])->modelKeys();
+        $batch = $this->unregisteredWait()->orderBy('id')->limit(self::BATCH)->select('id');
 
-        return $ids === [] ? 0 : $this->unregisteredWait()->whereKey($ids)->update(['waiting_since' => DB::raw('last_inbound_at')]);
+        return $this->unregisteredWait()->whereIn('id', $batch)->update(['waiting_since' => DB::raw('last_inbound_at')]);
     }
 
     /**
