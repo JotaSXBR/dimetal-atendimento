@@ -23,6 +23,10 @@
                         Contatos
                     </flux:sidebar.item>
 
+                    <flux:sidebar.item icon="archive-box" :href="route('historico')" :current="request()->routeIs('historico')" wire:navigate>
+                        Histórico
+                    </flux:sidebar.item>
+
 
                     @can('supervisor')
                         <flux:sidebar.item icon="chart-bar" :href="route('relatorios')" :current="request()->routeIs('relatorios')" wire:navigate>

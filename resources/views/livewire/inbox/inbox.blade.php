@@ -54,7 +54,7 @@
                     <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket encerrado nos últimos 7 dias.</p>
                 @endif
 
-                <p class="p-4 text-center text-xs"><a href="{{ url('/historico') }}" wire:navigate class="text-accent underline">Busca completa</a></p>
+                <p class="p-4 text-center text-xs"><a href="{{ route('historico') }}" wire:navigate class="text-accent underline">Busca completa</a></p>
             @else
             @foreach ([['Aguardando', $waiting, 'text-warn'], ['Em atendimento', $active, 'text-accent']] as [$heading, $group, $tone])
                 @if ($group->isNotEmpty())
