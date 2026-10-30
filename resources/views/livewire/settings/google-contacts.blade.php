@@ -13,7 +13,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <p class="text-sm font-semibold text-ink">{{ $connection->account_email }}</p>
-                    <p class="text-xs text-ink-3">Conectado em {{ $connection->connected_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</p>
+                    <p class="text-xs text-ink-3">Conectado em {{ $connection->connected_at?->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}</p>
                 </div>
                 <flux:badge :color="$connection->status === \App\Enums\GoogleConnectionStatus::CONNECTED ? 'green' : 'red'">{{ $connection->status->label() }}</flux:badge>
             </div>
