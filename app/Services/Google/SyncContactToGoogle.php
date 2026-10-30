@@ -3,6 +3,7 @@
 namespace App\Services\Google;
 
 use App\Models\Contact;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Espelha um contato editado no Google Contatos (só de ida). Devolve `created`, `updated`, `unchanged`, `skipped` ou `failed`
@@ -40,7 +41,7 @@ class SyncContactToGoogle
         try {
             [$result, $google] = $this->pushRenewingOnce($token, $contact, $person);
         } catch (GooglePeopleException $e) {
-            return $this->fail($contact, $e->reason);
+            return $this->fail($contact, $e->reason, $e);
         }
 
         $this->settle($contact, [
@@ -157,9 +158,17 @@ class SyncContactToGoogle
         $contact->forceFill($mirror + ['google_synced_at' => $now, 'google_error' => null, 'updated_at' => $now])->save();
     }
 
-    private function fail(Contact $contact, string $reason): string
+    private function fail(Contact $contact, string $reason, ?GooglePeopleException $error = null): string
     {
         $contact->forceFill(['google_error' => $reason])->save();
+
+        // O código curto vai para a ficha; o motivo que o Google devolveu (campo recusado) só para o log do worker.
+        Log::warning('Envio de contato ao Google falhou', [
+            'contact' => $contact->id,
+            'reason' => $reason,
+            'http' => $error?->httpStatus,
+            'detail' => $error?->detail,
+        ]);
 
         // Só uma nova autorização resolve token recusado ou escopo faltando; um 403 comum é só deste contato, e os demais
         // erros a rotina reenvia depois.
