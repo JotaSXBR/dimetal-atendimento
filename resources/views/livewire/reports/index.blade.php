@@ -31,6 +31,50 @@
         </div>
     </dl>
 
+    @if ($schedulerStale)
+        <div class="rounded-[14px] border border-warn/30 bg-warn/10 p-4 text-sm text-warn" role="alert">
+            O verificador de SLA não roda há mais de 3 minutos. Os alertas de espera podem estar atrasados.
+        </div>
+    @endif
+
+    <div class="rounded-[14px] border border-line bg-surface p-4">
+        <h2 class="text-sm font-semibold text-ink">Aguardando resposta além do SLA</h2>
+        <p class="text-xs text-ink-3">Clientes esperando resposta humana, perto de estourar ou já estourados (só conta o horário de funcionamento).</p>
+
+        @if ($data['waiting'] === [])
+            <p class="mt-3 text-sm text-ink-3">Ninguém esperando além do SLA agora.</p>
+        @else
+            <div class="mt-3 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-xs text-ink-3">
+                        <tr>
+                            <th scope="col" class="py-2 pe-4 text-start font-normal">Cliente</th>
+                            <th scope="col" class="px-4 py-2 text-start font-normal">Setor</th>
+                            <th scope="col" class="px-4 py-2 text-start font-normal">Responsável</th>
+                            <th scope="col" class="px-4 py-2 text-start font-normal">Esperando desde</th>
+                            <th scope="col" class="px-4 py-2 text-start font-normal">Limite</th>
+                            <th scope="col" class="px-4 py-2 text-start font-normal">Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach ($data['waiting'] as $row)
+                            <tr>
+                                <td class="py-2 pe-4 text-ink">{{ $row['contact'] }}</td>
+                                <td class="px-4 py-2 text-ink-2">{{ $row['sector'] ?? 'Fila geral' }}</td>
+                                <td class="px-4 py-2 text-ink-2">{{ $row['agent'] ?? '—' }}</td>
+                                <td class="px-4 py-2 font-mono text-ink-2">{{ $row['since']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</td>
+                                <td class="px-4 py-2 font-mono text-ink-2">{{ $row['due']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</td>
+                                <td class="px-4 py-2">
+                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $row['state'] === 'estourou' ? 'bg-danger/10 text-danger' : 'bg-warn/10 text-warn' }}">{{ $row['state'] === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+
     <div class="rounded-[14px] border border-line bg-surface p-4">
         <h2 class="text-sm font-semibold text-ink">Volume por setor</h2>
         @php($max = max(1, collect($data['by_sector'])->max('count') ?? 1))

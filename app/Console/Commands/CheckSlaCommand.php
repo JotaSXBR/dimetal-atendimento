@@ -20,7 +20,7 @@ class CheckSlaCommand extends Command
     {
         $result = $clock();
 
-        Cache::put(self::HEARTBEAT, now(), 600);
+        Cache::put(self::HEARTBEAT, now()->getTimestamp(), 600);
 
         $this->info(sprintf('SLA: %d adotados, %d calculados, %d avisos, %d estourados.', $result['adopted'], $result['scheduled'], $result['warned'], $result['breached']));
 

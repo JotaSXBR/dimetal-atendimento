@@ -2,10 +2,12 @@
 
 namespace App\Livewire\Reports;
 
+use App\Console\Commands\CheckSlaCommand;
 use App\Services\Reports\AttendanceReport;
 use App\Settings\CompanySettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -33,8 +35,17 @@ class Index extends Component
         return view('livewire.reports.index', [
             'data' => $report->for($from->setTimezone(config()->string('app.timezone')), $now->setTimezone(config()->string('app.timezone')), CompanySettings::slaMinutes()),
             'sla' => CompanySettings::slaMinutes(),
+            'schedulerStale' => $this->schedulerStale(),
             'from' => $from,
         ]);
+    }
+
+    /** A rotina de SLA grava a batida a cada minuto; sem batida nos últimos 3 minutos (ou nunca), os alertas podem estar parados. */
+    private function schedulerStale(): bool
+    {
+        $beat = Cache::get(CheckSlaCommand::HEARTBEAT);
+
+        return ! is_int($beat) || now()->getTimestamp() - $beat > 180;
     }
 
     /** "3 min 12 s", ou um traço quando não há dado. */

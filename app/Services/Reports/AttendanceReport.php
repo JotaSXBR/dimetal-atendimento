@@ -3,23 +3,31 @@
 namespace App\Services\Reports;
 
 use App\Enums\TicketStatus;
+use App\Models\Ticket;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Números de atendimento e SLA de primeira resposta, calculados no banco sobre os tickets abertos no período.
+ * Números de atendimento e SLA de primeira resposta, calculados no banco sobre os tickets abertos no período, e a lista de quem
+ * espera resposta agora (perto de estourar ou estourado).
  *
  * @phpstan-type Agent array{name: string, assigned: int, closed: int, median_seconds: int|null}
+ * @phpstan-type Waiting array{contact: string, sector: string|null, agent: string|null, since: CarbonImmutable, due: CarbonImmutable, state: string}
  */
 class AttendanceReport
 {
+    /** A lista de espera mostra os mais atrasados primeiro e para em 50. */
+    private const WAITING_LIMIT = 50;
+
     private const MEDIAN = 'percentile_cont(0.5) within group (order by extract(epoch from tickets.first_human_reply_at - tickets.opened_at))';
 
     /**
-     * `overdue` não depende do período: são os tickets de agora que esperam resposta além do SLA.
+     * `overdue` e `waiting` não dependem do período: são os tickets de agora que esperam resposta e já passaram do vencimento do SLA
+     * (contado só no expediente) ou estão perto dele.
      *
-     * @return array{opened: int, median_seconds: int|null, sla_percent: float|null, overdue: int, by_sector: list<array{name: string, count: int}>, by_agent: list<Agent>}
+     * @return array{opened: int, median_seconds: int|null, sla_percent: float|null, overdue: int, waiting: list<Waiting>, by_sector: list<array{name: string, count: int}>, by_agent: list<Agent>}
      */
     public function for(CarbonInterface $from, CarbonInterface $to, int $slaMinutes): array
     {
@@ -35,12 +43,52 @@ class AttendanceReport
             'sla_percent' => $total === 0 ? null : round($this->int($sla->within ?? 0) / $total * 100, 1),
             'overdue' => DB::table('tickets')
                 ->where('status', '<>', TicketStatus::ENCERRADO->value)
-                ->whereNull('first_human_reply_at')
-                ->where('opened_at', '<', now()->subMinutes($slaMinutes))
+                ->whereIn('status', [TicketStatus::AGUARDANDO->value, TicketStatus::EM_ATENDIMENTO->value])
+                ->whereNotNull('waiting_since')
+                ->where('sla_due_at', '<=', now())
                 ->count(),
+            'waiting' => $this->waiting(),
             'by_sector' => $this->bySector($period()),
             'by_agent' => $this->byAgent($period()),
         ];
+    }
+
+    /**
+     * @return list<Waiting>
+     */
+    private function waiting(): array
+    {
+        $now = now();
+        $rows = [];
+
+        $tickets = Ticket::query()
+            ->open()
+            ->whereIn('status', [TicketStatus::AGUARDANDO->value, TicketStatus::EM_ATENDIMENTO->value])
+            ->whereNotNull('waiting_since')
+            ->whereNotNull('sla_due_at')
+            ->where('sla_warn_at', '<=', $now)
+            ->with(['contact', 'sector', 'assignee'])
+            ->orderBy('sla_due_at')
+            ->orderBy('id')
+            ->limit(self::WAITING_LIMIT)
+            ->get();
+
+        foreach ($tickets as $ticket) {
+            if ($ticket->waiting_since === null || $ticket->sla_due_at === null) {
+                continue;
+            }
+
+            $rows[] = [
+                'contact' => $ticket->contact->label(),
+                'sector' => $ticket->sector?->name,
+                'agent' => $ticket->assignee?->name,
+                'since' => $ticket->waiting_since,
+                'due' => $ticket->sla_due_at,
+                'state' => $ticket->slaState($now) ?? 'perto',
+            ];
+        }
+
+        return $rows;
     }
 
     /**
