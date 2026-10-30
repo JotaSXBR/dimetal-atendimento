@@ -37,6 +37,10 @@
                             </flux:sidebar.item>
                         @endcan
 
+                        <flux:sidebar.item icon="bolt" :href="route('configuracoes.respostas')" :current="request()->routeIs('configuracoes.respostas')" wire:navigate>
+                            Respostas rápidas
+                        </flux:sidebar.item>
+
                         <flux:sidebar.item icon="users" :href="route('configuracoes.usuarios')" :current="request()->routeIs('configuracoes.usuarios')" wire:navigate>
                             Usuários
                         </flux:sidebar.item>

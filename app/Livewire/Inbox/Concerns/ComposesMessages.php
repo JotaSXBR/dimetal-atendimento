@@ -3,6 +3,7 @@
 namespace App\Livewire\Inbox\Concerns;
 
 use App\Jobs\SendTicketMessageJob;
+use App\Models\QuickReply;
 use App\Models\Ticket;
 use App\Services\Inbox\AttachmentRules;
 use App\Services\Inbox\Presence;
@@ -10,6 +11,7 @@ use App\Services\Inbox\SendTicketMedia;
 use App\Services\Inbox\SendTicketMessage;
 use App\Services\Inbox\Signature;
 use App\Services\Waha\WahaClient;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\RateLimiter;
 use InvalidArgumentException;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -52,6 +54,22 @@ trait ComposesMessages
     {
         $this->sign = ! $this->sign;
         $this->user()->forceFill(['sign_messages' => $this->sign])->save();
+    }
+
+    /** O rascunho `/pre` chama as respostas rápidas do usuário; o texto entra no campo, editável. */
+    public function useQuickReply(int $id): void
+    {
+        $this->authorize('reply', $this->selected());
+
+        $this->draft = QuickReply::forUser($this->user())->findOrFail($id)->body;
+    }
+
+    /**
+     * @return Collection<int, QuickReply>
+     */
+    public function quickReplies(): Collection
+    {
+        return QuickReply::forUser($this->user())->matching($this->draft)->get();
     }
 
     /** Entra na bandeja o arquivo que acabou de subir (um por requisição); o servidor decide se ele fica. */

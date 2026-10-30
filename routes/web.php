@@ -9,6 +9,7 @@ use App\Livewire\Settings\BusinessHoursPage;
 use App\Livewire\Settings\Channels;
 use App\Livewire\Settings\Company;
 use App\Livewire\Settings\GoogleContacts;
+use App\Livewire\Settings\QuickReplies;
 use App\Livewire\Settings\Sectors;
 use App\Livewire\Settings\Users;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'can:supervisor'])->group(function () {
     Route::get('configuracoes/usuarios', Users::class)->name('configuracoes.usuarios');
+    Route::get('configuracoes/respostas-rapidas', QuickReplies::class)->name('configuracoes.respostas');
 });
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
