@@ -71,13 +71,33 @@ class MergeLidContact
             'last_inbound_at' => $this->later($survivor->last_inbound_at, $loser->last_inbound_at),
             'last_outbound_at' => $this->later($survivor->last_outbound_at, $loser->last_outbound_at),
             'first_human_reply_at' => $this->earlier($survivor->first_human_reply_at, $loser->first_human_reply_at),
-        ])->save();
+        ])->forceFill($this->mergedWait($survivor, $loser))->save();
 
         $loser->forceFill(['status' => TicketStatus::ENCERRADO, 'closed_at' => now(), 'closed_reason' => ClosedReason::MESCLADO])->save();
         TicketEvent::create(['ticket_id' => $loser->id, 'type' => 'merged', 'payload' => ['into_ticket_id' => $survivor->id]]);
 
         TicketUpdated::dispatch($survivor);
         TicketUpdated::dispatch($loser);
+    }
+
+    /**
+     * A espera do cliente na conversa única: vale a mais antiga, com as marcas de SLA dela, e só se nenhuma resposta humana
+     * (de qualquer um dos dois tickets) veio depois dela. Sem isto, a espera do ticket que perdeu sumiria do painel.
+     *
+     * @return array<string, CarbonImmutable|null>
+     */
+    private function mergedWait(Ticket $survivor, Ticket $loser): array
+    {
+        $columns = ['waiting_since', 'sla_warn_at', 'sla_due_at', 'sla_warned_at', 'sla_breached_at'];
+        $waiting = array_filter([$survivor, $loser], fn (Ticket $t): bool => $t->waiting_since !== null);
+        usort($waiting, fn (Ticket $x, Ticket $y): int => $x->waiting_since <=> $y->waiting_since);
+        $source = $waiting[0] ?? null;
+
+        if ($source === null || ($survivor->last_outbound_at !== null && $survivor->last_outbound_at->gte($source->waiting_since))) {
+            return array_fill_keys($columns, null);
+        }
+
+        return array_combine($columns, array_map(fn (string $column) => $source->getAttribute($column), $columns));
     }
 
     private function later(?CarbonImmutable $a, ?CarbonImmutable $b): ?CarbonImmutable
