@@ -29,6 +29,12 @@
                             Relatórios
                         </flux:sidebar.item>
                     @endcan
+
+                    @can('admin')
+                        <flux:sidebar.item icon="shield-check" :href="route('auditoria')" :current="request()->routeIs('auditoria')" wire:navigate>
+                            Auditoria
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
 
                 @can('supervisor')

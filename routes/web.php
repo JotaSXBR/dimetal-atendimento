@@ -3,6 +3,7 @@
 use App\Http\Controllers\GoogleConnectionController;
 use App\Http\Controllers\MessageMediaController;
 use App\Http\Controllers\Webhooks\WahaWebhookController;
+use App\Livewire\Audit\Index as AuditIndex;
 use App\Livewire\Contacts\Index as ContactsIndex;
 use App\Livewire\Inbox\Inbox;
 use App\Livewire\Reports\Index as ReportsIndex;
@@ -32,6 +33,7 @@ Route::middleware(['auth', 'can:supervisor'])->group(function () {
 });
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
+    Route::get('auditoria', AuditIndex::class)->name('auditoria');
     Route::get('configuracoes/canais', Channels::class)->name('configuracoes.canais');
     Route::get('configuracoes/horario', BusinessHoursPage::class)->name('configuracoes.horario');
     Route::get('configuracoes/empresa', Company::class)->name('configuracoes.empresa');
