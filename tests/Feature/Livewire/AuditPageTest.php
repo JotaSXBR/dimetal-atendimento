@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire;
 use App\Enums\UserRole;
 use App\Livewire\Audit\Index;
 use App\Models\Channel;
+use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
@@ -60,31 +61,36 @@ class AuditPageTest extends TestCase
     {
         $ana = User::factory()->create(['name' => 'Ana Atendente']);
         $bia = User::factory()->create(['name' => 'Bia Atendente']);
-        $this->event('claimed', $ana, ['marca' => 'assumiu-ana'], now());
+        $alfa = Sector::factory()->create(['name' => 'Setor Alfa']);
+        $velho = Sector::factory()->create(['name' => 'Setor Velho']);
+        $this->event('transferred', $ana, ['to_sector' => $alfa->id], now());
         $this->event('closed', $bia, ['reason' => 'manual', 'summary' => 'Resumo da Bia'], now());
-        $this->event('transferred', $ana, ['marca' => 'transferiu-velho'], now()->subDays(10));
+        $this->event('transferred', $ana, ['to_sector' => $velho->id], now()->subDays(10));
 
-        $this->page()->set('type', 'closed')->assertSee('Resumo da Bia')->assertDontSee('assumiu-ana');
-        $this->page()->set('userId', $ana->id)->assertDontSee('Resumo da Bia')->assertSee('assumiu-ana')->assertDontSee('transferiu-velho');
-        $this->page()->set('period', '30')->assertSee('transferiu-velho');
+        $this->page()->set('type', 'closed')->assertSee('Resumo da Bia')->assertDontSee('Setor Alfa');
+        $this->page()->set('userId', $ana->id)->assertDontSee('Resumo da Bia')->assertSee('Setor Alfa')->assertDontSee('Setor Velho');
+        $this->page()->set('period', '30')->assertSee('Setor Velho');
     }
 
     public function test_horario_em_sao_paulo_e_hoje_comeca_a_meia_noite_de_la(): void
     {
         $this->travelTo(CarbonImmutable::parse('2026-10-31 01:00:00'));
-        $this->event('claimed', null, ['marca' => 'de-hoje'], CarbonImmutable::parse('2026-10-30 12:00:00'));
-        $this->event('claimed', null, ['marca' => 'de-ontem'], CarbonImmutable::parse('2026-10-30 02:00:00'));
+        $hoje = Sector::factory()->create(['name' => 'Setor de Hoje']);
+        $ontem = Sector::factory()->create(['name' => 'Setor de Ontem']);
+        $this->event('transferred', null, ['to_sector' => $hoje->id], CarbonImmutable::parse('2026-10-30 12:00:00'));
+        $this->event('transferred', null, ['to_sector' => $ontem->id], CarbonImmutable::parse('2026-10-30 02:00:00'));
 
-        $this->page()->set('period', 'hoje')->assertSee('de-hoje')->assertDontSee('de-ontem')->assertSee('30/10 09:00');
+        $this->page()->set('period', 'hoje')->assertSee('Setor de Hoje')->assertDontSee('Setor de Ontem')->assertSee('30/10 09:00');
     }
 
     public function test_pagina_de_25_em_25(): void
     {
         $ticket = Ticket::factory()->for($this->channel ??= Channel::factory()->create())->create();
         foreach (range(1, 30) as $n) {
-            $this->event('claimed', null, ['n' => $n], now()->subMinutes($n), $ticket);
+            $this->event('tipo-novo', null, ['n' => $n], now()->subMinutes($n), $ticket);
         }
 
+        // Tipo que a tela não conhece: a auditoria mostra o conteúdo como veio.
         $this->page()->assertSee('{"n":1}')->assertDontSee('{"n":30}');
     }
 
@@ -92,6 +98,6 @@ class AuditPageTest extends TestCase
     {
         $this->event('closed', null, ['reason' => 'inatividade']);
 
-        $this->page()->assertSee('Sistema')->assertSee('inatividade');
+        $this->page()->assertSee('Sistema')->assertSee('por inatividade');
     }
 }

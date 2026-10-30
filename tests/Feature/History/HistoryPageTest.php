@@ -125,7 +125,7 @@ class HistoryPageTest extends TestCase
 
         $this->page($closer)->call('select', $ticket->id)
             ->assertSee('Pode fechar o pedido')
-            ->assertSee('Assumido')
+            ->assertSee('assumiu')
             ->assertSee('Cotacao aprovada pelo socio')
             ->assertSee('Marina Alves')
             ->assertSee((string) $ticket->protocol)
