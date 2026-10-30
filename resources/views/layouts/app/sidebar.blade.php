@@ -13,7 +13,7 @@
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
                     <flux:sidebar.item icon="inbox" :href="route('inbox')" :current="request()->routeIs('inbox') && request('tab') !== 'meus'" wire:navigate>
-                        Fila do setor
+                        Atendimento
                     </flux:sidebar.item>
 
                     <flux:sidebar.item icon="user" :href="route('inbox', ['tab' => 'meus'])" :current="request()->routeIs('inbox') && request('tab') === 'meus'" wire:navigate>
@@ -23,6 +23,18 @@
                         Contatos
                     </flux:sidebar.item>
 
+
+                    @can('supervisor')
+                        <flux:sidebar.item icon="chart-bar" :href="route('relatorios')" :current="request()->routeIs('relatorios')" wire:navigate>
+                            Relatórios
+                        </flux:sidebar.item>
+                    @endcan
+
+                    @can('admin')
+                        <flux:sidebar.item icon="shield-check" :href="route('auditoria')" :current="request()->routeIs('auditoria')" wire:navigate>
+                            Auditoria
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
 
                 @can('supervisor')
@@ -37,11 +49,23 @@
                             </flux:sidebar.item>
                         @endcan
 
+                        <flux:sidebar.item icon="bolt" :href="route('configuracoes.respostas')" :current="request()->routeIs('configuracoes.respostas')" wire:navigate>
+                            Respostas rápidas
+                        </flux:sidebar.item>
+
                         <flux:sidebar.item icon="users" :href="route('configuracoes.usuarios')" :current="request()->routeIs('configuracoes.usuarios')" wire:navigate>
                             Usuários
                         </flux:sidebar.item>
 
                         @can('admin')
+                            <flux:sidebar.item icon="building-office" :href="route('configuracoes.empresa')" :current="request()->routeIs('configuracoes.empresa')" wire:navigate>
+                                Empresa
+                            </flux:sidebar.item>
+
+                            <flux:sidebar.item icon="archive-box" :href="route('configuracoes.retencao')" :current="request()->routeIs('configuracoes.retencao')" wire:navigate>
+                                Retenção
+                            </flux:sidebar.item>
+
                             <flux:sidebar.item icon="link" :href="route('configuracoes.google')" :current="request()->routeIs('configuracoes.google*')" wire:navigate>
                                 Google Contatos
                             </flux:sidebar.item>

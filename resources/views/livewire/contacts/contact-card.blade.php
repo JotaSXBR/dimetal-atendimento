@@ -37,6 +37,23 @@
 
     <flux:button type="submit" size="sm" variant="primary" class="w-full">Salvar contato</flux:button>
 
+    <div class="border-t border-line pt-3">
+        <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Atendimentos</h3>
+        <ul class="mt-2 space-y-2">
+            @forelse ($history as $past)
+                <li class="text-xs" wire:key="history-{{ $past->id }}">
+                    <p class="font-mono text-ink">{{ $past->protocol }} <span class="font-sans text-ink-3">· {{ $past->opened_at->timezone(config()->string('app.display_timezone'))->format('d/m/Y') }} · {{ $past->sector?->name ?? 'Fila geral' }}</span></p>
+                    <p class="text-ink-2">{{ $past->status->label() }}@if ($past->close_outcome) · {{ $past->close_outcome->label() }}@endif</p>
+                    @if ($past->close_summary)
+                        <p class="text-ink-3">{{ $past->close_summary }}</p>
+                    @endif
+                </li>
+            @empty
+                <li class="text-xs text-ink-3">Nenhum atendimento ainda.</li>
+            @endforelse
+        </ul>
+    </div>
+
     <div class="flex items-start justify-between gap-2 border-t border-line pt-3 text-xs {{ $google['error'] ? 'text-danger' : 'text-ink-3' }}" @if ($google['error']) role="alert" @endif>
         <span>{{ $google['text'] }}</span>
         @if ($google['error'])

@@ -103,7 +103,7 @@
                 @endif
 
                 @if ($canClose)
-                    <flux:button size="sm" wire:click="close" wire:confirm="Encerrar este ticket? A próxima mensagem do cliente abre um ticket novo.">Encerrar</flux:button>
+                    <flux:button size="sm" wire:click="openPanel('close')">Encerrar</flux:button>
                 @endif
             </header>
 
@@ -127,6 +127,31 @@
                     </div>
                     <flux:button type="submit" variant="primary" size="sm">Transferir</flux:button>
                     <flux:button type="button" size="sm" variant="subtle" wire:click="closePanel">Cancelar</flux:button>
+                </form>
+            @elseif ($panel === 'close')
+                <form wire:submit="close" class="space-y-3 border-b border-line bg-surface px-4 py-3">
+                    <p class="text-xs text-ink-3">Encerrar {{ $ticket->protocol }}. A próxima mensagem do cliente abre um ticket novo.</p>
+                    <div class="w-56">
+                        <flux:select wire:model="closeOutcome" label="Motivo do encerramento" placeholder="Escolha o motivo">
+                            @foreach (\App\Enums\CloseOutcome::cases() as $outcome)
+                                <flux:select.option :value="$outcome->value">{{ $outcome->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        @error('closeOutcome')
+                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <flux:textarea wire:model="closeSummary" rows="3" label="Resumo do atendimento" placeholder="O que foi pedido e o que ficou combinado" maxlength="500" />
+                        <p class="mt-1 text-xs text-ink-3">Obrigatório. Aparece no histórico do contato e na auditoria.</p>
+                        @error('closeSummary')
+                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div class="flex gap-2">
+                        <flux:button type="submit" variant="primary" size="sm">Encerrar ticket</flux:button>
+                        <flux:button type="button" size="sm" variant="subtle" wire:click="closePanel">Cancelar</flux:button>
+                    </div>
                 </form>
             @elseif ($panel === 'reassign')
                 <form wire:submit="reassign" class="flex flex-wrap items-end gap-3 border-b border-line bg-surface px-4 py-3">
@@ -181,7 +206,7 @@
                                 @endif
 
                                 @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                                    <p class="break-words whitespace-pre-wrap">{{ $message->body }}</p>
+                                    <p class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}</p>
                                 @elseif ($message->body === '' && ! $message->hasMedia() && $message->type !== 'view_once')
                                     <p class="break-words whitespace-pre-wrap">[{{ $message->type }}]</p>
                                 @endif
@@ -287,9 +312,22 @@
                             >
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-on:click="$refs.picker.click()" />
                             <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-on:click="$dispatch('voice-start')" />
+                            <flux:button type="button" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
 
                             <div class="flex-1">
-                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />
+                                @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())
+                                    <ul class="mb-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface text-sm" role="listbox" aria-label="Respostas rápidas">
+                                        @foreach ($suggestions as $suggestion)
+                                            <li wire:key="qr-{{ $suggestion->id }}">
+                                                <button type="button" class="flex w-full gap-2 px-3 py-2 text-start hover:bg-surface-2" wire:click="useQuickReply({{ $suggestion->id }})">
+                                                    <code class="shrink-0 font-semibold">/{{ $suggestion->shortcut }}</code>
+                                                    <span class="truncate text-ink-2">{{ $suggestion->body }}</span>
+                                                </button>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:input.debounce.250ms="if ($event.target.value.startsWith('/')) { $wire.$set('draft', $event.target.value) }" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />
                                 @error('draft')
                                     <p class="mt-1 text-xs text-danger">{{ $message }}</p>
                                 @enderror

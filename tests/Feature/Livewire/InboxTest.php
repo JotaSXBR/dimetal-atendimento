@@ -32,7 +32,7 @@ class InboxTest extends TestCase
 
     private function user(UserRole $role = UserRole::ATENDENTE): User
     {
-        return User::factory()->create(['role' => $role]);
+        return User::factory()->create(['role' => $role, 'sign_messages' => false]);
     }
 
     private function ticket(TicketStatus $status = TicketStatus::AGUARDANDO, ?User $owner = null, string $name = 'Maria Souza'): Ticket
@@ -189,6 +189,9 @@ class InboxTest extends TestCase
 
         Livewire::actingAs($me)->test(Inbox::class)
             ->call('select', $ticket->id)
+            ->call('openPanel', 'close')
+            ->set('closeOutcome', 'resolvido')
+            ->set('closeSummary', 'Cotacao enviada')
             ->call('close')
             ->assertSee('Somente leitura')
             ->assertDontSee('Escreva uma resposta');

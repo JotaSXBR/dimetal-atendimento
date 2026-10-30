@@ -36,7 +36,7 @@ class ContactSyncStatus
             ! $this->account->isConnected() => 'Google não conectado',
             $contact->edited_at === null => 'Será enviado ao Google depois da primeira edição',
             ! $this->mapper->isEligible($contact) => 'Sem telefone nem e-mail para enviar ao Google',
-            $this->isInSync($contact) => 'Sincronizado em '.$contact->google_synced_at?->timezone(config()->string('app.timezone'))->format('d/m/Y H:i'),
+            $this->isInSync($contact) => 'Sincronizado em '.$contact->google_synced_at?->timezone(config()->string('app.display_timezone'))->format('d/m/Y H:i'),
             default => 'Pendente',
         };
 

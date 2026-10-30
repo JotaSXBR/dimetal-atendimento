@@ -45,7 +45,7 @@ class InboxAttachmentsTest extends TestCase
         Storage::fake('local');
         RateLimiter::clear('send-message:1');
 
-        $this->me = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $this->me = User::factory()->create(['role' => UserRole::ATENDENTE, 'sign_messages' => false]);
         $this->ticket = Ticket::factory()->create([
             'channel_id' => Channel::factory()->connected()->create()->id,
             'contact_id' => Contact::factory()->create()->id,

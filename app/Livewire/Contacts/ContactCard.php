@@ -6,6 +6,7 @@ use App\Actions\Contacts\SaveContact;
 use App\Jobs\SyncContactToGoogleJob;
 use App\Livewire\Forms\ContactForm;
 use App\Models\Contact;
+use App\Models\Ticket;
 use App\Services\Google\ContactSyncStatus;
 use App\Services\Google\GoogleAccount;
 use Illuminate\Contracts\View\View;
@@ -15,6 +16,8 @@ use Livewire\Component;
 /** Ficha editável do contato: vive no painel do inbox e na tela Contatos. */
 class ContactCard extends Component
 {
+    private const HISTORY_LIMIT = 10;
+
     #[Locked]
     public int $contactId;
 
@@ -70,6 +73,10 @@ class ContactCard extends Component
     {
         $contact = $this->contact();
 
-        return view('livewire.contacts.contact-card', ['contact' => $contact, 'google' => $syncStatus->describe($contact)]);
+        return view('livewire.contacts.contact-card', [
+            'contact' => $contact,
+            'google' => $syncStatus->describe($contact),
+            'history' => Ticket::query()->with('sector')->where('contact_id', $contact->id)->latest('opened_at')->limit(self::HISTORY_LIMIT)->get(),
+        ]);
     }
 }

@@ -26,6 +26,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property UserRole $role
  * @property bool $active
  * @property bool $can_transfer
+ * @property bool $sign_messages
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -53,6 +54,7 @@ class User extends Authenticatable implements PasskeyUser
             'role' => UserRole::class,
             'active' => 'boolean',
             'can_transfer' => 'boolean',
+            'sign_messages' => 'boolean',
         ];
     }
 

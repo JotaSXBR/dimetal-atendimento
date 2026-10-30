@@ -31,6 +31,14 @@ class TicketEvent extends Model
     }
 
     /**
+     * @return BelongsTo<User, $this>
+     */
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'actor_user_id');
+    }
+
+    /**
      * @return BelongsTo<Ticket, $this>
      */
     public function ticket(): BelongsTo

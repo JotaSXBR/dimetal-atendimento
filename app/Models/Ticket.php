@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ClosedReason;
+use App\Enums\CloseOutcome;
 use App\Enums\TicketStatus;
 use App\Services\Inbox\TicketProtocol;
 use Carbon\CarbonImmutable;
@@ -30,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  * @property CarbonImmutable|null $last_outbound_at
  * @property CarbonImmutable|null $closed_at
  * @property ClosedReason|null $closed_reason
+ * @property CloseOutcome|null $close_outcome
+ * @property string|null $close_summary
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -46,6 +49,8 @@ use Illuminate\Support\Facades\DB;
     'last_outbound_at',
     'closed_at',
     'closed_reason',
+    'close_outcome',
+    'close_summary',
 ])]
 class Ticket extends Model
 {
@@ -72,6 +77,7 @@ class Ticket extends Model
             'last_outbound_at' => 'datetime',
             'closed_at' => 'datetime',
             'closed_reason' => ClosedReason::class,
+            'close_outcome' => CloseOutcome::class,
         ];
     }
 
