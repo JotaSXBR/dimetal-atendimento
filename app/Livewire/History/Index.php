@@ -6,6 +6,7 @@ use App\Enums\CloseOutcome;
 use App\Enums\TicketStatus;
 use App\Models\Sector;
 use App\Models\Ticket;
+use App\Models\TicketEvent;
 use App\Models\User;
 use App\Services\Inbox\HistorySearch;
 use Carbon\CarbonImmutable;
@@ -91,12 +92,14 @@ class Index extends Component
         $messages = collect();
         $hasMore = false;
         $events = collect();
+        $closer = null;
 
         if ($ticket !== null) {
             $latest = $ticket->messages()->latest('id')->limit(self::MESSAGE_LIMIT + 1)->get();
             $hasMore = $latest->count() > self::MESSAGE_LIMIT;
             $messages = $latest->take(self::MESSAGE_LIMIT)->reverse()->values();
             $events = $ticket->events()->with('actor')->orderBy('created_at')->orderBy('id')->get();
+            $closer = $events->last(fn (TicketEvent $event) => $event->type === 'closed')?->actor?->name;
         }
 
         return view('livewire.history.index', [
@@ -106,7 +109,7 @@ class Index extends Component
             'hasMore' => $hasMore,
             'limit' => self::MESSAGE_LIMIT,
             'events' => $events,
-            'closer' => $events->where('type', 'closed')->last()?->actor?->name,
+            'closer' => $closer,
             'sectors' => Sector::query()->orderBy('name')->get(['id', 'name']),
             'agents' => $user->canSeeAllSectors() ? User::query()->orderBy('name')->get(['id', 'name']) : null,
             'outcomes' => CloseOutcome::cases(),

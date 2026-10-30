@@ -7,6 +7,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 /**
  * A consulta do histórico: tickets encerrados que o usuário pode ver, filtrados. O texto das mensagens só entra na busca
@@ -35,7 +36,7 @@ final class HistorySearch
                     ->orWhereRaw('tickets.protocol ilike ?', [$like]);
 
                 if (mb_strlen($q) >= self::MIN_TEXT) {
-                    $match->orWhereExists(fn ($message) => $message->selectRaw('1')->from('messages')
+                    $match->orWhereExists(fn (QueryBuilder $message) => $message->selectRaw('1')->from('messages')
                         ->whereColumn('messages.ticket_id', 'tickets.id')
                         ->whereRaw('messages.body ilike ?', [$like]));
                 }

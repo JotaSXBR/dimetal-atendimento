@@ -13,6 +13,7 @@ use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -47,7 +48,7 @@ class InboxClosedTabTest extends TestCase
         ], $override));
     }
 
-    private function inbox(?User $user = null): \Livewire\Features\SupportTesting\Testable
+    private function inbox(?User $user = null): Testable
     {
         return Livewire::actingAs($user ?? $this->agent)->test(Inbox::class);
     }

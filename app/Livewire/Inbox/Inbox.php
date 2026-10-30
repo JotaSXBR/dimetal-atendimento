@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Services\Inbox\ResendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -260,15 +261,25 @@ class Inbox extends Component
             ->get();
     }
 
+    /**
+     * Os encerrados recentes que o usuário pode ver, para a aba "Encerrados"; vazio nas outras abas.
+     *
+     * @return EloquentCollection<int, Ticket>
+     */
+    private function recentlyClosed(User $user): EloquentCollection
+    {
+        if ($this->tab !== 'encerrados') {
+            return new EloquentCollection;
+        }
+
+        return Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
+            ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get();
+    }
+
     public function render(): View
     {
         $user = $this->user();
         $ticket = $this->find();
-
-        $closed = $this->tab === 'encerrados'
-            ? Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
-                ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get()
-            : new Collection;
 
         $list = Ticket::query()
             ->open()
@@ -284,7 +295,7 @@ class Inbox extends Component
         return view('livewire.inbox.inbox', [
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),
-            'closed' => $closed,
+            'closed' => $this->recentlyClosed($user),
             'ticket' => $ticket,
             'messages' => $ticket?->messages()->latest('id')->limit(200)->get()->reverse(),
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),
