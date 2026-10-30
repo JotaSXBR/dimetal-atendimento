@@ -4,16 +4,20 @@ namespace Tests\Feature\Sla;
 
 use App\Actions\Inbox\ReassignTicket;
 use App\Actions\Inbox\TransferTicket;
+use App\Enums\DeliveryStatus;
+use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\Channel;
 use App\Models\Contact;
+use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\WahaEvent;
 use App\Services\Inbox\IngestMessage;
+use App\Services\Inbox\SendFailure;
 use App\Services\Inbox\SendTicketMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -121,6 +125,22 @@ class WaitingSinceTest extends TestCase
         app(SendTicketMessage::class)->deliver($reply);
 
         $this->assertNotNull($ticket->fresh()?->waiting_since, 'só resposta humana para o relógio');
+    }
+
+    public function test_eco_da_resposta_do_bot_depois_de_minutos_nao_para_o_relogio(): void
+    {
+        $ticket = $this->ticket(['waiting_since' => now()->subMinutes(10)]);
+        $bot = Message::factory()->for($ticket)->create([
+            'channel_id' => $this->channel->id, 'contact_id' => $ticket->contact_id, 'direction' => MessageDirection::OUT,
+            'origin' => MessageOrigin::BOT, 'body' => 'Estamos fechados', 'wa_message_id' => null,
+            'delivery_status' => DeliveryStatus::FAILED, 'failure_code' => SendFailure::UNKNOWN,
+        ]);
+        Message::query()->whereKey($bot->id)->update(['updated_at' => now()->subMinutes(5)]);
+
+        $this->ingest(['id' => 'true_5516997524950@c.us_BOT9', 'from' => '5516999990001@c.us', 'to' => self::PEER, 'fromMe' => true, 'body' => 'Estamos fechados', 'timestamp' => now()->getTimestamp(), 'hasMedia' => false]);
+
+        $this->assertSame(1, Message::query()->where('ticket_id', $ticket->id)->count(), 'o eco casou com a linha do bot em vez de virar outra');
+        $this->assertNotNull($ticket->fresh()?->waiting_since, 'o eco do bot não é resposta humana');
     }
 
     public function test_resposta_atrasada_de_antes_da_espera_nao_para_o_relogio(): void
