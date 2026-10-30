@@ -42,3 +42,6 @@ yarn-error.log
 /opencode.jsonc
 
 /.superpowers
+/GEMINI.md
+/.gemini
+/.codegraph
