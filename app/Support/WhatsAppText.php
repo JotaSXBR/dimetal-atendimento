@@ -20,7 +20,9 @@ final class WhatsAppText
 
     public static function html(string $text): HtmlString
     {
-        $parts = preg_split('/(```.+?```)/s', e($text), -1, PREG_SPLIT_DELIM_CAPTURE) ?: [];
+        $escaped = e($text);
+        // Se o PCRE falhar (limite de backtracking), a mensagem aparece sem formatação em vez de sumir.
+        $parts = preg_split('/(```.+?```)/s', $escaped, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$escaped];
         $html = '';
 
         foreach ($parts as $part) {
@@ -36,7 +38,7 @@ final class WhatsAppText
     {
         foreach (self::INLINE as $mark => $tag) {
             $quoted = preg_quote($mark, '/');
-            $text = (string) preg_replace('/(?<![\w'.$quoted.'])'.$quoted.'(?!\s)([^'.$quoted."\n]+?)(?<!\s)".$quoted.'(?![\w'.$quoted.'])/u', "<{$tag}>$1</{$tag}>", $text);
+            $text = preg_replace('/(?<![\w'.$quoted.'])'.$quoted.'(?!\s)([^'.$quoted."\n]+?)(?<!\s)".$quoted.'(?![\w'.$quoted.'])/u', "<{$tag}>$1</{$tag}>", $text) ?? $text;
         }
 
         return $text;

@@ -38,7 +38,7 @@
             <tbody class="divide-y divide-line">
                 @forelse ($events as $event)
                     <tr wire:key="event-{{ $event->id }}">
-                        <td class="px-4 py-2 font-mono text-xs whitespace-nowrap text-ink-2">{{ $event->created_at->timezone(config()->string('app.timezone'))->format('d/m H:i') }}</td>
+                        <td class="px-4 py-2 font-mono text-xs whitespace-nowrap text-ink-2">{{ $event->created_at->timezone(config()->string('app.display_timezone'))->format('d/m H:i') }}</td>
                         <td class="px-4 py-2 text-ink">{{ $event->actor?->name ?? 'Sistema' }}</td>
                         <td class="px-4 py-2 text-ink">{{ \App\Livewire\Audit\Index::typeLabel($event->type) }}</td>
                         <td class="px-4 py-2 font-mono text-xs text-ink-2">{{ $event->ticket?->protocol ?? '—' }}</td>

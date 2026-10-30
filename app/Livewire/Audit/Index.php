@@ -86,13 +86,13 @@ class Index extends Component
 
     public function render(): View
     {
-        $now = CarbonImmutable::now(config()->string('app.timezone'));
+        $now = CarbonImmutable::now(config()->string('app.display_timezone'));
         $period = array_key_exists($this->period, self::PERIODS) ? $this->period : '7';
         $since = $period === 'hoje' ? $now->startOfDay() : $now->subDays((int) $period)->startOfDay();
 
         $events = TicketEvent::query()
             ->with(['ticket', 'actor'])
-            ->where('created_at', '>=', $since)
+            ->where('created_at', '>=', $since->setTimezone(config()->string('app.timezone')))
             ->when($this->userId !== null, fn ($query) => $query->where('actor_user_id', $this->userId))
             ->when($this->type !== '', fn ($query) => $query->where('type', $this->type))
             ->latest('created_at')->latest('id')

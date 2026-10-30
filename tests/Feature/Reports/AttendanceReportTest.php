@@ -108,6 +108,18 @@ class AttendanceReportTest extends TestCase
         $this->assertSame([], $report['by_agent']);
     }
 
+    public function test_hoje_comeca_a_meia_noite_de_sao_paulo_e_nao_de_utc(): void
+    {
+        // 22h em Brasília de 30/10 já é 01h UTC de 31/10.
+        $this->travelTo(CarbonImmutable::parse('2026-10-31 01:00:00'));
+        $this->ticket($this->a, '12:00', null, TicketStatus::AGUARDANDO, null, ['opened_at' => CarbonImmutable::parse('2026-10-30 12:00:00')]);
+        $this->ticket($this->a, '12:00', null, TicketStatus::AGUARDANDO, null, ['opened_at' => CarbonImmutable::parse('2026-10-30 02:00:00')]);
+
+        $opened = Livewire::actingAs(User::factory()->create(['role' => UserRole::SUPERVISOR]))->test(Index::class)->set('period', 'hoje')->viewData('data')['opened'];
+
+        $this->assertSame(1, $opened, 'só o ticket aberto às 09h de Brasília é de hoje');
+    }
+
     public function test_so_supervisor_e_admin_abrem_a_pagina(): void
     {
         $this->actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))->get('/relatorios')->assertForbidden();

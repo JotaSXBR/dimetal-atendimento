@@ -26,11 +26,12 @@ class Index extends Component
     public function render(AttendanceReport $report): View
     {
         $period = array_key_exists($this->period, self::PERIODS) ? $this->period : '7';
-        $now = CarbonImmutable::now(config()->string('app.timezone'));
+        // "Hoje" é o dia de Brasília; o banco guarda em `app.timezone` e o construtor de consultas não converte o fuso.
+        $now = CarbonImmutable::now(config()->string('app.display_timezone'));
         $from = $period === 'hoje' ? $now->startOfDay() : $now->subDays((int) $period)->startOfDay();
 
         return view('livewire.reports.index', [
-            'data' => $report->for($from, $now, CompanySettings::slaMinutes()),
+            'data' => $report->for($from->setTimezone(config()->string('app.timezone')), $now->setTimezone(config()->string('app.timezone')), CompanySettings::slaMinutes()),
             'sla' => CompanySettings::slaMinutes(),
             'from' => $from,
         ]);

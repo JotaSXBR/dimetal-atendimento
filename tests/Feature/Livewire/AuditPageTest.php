@@ -69,6 +69,15 @@ class AuditPageTest extends TestCase
         $this->page()->set('period', '30')->assertSee('transferiu-velho');
     }
 
+    public function test_horario_em_sao_paulo_e_hoje_comeca_a_meia_noite_de_la(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-31 01:00:00'));
+        $this->event('claimed', null, ['marca' => 'de-hoje'], CarbonImmutable::parse('2026-10-30 12:00:00'));
+        $this->event('claimed', null, ['marca' => 'de-ontem'], CarbonImmutable::parse('2026-10-30 02:00:00'));
+
+        $this->page()->set('period', 'hoje')->assertSee('de-hoje')->assertDontSee('de-ontem')->assertSee('30/10 09:00');
+    }
+
     public function test_pagina_de_25_em_25(): void
     {
         $ticket = Ticket::factory()->for($this->channel ??= Channel::factory()->create())->create();

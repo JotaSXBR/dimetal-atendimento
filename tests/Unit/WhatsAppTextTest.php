@@ -28,6 +28,22 @@ class WhatsAppTextTest extends TestCase
         ];
     }
 
+    public function test_texto_longo_com_marcas_sem_par_nao_some(): void
+    {
+        $long = str_repeat('*a ', 1400);
+
+        $this->assertStringContainsString('*a *a', html_entity_decode(strip_tags((string) WhatsAppText::html($long))));
+        $this->assertNotSame('', (string) WhatsAppText::html($long));
+    }
+
+    public function test_byte_invalido_nao_apaga_a_mensagem(): void
+    {
+        $html = (string) WhatsAppText::html('ol'.chr(255).' *oi*');
+
+        $this->assertStringContainsString('<strong>oi</strong>', $html);
+        $this->assertStringContainsString('ol', $html);
+    }
+
     #[DataProvider('casos')]
     public function test_formata_e_escapa(string $in, string $out): void
     {
