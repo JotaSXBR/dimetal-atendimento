@@ -25,6 +25,9 @@ trait ComposesMessages
 {
     use WithFileUploads;
 
+    /** Tamanho máximo de uma mensagem de texto do WhatsApp na tela. */
+    private const MESSAGE_LIMIT = 4096;
+
     /** Legenda de mídia no WhatsApp: acima disto o texto sai como mensagem separada. */
     private const CAPTION_LIMIT = 1024;
 
@@ -135,6 +138,15 @@ trait ComposesMessages
         $captioned = $this->captionsFirstFile();
         $separateText = $this->draft !== '' && ! $captioned;
 
+        $text = $separateText ? Signature::apply($this->draft, $this->user(), $ticket->sector) : '';
+
+        // O limite vale para o texto que sai, já com a assinatura.
+        if (mb_strlen($text) > self::MESSAGE_LIMIT) {
+            $this->addError('draft', 'Com a assinatura, a mensagem passa de '.self::MESSAGE_LIMIT.' caracteres.');
+
+            return;
+        }
+
         // Freio contra conta comprometida ou laço no navegador: cada mensagem enviada conta, arquivo inclusive.
         if (! $this->reserveSends(count($this->attachments) + ($separateText ? 1 : 0))) {
             $this->addError('draft', 'Você está enviando mensagens rápido demais. Aguarde alguns segundos.');
@@ -143,7 +155,6 @@ trait ComposesMessages
         }
 
         if ($separateText) {
-            $text = Signature::apply($this->draft, $this->user(), $ticket->sector);
             SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $text)->id);
         }
 
@@ -244,8 +255,8 @@ trait ComposesMessages
     {
         // Sem arquivo o texto é obrigatório; com arquivo ele é só a legenda.
         $this->validate(
-            ['draft' => [$this->attachments === [] ? 'required' : 'nullable', 'string', 'max:4096']],
-            ['draft.required' => 'Escreva uma mensagem.', 'draft.max' => 'A mensagem passa de 4096 caracteres.'],
+            ['draft' => [$this->attachments === [] ? 'required' : 'nullable', 'string', 'max:'.self::MESSAGE_LIMIT]],
+            ['draft.required' => 'Escreva uma mensagem.', 'draft.max' => 'A mensagem passa de '.self::MESSAGE_LIMIT.' caracteres.'],
         );
     }
 

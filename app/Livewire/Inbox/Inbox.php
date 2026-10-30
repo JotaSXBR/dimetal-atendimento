@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Services\Inbox\ResendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -39,6 +40,13 @@ class Inbox extends Component
         ."when media_mime = 'image/webp' then 'Figurinha' when media_mime like 'image/%' then 'Foto' "
         ."when media_mime like 'audio/%' then 'Áudio' when media_mime like 'video/%' then 'Vídeo' "
         ."when type = 'media' then 'Arquivo' else '['||type||']' end";
+
+    /** A aba "Encerrados" mostra só o recente; a busca completa fica no Histórico. */
+    private const CLOSED_TAB_DAYS = 7;
+
+    private const CLOSED_TAB_LIMIT = 50;
+
+    private const ALREADY_CLOSED = 'Este ticket já foi encerrado por outra pessoa.';
 
     public ?int $ticketId = null;
 
@@ -149,8 +157,18 @@ class Inbox extends Component
     public function close(): void
     {
         $ticket = $this->selected();
+
+        // Outra pessoa encerrou enquanto o painel estava aberto: aviso, não erro 403.
+        if ($ticket->status === TicketStatus::ENCERRADO) {
+            $this->notice = self::ALREADY_CLOSED;
+            $this->closePanel();
+
+            return;
+        }
+
         $this->authorize('close', $ticket);
 
+        $this->closeSummary = trim($this->closeSummary);
         $this->validate([
             'closeOutcome' => ['required', Rule::enum(CloseOutcome::class)],
             'closeSummary' => ['required', 'string', 'min:3', 'max:500'],
@@ -162,7 +180,9 @@ class Inbox extends Component
             'closeSummary.max' => 'O resumo passa de 500 caracteres.',
         ]);
 
-        (new CloseTicket)($ticket, $this->user(), ClosedReason::MANUAL, CloseOutcome::from($this->closeOutcome), trim($this->closeSummary));
+        $closed = (new CloseTicket)($ticket, $this->user(), ClosedReason::MANUAL, CloseOutcome::from($this->closeOutcome), $this->closeSummary);
+
+        $this->notice = $closed ? null : self::ALREADY_CLOSED;
         $this->closePanel();
     }
 
@@ -205,14 +225,14 @@ class Inbox extends Component
      */
     private function selected(): Ticket
     {
-        return Ticket::query()->visibleTo($this->user())->findOrFail($this->ticketId);
+        return Ticket::query()->readableBy($this->user())->findOrFail($this->ticketId);
     }
 
     private function find(): ?Ticket
     {
         return $this->ticketId === null
             ? null
-            : Ticket::query()->visibleTo($this->user())->with(['contact', 'channel', 'assignee', 'sector'])->find($this->ticketId);
+            : Ticket::query()->readableBy($this->user())->with(['contact', 'channel', 'assignee', 'sector'])->find($this->ticketId);
     }
 
     /**
@@ -241,6 +261,21 @@ class Inbox extends Component
             ->get();
     }
 
+    /**
+     * Os encerrados recentes que o usuário pode ver, para a aba "Encerrados"; vazio nas outras abas.
+     *
+     * @return EloquentCollection<int, Ticket>
+     */
+    private function recentlyClosed(User $user): EloquentCollection
+    {
+        if ($this->tab !== 'encerrados') {
+            return new EloquentCollection;
+        }
+
+        return Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
+            ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get();
+    }
+
     public function render(): View
     {
         $user = $this->user();
@@ -260,6 +295,7 @@ class Inbox extends Component
         return view('livewire.inbox.inbox', [
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),
+            'closed' => $this->recentlyClosed($user),
             'ticket' => $ticket,
             'messages' => $ticket?->messages()->latest('id')->limit(200)->get()->reverse(),
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),

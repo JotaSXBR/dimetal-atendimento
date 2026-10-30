@@ -7,7 +7,9 @@ use App\Livewire\Settings\Retention;
 use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
+use Illuminate\Foundation\Console\QueuedCommand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -62,15 +64,29 @@ class RetentionPageTest extends TestCase
 
     public function test_executar_o_expurgo_agora_apaga_so_o_vencido_e_mostra_o_resultado(): void
     {
+        // O CI define QUEUE_CONNECTION=redis e isso vence o `sync` do phpunit.xml: sem fixar, o job só entraria na fila.
+        config(['queue.default' => 'sync']);
+
         $new = $this->attachment('outbound/novo.jpg', 2_000_000, 5);
         $old = $this->attachment('outbound/velho.pdf', 3_000_000, 120);
 
-        Livewire::actingAs($this->admin())->test(Retention::class)->call('purgeNow')->assertSee('Anexos expirados: 1');
+        Livewire::actingAs($this->admin())->test(Retention::class)->call('purgeNow')->assertSee('Expurgo iniciado');
 
         $this->assertNull($old->fresh()?->local_path);
         Storage::disk('local')->assertMissing('outbound/velho.pdf');
         $this->assertSame('outbound/novo.jpg', $new->fresh()?->local_path);
         Storage::disk('local')->assertExists('outbound/novo.jpg');
+    }
+
+    public function test_o_expurgo_manual_vai_para_a_fila_e_nao_roda_no_request(): void
+    {
+        Queue::fake();
+        $old = $this->attachment('outbound/velho.pdf', 3_000_000, 120);
+
+        Livewire::actingAs($this->admin())->test(Retention::class)->call('purgeNow');
+
+        Queue::assertPushed(QueuedCommand::class);
+        $this->assertSame('outbound/velho.pdf', $old->fresh()?->local_path);
     }
 
     public function test_quem_nao_e_admin_nao_executa(): void

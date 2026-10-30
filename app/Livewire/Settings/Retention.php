@@ -19,13 +19,13 @@ class Retention extends Component
         $this->authorize('admin');
     }
 
-    /** Roda agora o mesmo expurgo da rotina das 03:30; o texto e os eventos ficam, só o arquivo vai. */
+    /** Enfileira o mesmo expurgo da rotina das 03:30 (com muitos arquivos, no request estouraria o tempo); o texto e os eventos ficam, só o arquivo vai. */
     public function purgeNow(): void
     {
         $this->authorize('admin');
 
-        Artisan::call('app:purge-media');
-        $this->result = trim(Artisan::output());
+        Artisan::queue('app:purge-media');
+        $this->result = 'Expurgo iniciado. Os números desta tela atualizam quando ele terminar; recarregue em instantes.';
     }
 
     public function render(): View
