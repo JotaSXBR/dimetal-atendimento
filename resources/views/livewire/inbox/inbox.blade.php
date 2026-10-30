@@ -181,7 +181,7 @@
                                 @endif
 
                                 @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                                    <p class="break-words whitespace-pre-wrap">{{ $message->body }}</p>
+                                    <p class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}</p>
                                 @elseif ($message->body === '' && ! $message->hasMedia() && $message->type !== 'view_once')
                                     <p class="break-words whitespace-pre-wrap">[{{ $message->type }}]</p>
                                 @endif
