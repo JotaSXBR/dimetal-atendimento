@@ -287,6 +287,7 @@
                             >
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-on:click="$refs.picker.click()" />
                             <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-on:click="$dispatch('voice-start')" />
+                            <flux:button type="button" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
 
                             <div class="flex-1">
                                 <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />

@@ -8,6 +8,7 @@ use App\Services\Inbox\AttachmentRules;
 use App\Services\Inbox\Presence;
 use App\Services\Inbox\SendTicketMedia;
 use App\Services\Inbox\SendTicketMessage;
+use App\Services\Inbox\Signature;
 use App\Services\Waha\WahaClient;
 use Illuminate\Support\Facades\RateLimiter;
 use InvalidArgumentException;
@@ -30,6 +31,9 @@ trait ComposesMessages
 
     public string $draft = '';
 
+    /** Assinar as mensagens (a escolha do atendente, guardada em `users.sign_messages`). */
+    public bool $sign = true;
+
     /** O arquivo que acabou de subir; `commitUpload` o move para a bandeja ou o descarta. */
     public ?TemporaryUploadedFile $upload = null;
 
@@ -38,6 +42,17 @@ trait ComposesMessages
 
     /** @var array<int, TemporaryUploadedFile> Bandeja: arquivos aceitos, na ordem de envio. */
     public array $attachments = [];
+
+    public function mountComposesMessages(): void
+    {
+        $this->sign = $this->user()->sign_messages;
+    }
+
+    public function toggleSign(): void
+    {
+        $this->sign = ! $this->sign;
+        $this->user()->forceFill(['sign_messages' => $this->sign])->save();
+    }
 
     /** Entra na bandeja o arquivo que acabou de subir (um por requisição); o servidor decide se ele fica. */
     public function commitUpload(int $ticketId): void
@@ -110,7 +125,8 @@ trait ComposesMessages
         }
 
         if ($separateText) {
-            SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $this->draft)->id);
+            $text = Signature::apply($this->draft, $this->user(), $ticket->sector);
+            SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $text)->id);
         }
 
         $failures = $this->sendAttachments($ticket, $captioned);

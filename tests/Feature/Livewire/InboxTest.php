@@ -32,7 +32,7 @@ class InboxTest extends TestCase
 
     private function user(UserRole $role = UserRole::ATENDENTE): User
     {
-        return User::factory()->create(['role' => $role]);
+        return User::factory()->create(['role' => $role, 'sign_messages' => false]);
     }
 
     private function ticket(TicketStatus $status = TicketStatus::AGUARDANDO, ?User $owner = null, string $name = 'Maria Souza'): Ticket

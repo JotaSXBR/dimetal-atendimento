@@ -2,8 +2,11 @@
 
 namespace App\Livewire\Settings;
 
+use App\Services\Inbox\Signature;
 use App\Settings\CompanySettings;
+use App\Support\WhatsAppText;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -59,6 +62,15 @@ class Company extends Component
             'slaMinutes' => $this->slaMinutes,
         ]);
         $this->saved = true;
+    }
+
+    /** Como a assinatura aparece numa mensagem de exemplo, com o nome de quem está editando. */
+    public function preview(): HtmlString
+    {
+        $signature = Signature::render($this->signatureTemplate, (string) auth()->user()?->name, 'Comercial', $this->name);
+        $sample = 'Bom dia! Tudo bem?';
+
+        return WhatsAppText::html($signature === '' ? $sample : Signature::place($sample, $signature, $this->signaturePosition));
     }
 
     public function render(): View

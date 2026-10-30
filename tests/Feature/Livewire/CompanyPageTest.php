@@ -57,6 +57,17 @@ class CompanyPageTest extends TestCase
         $this->page()->assertSet('name', 'Acme')->assertSet('signaturePosition', 'fim')->assertSet('slaMinutes', 20);
     }
 
+    public function test_a_previa_mostra_a_assinatura_formatada_com_o_nome_de_quem_edita(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN, 'name' => 'Jessé']);
+
+        Livewire::actingAs($admin)->test(Company::class)
+            ->set('name', 'Dimetal Distribuidora')
+            ->assertSeeHtml('<strong>Jessé @ Dimetal Distribuidora:</strong>')
+            ->set('signaturePosition', 'fim')
+            ->assertSeeHtml('Bom dia! Tudo bem?');
+    }
+
     public function test_so_admin_entra(): void
     {
         $this->actingAs(User::factory()->create(['role' => UserRole::SUPERVISOR]))->get('/configuracoes/empresa')->assertForbidden();
