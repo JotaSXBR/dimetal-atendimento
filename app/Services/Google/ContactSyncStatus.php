@@ -9,7 +9,8 @@ class ContactSyncStatus
 {
     private const ERRORS = [
         'unauthorized' => 'acesso recusado pelo Google; reconecte a conta',
-        'forbidden' => 'acesso recusado pelo Google; reconecte a conta',
+        'insufficient_scope' => 'faltam permissões na conta do Google; reconecte e aceite o acesso aos contatos',
+        'forbidden' => 'o Google recusou este contato',
         'invalid_grant' => 'a autorização do Google expirou; reconecte a conta',
         'token_refresh_failed' => 'não foi possível renovar o acesso ao Google; tentaremos de novo',
         'api_disabled' => 'a People API está desligada no projeto do Google',

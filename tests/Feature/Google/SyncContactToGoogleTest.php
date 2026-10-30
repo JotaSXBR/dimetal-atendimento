@@ -10,7 +10,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class SyncContactToGoogleTest extends TestCase
@@ -221,26 +220,87 @@ class SyncContactToGoogleTest extends TestCase
         $this->assertSame('people/c9', $contact->fresh()?->google_resource_name);
     }
 
-    /** @return array<string, array{int, string, bool}> */
-    public static function respostasDeAcesso(): array
-    {
-        return [
-            '401' => [401, 'unauthorized', true],
-            '403' => [403, 'forbidden', true],
-        ];
-    }
-
-    #[DataProvider('respostasDeAcesso')]
-    public function test_acesso_recusado_marca_a_conexao_para_reautenticar(int $status, string $reason, bool $reauth): void
+    public function test_401_renova_o_token_uma_vez_e_conclui_o_envio(): void
     {
         $this->connect();
-        $this->fakeGoogle(['create' => Http::response(['error' => ['code' => $status]], $status)]);
+        $unauthorized = Http::response(['error' => ['code' => 401]], 401);
+        $created = $this->person('people/c9', 'E9');
+        $calls = 0;
+        Http::fake(function (Request $request) use ($unauthorized, $created, &$calls) {
+            if (str_contains($request->url(), 'oauth2.googleapis.com')) {
+                return Http::response(['access_token' => 'novo', 'expires_in' => 3600], 200);
+            }
+
+            if (str_contains($request->url(), ':createContact')) {
+                return ++$calls === 1 ? $unauthorized : Http::response($created, 200);
+            }
+
+            return Http::response([], 200);
+        });
+        $contact = $this->contact();
+
+        $this->assertSame('created', $this->sync($contact));
+
+        $this->assertSame(GoogleConnectionStatus::CONNECTED, GoogleConnection::query()->firstOrFail()->status);
+        $this->assertSame('novo', GoogleConnection::query()->firstOrFail()->access_token);
+    }
+
+    public function test_401_que_persiste_depois_de_renovar_pede_nova_autorizacao(): void
+    {
+        $this->connect();
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'oauth2.googleapis.com')) {
+                return Http::response(['access_token' => 'novo', 'expires_in' => 3600], 200);
+            }
+
+            return str_contains($request->url(), ':createContact') ? Http::response(['error' => ['code' => 401]], 401) : Http::response([], 200);
+        });
         $contact = $this->contact();
 
         $this->assertSame('failed', $this->sync($contact));
 
-        $this->assertSame($reason, $contact->fresh()?->google_error);
+        $this->assertSame('unauthorized', $contact->fresh()?->google_error);
+        $this->assertSame(GoogleConnectionStatus::NEEDS_REAUTH, GoogleConnection::query()->firstOrFail()->status);
+    }
+
+    public function test_401_com_a_autorizacao_revogada_pede_nova_autorizacao(): void
+    {
+        $this->connect();
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'oauth2.googleapis.com')) {
+                return Http::response(['error' => 'invalid_grant'], 400);
+            }
+
+            return str_contains($request->url(), ':createContact') ? Http::response(['error' => ['code' => 401]], 401) : Http::response([], 200);
+        });
+
+        $this->assertSame('failed', $this->sync($this->contact()));
+
+        $this->assertSame(GoogleConnectionStatus::NEEDS_REAUTH, GoogleConnection::query()->firstOrFail()->status);
+    }
+
+    public function test_403_comum_de_um_contato_nao_desconecta_a_conta(): void
+    {
+        $this->connect();
+        $this->fakeGoogle(['create' => Http::response(['error' => ['code' => 403, 'status' => 'PERMISSION_DENIED']], 403)]);
+        $contact = $this->contact();
+
+        $this->assertSame('failed', $this->sync($contact));
+
+        $this->assertSame('forbidden', $contact->fresh()?->google_error);
         $this->assertNotNull($contact->fresh()?->google_attempted_at);
+        $this->assertSame(GoogleConnectionStatus::CONNECTED, GoogleConnection::query()->firstOrFail()->status);
+    }
+
+    public function test_403_por_escopo_insuficiente_pede_nova_autorizacao(): void
+    {
+        $this->connect();
+        $this->fakeGoogle(['create' => Http::response(['error' => ['code' => 403, 'status' => 'PERMISSION_DENIED', 'details' => [['reason' => 'ACCESS_TOKEN_SCOPE_INSUFFICIENT']]]], 403)]);
+        $contact = $this->contact();
+
+        $this->assertSame('failed', $this->sync($contact));
+
+        $this->assertSame('insufficient_scope', $contact->fresh()?->google_error);
         $this->assertSame(GoogleConnectionStatus::NEEDS_REAUTH, GoogleConnection::query()->firstOrFail()->status);
     }
 

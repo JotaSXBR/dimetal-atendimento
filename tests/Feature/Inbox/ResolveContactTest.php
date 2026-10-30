@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Inbox;
 
+use App\Enums\ClosedReason;
 use App\Enums\TicketStatus;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Ticket;
+use App\Models\TicketEvent;
+use App\Models\User;
 use App\Services\Inbox\ResolveContact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -149,21 +152,79 @@ class ResolveContactTest extends TestCase
         $this->assertNotNull($fresh?->edited_at);
     }
 
-    public function test_nao_funde_quando_os_dois_tem_ticket_aberto_no_mesmo_canal(): void
+    public function test_dois_tickets_abertos_no_mesmo_canal_viram_um_com_as_mensagens_juntas(): void
     {
         $channel = Channel::factory()->create();
         $lidOnly = Contact::factory()->create(['wa_id' => null, 'lid' => self::LID]);
         $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => null]);
-        $lidTicket = Ticket::factory()->for($lidOnly)->for($channel)->create(['status' => TicketStatus::EM_ATENDIMENTO]);
-        $phoneTicket = Ticket::factory()->for($phone)->for($channel)->create(['status' => TicketStatus::EM_ATENDIMENTO]);
+        $older = Ticket::factory()->for($phone)->for($channel)->create(['status' => TicketStatus::AGUARDANDO, 'opened_at' => now()->subHour()]);
+        $newer = Ticket::factory()->for($lidOnly)->for($channel)->create(['status' => TicketStatus::AGUARDANDO, 'opened_at' => now()->subMinutes(5)]);
+        $fromOlder = Message::factory()->for($older)->create(['contact_id' => $phone->id]);
+        $fromNewer = Message::factory()->for($newer)->create(['contact_id' => $lidOnly->id]);
 
         $resolved = $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
 
         $this->assertTrue($resolved->is($phone));
-        $this->assertNull($phone->fresh()?->lid);
-        $this->assertSame(self::LID, $lidOnly->fresh()?->lid);
-        $this->assertSame($lidOnly->id, $lidTicket->fresh()?->contact_id);
-        $this->assertSame($phone->id, $phoneTicket->fresh()?->contact_id);
+        $this->assertSame(self::LID, $phone->fresh()?->lid);
+        $this->assertNull(Contact::query()->find($lidOnly->id));
+        $this->assertSame($older->id, $fromOlder->fresh()?->ticket_id);
+        $this->assertSame($older->id, $fromNewer->fresh()?->ticket_id, 'a conversa do ticket mais novo foi para o que ficou');
+        $this->assertSame($phone->id, $fromNewer->fresh()?->contact_id);
+        $closed = $newer->fresh();
+        $this->assertSame(TicketStatus::ENCERRADO, $closed?->status);
+        $this->assertSame(ClosedReason::MESCLADO, $closed?->closed_reason);
+        $this->assertSame($phone->id, $closed?->contact_id);
+        $this->assertSame(1, Ticket::query()->open()->where('contact_id', $phone->id)->count());
+        $this->assertSame(1, TicketEvent::query()->where('ticket_id', $newer->id)->where('type', 'merged')->count());
+    }
+
+    public function test_na_fusao_de_tickets_fica_o_que_ja_tem_atendente(): void
+    {
+        $channel = Channel::factory()->create();
+        $agent = User::factory()->create();
+        $lidOnly = Contact::factory()->create(['wa_id' => null, 'lid' => self::LID]);
+        $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => null]);
+        $waiting = Ticket::factory()->for($phone)->for($channel)->create(['status' => TicketStatus::AGUARDANDO, 'opened_at' => now()->subHour()]);
+        $assigned = Ticket::factory()->for($lidOnly)->for($channel)->create([
+            'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $agent->id, 'opened_at' => now()->subMinutes(5),
+        ]);
+
+        $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
+
+        $this->assertSame(TicketStatus::EM_ATENDIMENTO, $assigned->fresh()?->status);
+        $this->assertSame($phone->id, $assigned->fresh()?->contact_id);
+        $this->assertSame(ClosedReason::MESCLADO, $waiting->fresh()?->closed_reason);
+    }
+
+    public function test_fusao_leva_o_espelho_do_google_do_registro_do_lid(): void
+    {
+        $lidOnly = Contact::factory()->edited()->create([
+            'wa_id' => null, 'lid' => self::LID, 'email' => 'a@b.com',
+            'google_resource_name' => 'people/c77', 'google_etag' => 'E7', 'google_payload_hash' => 'h', 'google_synced_at' => now(),
+        ]);
+        $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => null]);
+
+        $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
+
+        $fresh = $phone->fresh();
+        $this->assertSame('people/c77', $fresh?->google_resource_name);
+        $this->assertSame('E7', $fresh?->google_etag);
+        $this->assertNull(Contact::query()->find($lidOnly->id));
+    }
+
+    public function test_mensagem_por_lid_com_telefone_trava_as_duas_identidades(): void
+    {
+        $locks = [];
+        DB::listen(function ($query) use (&$locks): void {
+            if (str_contains($query->sql, 'pg_advisory_xact_lock')) {
+                $locks[] = $query->bindings[0];
+            }
+        });
+
+        $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
+
+        $this->assertEqualsCanonicalizing(['contact:'.self::LID, 'contact:5516997524950@c.us'], $locks);
+        $this->assertSame($locks, collect($locks)->sort()->values()->all(), 'ordem fixa evita impasse entre duas ingestões');
     }
 
     public function test_resolucao_e_serializada_por_remetente(): void

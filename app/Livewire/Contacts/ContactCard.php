@@ -7,6 +7,7 @@ use App\Jobs\SyncContactToGoogleJob;
 use App\Livewire\Forms\ContactForm;
 use App\Models\Contact;
 use App\Services\Google\ContactSyncStatus;
+use App\Services\Google\GoogleAccount;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -35,8 +36,12 @@ class ContactCard extends Component
     }
 
     /** Reenvia ao Google um contato que deu erro: zera o erro e a tentativa e enfileira de novo. */
-    public function resync(): void
+    public function resync(GoogleAccount $account): void
     {
+        if (! $account->isConnected()) {
+            return;
+        }
+
         $contact = $this->contact();
         $contact->forceFill(['google_error' => null, 'google_attempted_at' => null])->save();
 

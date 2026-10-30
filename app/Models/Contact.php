@@ -44,6 +44,19 @@ class Contact extends Model
     /** @use HasFactory<ContactFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        // `updated_at` tem resolução de 1 s. Uma edição no mesmo segundo do último envio ao Google ficaria igual a ele e a
+        // varredura não a veria; então a edição fica sempre ao menos 1 s à frente. O próprio envio grava os dois juntos.
+        static::updating(function (Contact $contact): void {
+            $synced = $contact->google_synced_at;
+
+            if ($synced !== null && ! $contact->isDirty(['google_synced_at', 'updated_at']) && ! now()->startOfSecond()->gt($synced)) {
+                $contact->updated_at = $synced->addSecond();
+            }
+        });
+    }
+
     /**
      * @return array<string, string>
      */

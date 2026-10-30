@@ -165,6 +165,19 @@ class GoogleSyncTriggersTest extends TestCase
         $this->artisan('app:sync-google-contacts')->expectsOutputToContain('1 contato')->assertSuccessful();
     }
 
+    public function test_edicao_no_mesmo_segundo_do_envio_continua_pendente(): void
+    {
+        Queue::fake();
+        $this->connect();
+        $this->travelTo(now()->startOfSecond());
+        $contact = $this->pending(['google_resource_name' => 'people/c1', 'google_synced_at' => now(), 'updated_at' => now()]);
+        $this->assertSame(0, Contact::query()->pendingGoogle()->count());
+
+        app(SaveContact::class)($contact->fresh() ?? $contact, ['name' => 'Editado no mesmo segundo']);
+
+        $this->assertSame(1, Contact::query()->pendingGoogle()->count());
+    }
+
     public function test_varredura_agendada_a_cada_10_minutos_sem_sobreposicao(): void
     {
         $event = collect(app(Schedule::class)->events())->first(fn ($e) => str_contains((string) $e->command, 'app:sync-google-contacts'));

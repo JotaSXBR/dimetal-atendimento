@@ -38,7 +38,7 @@ class SyncContactToGoogle
         }
 
         try {
-            [$result, $google] = $this->push(new PeopleClient($token), $contact, $person);
+            [$result, $google] = $this->pushRenewingOnce($token, $contact, $person);
         } catch (GooglePeopleException $e) {
             return $this->fail($contact, $e->reason);
         }
@@ -50,6 +50,28 @@ class SyncContactToGoogle
         ]);
 
         return $result;
+    }
+
+    /**
+     * 401 com um token que parecia válido (revogado, relógio, rotação): renova uma vez e tenta de novo antes de pedir ao
+     * administrador que reconecte a conta.
+     *
+     * @param  array<string, mixed>  $person
+     * @return array{string, GooglePerson}
+     */
+    private function pushRenewingOnce(string $token, Contact $contact, array $person): array
+    {
+        try {
+            return $this->push(new PeopleClient($token), $contact, $person);
+        } catch (GooglePeopleException $e) {
+            $renewed = $e->reason === 'unauthorized' ? $this->account->renew() : null;
+
+            if ($renewed === null) {
+                throw $e;
+            }
+
+            return $this->push(new PeopleClient($renewed), $contact, $person);
+        }
     }
 
     /**
@@ -139,8 +161,9 @@ class SyncContactToGoogle
     {
         $contact->forceFill(['google_error' => $reason])->save();
 
-        // Só uma nova autorização resolve acesso recusado; os demais erros a rotina reenvia depois.
-        if (in_array($reason, ['unauthorized', 'forbidden'], true)) {
+        // Só uma nova autorização resolve token recusado ou escopo faltando; um 403 comum é só deste contato, e os demais
+        // erros a rotina reenvia depois.
+        if (in_array($reason, ['unauthorized', 'insufficient_scope'], true)) {
             $this->account->markNeedsReauth($reason);
         }
 

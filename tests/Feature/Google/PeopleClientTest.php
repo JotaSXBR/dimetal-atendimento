@@ -145,6 +145,13 @@ class PeopleClientTest extends TestCase
         $this->failsWith('api_disabled', fn () => $this->client()->createContact([]));
     }
 
+    public function test_403_por_escopo_insuficiente_vira_insufficient_scope(): void
+    {
+        Http::fake(['*' => Http::response(['error' => ['code' => 403, 'status' => 'PERMISSION_DENIED', 'details' => [['reason' => 'ACCESS_TOKEN_SCOPE_INSUFFICIENT']]]], 403)]);
+
+        $this->failsWith('insufficient_scope', fn () => $this->client()->createContact([]));
+    }
+
     public function test_403_comum_vira_forbidden(): void
     {
         Http::fake(['*' => Http::response(['error' => ['code' => 403, 'status' => 'PERMISSION_DENIED']], 403)]);

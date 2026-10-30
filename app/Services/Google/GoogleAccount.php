@@ -64,7 +64,15 @@ class GoogleAccount
         return $this->refresh($connection);
     }
 
-    /** O acesso foi recusado pelo Google (401/403): só uma nova autorização resolve. */
+    /** Renova o token já, sem olhar a validade: usado quando o Google recusa (401) um token que parecia válido. */
+    public function renew(): ?string
+    {
+        $connection = $this->current();
+
+        return $connection?->status === GoogleConnectionStatus::CONNECTED ? $this->refresh($connection) : null;
+    }
+
+    /** O acesso foi recusado pelo Google: só uma nova autorização resolve. */
     public function markNeedsReauth(string $reason): void
     {
         $this->current()?->forceFill(['status' => GoogleConnectionStatus::NEEDS_REAUTH, 'last_error' => $reason])->save();

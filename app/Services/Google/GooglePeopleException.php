@@ -9,7 +9,7 @@ use RuntimeException;
  * Falha numa chamada ao People API. `reason` é um código curto e estável (vai para `contacts.google_error`);
  * a mensagem nunca carrega token nem dado do contato.
  *
- * Códigos: unauthorized, forbidden, api_disabled, not_found, conflict, rate_limited, unavailable, bad_request, invalid_response.
+ * Códigos: unauthorized, insufficient_scope, forbidden, api_disabled, not_found, conflict, rate_limited, unavailable, bad_request, invalid_response.
  */
 class GooglePeopleException extends RuntimeException
 {
@@ -26,7 +26,7 @@ class GooglePeopleException extends RuntimeException
 
         $reason = match (true) {
             $status === 401 => 'unauthorized',
-            $status === 403 => self::isServiceDisabled($error) ? 'api_disabled' : 'forbidden',
+            $status === 403 => self::forbiddenReason($error),
             $status === 404 => 'not_found',
             $status === 429 => 'rate_limited',
             $status === 400 && $google === 'FAILED_PRECONDITION' => 'conflict',
@@ -37,14 +37,21 @@ class GooglePeopleException extends RuntimeException
         return new self($reason, $status);
     }
 
-    private static function isServiceDisabled(mixed $error): bool
+    /** 403 tem causas bem diferentes: API desligada no projeto, escopo faltando (só reautorizar resolve) ou recusa só deste contato. */
+    private static function forbiddenReason(mixed $error): string
     {
-        foreach (is_array($error) && is_array($error['details'] ?? null) ? $error['details'] : [] as $detail) {
-            if (is_array($detail) && ($detail['reason'] ?? null) === 'SERVICE_DISABLED') {
-                return true;
+        $reasons = [];
+
+        foreach (['details', 'errors'] as $list) {
+            foreach (is_array($error) && is_array($error[$list] ?? null) ? $error[$list] : [] as $item) {
+                $reasons[] = is_array($item) ? ($item['reason'] ?? null) : null;
             }
         }
 
-        return false;
+        return match (true) {
+            in_array('SERVICE_DISABLED', $reasons, true) => 'api_disabled',
+            in_array('ACCESS_TOKEN_SCOPE_INSUFFICIENT', $reasons, true), in_array('insufficientPermissions', $reasons, true) => 'insufficient_scope',
+            default => 'forbidden',
+        };
     }
 }

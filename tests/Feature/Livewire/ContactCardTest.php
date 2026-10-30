@@ -169,6 +169,17 @@ class ContactCardTest extends TestCase
         Queue::assertPushedOn('google', SyncContactToGoogleJob::class, fn (SyncContactToGoogleJob $job): bool => $job->contactId === $this->contact->id);
     }
 
+    public function test_reenviar_sem_conexao_nao_mexe_no_contato(): void
+    {
+        Queue::fake();
+        $this->contact->update(['edited_at' => now(), 'google_error' => 'rate_limited']);
+
+        $this->card()->call('resync');
+
+        $this->assertSame('rate_limited', $this->contact->fresh()?->google_error);
+        Queue::assertNothingPushed();
+    }
+
     public function test_salvar_na_ficha_enfileira_o_envio_ao_google(): void
     {
         Queue::fake();
