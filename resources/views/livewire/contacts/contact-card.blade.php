@@ -1,3 +1,4 @@
+<div>
 @php($tz = config()->string('app.display_timezone'))
 @if ($compact && ! $editing)
     <div class="space-y-4 text-sm">
@@ -122,3 +123,4 @@
     </div>
 </form>
 @endif
+</div>
