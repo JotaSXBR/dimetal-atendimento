@@ -5,7 +5,7 @@
         \App\Enums\TicketStatus::EM_ATENDIMENTO => 'green',
         default => 'zinc',
     };
-    $tabs = ['todos' => 'Todos', 'aguardando' => 'Aguardando', 'meus' => 'Meus'];
+    $tabs = ['todos' => 'Todos', 'aguardando' => 'Aguardando', 'meus' => 'Meus', 'encerrados' => 'Encerrados'];
 @endphp
 
 <div class="grid h-dvh grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)_280px]">
@@ -30,6 +30,32 @@
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
+            @if ($tab === 'encerrados')
+                @foreach ($closed as $item)
+                    <button
+                        type="button"
+                        wire:click="select({{ $item->id }})"
+                        wire:key="closed-{{ $item->id }}"
+                        class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
+                    >
+                        <flux:avatar :name="$item->contact->label()" size="sm" />
+
+                        <span class="min-w-0 flex-1">
+                            <span class="flex items-baseline justify-between gap-2">
+                                <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
+                                <span class="font-mono text-[10px] text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m H:i') }}</span>
+                            </span>
+                            <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->protocol }} · {{ $item->close_outcome?->label() ?? $item->closed_reason?->label() }}</span>
+                        </span>
+                    </button>
+                @endforeach
+
+                @if ($closed->isEmpty())
+                    <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket encerrado nos últimos 7 dias.</p>
+                @endif
+
+                <p class="p-4 text-center text-xs"><a href="{{ url('/historico') }}" wire:navigate class="text-accent underline">Busca completa</a></p>
+            @else
             @foreach ([['Aguardando', $waiting, 'text-warn'], ['Em atendimento', $active, 'text-accent']] as [$heading, $group, $tone])
                 @if ($group->isNotEmpty())
                     <p class="px-4 pt-4 pb-1 font-mono text-[10px] font-semibold tracking-wider uppercase {{ $tone }}">
@@ -62,6 +88,7 @@
             @if ($waiting->isEmpty() && $active->isEmpty())
                 <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket por aqui.</p>
             @endif
+            @endif
         </div>
     </section>
 
@@ -84,6 +111,11 @@
                     <p class="truncate font-mono text-[11px] text-ink-3">
                         {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}
                     </p>
+                    @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
+                        <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
+                            {{ $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label() }}@if ($ticket->close_summary) · {{ $ticket->close_summary }}@endif
+                        </p>
+                    @endif
                 </div>
 
                 @if ($canClaim)

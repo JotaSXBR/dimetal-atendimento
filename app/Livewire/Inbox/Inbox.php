@@ -40,6 +40,11 @@ class Inbox extends Component
         ."when media_mime like 'audio/%' then 'Áudio' when media_mime like 'video/%' then 'Vídeo' "
         ."when type = 'media' then 'Arquivo' else '['||type||']' end";
 
+    /** A aba "Encerrados" mostra só o recente; a busca completa fica no Histórico. */
+    private const CLOSED_TAB_DAYS = 7;
+
+    private const CLOSED_TAB_LIMIT = 50;
+
     private const ALREADY_CLOSED = 'Este ticket já foi encerrado por outra pessoa.';
 
     public ?int $ticketId = null;
@@ -219,14 +224,14 @@ class Inbox extends Component
      */
     private function selected(): Ticket
     {
-        return Ticket::query()->visibleTo($this->user())->findOrFail($this->ticketId);
+        return Ticket::query()->readableBy($this->user())->findOrFail($this->ticketId);
     }
 
     private function find(): ?Ticket
     {
         return $this->ticketId === null
             ? null
-            : Ticket::query()->visibleTo($this->user())->with(['contact', 'channel', 'assignee', 'sector'])->find($this->ticketId);
+            : Ticket::query()->readableBy($this->user())->with(['contact', 'channel', 'assignee', 'sector'])->find($this->ticketId);
     }
 
     /**
@@ -260,6 +265,11 @@ class Inbox extends Component
         $user = $this->user();
         $ticket = $this->find();
 
+        $closed = $this->tab === 'encerrados'
+            ? Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
+                ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get()
+            : new Collection;
+
         $list = Ticket::query()
             ->open()
             ->visibleTo($user)
@@ -274,6 +284,7 @@ class Inbox extends Component
         return view('livewire.inbox.inbox', [
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),
+            'closed' => $closed,
             'ticket' => $ticket,
             'messages' => $ticket?->messages()->latest('id')->limit(200)->get()->reverse(),
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),
