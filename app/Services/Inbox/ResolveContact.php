@@ -30,7 +30,8 @@ class ResolveContact
 
             $contact->wa_id ??= $waId;
 
-            if ($lid !== null && $contact->lid === null) {
+            // O lid também pode mudar para o mesmo telefone: o atual substitui o guardado (e funde o registro só de lid dele).
+            if ($lid !== null && $contact->lid !== $lid) {
                 $this->claimLid($contact, $lid);
             }
 
