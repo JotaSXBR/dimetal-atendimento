@@ -42,6 +42,10 @@
                         </flux:sidebar.item>
 
                         @can('admin')
+                            <flux:sidebar.item icon="link" :href="route('configuracoes.google')" :current="request()->routeIs('configuracoes.google*')" wire:navigate>
+                                Google Contatos
+                            </flux:sidebar.item>
+
                             <flux:sidebar.item icon="squares-2x2" :href="route('configuracoes.setores')" :current="request()->routeIs('configuracoes.setores')" wire:navigate>
                                 Setores
                             </flux:sidebar.item>
