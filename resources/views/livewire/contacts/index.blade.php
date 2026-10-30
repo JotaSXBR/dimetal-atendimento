@@ -1,12 +1,8 @@
 <section class="mx-auto grid w-full max-w-6xl gap-6 p-6 lg:grid-cols-[1fr_22rem]">
     <div>
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <flux:heading size="xl" level="1">Contatos</flux:heading>
-                <flux:subheading>Quem fala com a Dimetal. Edite o nome e os dados; contatos editados vão para o Google Contacts.</flux:subheading>
-            </div>
+        <x-page-header title="Contatos" subtitle="Quem fala com a Dimetal. Edite o nome e os dados; contatos editados vão para o Google Contacts.">
             <flux:button variant="primary" icon="plus" wire:click="$toggle('showNew')">Novo contato</flux:button>
-        </div>
+        </x-page-header>
 
         @if ($showNew)
             <form wire:submit="createContact" class="mt-4 grid gap-3 rounded-[14px] border border-line bg-surface p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">

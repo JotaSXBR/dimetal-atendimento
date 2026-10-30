@@ -1,11 +1,7 @@
 <section class="mx-auto w-full max-w-3xl p-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <flux:heading size="xl" level="1">Respostas rápidas</flux:heading>
-            <flux:subheading>Digite <code>/</code> na mensagem para inserir. O texto entra editável: leia o histórico antes de enviar valores ou prazos.</flux:subheading>
-        </div>
+    <x-page-header title="Respostas rápidas" subtitle="Digite / na mensagem para inserir. O texto entra editável: leia o histórico antes de enviar valores ou prazos.">
         <flux:button variant="primary" icon="plus" wire:click="newReply">Nova resposta</flux:button>
-    </div>
+    </x-page-header>
 
     @if ($showForm)
         <form wire:submit="save" class="mt-4 space-y-3 rounded-[14px] border border-line bg-surface p-4">

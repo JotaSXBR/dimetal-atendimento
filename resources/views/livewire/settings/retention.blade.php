@@ -1,8 +1,5 @@
 <section class="mx-auto w-full max-w-3xl space-y-6 p-6">
-    <div>
-        <flux:heading size="xl" level="1">Retenção</flux:heading>
-        <flux:subheading>O texto das mensagens, o protocolo e a linha do tempo ficam para sempre. Só os arquivos têm prazo.</flux:subheading>
-    </div>
+    <x-page-header title="Retenção" subtitle="O texto das mensagens, o protocolo e a linha do tempo ficam para sempre. Só os arquivos têm prazo." />
 
     <dl class="divide-y divide-line rounded-[14px] border border-line bg-surface text-sm">
         <div class="flex justify-between gap-4 px-4 py-3">

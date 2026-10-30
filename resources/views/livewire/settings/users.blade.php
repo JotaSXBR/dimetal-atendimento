@@ -1,11 +1,7 @@
-<section class="mx-auto w-full max-w-4xl p-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="xl" level="1">Usuários</flux:heading>
-            <flux:subheading>Quem atende, em quais setores, e quem pode transferir tickets.</flux:subheading>
-        </div>
+<section class="mx-auto w-full max-w-6xl p-6">
+    <x-page-header title="Usuários" subtitle="Quem atende, em quais setores, e quem pode transferir tickets.">
         <flux:button variant="primary" size="sm" icon="plus" wire:click="newUser">Novo usuário</flux:button>
-    </div>
+    </x-page-header>
 
     @if ($showForm)
         <form wire:submit="save" class="mt-6 grid gap-4 rounded-[14px] border border-line bg-surface p-5 md:grid-cols-2">

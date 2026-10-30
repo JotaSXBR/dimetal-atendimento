@@ -1,15 +1,11 @@
-<section class="mx-auto w-full max-w-5xl space-y-6 p-6">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-        <div>
-            <flux:heading size="xl" level="1">Relatórios</flux:heading>
-            <flux:subheading>Atendimento e SLA de primeira resposta ({{ $sla }} min), a partir de {{ $from->format('d/m/Y') }}.</flux:subheading>
-        </div>
+<section class="mx-auto w-full max-w-6xl space-y-6 p-6">
+    <x-page-header title="Relatórios" :subtitle="'Atendimento e SLA de primeira resposta ('.$sla.' min), a partir de '.$from->format('d/m/Y').'.'">
         <flux:radio.group wire:model.live="period" variant="segmented" aria-label="Período">
             @foreach (\App\Livewire\Reports\Index::PERIODS as $value => $label)
                 <flux:radio :value="$value" :label="$label" />
             @endforeach
         </flux:radio.group>
-    </div>
+    </x-page-header>
 
     <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-[14px] border border-line bg-surface p-4">

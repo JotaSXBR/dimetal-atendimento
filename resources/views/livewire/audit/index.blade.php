@@ -1,8 +1,5 @@
 <section class="mx-auto w-full max-w-6xl space-y-4 p-6">
-    <div>
-        <flux:heading size="xl" level="1">Auditoria</flux:heading>
-        <flux:subheading>Trilha dos eventos de ticket: assumir, transferir, encerrar e mais. Nunca se edita nem se apaga.</flux:subheading>
-    </div>
+    <x-page-header title="Auditoria" subtitle="Trilha dos eventos de ticket: assumir, transferir, encerrar e mais. Nunca se edita nem se apaga." />
 
     <div class="grid gap-3 sm:grid-cols-3">
         <flux:select wire:model.live="period" label="Período">

@@ -1,8 +1,5 @@
 <section class="mx-auto w-full max-w-3xl p-6">
-    <flux:heading size="xl" level="1">Google Contatos</flux:heading>
-    <flux:subheading>
-        Os contatos que você edita no sistema são copiados para o Google Contatos da empresa (só de ida). Contato que nunca foi editado não é enviado.
-    </flux:subheading>
+    <x-page-header title="Google Contatos" subtitle="Os contatos que você edita no sistema são copiados para o Google Contatos da empresa (só de ida). Contato que nunca foi editado não é enviado." />
 
     @if (session('google_error'))
         <flux:callout class="mt-4" variant="danger" icon="exclamation-triangle" :text="session('google_error')" />
