@@ -137,18 +137,35 @@ Recursos do beta hoje:
 | `pg-beta` | `m3kcov2jn01utd97jjho2lox` |
 | `redis-beta` | `vp3u0qyz2tsmyveqrb6ml2zi` |
 
-### Fila de saída (dentro do `worker-beta`)
+### Filas (dentro do `worker-beta`)
 
-O estágio `worker` roda `docker/worker.sh`, que inicia **dois** processos de fila no mesmo container: `outbound`
-(`--tries=1 --timeout=120`, **um único processo**) e `default` (`--tries=3`). O envio humanizado (visto, digitando,
-pausa, envio) leva segundos, e um só consumidor em `outbound` garante que as mensagens de cada conversa saiam na ordem,
-sem prender a ingestão, os acks e o tempo real, que ficam em `default`. Se um dos processos morrer, o script encerra o
-outro e o container sai com erro, para o Coolify reiniciar os dois juntos. O `retry_after` da fila
-(`REDIS_QUEUE_RETRY_AFTER`, padrão 180) fica acima do timeout do job (120). **Não escale réplicas** do `worker-beta`:
-com mais de um processo em `outbound`, uma mensagem curta ultrapassa a longa que veio antes. Ao trocar o formato do
-`SendTicketMessageJob` (como na fatia de mídia), esvazie a fila `default` de envios antigos antes do deploy: um job
-serializado pelo código velho falha no worker novo. Se um dia um único processo de saída virar gargalo, separe em
-um recurso próprio (estágio com `queue:work --queue=outbound`) ou serialize por conversa.
+O estágio `worker` roda `docker/worker.sh`, que inicia **quatro** processos de fila no mesmo container, um por tipo de
+trabalho, para um lento não segurar os outros:
+
+| Fila | Processo | O que carrega |
+|---|---|---|
+| `outbound` | `--tries=1`, **um único** | envio ao cliente (`SendTicketMessageJob`, `DrainOutboxJob`, `GoOfflineJob`) |
+| `inbound` | `--tries=3` | ingestão do webhook do WAHA (`HandleWahaEvent`) e download de mídia (`ResolveMessageMediaJob`) |
+| `realtime`, `default` | `--tries=3` | avisos de tela (Reverb) e, por rede de segurança, o que cair em `default` |
+| `google` | `--tries=1`, **um único** | contatos para o Google (`SyncContactToGoogleJob`) |
+
+O envio humanizado (visto, digitando, pausa, envio) leva segundos, e um só consumidor em `outbound` garante que as
+mensagens de cada conversa saiam na ordem. O People API do Google pede escrita sequencial, por isso `google` também tem
+um processo só, e uma lentidão ou limite (429) dele atrasa apenas a sincronização de contatos. Se um dos processos
+morrer, o script encerra os outros e o container sai com erro, para o Coolify reiniciar todos juntos. O `retry_after` da
+fila (`REDIS_QUEUE_RETRY_AFTER`, padrão 180) fica acima do timeout do job (120). **Não escale réplicas** do `worker-beta`:
+com mais de um processo em `outbound` (ou `google`), a ordem se perde. Cada processo é um `php` residente, então o
+container pede uns 300 MB. Ao trocar o formato de um job (como o `SendTicketMessageJob` na fatia de mídia), esvazie a
+fila antiga antes do deploy: um job serializado pelo código velho falha no worker novo. Jobs que já estavam em `default`
+na hora do deploy continuam sendo processados (o processo `realtime` também lê `default`). Um teste
+(`QueueRoutingTest`) garante que toda fila usada pelo código tem consumidor no `worker.sh`.
+
+### Google Contatos (variáveis)
+
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `GOOGLE_REDIRECT_URI` (`{APP_URL}/configuracoes/google/callback`, igual ao
+cadastrado no console do Google) entram no `app-beta`. O `worker-beta` e o `scheduler-beta` precisam das mesmas três
+variáveis (o worker renova o token e fala com o People API). A conta se conecta em *Configurações → Google Contatos*
+(só admin). A varredura `app:sync-google-contacts` roda a cada 10 minutos no `scheduler`.
 
 ### Mídia no WAHA
 

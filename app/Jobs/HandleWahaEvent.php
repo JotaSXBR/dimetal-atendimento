@@ -26,7 +26,10 @@ class HandleWahaEvent implements ShouldQueue
 
     private const ACK_RETRY_SECONDS = 5;
 
-    public function __construct(public int $wahaEventId) {}
+    public function __construct(public int $wahaEventId)
+    {
+        $this->onQueue('inbound');
+    }
 
     public function handle(): void
     {

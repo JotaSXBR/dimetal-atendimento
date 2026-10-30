@@ -24,6 +24,12 @@ abstract class InboxEvent implements ShouldBroadcast, ShouldDispatchAfterCommit
 
     abstract protected function type(): string;
 
+    /** O aviso de tela é leve e não pode esperar atrás do download de uma mídia. */
+    public function broadcastQueue(): string
+    {
+        return 'realtime';
+    }
+
     /**
      * @return array<int, Channel>
      */

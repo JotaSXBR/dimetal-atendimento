@@ -39,10 +39,35 @@ final class PhoneFormat
         $digits = (string) preg_replace('/\D/', '', $input);
         $international = str_starts_with(trim($input), '+');
 
+        if (! $international) {
+            // Zero de tronco ("011 98765-4321") não faz parte do número.
+            $digits = ltrim($digits, '0');
+        }
+
         if (! $international && in_array(strlen($digits), [10, 11], true)) {
             $digits = '55'.$digits;
         }
 
         return strlen($digits) >= 8 && strlen($digits) <= 15 ? $digits.'@c.us' : null;
+    }
+
+    /**
+     * Ids de chat do mesmo celular brasileiro, com e sem o nono dígito: o WhatsApp ainda registra muitas linhas antigas
+     * sem o 9, e quem digita o número completo não deve criar um segundo contato.
+     *
+     * @return list<string>
+     */
+    public static function variants(string $waId): array
+    {
+        $digits = explode('@', $waId)[0];
+        $variants = [$waId];
+
+        if (preg_match('/^55(\d{2})9(\d{8})$/', $digits, $m) === 1) {
+            $variants[] = '55'.$m[1].$m[2].'@c.us';
+        } elseif (preg_match('/^55(\d{2})([6-9]\d{7})$/', $digits, $m) === 1) {
+            $variants[] = '55'.$m[1].'9'.$m[2].'@c.us';
+        }
+
+        return $variants;
     }
 }

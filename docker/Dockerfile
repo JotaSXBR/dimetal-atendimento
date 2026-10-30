@@ -79,7 +79,7 @@ FROM runtime AS worker
 
 STOPSIGNAL SIGTERM
 
-# Um processo para `outbound` e outro para `default`, no mesmo container (ver docker/worker.sh).
+# Um processo por fila (outbound, inbound, realtime+default e google), no mesmo container (ver docker/worker.sh).
 COPY --chmod=755 docker/worker.sh /usr/local/bin/worker.sh
 
 CMD ["/usr/local/bin/worker.sh"]

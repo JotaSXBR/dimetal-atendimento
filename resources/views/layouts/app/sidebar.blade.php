@@ -19,6 +19,9 @@
                     <flux:sidebar.item icon="user" :href="route('inbox', ['tab' => 'meus'])" :current="request()->routeIs('inbox') && request('tab') === 'meus'" wire:navigate>
                         Meus tickets
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="user-group" :href="route('contatos')" :current="request()->routeIs('contatos')" wire:navigate>
+                        Contatos
+                    </flux:sidebar.item>
 
                 </flux:sidebar.group>
 
@@ -39,6 +42,10 @@
                         </flux:sidebar.item>
 
                         @can('admin')
+                            <flux:sidebar.item icon="link" :href="route('configuracoes.google')" :current="request()->routeIs('configuracoes.google*')" wire:navigate>
+                                Google Contatos
+                            </flux:sidebar.item>
+
                             <flux:sidebar.item icon="squares-2x2" :href="route('configuracoes.setores')" :current="request()->routeIs('configuracoes.setores')" wire:navigate>
                                 Setores
                             </flux:sidebar.item>
