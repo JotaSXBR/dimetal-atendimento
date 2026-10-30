@@ -154,6 +154,43 @@ class SyncContactToGoogleTest extends TestCase
         $this->assertSame('people/c1', $contact->fresh()?->google_resource_name);
     }
 
+    public function test_busca_sem_etag_rele_o_contato_antes_de_atualizar(): void
+    {
+        $this->connect();
+        $semEtag = ['resourceName' => 'people/c5', 'phoneNumbers' => [['value' => self::PHONE, 'canonicalForm' => self::PHONE]]];
+        $this->fakeGoogle([
+            'search' => [self::PHONE => [$semEtag]],
+            'get' => Http::response($this->person('people/c5', 'E5'), 200),
+        ]);
+        $contact = $this->contact();
+
+        $this->assertSame('updated', $this->sync($contact));
+
+        $patch = $this->sent(':updateContact', 'PATCH')[0];
+        $this->assertSame('E5', $patch->data()['metadata']['sources'][0]['etag'], 'o etag vem da releitura, nunca vazio');
+        $this->assertNull($contact->fresh()?->google_error);
+    }
+
+    public function test_sem_etag_nem_depois_da_releitura_falha_sem_chamar_o_patch_e_explica_no_log(): void
+    {
+        Log::spy();
+        $this->connect();
+        $semEtag = [
+            'resourceName' => 'people/c5',
+            'metadata' => ['sources' => [['type' => 'PROFILE']]],
+            'phoneNumbers' => [['value' => self::PHONE, 'canonicalForm' => self::PHONE]],
+        ];
+        $this->fakeGoogle(['search' => [self::PHONE => [$semEtag]], 'get' => Http::response($semEtag, 200)]);
+        $contact = $this->contact();
+
+        $this->assertSame('failed', $this->sync($contact));
+
+        $this->assertCount(0, $this->sent(':updateContact'));
+        $this->assertSame('invalid_response', $contact->fresh()?->google_error);
+        Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => str_contains((string) $context['detail'], 'people/c5')
+            && str_contains((string) $context['detail'], 'PROFILE'));
+    }
+
     public function test_contato_ja_espelhado_usa_a_mascara_completa_e_limpa_o_campo_esvaziado(): void
     {
         $this->connect();

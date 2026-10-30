@@ -104,6 +104,8 @@ class SyncContactToGoogle
      */
     private function update(PeopleClient $client, GooglePerson $current, array $person, array $fields): GooglePerson
     {
+        $current = $this->withEtag($client, $current);
+
         try {
             return $client->updateContact($current, $person, $fields);
         } catch (GooglePeopleException $e) {
@@ -115,6 +117,25 @@ class SyncContactToGoogle
 
             return $client->updateContact($fresh, $person, $fields);
         }
+    }
+
+    /**
+     * A escrita exige o `etag` da fonte CONTACT, e a busca nem sempre o traz: sem ele o Google recusa com 400. Relê o contato
+     * (leitura direta sempre traz) e, se ainda faltar, falha aqui com o motivo no log em vez de mandar um PATCH que será recusado.
+     */
+    private function withEtag(PeopleClient $client, GooglePerson $person): GooglePerson
+    {
+        if ($person->etag !== '') {
+            return $person;
+        }
+
+        $fresh = $client->getContact($person->resourceName);
+
+        if ($fresh === null || $fresh->etag === '') {
+            throw new GooglePeopleException('invalid_response', null, 'sem etag da fonte CONTACT para atualizar '.$person->resourceName.'; fontes: '.implode(',', $fresh->sources ?? $person->sources));
+        }
+
+        return $fresh;
     }
 
     /** A busca do Google é por prefixo: só vale quem tem exatamente o mesmo telefone (dígitos) ou o mesmo e-mail. */
