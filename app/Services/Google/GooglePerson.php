@@ -8,12 +8,14 @@ final readonly class GooglePerson
     /**
      * @param  list<string>  $phones  forma canônica (+E.164) quando o Google a traz
      * @param  list<string>  $emails
+     * @param  list<string>  $sources  tipos de fonte que o Google informou (CONTACT, PROFILE...), para explicar um `etag` ausente
      */
     public function __construct(
         public string $resourceName,
         public string $etag,
         public array $phones,
         public array $emails,
+        public array $sources = [],
     ) {}
 
     /** Lê uma `Person` da resposta do People API; sem `resourceName` a resposta é inútil. */
@@ -25,7 +27,25 @@ final readonly class GooglePerson
             throw new GooglePeopleException('invalid_response');
         }
 
-        return new self($resourceName, self::etagOf($data), self::valuesOf($data, 'phoneNumbers', true), self::valuesOf($data, 'emailAddresses', false));
+        return new self($resourceName, self::etagOf($data), self::valuesOf($data, 'phoneNumbers', true), self::valuesOf($data, 'emailAddresses', false), self::sourceTypes($data));
+    }
+
+    /**
+     * @param  array<mixed>  $data
+     * @return list<string>
+     */
+    private static function sourceTypes(array $data): array
+    {
+        $metadata = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
+        $types = [];
+
+        foreach (is_array($metadata['sources'] ?? null) ? $metadata['sources'] : [] as $source) {
+            if (is_array($source) && is_string($source['type'] ?? null)) {
+                $types[] = $source['type'];
+            }
+        }
+
+        return $types;
     }
 
     /**

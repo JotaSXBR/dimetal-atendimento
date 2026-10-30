@@ -54,7 +54,7 @@ class PeopleClientTest extends TestCase
 
         $created = $this->client()->createContact(['names' => [['unstructuredName' => 'Maria']]]);
 
-        $this->assertEquals(new GooglePerson('people/c1', 'E1', ['+5516997524950'], ['a@b.com']), $created);
+        $this->assertEquals(new GooglePerson('people/c1', 'E1', ['+5516997524950'], ['a@b.com'], ['CONTACT']), $created);
         Http::assertSent(fn (Request $r) => $r->method() === 'POST'
             && str_starts_with($r->url(), self::BASE.'/people:createContact')
             && $r->hasHeader('Authorization', 'Bearer tok-123')
