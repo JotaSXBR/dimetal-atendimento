@@ -137,6 +137,18 @@ class ResolveContactTest extends TestCase
         $this->assertSame($phone->id, $message->fresh()?->contact_id);
     }
 
+    public function test_fusao_mantem_o_nome_editado_do_registro_do_lid(): void
+    {
+        $lidOnly = Contact::factory()->edited()->create(['wa_id' => null, 'lid' => self::LID, 'name' => 'Maria Editada']);
+        $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => null, 'name' => 'push name']);
+
+        $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net', 'push novo');
+
+        $fresh = $phone->fresh();
+        $this->assertSame('Maria Editada', $fresh?->name);
+        $this->assertNotNull($fresh?->edited_at);
+    }
+
     public function test_nao_funde_quando_os_dois_tem_ticket_aberto_no_mesmo_canal(): void
     {
         $channel = Channel::factory()->create();

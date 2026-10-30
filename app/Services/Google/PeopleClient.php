@@ -21,11 +21,16 @@ class PeopleClient
 
     private const MAX_ATTEMPTS = 4;
 
-    private const TIMEOUT_SECONDS = 15;
+    // Pior caso de um envio: 6 chamadas de 10 s mais 40 s de espera cabem nos 110 s do job (`SyncContactToGoogleJob`).
+    private const TIMEOUT_SECONDS = 10;
+
+    private const MAX_TOTAL_WAIT_SECONDS = 40;
 
     private const MAX_BACKOFF_SECONDS = 30;
 
     private bool $warmedUp = false;
+
+    private int $waitedSeconds = 0;
 
     public function __construct(private readonly string $accessToken) {}
 
@@ -147,19 +152,34 @@ class PeopleClient
     private function wait(Response $response, int $attempt): void
     {
         $retryAfter = $response->header('Retry-After');
+        $rateLimited = $response->status() === 429;
 
-        if ($response->status() === 429 && ctype_digit($retryAfter) && (int) $retryAfter > 0) {
-            Sleep::for(min((int) $retryAfter, self::MAX_BACKOFF_SECONDS))->seconds();
+        if ($rateLimited && ctype_digit($retryAfter) && (int) $retryAfter > 0) {
+            $this->pause(min((int) $retryAfter, self::MAX_BACKOFF_SECONDS), 'rate_limited');
 
             return;
         }
 
-        $this->backoff($attempt);
+        $this->backoff($attempt, $rateLimited ? 'rate_limited' : 'unavailable');
     }
 
     /** 1, 2, 4 s (no máximo 30) mais até 250 ms de variação, para duas filas não baterem juntas. */
-    private function backoff(int $attempt): void
+    private function backoff(int $attempt, string $reason = 'unavailable'): void
     {
-        Sleep::for(min(self::MAX_BACKOFF_SECONDS, 2 ** ($attempt - 1)))->seconds()->and(random_int(0, 250))->milliseconds();
+        $this->pause(min(self::MAX_BACKOFF_SECONDS, 2 ** ($attempt - 1)), $reason, random_int(0, 250));
+    }
+
+    /**
+     * Espera, dentro de um orçamento por envio: o job tem tempo limite e, se estourar, o Laravel derruba o processo da fila.
+     * Sem orçamento para esperar, desiste com o motivo da falha; a varredura reenvia depois.
+     */
+    private function pause(int $seconds, string $reason, int $jitterMs = 0): void
+    {
+        if ($this->waitedSeconds + $seconds > self::MAX_TOTAL_WAIT_SECONDS) {
+            throw new GooglePeopleException($reason);
+        }
+
+        $this->waitedSeconds += $seconds;
+        Sleep::for($seconds)->seconds()->and($jitterMs)->milliseconds();
     }
 }

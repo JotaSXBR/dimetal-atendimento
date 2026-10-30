@@ -85,9 +85,14 @@ class ResolveContact
         Ticket::query()->where('contact_id', $lid->id)->update(['contact_id' => $phone->id]);
         Message::query()->where('contact_id', $lid->id)->update(['contact_id' => $phone->id]);
 
-        // O que só o registro do lid tinha (nome editado, apelido, perfil) não se perde.
+        // O que só o registro do lid tinha (nome editado, apelido, perfil) não se perde. Se foi o lid quem recebeu a edição
+        // humana e o telefone ainda tem só o push name, os dados do lid valem: o push name não pode virar "nome editado".
+        $lidWins = $lid->edited_at !== null && $phone->edited_at === null;
+
         foreach (['name', 'nickname', 'phone2', 'email', 'company', 'job_title', 'address', 'notes', 'birthday', 'urls', 'edited_at'] as $field) {
-            $phone->{$field} ??= $lid->{$field};
+            if ($lid->getAttribute($field) !== null && ($lidWins || $phone->getAttribute($field) === null)) {
+                $phone->setAttribute($field, $lid->getAttribute($field));
+            }
         }
 
         $lid->delete();

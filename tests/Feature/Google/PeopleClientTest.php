@@ -172,6 +172,16 @@ class PeopleClientTest extends TestCase
         Http::assertSentCount(4);
     }
 
+    public function test_esperas_longas_estouram_o_orcamento_e_desistem_antes_do_timeout_do_job(): void
+    {
+        Http::fake(['*' => Http::response('', 429, ['Retry-After' => '30'])]);
+
+        $this->failsWith('rate_limited', fn () => $this->client()->createContact([]));
+
+        Http::assertSentCount(2);
+        Sleep::assertSleptTimes(1);
+    }
+
     public function test_503_em_get_repete(): void
     {
         Http::fake(['*' => Http::sequence()->push('', 503)->push($this->person(), 200)]);

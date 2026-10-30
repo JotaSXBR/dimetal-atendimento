@@ -7,6 +7,7 @@ use App\Actions\Contacts\SaveContact;
 use App\Livewire\Forms\ContactForm;
 use App\Models\Contact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -118,6 +119,46 @@ class SaveContactTest extends TestCase
         $this->assertSame($first['contact']->id, $again['contact']->id);
         $this->assertFalse($again['created']);
         $this->assertSame('Ana', $again['contact']->fresh()?->name);
+        $this->assertSame(1, Contact::query()->count());
+    }
+
+    public function test_celular_com_ou_sem_o_nono_digito_abre_o_mesmo_contato(): void
+    {
+        $semNove = Contact::factory()->create(['wa_id' => '551187654321@c.us']);
+
+        $result = app(CreateContact::class)('(11) 98765-4321', 'Ana');
+
+        $this->assertSame($semNove->id, $result['contact']->id);
+        $this->assertFalse($result['created']);
+        $this->assertSame(1, Contact::query()->count());
+
+        $comNove = Contact::factory()->create(['wa_id' => '5521987654321@c.us']);
+
+        $this->assertSame($comNove->id, app(CreateContact::class)('(21) 8765-4321', 'Bia')['contact']->id);
+    }
+
+    public function test_zero_de_tronco_na_frente_nao_impede_o_ddi(): void
+    {
+        $result = app(CreateContact::class)('011 98765-4321', 'Ana');
+
+        $this->assertSame('5511987654321@c.us', $result['contact']->wa_id);
+    }
+
+    public function test_corrida_no_cadastro_nao_estoura_o_indice_unico(): void
+    {
+        $fired = false;
+        // O concorrente grava logo depois da consulta de existência e antes do insert, como numa corrida de verdade.
+        DB::listen(function ($query) use (&$fired): void {
+            if (! $fired && str_contains($query->sql, '"wa_id" in')) {
+                $fired = true;
+                DB::table('contacts')->insert(['wa_id' => '5516997524950@c.us', 'name' => 'Concorrente', 'created_at' => now(), 'updated_at' => now()]);
+            }
+        });
+
+        $result = app(CreateContact::class)('(16) 99752-4950', 'Ana');
+
+        $this->assertFalse($result['created']);
+        $this->assertSame('Concorrente', $result['contact']->name);
         $this->assertSame(1, Contact::query()->count());
     }
 

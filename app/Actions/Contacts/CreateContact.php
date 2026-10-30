@@ -21,7 +21,14 @@ class CreateContact
             throw ValidationException::withMessages(['phone' => 'Telefone inválido: informe o DDD e o número.']);
         }
 
-        $contact = Contact::query()->firstOrCreate(['wa_id' => $waId], ['name' => trim($name), 'edited_at' => now()]);
+        $existing = Contact::query()->whereIn('wa_id', PhoneFormat::variants($waId))->first();
+
+        if ($existing !== null) {
+            return ['contact' => $existing, 'created' => false];
+        }
+
+        // `createOrFirst` aguenta o clique duplo e dois atendentes cadastrando ao mesmo tempo: quem perde a corrida recebe o registro do vencedor.
+        $contact = Contact::query()->createOrFirst(['wa_id' => $waId], ['name' => trim($name), 'edited_at' => now()]);
 
         if ($contact->wasRecentlyCreated) {
             SyncContactToGoogleJob::dispatchWhenConnected($contact);
