@@ -2,7 +2,11 @@
     $tz = config('app.display_timezone');
 @endphp
 
-<div class="grid h-dvh grid-cols-1 bg-surface lg:grid-cols-[360px_minmax(0,1fr)_280px]">
+<div
+    class="grid h-dvh grid-cols-1 bg-surface lg:grid-cols-[360px_minmax(0,1fr)_var(--details-w,280px)]"
+    x-data="{ details: localStorage.getItem('ticketDetailsOpen') !== '0', sheet: false, toggle() { this.details = ! this.details; localStorage.setItem('ticketDetailsOpen', this.details ? '1' : '0') } }"
+    x-bind:style="details ? '' : '--details-w: 0px'"
+>
     {{-- Busca e lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
         <header class="space-y-3 border-b border-line p-4">
@@ -83,6 +87,9 @@
                     <p class="truncate text-sm font-semibold text-ink">{{ $ticket->contact->label() }}</p>
                     <p class="truncate font-mono text-[11px] text-ink-3">{{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }}</p>
                 </div>
+
+                <flux:button size="sm" variant="subtle" icon="information-circle" class="lg:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
+                <flux:button size="sm" variant="subtle" icon="information-circle" class="max-lg:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
             </header>
 
             <div class="border-b border-line bg-surface-2 px-4 py-2 text-xs text-ink-2" role="status">
@@ -108,47 +115,7 @@
     </section>
 
     {{-- Detalhes --}}
-    <aside class="hidden overflow-y-auto border-s border-line p-4 lg:block">
-        @if ($ticket)
-            <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Ticket encerrado</p>
-
-            <dl class="mt-3 space-y-3 text-sm">
-                @foreach ([
-                    'Protocolo' => $ticket->protocol,
-                    'Canal' => $ticket->channel->name,
-                    'Setor' => $ticket->sector?->name ?? 'Sem setor',
-                    'Responsável' => $ticket->assignee?->name ?? '—',
-                    'Aberto em' => $ticket->opened_at->timezone($tz)->format('d/m/Y H:i'),
-                    'Encerrado em' => $ticket->closed_at?->timezone($tz)->format('d/m/Y H:i'),
-                    'Motivo' => $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label(),
-                ] as $label => $value)
-                    <div>
-                        <dt class="text-xs text-ink-3">{{ $label }}</dt>
-                        <dd class="text-ink">{{ $value }}</dd>
-                    </div>
-                @endforeach
-            </dl>
-
-            @if ($ticket->close_summary)
-                <p class="mt-5 font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Resumo do atendimento</p>
-                <p class="mt-1 text-sm break-words whitespace-pre-wrap text-ink">{{ $ticket->close_summary }}</p>
-            @endif
-
-            <p class="mt-5 font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Linha do tempo</p>
-            <ol class="mt-2 space-y-2 text-xs">
-                @foreach ($events as $event)
-                    <li wire:key="event-{{ $event->id }}">
-                        <span class="font-mono text-[10px] text-ink-3">{{ $event->created_at->timezone($tz)->format('d/m H:i') }}</span>
-                        <span class="text-ink">{{ \App\Support\TicketEventText::label($event->type) }}</span>
-                        @if ($event->actor)
-                            <span class="text-ink-3">· {{ $event->actor->name }}</span>
-                        @endif
-                        @if (($detail = \App\Support\TicketEventText::detail($event)) !== '')
-                            <p class="break-words text-ink-2">{{ $detail }}</p>
-                        @endif
-                    </li>
-                @endforeach
-            </ol>
-        @endif
-    </aside>
+    @if ($ticket)
+        <x-ticket-details :ticket="$ticket" :tz="$tz" :readonly="true" :events="$events" :timeline="$timeline" />
+    @endif
 </div>

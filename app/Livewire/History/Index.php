@@ -9,8 +9,10 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
 use App\Services\Inbox\HistorySearch;
+use App\Support\TicketTimeline;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -49,6 +51,7 @@ class Index extends Component
     #[Url]
     public string $outcome = '';
 
+    #[Url]
     public ?int $ticketId = null;
 
     public function mount(): void
@@ -91,7 +94,7 @@ class Index extends Component
 
         $messages = collect();
         $hasMore = false;
-        $events = collect();
+        $events = new EloquentCollection;
         $closer = null;
 
         if ($ticket !== null) {
@@ -108,7 +111,8 @@ class Index extends Component
             'messages' => $messages,
             'hasMore' => $hasMore,
             'limit' => self::MESSAGE_LIMIT,
-            'events' => $events,
+            'events' => TicketTimeline::changes($events),
+            'timeline' => new TicketTimeline($events),
             'closer' => $closer,
             'sectors' => Sector::query()->orderBy('name')->get(['id', 'name']),
             'agents' => $user->canSeeAllSectors() ? User::query()->orderBy('name')->get(['id', 'name']) : null,

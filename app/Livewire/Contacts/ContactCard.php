@@ -23,17 +23,45 @@ class ContactCard extends Component
 
     public ContactForm $form;
 
-    public function mount(int $contactId): void
+    /** No Inbox a ficha abre em resumo; o formulário só aparece em "Editar". Em Contatos ela é sempre o formulário. */
+    public bool $compact = false;
+
+    public bool $editing = false;
+
+    /** O ticket em que a ficha está aberta: não entra na lista de atendimentos anteriores. */
+    #[Locked]
+    public ?int $currentTicketId = null;
+
+    /** Histórico: só leitura, sem o botão Editar. */
+    #[Locked]
+    public bool $readonly = false;
+
+    public function mount(int $contactId, bool $compact = false, bool $readonly = false, ?int $currentTicketId = null): void
     {
+        $this->currentTicketId = $currentTicketId;
         $this->contactId = $contactId;
+        $this->compact = $compact;
+        $this->readonly = $readonly;
         $this->form->fillFrom($this->contact());
+    }
+
+    public function toggleEdit(): void
+    {
+        abort_if($this->readonly, 403);
+
+        $this->editing = ! $this->editing;
+        $this->form->fillFrom($this->contact());
+        $this->resetErrorBag();
     }
 
     public function save(SaveContact $saveContact): void
     {
+        abort_if($this->readonly, 403);
+
         $this->form->validate();
 
         $saveContact($this->contact(), $this->form->payload());
+        $this->editing = false;
 
         $this->dispatch('contact-saved', contactId: $this->contactId);
     }
@@ -41,6 +69,8 @@ class ContactCard extends Component
     /** Reenvia ao Google um contato que deu erro: zera o erro e a tentativa e enfileira de novo. */
     public function resync(GoogleAccount $account): void
     {
+        abort_if($this->readonly, 403);
+
         if (! $account->isConnected()) {
             return;
         }
@@ -76,7 +106,7 @@ class ContactCard extends Component
         return view('livewire.contacts.contact-card', [
             'contact' => $contact,
             'google' => $syncStatus->describe($contact),
-            'history' => Ticket::query()->with('sector')->where('contact_id', $contact->id)->latest('opened_at')->limit(self::HISTORY_LIMIT)->get(),
+            'history' => Ticket::query()->with('sector')->where('contact_id', $contact->id)->when($this->currentTicketId !== null, fn ($query) => $query->whereKeyNot($this->currentTicketId))->latest('opened_at')->limit(self::HISTORY_LIMIT)->get(),
         ]);
     }
 }

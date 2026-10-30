@@ -1,8 +1,5 @@
 <section class="mx-auto w-full max-w-6xl space-y-4 p-6">
-    <div>
-        <flux:heading size="xl" level="1">Auditoria</flux:heading>
-        <flux:subheading>Trilha dos eventos de ticket: assumir, transferir, encerrar e mais. Nunca se edita nem se apaga.</flux:subheading>
-    </div>
+    <x-page-header title="Auditoria" subtitle="Trilha dos eventos de ticket: assumir, transferir, encerrar e mais. Nunca se edita nem se apaga." />
 
     <div class="grid gap-3 sm:grid-cols-3">
         <flux:select wire:model.live="period" label="Período">
@@ -42,7 +39,7 @@
                         <td class="px-4 py-2 text-ink">{{ $event->actor?->name ?? 'Sistema' }}</td>
                         <td class="px-4 py-2 text-ink">{{ \App\Livewire\Audit\Index::typeLabel($event->type) }}</td>
                         <td class="px-4 py-2 font-mono text-xs text-ink-2">{{ $event->ticket?->protocol ?? '—' }}</td>
-                        <td class="px-4 py-2 break-words text-ink-2">{{ \App\Livewire\Audit\Index::detail($event) }}</td>
+                        <td class="px-4 py-2 break-words text-ink-2">{{ $timeline->detail($event) }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="px-4 py-6 text-center text-ink-3">Nenhum evento no período.</td></tr>

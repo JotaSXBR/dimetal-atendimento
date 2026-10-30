@@ -10,15 +10,23 @@
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
+            @php($counts = app(\App\Support\SidebarState::class)->counts(auth()->user()))
+
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="inbox" :href="route('inbox')" :current="request()->routeIs('inbox') && request('tab') !== 'meus'" wire:navigate>
+                <flux:sidebar.group heading="Atendimento" class="grid">
+                    <flux:sidebar.item icon="inbox" :href="route('inbox')" :current="request()->routeIs('inbox')" :badge="$counts['waiting'] ?: null" wire:navigate>
                         Atendimento
                     </flux:sidebar.item>
 
-                    <flux:sidebar.item icon="user" :href="route('inbox', ['tab' => 'meus'])" :current="request()->routeIs('inbox') && request('tab') === 'meus'" wire:navigate>
-                        Meus tickets
-                    </flux:sidebar.item>
+                    @if ($counts['waiting'] > 0 || $counts['breached'] > 0)
+                        <p class="-mt-1 mb-1 ps-9 text-xs text-ink-3">
+                            {{ $counts['waiting'] }} aguardando
+                            @if ($counts['breached'] > 0)
+                                <span class="block font-medium text-danger">{{ $counts['breached'] }} com SLA estourado</span>
+                            @endif
+                        </p>
+                    @endif
+
                     <flux:sidebar.item icon="user-group" :href="route('contatos')" :current="request()->routeIs('contatos')" wire:navigate>
                         Contatos
                     </flux:sidebar.item>
@@ -26,26 +34,31 @@
                     <flux:sidebar.item icon="archive-box" :href="route('historico')" :current="request()->routeIs('historico')" wire:navigate>
                         Histórico
                     </flux:sidebar.item>
-
-
-                    @can('supervisor')
-                        <flux:sidebar.item icon="chart-bar" :href="route('relatorios')" :current="request()->routeIs('relatorios')" wire:navigate>
-                            Relatórios
-                        </flux:sidebar.item>
-                    @endcan
-
-                    @can('admin')
-                        <flux:sidebar.item icon="shield-check" :href="route('auditoria')" :current="request()->routeIs('auditoria')" wire:navigate>
-                            Auditoria
-                        </flux:sidebar.item>
-                    @endcan
                 </flux:sidebar.group>
 
                 @can('supervisor')
-                    <flux:sidebar.group heading="Configurações" class="grid">
+                    <flux:sidebar.group heading="Gestão" class="grid">
+                        <flux:sidebar.item icon="chart-bar" :href="route('relatorios')" :current="request()->routeIs('relatorios')" wire:navigate>
+                            Relatórios
+                        </flux:sidebar.item>
+
+                        @can('admin')
+                            <flux:sidebar.item icon="shield-check" :href="route('auditoria')" :current="request()->routeIs('auditoria')" wire:navigate>
+                                Auditoria
+                            </flux:sidebar.item>
+                        @endcan
+                    </flux:sidebar.group>
+
+                    <p class="px-3 pt-2 font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Configurações</p>
+
+                    <flux:sidebar.group heading="Operação" class="grid">
                         @can('admin')
                             <flux:sidebar.item icon="chat-bubble-left-right" :href="route('configuracoes.canais')" :current="request()->routeIs('configuracoes.canais')" wire:navigate>
                                 Canais
+                            </flux:sidebar.item>
+
+                            <flux:sidebar.item icon="squares-2x2" :href="route('configuracoes.setores')" :current="request()->routeIs('configuracoes.setores')" wire:navigate>
+                                Setores
                             </flux:sidebar.item>
 
                             <flux:sidebar.item icon="clock" :href="route('configuracoes.horario')" :current="request()->routeIs('configuracoes.horario')" wire:navigate>
@@ -56,7 +69,9 @@
                         <flux:sidebar.item icon="bolt" :href="route('configuracoes.respostas')" :current="request()->routeIs('configuracoes.respostas')" wire:navigate>
                             Respostas rápidas
                         </flux:sidebar.item>
+                    </flux:sidebar.group>
 
+                    <flux:sidebar.group heading="Pessoas e empresa" class="grid">
                         <flux:sidebar.item icon="users" :href="route('configuracoes.usuarios')" :current="request()->routeIs('configuracoes.usuarios')" wire:navigate>
                             Usuários
                         </flux:sidebar.item>
@@ -65,34 +80,28 @@
                             <flux:sidebar.item icon="building-office" :href="route('configuracoes.empresa')" :current="request()->routeIs('configuracoes.empresa')" wire:navigate>
                                 Empresa
                             </flux:sidebar.item>
+                        @endcan
+                    </flux:sidebar.group>
 
-                            <flux:sidebar.item icon="archive-box" :href="route('configuracoes.retencao')" :current="request()->routeIs('configuracoes.retencao')" wire:navigate>
-                                Retenção
-                            </flux:sidebar.item>
-
+                    @can('admin')
+                        <flux:sidebar.group heading="Dados e integrações" class="grid">
                             <flux:sidebar.item icon="link" :href="route('configuracoes.google')" :current="request()->routeIs('configuracoes.google*')" wire:navigate>
                                 Google Contatos
                             </flux:sidebar.item>
 
-                            <flux:sidebar.item icon="squares-2x2" :href="route('configuracoes.setores')" :current="request()->routeIs('configuracoes.setores')" wire:navigate>
-                                Setores
+                            <flux:sidebar.item icon="trash" :href="route('configuracoes.retencao')" :current="request()->routeIs('configuracoes.retencao')" wire:navigate>
+                                Retenção
                             </flux:sidebar.item>
-                        @endcan
-                    </flux:sidebar.group>
+                        </flux:sidebar.group>
+                    @endcan
                 @endcan
             </flux:sidebar.nav>
 
             <flux:spacer />
 
-            <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
-                </flux:sidebar.item>
-
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
-                </flux:sidebar.item>
-            </flux:sidebar.nav>
+            @if (app(\App\Support\SidebarState::class)->whatsappDown())
+                <p class="mx-2 mb-2 rounded-md bg-warn/10 px-3 py-2 text-xs text-warn" role="status">WhatsApp desconectado. As mensagens ficam aguardando até a conexão voltar.</p>
+            @endif
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>

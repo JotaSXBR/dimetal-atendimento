@@ -1,9 +1,5 @@
 <section class="mx-auto w-full max-w-3xl p-6">
-    <flux:heading size="xl" level="1">Setores</flux:heading>
-    <flux:subheading>
-        Ativo aparece no menu e recebe tickets. Fora do menu não aparece no menu, mas continua recebendo transferências.
-        Desativado não recebe nada novo; o histórico permanece.
-    </flux:subheading>
+    <x-page-header title="Setores" subtitle="Ativo aparece no menu e recebe tickets. Fora do menu não aparece no menu, mas continua recebendo transferências. Desativado não recebe nada novo; o histórico permanece." />
 
     <ul class="mt-6 divide-y divide-line rounded-[14px] border border-line bg-surface">
         @foreach ($sectors as $sector)

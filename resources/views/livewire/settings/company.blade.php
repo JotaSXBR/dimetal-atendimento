@@ -1,6 +1,5 @@
 <section class="mx-auto w-full max-w-3xl p-6">
-    <flux:heading size="xl" level="1">Empresa</flux:heading>
-    <flux:subheading>Dados que aparecem nas mensagens e o prazo de primeira resposta usado nos relatórios.</flux:subheading>
+    <x-page-header title="Empresa" subtitle="Dados que aparecem nas mensagens e o prazo de primeira resposta usado nos relatórios." />
 
     <form wire:submit="save" class="mt-6 space-y-6 rounded-[14px] border border-line bg-surface p-5">
         <flux:input label="Nome fantasia" wire:model="name" />

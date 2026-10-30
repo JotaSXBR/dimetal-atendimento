@@ -18,7 +18,7 @@ use App\Livewire\Settings\Sectors;
 use App\Livewire\Settings\Users;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::redirect('/', '/inbox')->name('home');
 
 Route::post('webhooks/waha', WahaWebhookController::class)->middleware('throttle:webhook')->name('webhooks.waha');
 
