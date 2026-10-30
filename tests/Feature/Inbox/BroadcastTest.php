@@ -94,7 +94,7 @@ class BroadcastTest extends TestCase
         $event = new MessageCreated($message->load('ticket'));
 
         $this->assertSame(
-            ['ticket_id' => $ticket->id, 'message_id' => $message->id, 'type' => 'message.created'],
+            ['ticket_id' => $ticket->id, 'message_id' => $message->id, 'type' => 'message.created', 'direction' => $message->direction->value],
             $event->broadcastWith(),
         );
         $this->assertEquals(

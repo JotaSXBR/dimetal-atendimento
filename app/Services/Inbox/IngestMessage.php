@@ -15,6 +15,7 @@ use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\WahaEvent;
+use App\Services\Alerts\AlertDispatcher;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
@@ -185,6 +186,10 @@ class IngestMessage
         ]);
 
         TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'opened']);
+
+        if ($ticket->status === TicketStatus::AGUARDANDO) {
+            app(AlertDispatcher::class)->queued($ticket);
+        }
 
         return $ticket;
     }
