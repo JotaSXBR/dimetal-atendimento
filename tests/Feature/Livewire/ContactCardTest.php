@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\CloseOutcome;
 use App\Enums\GoogleConnectionStatus;
+use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Jobs\SyncContactToGoogleJob;
 use App\Livewire\Contacts\ContactCard;
@@ -178,6 +180,35 @@ class ContactCardTest extends TestCase
 
         $this->assertSame('rate_limited', $this->contact->fresh()?->google_error);
         Queue::assertNothingPushed();
+    }
+
+    public function test_a_ficha_lista_os_10_atendimentos_mais_recentes_com_motivo_e_resumo(): void
+    {
+        $channel = Channel::factory()->connected()->create();
+        foreach (range(1, 11) as $n) {
+            Ticket::factory()->for($this->contact)->for($channel)->create([
+                'status' => TicketStatus::ENCERRADO,
+                'opened_at' => now()->subDays(20 - $n),
+                'protocol' => sprintf('2026-%06d', $n),
+                'close_outcome' => CloseOutcome::RESOLVIDO,
+                'close_summary' => 'Resumo do ticket '.$n,
+            ]);
+        }
+
+        $this->card()
+            ->assertSee('Atendimentos')
+            ->assertSee('2026-000011')->assertSee('Resumo do ticket 11')->assertSee('Resolvido')
+            ->assertSee('2026-000002')
+            ->assertDontSee('2026-000001');
+    }
+
+    public function test_ticket_aberto_aparece_sem_resumo_e_contato_sem_ticket_avisa(): void
+    {
+        $this->card()->assertSee('Nenhum atendimento ainda');
+
+        Ticket::factory()->for($this->contact)->for(Channel::factory()->connected()->create())->create(['status' => TicketStatus::EM_ATENDIMENTO, 'protocol' => '2026-000500']);
+
+        $this->card()->assertSee('2026-000500')->assertSee('Em atendimento')->assertDontSee('Nenhum atendimento ainda');
     }
 
     public function test_salvar_na_ficha_enfileira_o_envio_ao_google(): void
