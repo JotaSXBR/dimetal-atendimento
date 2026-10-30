@@ -13,7 +13,7 @@
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
                     <flux:sidebar.item icon="inbox" :href="route('inbox')" :current="request()->routeIs('inbox') && request('tab') !== 'meus'" wire:navigate>
-                        Fila do setor
+                        Atendimento
                     </flux:sidebar.item>
 
                     <flux:sidebar.item icon="user" :href="route('inbox', ['tab' => 'meus'])" :current="request()->routeIs('inbox') && request('tab') === 'meus'" wire:navigate>
@@ -42,6 +42,10 @@
                         </flux:sidebar.item>
 
                         @can('admin')
+                            <flux:sidebar.item icon="building-office" :href="route('configuracoes.empresa')" :current="request()->routeIs('configuracoes.empresa')" wire:navigate>
+                                Empresa
+                            </flux:sidebar.item>
+
                             <flux:sidebar.item icon="link" :href="route('configuracoes.google')" :current="request()->routeIs('configuracoes.google*')" wire:navigate>
                                 Google Contatos
                             </flux:sidebar.item>

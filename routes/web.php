@@ -7,6 +7,7 @@ use App\Livewire\Contacts\Index as ContactsIndex;
 use App\Livewire\Inbox\Inbox;
 use App\Livewire\Settings\BusinessHoursPage;
 use App\Livewire\Settings\Channels;
+use App\Livewire\Settings\Company;
 use App\Livewire\Settings\GoogleContacts;
 use App\Livewire\Settings\Sectors;
 use App\Livewire\Settings\Users;
@@ -29,6 +30,7 @@ Route::middleware(['auth', 'can:supervisor'])->group(function () {
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('configuracoes/canais', Channels::class)->name('configuracoes.canais');
     Route::get('configuracoes/horario', BusinessHoursPage::class)->name('configuracoes.horario');
+    Route::get('configuracoes/empresa', Company::class)->name('configuracoes.empresa');
     Route::get('configuracoes/google', GoogleContacts::class)->name('configuracoes.google');
     Route::get('configuracoes/google/redirect', [GoogleConnectionController::class, 'redirect'])->name('configuracoes.google.redirect');
     Route::get('configuracoes/google/callback', [GoogleConnectionController::class, 'callback'])->name('configuracoes.google.callback');
