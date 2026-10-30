@@ -64,6 +64,9 @@ class RetentionPageTest extends TestCase
 
     public function test_executar_o_expurgo_agora_apaga_so_o_vencido_e_mostra_o_resultado(): void
     {
+        // O CI define QUEUE_CONNECTION=redis e isso vence o `sync` do phpunit.xml: sem fixar, o job só entraria na fila.
+        config(['queue.default' => 'sync']);
+
         $new = $this->attachment('outbound/novo.jpg', 2_000_000, 5);
         $old = $this->attachment('outbound/velho.pdf', 3_000_000, 120);
 
