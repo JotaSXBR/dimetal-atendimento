@@ -36,6 +36,9 @@ final class Signature
 
     public static function render(string $template, string $agent, string $sector, string $company): string
     {
-        return trim(strtr($template, ['{{atendente}}' => $agent, '{{setor}}' => $sector, '{{empresa}}' => $company]));
+        // O WhatsApp não tem escape: `*`, `_`, `~` ou crase dentro de um nome fechariam o negrito do modelo no lugar errado.
+        $plain = fn (string $value): string => str_replace(['*', '_', '~', '`'], '', $value);
+
+        return trim(strtr($template, ['{{atendente}}' => $plain($agent), '{{setor}}' => $plain($sector), '{{empresa}}' => $plain($company)]));
     }
 }

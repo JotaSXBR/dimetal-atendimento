@@ -14,11 +14,11 @@ use Illuminate\Support\Facades\DB;
 class CloseTicket
 {
     /**
-     * Idempotente: só o fechamento que de fato mudou o status grava evento.
+     * Idempotente: só o fechamento que de fato mudou o status grava evento. Devolve falso quando o ticket já estava encerrado.
      */
-    public function __invoke(Ticket $ticket, User $user, ClosedReason $reason = ClosedReason::MANUAL, ?CloseOutcome $outcome = null, ?string $summary = null): void
+    public function __invoke(Ticket $ticket, User $user, ClosedReason $reason = ClosedReason::MANUAL, ?CloseOutcome $outcome = null, ?string $summary = null): bool
     {
-        DB::transaction(function () use ($ticket, $user, $reason, $outcome, $summary): void {
+        $closed = DB::transaction(function () use ($ticket, $user, $reason, $outcome, $summary): bool {
             $closed = Ticket::query()
                 ->whereKey($ticket->id)
                 ->where('status', '<>', TicketStatus::ENCERRADO->value)
@@ -40,8 +40,12 @@ class CloseTicket
                 ]);
                 TicketUpdated::dispatch($ticket->refresh());
             }
+
+            return $closed;
         });
 
         $ticket->refresh();
+
+        return $closed;
     }
 }

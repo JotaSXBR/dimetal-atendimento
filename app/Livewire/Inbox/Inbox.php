@@ -40,6 +40,8 @@ class Inbox extends Component
         ."when media_mime like 'audio/%' then 'Áudio' when media_mime like 'video/%' then 'Vídeo' "
         ."when type = 'media' then 'Arquivo' else '['||type||']' end";
 
+    private const ALREADY_CLOSED = 'Este ticket já foi encerrado por outra pessoa.';
+
     public ?int $ticketId = null;
 
     #[Url]
@@ -149,8 +151,18 @@ class Inbox extends Component
     public function close(): void
     {
         $ticket = $this->selected();
+
+        // Outra pessoa encerrou enquanto o painel estava aberto: aviso, não erro 403.
+        if ($ticket->status === TicketStatus::ENCERRADO) {
+            $this->notice = self::ALREADY_CLOSED;
+            $this->closePanel();
+
+            return;
+        }
+
         $this->authorize('close', $ticket);
 
+        $this->closeSummary = trim($this->closeSummary);
         $this->validate([
             'closeOutcome' => ['required', Rule::enum(CloseOutcome::class)],
             'closeSummary' => ['required', 'string', 'min:3', 'max:500'],
@@ -162,7 +174,9 @@ class Inbox extends Component
             'closeSummary.max' => 'O resumo passa de 500 caracteres.',
         ]);
 
-        (new CloseTicket)($ticket, $this->user(), ClosedReason::MANUAL, CloseOutcome::from($this->closeOutcome), trim($this->closeSummary));
+        $closed = (new CloseTicket)($ticket, $this->user(), ClosedReason::MANUAL, CloseOutcome::from($this->closeOutcome), $this->closeSummary);
+
+        $this->notice = $closed ? null : self::ALREADY_CLOSED;
         $this->closePanel();
     }
 

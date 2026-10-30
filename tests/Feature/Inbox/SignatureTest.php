@@ -114,4 +114,19 @@ class SignatureTest extends TestCase
 
         $this->assertSame('Segue a foto', Message::query()->where('type', 'media')->firstOrFail()->body);
     }
+
+    public function test_marcadores_no_nome_do_atendente_nao_desfazem_a_formatacao(): void
+    {
+        $this->me->name = 'Jé*s_s~é';
+
+        $this->assertSame("*Jéssé @ Dimetal Distribuidora:*\n\nOi", Signature::apply('Oi', $this->me, null));
+    }
+
+    public function test_rascunho_mais_assinatura_acima_de_4096_e_recusado_sem_enviar(): void
+    {
+        Livewire::actingAs($this->me)->test(Inbox::class)->set('ticketId', $this->ticket->id)
+            ->set('draft', str_repeat('a', 4090))->call('send')->assertHasErrors(['draft']);
+
+        $this->assertSame(0, Message::query()->count());
+    }
 }

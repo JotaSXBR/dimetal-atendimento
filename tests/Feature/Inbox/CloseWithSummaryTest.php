@@ -83,6 +83,21 @@ class CloseWithSummaryTest extends TestCase
         $this->assertSame(CloseOutcome::RESOLVIDO, $this->ticket->fresh()?->close_outcome);
     }
 
+    public function test_resumo_so_com_espacos_nao_conta_como_texto(): void
+    {
+        $this->inbox()->call('openPanel', 'close')->set('closeOutcome', 'resolvido')->set('closeSummary', '  ab')->call('close')->assertHasErrors(['closeSummary']);
+    }
+
+    public function test_quem_encerra_depois_de_outro_recebe_o_aviso_em_vez_de_erro(): void
+    {
+        $component = $this->inbox()->call('openPanel', 'close')->set('closeOutcome', 'resolvido')->set('closeSummary', 'Cotacao enviada');
+
+        (new CloseTicket)($this->ticket, User::factory()->create(['role' => UserRole::SUPERVISOR]), ClosedReason::MANUAL, CloseOutcome::SEM_RESPOSTA, 'Primeiro resumo');
+
+        $component->call('close')->assertSet('notice', 'Este ticket já foi encerrado por outra pessoa.')->assertSet('panel', null);
+        $this->assertSame('Primeiro resumo', $this->ticket->fresh()?->close_summary);
+    }
+
     public function test_quem_nao_ve_o_ticket_nao_abre_o_painel_de_encerramento(): void
     {
         $other = User::factory()->create(['role' => UserRole::ATENDENTE]);
