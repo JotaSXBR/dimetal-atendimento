@@ -221,4 +221,96 @@ class SlaClockTest extends TestCase
         $this->assertSame(0, $result['breached']);
         $this->assertSame(0, $this->breaches($ticket));
     }
+
+    public function test_ticket_sem_espera_com_datas_orfas_no_passado_nao_e_avisado_nem_estoura(): void
+    {
+        $this->at('2026-10-30 10:30');
+        $orphan = $this->ticket([
+            'waiting_since' => null,
+            'sla_warn_at' => $this->sp('2026-10-30 10:07:30'),
+            'sla_due_at' => $this->sp('2026-10-30 10:10'),
+        ]);
+
+        $result = $this->tick();
+
+        $this->assertSame(0, $result['warned']);
+        $this->assertSame(0, $result['breached']);
+        $this->assertNull($orphan->fresh()?->sla_breached_at);
+        $this->assertSame(0, $this->breaches($orphan));
+    }
+
+    /**
+     * Uma resposta humana que chega entre a leitura do ticket e a gravação da rotina (a rodada leva segundos): o evento
+     * `retrieved` dispara na leitura, antes do UPDATE, e é o ponto exato da corrida.
+     */
+    private function humanRepliesWhileTheRoundReads(): void
+    {
+        $fired = false;
+
+        Ticket::retrieved(function (Ticket $ticket) use (&$fired): void {
+            if (! $fired) {
+                $fired = true;
+                // Outra instância, como outro processo: a que a rotina está usando continua com os valores lidos.
+                Ticket::query()->whereKey($ticket->getKey())->firstOrFail()->recordOutbound(now());
+            }
+        });
+    }
+
+    public function test_resposta_durante_a_adocao_nao_deixa_uma_espera_falsa(): void
+    {
+        $this->at('2026-10-30 10:00');
+        $ticket = $this->ticket(['last_inbound_at' => $this->sp('2026-10-30 09:50'), 'last_outbound_at' => null]);
+        $this->humanRepliesWhileTheRoundReads();
+
+        $this->tick();
+
+        $this->assertNull($ticket->fresh()?->waiting_since, 'o atendente respondeu no meio da rodada');
+    }
+
+    public function test_resposta_durante_o_calculo_nao_deixa_vencimento_orfao(): void
+    {
+        $this->at('2026-10-30 10:00');
+        $ticket = $this->ticket(['waiting_since' => $this->sp('2026-10-30 10:00')]);
+        $this->humanRepliesWhileTheRoundReads();
+
+        $this->tick();
+
+        $fresh = $ticket->fresh();
+        $this->assertNull($fresh?->waiting_since);
+        $this->assertNull($fresh->sla_due_at, 'o vencimento de uma espera que acabou não pode ser gravado');
+        $this->assertNull($fresh->sla_warn_at);
+    }
+
+    public function test_resposta_durante_o_aviso_nao_marca_nem_avisa_a_tela(): void
+    {
+        $this->at('2026-10-30 10:08');
+        $ticket = $this->ticket(['waiting_since' => $this->sp('2026-10-30 10:00'), 'sla_warn_at' => $this->sp('2026-10-30 10:07:30'), 'sla_due_at' => $this->sp('2026-10-30 10:10')]);
+        $this->humanRepliesWhileTheRoundReads();
+        Event::fake([TicketUpdated::class]);
+
+        $result = $this->tick();
+
+        $this->assertSame(0, $result['warned']);
+        $this->assertNull($ticket->fresh()?->sla_warned_at);
+        Event::assertNotDispatched(TicketUpdated::class);
+    }
+
+    public function test_resposta_durante_o_estouro_nao_marca_nem_cria_o_evento(): void
+    {
+        $this->at('2026-10-30 10:11');
+        // Já avisado: o estouro é o único passo que lê o ticket nesta rodada, então a resposta cai exatamente nele.
+        $ticket = $this->ticket([
+            'waiting_since' => $this->sp('2026-10-30 10:00'),
+            'sla_warn_at' => $this->sp('2026-10-30 10:07:30'),
+            'sla_warned_at' => $this->sp('2026-10-30 10:08'),
+            'sla_due_at' => $this->sp('2026-10-30 10:10'),
+        ]);
+        $this->humanRepliesWhileTheRoundReads();
+
+        $result = $this->tick();
+
+        $this->assertSame(0, $result['breached']);
+        $this->assertNull($ticket->fresh()?->sla_breached_at);
+        $this->assertSame(0, $this->breaches($ticket), 'nenhum evento falso na auditoria');
+    }
 }
