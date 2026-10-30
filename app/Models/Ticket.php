@@ -182,25 +182,49 @@ class Ticket extends Model
      */
     public function recordInbound(CarbonInterface $at): void
     {
+        $at = $this->databaseTime($at);
+
+        // `waiting_since` é desde quando o cliente espera resposta humana: só a primeira mensagem sem resposta conta, e uma
+        // mensagem atrasada, de antes da última resposta, não abre espera nenhuma.
         DB::update(
-            'update tickets set last_inbound_at = greatest(last_inbound_at, ?), updated_at = ? where id = ?',
-            [$at, now(), $this->id],
+            'update tickets set last_inbound_at = greatest(last_inbound_at, ?),'
+            .' waiting_since = case when waiting_since is not null then waiting_since'
+            .' when last_outbound_at is null or ? > last_outbound_at then ? else null end,'
+            .' updated_at = ? where id = ?',
+            [$at, $at, $at, now(), $this->id],
         );
 
         $this->refresh();
     }
 
     /**
-     * Registra uma resposta humana (painel ou celular). Também marca a primeira resposta, uma única vez.
+     * Registra uma resposta humana (painel ou celular). Também marca a primeira resposta, uma única vez, e encerra a espera do
+     * cliente (e as marcas de SLA), a menos que a resposta seja de antes de ele escrever (eco tardio, caixa de saída): essa não
+     * responde à espera que está aberta.
      */
     public function recordOutbound(CarbonInterface $at): void
     {
+        $at = $this->databaseTime($at);
+        $answers = 'waiting_since is not null and waiting_since <= ?';
+
         DB::update(
-            'update tickets set last_outbound_at = greatest(last_outbound_at, ?), first_human_reply_at = coalesce(first_human_reply_at, ?), updated_at = ? where id = ?',
-            [$at, $at, now(), $this->id],
+            'update tickets set last_outbound_at = greatest(last_outbound_at, ?), first_human_reply_at = coalesce(first_human_reply_at, ?),'
+            ." sla_warn_at = case when {$answers} then null else sla_warn_at end,"
+            ." sla_due_at = case when {$answers} then null else sla_due_at end,"
+            ." sla_warned_at = case when {$answers} then null else sla_warned_at end,"
+            ." sla_breached_at = case when {$answers} then null else sla_breached_at end,"
+            ." waiting_since = case when {$answers} then null else waiting_since end,"
+            .' updated_at = ? where id = ?',
+            [$at, $at, $at, $at, $at, $at, $at, now(), $this->id],
         );
 
         $this->refresh();
+    }
+
+    /** O instante no fuso do banco: a coluna é `timestamp` sem fuso e o PDO formata no fuso do próprio objeto. */
+    private function databaseTime(CarbonInterface $at): CarbonImmutable
+    {
+        return CarbonImmutable::instance($at)->setTimezone(config()->string('app.timezone'));
     }
 
     /**
