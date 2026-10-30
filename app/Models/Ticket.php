@@ -221,6 +221,26 @@ class Ticket extends Model
         $this->refresh();
     }
 
+    /**
+     * `estourou` (passou do vencimento), `perto` (passou do aviso) ou `null`. Calculado na hora de desenhar a tela, a partir das
+     * datas gravadas pela rotina: o selo muda no instante certo mesmo que a rotina ainda não tenha rodado. Sem espera ou
+     * encerrado, `null`.
+     */
+    public function slaState(?CarbonInterface $now = null): ?string
+    {
+        if ($this->status === TicketStatus::ENCERRADO || $this->waiting_since === null) {
+            return null;
+        }
+
+        $now ??= now();
+
+        return match (true) {
+            $this->sla_due_at !== null && $this->sla_due_at <= $now => 'estourou',
+            $this->sla_warn_at !== null && $this->sla_warn_at <= $now => 'perto',
+            default => null,
+        };
+    }
+
     /** O instante no fuso do banco: a coluna é `timestamp` sem fuso e o PDO formata no fuso do próprio objeto. */
     private function databaseTime(CarbonInterface $at): CarbonImmutable
     {
