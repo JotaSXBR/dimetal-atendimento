@@ -18,14 +18,16 @@ class NoControlChars implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (! is_string($value)) {
-            return;
-        }
-
-        $control = $this->allowNewlines ? '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/' : '/[\x00-\x1F\x7F]/';
-
-        if (preg_match($control, $value) === 1 || preg_match('/[\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', $value) === 1) {
+        if (is_string($value) && ! self::isClean($value, $this->allowNewlines)) {
             $fail('O campo :attribute tem caracteres que não podem ser usados.');
         }
+    }
+
+    /** Sem caractere de controle (tab, LF e CR passam se `$allowNewlines`) nem de direção de texto. */
+    public static function isClean(string $value, bool $allowNewlines = false): bool
+    {
+        $control = $allowNewlines ? '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/' : '/[\x00-\x1F\x7F]/';
+
+        return preg_match($control, $value) !== 1 && preg_match('/[\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', $value) !== 1;
     }
 }
