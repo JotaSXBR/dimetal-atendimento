@@ -34,7 +34,10 @@ class Banner extends Component
     /** @param  array<string, mixed>  $payload */
     public function onChannelStatus(array $payload): void
     {
-        if (($payload['status'] ?? '') === 'WORKING' && ($channel = Channel::query()->find($payload['channel_id'] ?? 0)) !== null) {
+        $id = $payload['channel_id'] ?? null;
+        $channel = is_numeric($id) ? Channel::query()->find((int) $id) : null;
+
+        if (($payload['status'] ?? '') === 'WORKING' && $channel !== null) {
             $this->recovered = $channel->name;
         }
     }

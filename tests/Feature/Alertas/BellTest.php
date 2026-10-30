@@ -3,13 +3,11 @@
 namespace Tests\Feature\Alertas;
 
 use App\Livewire\Alerts\Bell;
-use App\Models\Channel;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\ChannelDown;
 use App\Notifications\SlaBreached;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
 

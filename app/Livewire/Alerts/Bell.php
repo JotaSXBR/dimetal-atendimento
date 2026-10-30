@@ -6,6 +6,7 @@ use App\Console\Commands\PurgeNotificationsCommand;
 use App\Models\Ticket;
 use Illuminate\Contracts\View\View;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -18,7 +19,7 @@ class Bell extends Component
     public function getListeners(): array
     {
         return [
-            'echo-private:users.'.Auth::id().',.Illuminate\Notifications\Events\BroadcastNotificationCreated' => '$refresh',
+            'echo-private:users.'.Auth::id().',.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated' => '$refresh',
             'alerts-refresh' => '$refresh',
         ];
     }
@@ -36,33 +37,47 @@ class Bell extends Component
     public function render(): View
     {
         $user = Auth::user();
-        $items = $user === null ? collect() : $user->notifications()
+
+        if ($user === null) {
+            return view('livewire.alerts.bell', ['items' => [], 'unread' => 0]);
+        }
+
+        $items = $user->notifications()
             ->where('created_at', '>=', now()->subDays(PurgeNotificationsCommand::RETENTION_DAYS))
             ->latest()
             ->limit(self::LIMIT)
             ->get();
 
-        $ids = $items->map(fn (DatabaseNotification $n): mixed => $n->data['ticket_id'] ?? null)->filter()->unique()->all();
+        $ids = $items->map(fn (DatabaseNotification $n): int => $this->ticketId($n->data))->filter()->unique()->values()->all();
         // Só mostra o protocolo de ticket que o usuário ainda pode ver (o ticket pode ter sido transferido depois do alerta).
-        $tickets = $user === null || $ids === [] ? collect() : Ticket::query()->visibleTo($user)->whereIn('id', $ids)->get()->keyBy('id');
+        /** @var Collection<int|string, Ticket> $tickets */
+        $tickets = $ids === [] ? new Collection : Ticket::query()->visibleTo($user)->whereIn('id', $ids)->get()->keyBy('id');
 
         return view('livewire.alerts.bell', [
-            'items' => $items->map(fn (DatabaseNotification $n): array => $this->present($n, $tickets)),
-            'unread' => $user?->unreadNotifications()->count() ?? 0,
+            'items' => $items->map(fn (DatabaseNotification $n): array => $this->present($n, $tickets))->all(),
+            'unread' => $user->unreadNotifications()->count(),
         ]);
     }
 
+    /** @param  array<mixed>  $data */
+    private function ticketId(array $data): int
+    {
+        $id = $data['ticket_id'] ?? null;
+
+        return is_numeric($id) ? (int) $id : 0;
+    }
+
     /**
-     * @param  \Illuminate\Support\Collection<int|string, Ticket>  $tickets
+     * @param  Collection<int|string, Ticket>  $tickets
      * @return array{id: string, icon: string, tone: string, title: string, detail: string, unread: bool, time: string}
      */
-    private function present(DatabaseNotification $n, $tickets): array
+    private function present(DatabaseNotification $n, Collection $tickets): array
     {
         $data = $n->data;
-        $ticket = $tickets->get($data['ticket_id'] ?? 0);
+        $ticket = $tickets->get($this->ticketId($data));
         $detail = $ticket !== null ? 'Ticket '.($ticket->protocol ?? '#'.$ticket->id) : '';
         $down = ($data['state'] ?? '') === 'down';
-        $channel = (string) ($data['channel_name'] ?? 'WhatsApp');
+        $channel = is_string($data['channel_name'] ?? null) ? $data['channel_name'] : 'WhatsApp';
 
         [$icon, $tone, $title, $detail] = match ($data['kind'] ?? '') {
             'sla_breached' => ['clock', 'danger', 'SLA estourado', $detail],

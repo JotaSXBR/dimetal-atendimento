@@ -17,7 +17,11 @@ final class AlertRecipients
         return $this->active()->get();
     }
 
-    /** Quem vê a fila do ticket: o mesmo critério de {@see User::canHandleSector()}, numa consulta só. @return Collection<int, User> */
+    /**
+     * Quem vê a fila do ticket: o mesmo critério de {@see User::canHandleSector()}, numa consulta só.
+     *
+     * @return Collection<int, User>
+     */
     public function queue(Ticket $ticket): Collection
     {
         return $this->active()->where(fn (Builder $q) => $this->seesQueue($q, $ticket))->get();

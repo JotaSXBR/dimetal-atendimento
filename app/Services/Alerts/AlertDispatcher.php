@@ -55,7 +55,7 @@ final class AlertDispatcher
 
     public function queued(Ticket $ticket, ?int $exceptUserId = null): void
     {
-        $ids = $this->recipients->queue($ticket)->pluck('id')->reject(fn (int $id): bool => $id === $exceptUserId)->values()->all();
+        $ids = $this->recipients->queue($ticket)->map(fn (User $user): int => $user->id)->reject(fn (int $id): bool => $id === $exceptUserId)->values()->all();
 
         if ($ids !== []) {
             TicketQueued::dispatch($ticket->id, $ids);

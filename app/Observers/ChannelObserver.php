@@ -23,7 +23,8 @@ class ChannelObserver
             DrainOutboxJob::dispatch($channel->id)->afterCommit();
         }
 
-        $from = ChannelStatus::tryFrom((string) $channel->getRawOriginal('status'));
+        $raw = $channel->getRawOriginal('status');
+        $from = is_string($raw) ? ChannelStatus::tryFrom($raw) : null;
 
         if ($from !== null) {
             app(AlertDispatcher::class)->channelChanged($channel, $from);

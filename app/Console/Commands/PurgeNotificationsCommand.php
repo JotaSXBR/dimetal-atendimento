@@ -16,7 +16,7 @@ class PurgeNotificationsCommand extends Command
 
     public function handle(): int
     {
-        $deleted = DatabaseNotification::query()->where('created_at', '<', now()->subDays(self::RETENTION_DAYS))->delete();
+        $deleted = DatabaseNotification::query()->toBase()->where('created_at', '<', now()->subDays(self::RETENTION_DAYS))->delete();
 
         $this->info("Notificações apagadas: {$deleted}.");
 
