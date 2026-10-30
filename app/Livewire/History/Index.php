@@ -12,6 +12,7 @@ use App\Services\Inbox\HistorySearch;
 use App\Support\TicketTimeline;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -93,7 +94,7 @@ class Index extends Component
 
         $messages = collect();
         $hasMore = false;
-        $events = collect();
+        $events = new EloquentCollection;
         $closer = null;
 
         if ($ticket !== null) {

@@ -36,15 +36,25 @@ final class TicketTimeline
     /** @param  Collection<int, TicketEvent>  $events */
     public function __construct(Collection $events)
     {
-        $ids = fn (array $keys): array => $events
-            ->flatMap(fn (TicketEvent $event) => array_map(fn (string $key) => ($event->payload ?? [])[$key] ?? null, $keys))
-            ->filter(fn ($id) => is_int($id))
-            ->unique()
-            ->values()
-            ->all();
+        $sectorIds = [];
+        $userIds = [];
 
-        $this->sectors = Sector::query()->whereIn('id', $ids(['from_sector', 'to_sector']))->pluck('name', 'id');
-        $this->users = User::query()->whereIn('id', $ids(['from_user', 'to_user']))->pluck('name', 'id');
+        foreach ($events as $event) {
+            foreach ($event->payload ?? [] as $key => $id) {
+                if (! is_int($id)) {
+                    continue;
+                }
+
+                if ($key === 'from_sector' || $key === 'to_sector') {
+                    $sectorIds[] = $id;
+                } elseif ($key === 'from_user' || $key === 'to_user') {
+                    $userIds[] = $id;
+                }
+            }
+        }
+
+        $this->sectors = Sector::query()->whereIn('id', $sectorIds)->get()->mapWithKeys(fn (Sector $sector): array => [$sector->id => $sector->name]);
+        $this->users = User::query()->whereIn('id', $userIds)->get()->mapWithKeys(fn (User $user): array => [$user->id => $user->name]);
     }
 
     /**
@@ -79,7 +89,9 @@ final class TicketTimeline
     {
         $verb = self::VERBS[$event->type] ?? mb_strtolower(TicketEventText::label($event->type));
 
-        return trim(($event->actor?->name ?? 'Sistema').' '.$verb.' '.$this->detail($event));
+        $actor = $event->actor_user_id === null ? null : $event->actor;
+
+        return trim((($actor === null ? null : $actor->name) ?? 'Sistema').' '.$verb.' '.$this->detail($event));
     }
 
     private function sector(mixed $id): string
