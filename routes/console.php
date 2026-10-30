@@ -14,3 +14,6 @@ Schedule::command('app:close-inactive-tickets')->everyTenMinutes()->withoutOverl
 Schedule::command('app:drain-outbox')->everyMinute()->withoutOverlapping(10);
 Schedule::command('app:sync-google-contacts')->everyTenMinutes()->withoutOverlapping(10);
 Schedule::command('app:purge-media')->dailyAt('03:30')->withoutOverlapping(10);
+
+// Em segundo plano, para uma rodada lenta não atrasar as demais tarefas do minuto (elas rodam em sequência).
+Schedule::command('app:check-sla')->everyMinute()->withoutOverlapping(5)->runInBackground();
