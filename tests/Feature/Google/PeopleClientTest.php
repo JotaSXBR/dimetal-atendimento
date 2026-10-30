@@ -131,6 +131,51 @@ class PeopleClientTest extends TestCase
         $this->failsWith('bad_request', fn () => $this->client()->createContact([]));
     }
 
+    public function test_a_excecao_guarda_o_motivo_do_google_so_em_detail_e_nunca_na_mensagem(): void
+    {
+        Http::fake(['*' => Http::response(['error' => [
+            'code' => 400,
+            'status' => 'INVALID_ARGUMENT',
+            'message' => "Invalid value at 'person.addresses[0]'",
+            'details' => [['@type' => 'type.googleapis.com/google.rpc.BadRequest', 'fieldViolations' => [['field' => 'person.addresses[0].formattedValue', 'description' => 'newline not allowed']]]],
+        ]], 400)]);
+
+        try {
+            $this->client()->createContact([]);
+            $this->fail('devia lançar GooglePeopleException');
+        } catch (GooglePeopleException $e) {
+            $this->assertSame(400, $e->httpStatus);
+            $this->assertStringContainsString('INVALID_ARGUMENT', (string) $e->detail);
+            $this->assertStringContainsString("person.addresses[0]'", (string) $e->detail);
+            $this->assertStringContainsString('person.addresses[0].formattedValue (newline not allowed)', (string) $e->detail);
+            $this->assertSame('People API: bad_request (HTTP 400)', $e->getMessage());
+        }
+    }
+
+    public function test_resposta_sem_corpo_nao_tem_detalhe(): void
+    {
+        Http::fake(['*' => Http::response('', 500)]);
+
+        try {
+            $this->client()->getContact('people/c1');
+            $this->fail('devia lançar GooglePeopleException');
+        } catch (GooglePeopleException $e) {
+            $this->assertNull($e->detail);
+        }
+    }
+
+    public function test_detalhe_muito_longo_e_cortado(): void
+    {
+        Http::fake(['*' => Http::response(['error' => ['status' => 'INVALID_ARGUMENT', 'message' => str_repeat('x', 2000)]], 400)]);
+
+        try {
+            $this->client()->createContact([]);
+            $this->fail('devia lançar GooglePeopleException');
+        } catch (GooglePeopleException $e) {
+            $this->assertLessThanOrEqual(500, mb_strlen((string) $e->detail));
+        }
+    }
+
     public function test_401_vira_unauthorized(): void
     {
         Http::fake(['*' => Http::response(['error' => ['code' => 401, 'status' => 'UNAUTHENTICATED']], 401)]);

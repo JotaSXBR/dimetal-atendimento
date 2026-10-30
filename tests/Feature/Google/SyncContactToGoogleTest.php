@@ -9,6 +9,7 @@ use App\Services\Google\SyncContactToGoogle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Tests\TestCase;
 
@@ -325,6 +326,41 @@ class SyncContactToGoogleTest extends TestCase
         $this->assertSame('failed', $this->sync($contact));
 
         $this->assertSame('rate_limited', $contact->fresh()?->google_error);
+    }
+
+    public function test_falha_do_google_vai_para_o_log_com_o_motivo_que_ele_devolveu(): void
+    {
+        Log::spy();
+        $this->connect();
+        $this->fakeGoogle(['create' => Http::response(['error' => [
+            'code' => 400,
+            'status' => 'INVALID_ARGUMENT',
+            'message' => "Invalid value at 'person.birthdays[0]'",
+            'details' => [['fieldViolations' => [['field' => 'person.birthdays[0].date', 'description' => 'invalid date']]]],
+        ]], 400)]);
+        $contact = $this->contact();
+
+        $this->assertSame('failed', $this->sync($contact));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => $context['contact'] === $contact->id
+            && $context['reason'] === 'bad_request'
+            && $context['http'] === 400
+            && str_contains((string) $context['detail'], 'person.birthdays[0].date (invalid date)'));
+        $this->assertSame('bad_request', $contact->fresh()?->google_error);
+    }
+
+    public function test_falha_sem_resposta_do_google_loga_so_o_codigo(): void
+    {
+        Log::spy();
+        $this->connect();
+        $this->fakeGoogle(['create' => Http::response('', 500)]);
+        $contact = $this->contact();
+
+        $this->assertSame('failed', $this->sync($contact));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => $context['reason'] === 'unavailable'
+            && $context['http'] === 500
+            && $context['detail'] === null);
     }
 
     public function test_sucesso_limpa_o_erro_anterior(): void
