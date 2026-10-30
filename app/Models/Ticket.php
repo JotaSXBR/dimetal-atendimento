@@ -120,6 +120,54 @@ class Ticket extends Model
     }
 
     /**
+     * O histórico: só encerrados. Supervisor/admin veem todos; inativo, nada. O atendente vê os que atendeu e os dos seus
+     * setores; encerrado sem setor e sem ele como responsável fica só para supervisor e admin.
+     *
+     * @param  Builder<Ticket>  $query
+     */
+    public function scopeInHistoryOf(Builder $query, User $user): void
+    {
+        $query->where('status', TicketStatus::ENCERRADO->value);
+
+        if (! $user->active) {
+            $query->whereRaw('false');
+
+            return;
+        }
+
+        if ($user->canSeeAllSectors()) {
+            return;
+        }
+
+        $query->where(fn (Builder $q) => $q
+            ->where('assigned_user_id', $user->id)
+            ->orWhereIn('sector_id', $user->sectors()->select('sectors.id')));
+    }
+
+    /**
+     * Tudo o que o usuário pode abrir: a fila e os atendimentos (`visibleTo`) mais o histórico (`inHistoryOf`). Supervisor
+     * e admin são tratados antes do OR: o `visibleTo` deles não põe condição, e um grupo vazio quebraria o `orWhere`.
+     *
+     * @param  Builder<Ticket>  $query
+     */
+    public function scopeReadableBy(Builder $query, User $user): void
+    {
+        if (! $user->active) {
+            $query->whereRaw('false');
+
+            return;
+        }
+
+        if ($user->canSeeAllSectors()) {
+            return;
+        }
+
+        $query->where(fn (Builder $q) => $q
+            ->visibleTo($user)
+            ->orWhere(fn (Builder $history) => $history->inHistoryOf($user)));
+    }
+
+    /**
      * Registra uma mensagem recebida. Atômico e só avança: um evento atrasado nunca recua o horário.
      */
     public function recordInbound(CarbonInterface $at): void

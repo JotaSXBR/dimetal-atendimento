@@ -10,7 +10,7 @@ class TicketPolicy
 {
     public function view(User $user, Ticket $ticket): bool
     {
-        return Ticket::query()->visibleTo($user)->whereKey($ticket->id)->exists();
+        return Ticket::query()->readableBy($user)->whereKey($ticket->id)->exists();
     }
 
     public function claim(User $user, Ticket $ticket): bool
