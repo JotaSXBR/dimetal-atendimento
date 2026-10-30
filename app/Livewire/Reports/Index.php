@@ -45,7 +45,8 @@ class Index extends Component
     {
         $beat = Cache::get(CheckSlaCommand::HEARTBEAT);
 
-        return ! is_int($beat) || now()->getTimestamp() - $beat > 180;
+        // O Redis guarda número sem serializar e o devolve como texto: aceita `"1793…"` além de `1793…`.
+        return ! is_numeric($beat) || now()->getTimestamp() - (int) $beat > 180;
     }
 
     /** "3 min 12 s", ou um traço quando não há dado. */

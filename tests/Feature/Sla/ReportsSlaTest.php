@@ -147,6 +147,23 @@ class ReportsSlaTest extends TestCase
         $this->supervisorPage()->assertDontSee('O verificador de SLA não roda');
     }
 
+    public function test_a_batida_que_o_redis_devolve_como_texto_conta_como_recente(): void
+    {
+        // O Redis guarda número sem serializar e o devolve como texto: o cache `array` dos testes devolve o `int` que entrou.
+        Cache::put('sla:last-run', (string) now()->subMinutes(2)->getTimestamp(), 600);
+        $this->supervisorPage()->assertDontSee('O verificador de SLA não roda');
+
+        Cache::put('sla:last-run', (string) now()->subMinutes(4)->getTimestamp(), 600);
+        $this->supervisorPage()->assertSee('O verificador de SLA não roda há mais de 3 minutos');
+    }
+
+    public function test_batida_ilegivel_conta_como_rotina_parada(): void
+    {
+        Cache::put('sla:last-run', 'lixo', 600);
+
+        $this->supervisorPage()->assertSee('O verificador de SLA não roda há mais de 3 minutos');
+    }
+
     public function test_so_supervisor_e_admin_veem(): void
     {
         Livewire::actingAs($this->agent)->test(Index::class)->assertForbidden();
