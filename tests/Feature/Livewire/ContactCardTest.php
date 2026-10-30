@@ -2,14 +2,18 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\GoogleConnectionStatus;
 use App\Enums\UserRole;
+use App\Jobs\SyncContactToGoogleJob;
 use App\Livewire\Contacts\ContactCard;
 use App\Livewire\Inbox\Inbox;
 use App\Models\Channel;
 use App\Models\Contact;
+use App\Models\GoogleConnection;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
@@ -107,5 +111,71 @@ class ContactCardTest extends TestCase
         $ticket = Ticket::factory()->for($this->contact)->for(Channel::factory()->connected()->create())->create();
 
         Livewire::actingAs($admin)->test(Inbox::class)->set('ticketId', $ticket->id)->assertSeeLivewire('contacts.contact-card');
+    }
+
+    private function connectGoogle(): void
+    {
+        GoogleConnection::query()->create([
+            'account_email' => 'dimetal@gmail.com', 'access_token' => 'tok', 'refresh_token' => 'ref',
+            'expires_at' => now()->addHour(), 'status' => GoogleConnectionStatus::CONNECTED, 'connected_at' => now(),
+        ]);
+    }
+
+    public function test_ficha_diz_que_o_google_nao_esta_conectado(): void
+    {
+        $this->contact->update(['edited_at' => now()]);
+
+        $this->card()->assertSee('Google não conectado');
+    }
+
+    public function test_contato_nunca_editado_so_vai_depois_da_primeira_edicao(): void
+    {
+        $this->connectGoogle();
+
+        $this->card()->assertSee('depois da primeira edição');
+    }
+
+    public function test_ficha_mostra_pendente_sincronizado_e_erro(): void
+    {
+        $this->connectGoogle();
+        $this->contact->update(['edited_at' => now()]);
+        $this->card()->assertSee('Pendente');
+
+        $this->contact->update(['google_synced_at' => now(), 'updated_at' => now(), 'google_resource_name' => 'people/c1']);
+        $this->card()->assertSee('Sincronizado em')->assertDontSee('Pendente');
+
+        $this->contact->update(['google_error' => 'rate_limited']);
+        $this->card()->assertSee('Erro:')->assertSee('Reenviar');
+    }
+
+    public function test_ficha_explica_quando_nao_ha_telefone_nem_email_para_o_google(): void
+    {
+        $this->connectGoogle();
+        $lidOnly = Contact::factory()->edited()->create(['wa_id' => null, 'lid' => '1@lid']);
+
+        Livewire::actingAs($this->user)->test(ContactCard::class, ['contactId' => $lidOnly->id])
+            ->assertSee('Sem telefone nem e-mail para enviar ao Google');
+    }
+
+    public function test_reenviar_limpa_o_erro_e_enfileira(): void
+    {
+        Queue::fake();
+        $this->connectGoogle();
+        $this->contact->update(['edited_at' => now(), 'google_error' => 'rate_limited', 'google_attempted_at' => now()]);
+
+        $this->card()->call('resync');
+
+        $this->assertNull($this->contact->fresh()?->google_error);
+        Queue::assertPushedOn('google', SyncContactToGoogleJob::class, fn (SyncContactToGoogleJob $job): bool => $job->contactId === $this->contact->id);
+    }
+
+    public function test_salvar_na_ficha_enfileira_o_envio_ao_google(): void
+    {
+        Queue::fake();
+        $this->connectGoogle();
+
+        $this->card()->set('form.name', 'Maria')->call('save');
+
+        Queue::assertPushed(SyncContactToGoogleJob::class);
     }
 }

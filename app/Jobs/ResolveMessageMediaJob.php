@@ -44,7 +44,10 @@ class ResolveMessageMediaJob implements ShouldQueue
     /** @var array<int, int> */
     public array $backoff = [5, 15, 60];
 
-    public function __construct(public readonly int $messageId) {}
+    public function __construct(public readonly int $messageId)
+    {
+        $this->onQueue('inbound');
+    }
 
     public function handle(): void
     {

@@ -1,19 +1,28 @@
 #!/bin/bash
-# Dois processos de fila no mesmo container: `outbound` (um só, para as mensagens de cada conversa saírem na ordem; o
-# envio humanizado espera segundos) e `default` (ingestão, acks, tempo real; nunca fica preso nessa espera). Se um
-# morrer, o outro é encerrado e o container sai, para o Coolify reiniciar os dois juntos.
+# Quatro processos de fila no mesmo container, um por tipo de trabalho, para um lento não segurar os outros:
+#   outbound  envio ao cliente. UM só: as mensagens de cada conversa saem na ordem, e o envio humanizado espera segundos.
+#   inbound   ingestão do webhook do WAHA e download de mídia (um download demorado não atrasa o envio nem a tela).
+#   realtime  avisos de tela (Reverb) e, por rede de segurança, a fila `default`, onde cai o que não escolheu fila.
+#   google    contatos para o Google: o People API pede escrita sequencial e pode demorar ou limitar (429).
+# Se um processo morrer, os outros são encerrados e o container sai, para o Coolify reiniciar todos juntos.
 artisan=/var/www/html/artisan
+pids=()
 
-php "$artisan" queue:work --queue=outbound --tries=1 --timeout=120 --max-time=3600 &
-outbound=$!
-php "$artisan" queue:work --queue=default --tries=3 --timeout=120 --max-time=3600 &
-default=$!
+start() {
+    php "$artisan" queue:work "$@" --timeout=120 --max-time=3600 &
+    pids+=($!)
+}
 
-trap 'kill -TERM "$outbound" "$default" 2>/dev/null' TERM INT
+start --queue=outbound --tries=1
+start --queue=inbound --tries=3
+start --queue=realtime,default --tries=3
+start --queue=google --tries=1
+
+trap 'kill -TERM "${pids[@]}" 2>/dev/null' TERM INT
 
 wait -n
 status=$?
 
-kill -TERM "$outbound" "$default" 2>/dev/null
+kill -TERM "${pids[@]}" 2>/dev/null
 wait
 exit "$status"

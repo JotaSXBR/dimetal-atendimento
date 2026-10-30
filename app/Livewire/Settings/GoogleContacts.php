@@ -29,7 +29,7 @@ class GoogleContacts extends Component
             'connection' => $account->current(),
             'synced' => Contact::query()->whereNotNull('google_synced_at')->count(),
             // Editado e ainda não enviado (ou alterado depois do último envio).
-            'pending' => Contact::query()->whereNotNull('edited_at')->whereNull('google_synced_at')->count(),
+            'pending' => Contact::query()->pendingGoogle()->count(),
             'failed' => Contact::query()->whereNotNull('google_error')->count(),
         ]);
     }

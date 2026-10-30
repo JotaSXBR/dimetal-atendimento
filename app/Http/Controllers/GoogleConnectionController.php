@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Contacts\SyncPendingContacts;
 use App\Services\Google\GoogleAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class GoogleConnectionController extends Controller
         return $this->provider()->scopes(self::SCOPES)->with(['access_type' => 'offline', 'prompt' => 'consent'])->redirect();
     }
 
-    public function callback(Request $request, GoogleAccount $account): RedirectResponse
+    public function callback(Request $request, GoogleAccount $account, SyncPendingContacts $syncPending): RedirectResponse
     {
         if ($request->filled('error')) {
             return $this->back('O acesso não foi autorizado no Google.');
@@ -40,6 +41,9 @@ class GoogleConnectionController extends Controller
         }
 
         $account->connect((string) $user->getEmail(), $user->token, $user->refreshToken, $user->expiresIn);
+
+        // Contatos editados antes de a conta existir (ou depois de uma reconexão) seguem agora.
+        $syncPending();
 
         return redirect()->route('configuracoes.google');
     }

@@ -36,4 +36,11 @@
     </div>
 
     <flux:button type="submit" size="sm" variant="primary" class="w-full">Salvar contato</flux:button>
+
+    <div class="flex items-start justify-between gap-2 border-t border-line pt-3 text-xs {{ $google['error'] ? 'text-danger' : 'text-ink-3' }}" @if ($google['error']) role="alert" @endif>
+        <span>{{ $google['text'] }}</span>
+        @if ($google['error'])
+            <flux:button size="xs" variant="subtle" icon="arrow-path" wire:click="resync">Reenviar</flux:button>
+        @endif
+    </div>
 </form>

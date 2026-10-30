@@ -194,7 +194,7 @@ class GoogleConnectionTest extends TestCase
     public function test_pagina_mostra_conta_estado_e_contagens(): void
     {
         $this->connection();
-        Contact::factory()->edited()->create(['google_synced_at' => now(), 'google_resource_name' => 'people/c1']);
+        Contact::factory()->edited()->create(['google_synced_at' => now(), 'updated_at' => now(), 'google_resource_name' => 'people/c1']);
         Contact::factory()->edited()->create();
         Contact::factory()->create();
 

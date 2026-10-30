@@ -87,6 +87,19 @@ class Contact extends Model
         });
     }
 
+    /**
+     * Editado, com como ser achado no Google (telefone do WhatsApp ou e-mail) e ainda não enviado, ou alterado depois do último
+     * envio. O envio grava `google_synced_at` e `updated_at` no mesmo instante; qualquer edição posterior desfaz a igualdade.
+     *
+     * @param  Builder<Contact>  $query
+     */
+    public function scopePendingGoogle(Builder $query): void
+    {
+        $query->whereNotNull('edited_at')
+            ->where(fn (Builder $query) => $query->where('wa_id', 'like', '%@c.us')->orWhereNotNull('email'))
+            ->where(fn (Builder $query) => $query->whereNull('google_synced_at')->orWhereColumn('updated_at', '>', 'google_synced_at'));
+    }
+
     /** Nome do contato ou, sem nome, o telefone em formato humano. */
     public function label(): string
     {

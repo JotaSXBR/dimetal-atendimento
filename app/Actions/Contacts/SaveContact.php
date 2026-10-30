@@ -2,6 +2,7 @@
 
 namespace App\Actions\Contacts;
 
+use App\Jobs\SyncContactToGoogleJob;
 use App\Models\Contact;
 
 /** Grava a edição de um contato. A primeira edição marca `edited_at`: dali em diante o contato vai ao Google. */
@@ -26,6 +27,8 @@ class SaveContact
 
         $contact->edited_at ??= now();
         $contact->save();
+
+        SyncContactToGoogleJob::dispatchWhenConnected($contact);
 
         return $contact;
     }

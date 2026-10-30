@@ -10,4 +10,5 @@ Artisan::command('inspire', function () {
 
 Schedule::command('app:close-inactive-tickets')->everyTenMinutes()->withoutOverlapping();
 Schedule::command('app:drain-outbox')->everyMinute()->withoutOverlapping();
+Schedule::command('app:sync-google-contacts')->everyTenMinutes()->withoutOverlapping();
 Schedule::command('app:purge-media')->dailyAt('03:30')->withoutOverlapping();

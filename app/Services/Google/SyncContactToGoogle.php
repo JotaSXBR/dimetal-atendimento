@@ -25,6 +25,8 @@ class SyncContactToGoogle
         $hash = $this->mapper->hash($person);
 
         if ($contact->google_resource_name !== null && $contact->google_payload_hash === $hash) {
+            $this->settle($contact, []);
+
             return 'unchanged';
         }
 
@@ -41,13 +43,11 @@ class SyncContactToGoogle
             return $this->fail($contact, $e->reason);
         }
 
-        $contact->forceFill([
+        $this->settle($contact, [
             'google_resource_name' => $google->resourceName,
             'google_etag' => $google->etag,
             'google_payload_hash' => $hash,
-            'google_synced_at' => now(),
-            'google_error' => null,
-        ])->save();
+        ]);
 
         return $result;
     }
@@ -120,6 +120,19 @@ class SyncContactToGoogle
         }
 
         return null;
+    }
+
+    /**
+     * Marca o contato como em dia. `google_synced_at` e `updated_at` recebem o mesmo instante: é assim que a varredura
+     * sabe que nada mudou desde o envio (`Contact::scopePendingGoogle`).
+     *
+     * @param  array<string, mixed>  $mirror
+     */
+    private function settle(Contact $contact, array $mirror): void
+    {
+        $now = now();
+
+        $contact->forceFill($mirror + ['google_synced_at' => $now, 'google_error' => null, 'updated_at' => $now])->save();
     }
 
     private function fail(Contact $contact, string $reason): string

@@ -3,8 +3,10 @@
 namespace App\Livewire\Contacts;
 
 use App\Actions\Contacts\SaveContact;
+use App\Jobs\SyncContactToGoogleJob;
 use App\Livewire\Forms\ContactForm;
 use App\Models\Contact;
+use App\Services\Google\ContactSyncStatus;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -32,6 +34,15 @@ class ContactCard extends Component
         $this->dispatch('contact-saved', contactId: $this->contactId);
     }
 
+    /** Reenvia ao Google um contato que deu erro: zera o erro e a tentativa e enfileira de novo. */
+    public function resync(): void
+    {
+        $contact = $this->contact();
+        $contact->forceFill(['google_error' => null, 'google_attempted_at' => null])->save();
+
+        SyncContactToGoogleJob::dispatchWhenConnected($contact);
+    }
+
     public function addUrl(): void
     {
         if (count($this->form->urls) < ContactForm::MAX_URLS) {
@@ -50,8 +61,10 @@ class ContactCard extends Component
         return Contact::query()->findOrFail($this->contactId);
     }
 
-    public function render(): View
+    public function render(ContactSyncStatus $syncStatus): View
     {
-        return view('livewire.contacts.contact-card', ['contact' => $this->contact()]);
+        $contact = $this->contact();
+
+        return view('livewire.contacts.contact-card', ['contact' => $contact, 'google' => $syncStatus->describe($contact)]);
     }
 }

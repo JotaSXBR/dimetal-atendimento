@@ -2,6 +2,7 @@
 
 namespace App\Actions\Contacts;
 
+use App\Jobs\SyncContactToGoogleJob;
 use App\Models\Contact;
 use App\Support\PhoneFormat;
 use Illuminate\Validation\ValidationException;
@@ -21,6 +22,10 @@ class CreateContact
         }
 
         $contact = Contact::query()->firstOrCreate(['wa_id' => $waId], ['name' => trim($name), 'edited_at' => now()]);
+
+        if ($contact->wasRecentlyCreated) {
+            SyncContactToGoogleJob::dispatchWhenConnected($contact);
+        }
 
         return ['contact' => $contact, 'created' => $contact->wasRecentlyCreated];
     }
