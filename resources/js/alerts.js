@@ -180,11 +180,12 @@ function start(id) {
         setInterval(claim, 1000);
     }
 
+    // O `wire:navigate` troca o <body> inteiro: observar o <html>, que sobrevive à troca, evita o observer ficar em um nó morto.
     let frame = null;
     new MutationObserver(() => {
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(sync);
-    }).observe(document.body, { childList: true, subtree: true });
+    }).observe(document.documentElement, { childList: true, subtree: true });
     document.addEventListener('livewire:navigated', sync);
 
     // Qualquer clique ou tecla libera o áudio (a política do navegador pede um gesto).

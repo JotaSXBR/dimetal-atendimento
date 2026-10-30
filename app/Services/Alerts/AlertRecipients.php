@@ -41,6 +41,33 @@ final class AlertRecipients
         })->get();
     }
 
+    /**
+     * Tickets com SLA estourado cujo alerta este usuário recebe: a regra de {@see self::sla()} vista do outro lado
+     * (o responsável, ou a fila quando não há responsável; supervisor e admin, todos). Alimenta a faixa e o som repetido.
+     *
+     * @return Builder<Ticket>
+     */
+    public function breachedFor(User $user): Builder
+    {
+        $query = Ticket::query()->open()->whereNotNull('waiting_since')->where('sla_due_at', '<=', now());
+
+        if (! $user->active) {
+            return $query->whereRaw('false');
+        }
+
+        if ($user->canSeeAllSectors()) {
+            return $query;
+        }
+
+        $sectors = $user->sectors()->select('sectors.id');
+
+        return $query->where(fn (Builder $q) => $q
+            ->where('assigned_user_id', $user->id)
+            ->orWhere(fn (Builder $queue) => $queue
+                ->whereNull('assigned_user_id')
+                ->where(fn (Builder $sector) => $sector->whereNull('sector_id')->orWhereIn('sector_id', $sectors))));
+    }
+
     /** @return Builder<User> */
     private function active(): Builder
     {

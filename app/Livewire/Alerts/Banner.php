@@ -3,7 +3,7 @@
 namespace App\Livewire\Alerts;
 
 use App\Models\Channel;
-use App\Models\Ticket;
+use App\Services\Alerts\AlertRecipients;
 use App\Support\ConnectionState;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -65,7 +65,7 @@ class Banner extends Component
             'down' => $down,
             // Voltou, mas outro canal segue caído: a faixa crítica já diz isso, não mostra a confirmação por cima.
             'recovered' => $down->isEmpty() ? $this->recovered : '',
-            'breached' => $user === null ? 0 : Ticket::query()->open()->visibleTo($user)->whereNotNull('waiting_since')->where('sla_due_at', '<=', now())->count(),
+            'breached' => $user === null ? 0 : app(AlertRecipients::class)->breachedFor($user)->count(),
             'canSeeChannels' => $user?->isAdmin() ?? false,
         ]);
     }
