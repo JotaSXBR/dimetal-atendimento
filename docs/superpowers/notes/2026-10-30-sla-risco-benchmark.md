@@ -26,5 +26,23 @@ depender dos tickets abertos, não do histórico. (3) O cálculo de expediente (
 vez por espera, então escala com as esperas novas por minuto, não com o total; um limite de 200 por passo protege contra rajada.
 
 **Limites.** Dados sintéticos e tudo em cache (numa VPS com pouca memória a leitura da tabela piora); sem concorrência com o resto
-do app; `closed_at` (Histórico e aba Encerrados) não foi medido e também não tem índice próprio. Da documentação do Laravel:
+do app; o `closed_at` (Histórico e aba Encerrados) foi medido na segunda rodada, abaixo. Da documentação do Laravel:
 `withoutOverlapping()` sem argumento segura o bloqueio por 24 horas se o processo morrer no meio.
+
+## Segunda rodada: busca por `closed_at` (Histórico e aba Encerrados)
+
+Mesma máquina, 1.000.000 de encerrados espalhados por 3 anos (5 setores, 10 atendentes, 3 motivos) e 300 abertos; tabela de 89 MB.
+Consultas iguais às do código (`status = 'encerrado'`, `closed_at` em janela, ordem `closed_at desc, id desc`).
+
+| Consulta | Sem índice de `closed_at` | Com `tickets (closed_at desc, id desc) where status = 'encerrado'` |
+|---|---|---|
+| Aba Encerrados (7 dias, atendente: setor ou o que atendeu, 50) | 58,0 ms | 0,23 ms |
+| Histórico 30 dias, página de 25 | 65,7 ms | 0,07 ms |
+| Histórico 30 dias, **contagem** da paginação | 70,9 ms | 23,6 ms |
+| Histórico sem data, página de 25 | 79,9 ms | 0,11 ms |
+| Histórico sem data, **contagem** | 54,5 ms | 50,7 ms |
+| Histórico com setor + motivo, 30 dias | 40,4 ms | 0,54 ms |
+
+Índice: 30 MB (cerca de 0,34 vez a tabela). **Conclusão:** o índice derruba as páginas em 100 a 600 vezes, mas a contagem do
+`paginate()` continua entre 24 e 51 ms e cresce em linha reta; por isso o Histórico passa a `simplePaginate`. Limites iguais aos da
+primeira rodada (sintético, em memória, sem concorrência); a subconsulta de setores do atendente foi medida como lista fixa.

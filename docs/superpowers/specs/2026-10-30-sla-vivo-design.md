@@ -81,8 +81,12 @@ em memória, dados sintéticos, sem concorrência. Detalhes em `docs/superpowers
 | Rotina parada sem ninguém perceber | Se o agendador cair, o alerta some em silêncio (a antítese do objetivo). | A rotina grava uma batida (`Cache`, `sla:last-run`); Relatórios mostra um aviso quando ela não roda há mais de 3 minutos. |
 | Atraso do aviso | A rotina é de 1 minuto, então a marca e a atualização de tela chegam até 60 s depois do instante. | Aceito: o limite padrão é de 10 minutos. O selo é calculado na hora de desenhar a tela, então quem abre o Inbox vê o estado certo. |
 
-**Não medido:** a busca por `closed_at` (aba Encerrados e Histórico) também não tem índice próprio e deve ler a tabela com 1 milhão
-de linhas; ficou fora desta fatia e vale uma medição à parte.
+**Achado junto, por decisão do dono: a busca por `closed_at` (aba Encerrados e Histórico).** Com 1 milhão de encerrados e só o
+índice atual, cada consulta lê a tabela inteira: aba Encerrados 58 ms; Histórico (30 dias) 66 ms a página mais 71 ms a contagem da
+paginação; sem filtro de data 80 ms mais 54 ms; com filtros de setor e motivo 40 ms. Um índice parcial `tickets (closed_at desc,
+id desc) where status = 'encerrado'` (30 MB, contra 89 MB da tabela) leva as páginas a 0,07 a 0,54 ms, mas a **contagem** do
+`paginate()` continua cara (24 ms em 30 dias, 51 ms sem filtro de data) e cresce com a tabela. Por isso o Histórico passa a
+`simplePaginate` (sem contagem; só "Anterior" e "Próxima", sem número de páginas) e ganha o índice.
 
 ## Abordagens consideradas
 
@@ -107,6 +111,7 @@ de linhas; ficou fora desta fatia e vale uma medição à parte.
    URL).
 8. **Máximo de 200 tickets por passo e por rodada**, e a rotina com `withoutOverlapping(5)` e `runInBackground()`.
 9. **Aviso em Relatórios quando a rotina para** (batida em cache, limite de 3 minutos).
+11. **Histórico sem numeração de páginas** (`simplePaginate`) e com o índice de `closed_at`, pelo custo da contagem medido acima.
 10. **Endurecer as quatro tarefas agendadas existentes** com `withoutOverlapping(10)`: é uma mudança fora do SLA, achada na pesquisa,
     de uma linha cada, num commit separado.
 
