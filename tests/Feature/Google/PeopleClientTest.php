@@ -54,7 +54,7 @@ class PeopleClientTest extends TestCase
 
         $created = $this->client()->createContact(['names' => [['unstructuredName' => 'Maria']]]);
 
-        $this->assertEquals(new GooglePerson('people/c1', 'E1', ['+5516997524950'], ['a@b.com'], ['CONTACT']), $created);
+        $this->assertEquals(new GooglePerson('people/c1', 'E1', ['+5516997524950'], ['a@b.com'], ['CONTACT'], 'c1'), $created);
         Http::assertSent(fn (Request $r) => $r->method() === 'POST'
             && str_starts_with($r->url(), self::BASE.'/people:createContact')
             && $r->hasHeader('Authorization', 'Bearer tok-123')
@@ -64,7 +64,7 @@ class PeopleClientTest extends TestCase
     public function test_update_contact_usa_patch_com_mascara_e_etag(): void
     {
         Http::fake(['*' => Http::response($this->person('people/c1', 'E2'), 200)]);
-        $current = new GooglePerson('people/c1', 'E1', [], []);
+        $current = new GooglePerson('people/c1', 'E1', [], [], ['CONTACT'], 'c1');
 
         $updated = $this->client()->updateContact($current, ['names' => [['unstructuredName' => 'Maria']]], ['names', 'phoneNumbers']);
 
@@ -75,8 +75,33 @@ class PeopleClientTest extends TestCase
             return $r->method() === 'PATCH'
                 && str_starts_with($r->url(), self::BASE.'/people/c1:updateContact')
                 && $query['updatePersonFields'] === 'names,phoneNumbers'
-                && $r['metadata']['sources'][0]['etag'] === 'E1';
+                && $r['metadata']['sources'] === [['type' => 'CONTACT', 'id' => 'c1', 'etag' => 'E1']];
         });
+    }
+
+    public function test_update_contact_sem_id_da_fonte_nao_manda_id_vazio(): void
+    {
+        Http::fake(['*' => Http::response($this->person('people/c1', 'E2'), 200)]);
+
+        $this->client()->updateContact(new GooglePerson('people/c1', 'E1', [], []), ['names' => [['unstructuredName' => 'Maria']]], ['names']);
+
+        Http::assertSent(fn (Request $r) => $r['metadata']['sources'] === [['type' => 'CONTACT', 'etag' => 'E1']]);
+    }
+
+    public function test_etag_e_id_vem_so_da_fonte_contact_e_nunca_do_topo_da_pessoa(): void
+    {
+        Http::fake(['*' => Http::sequence()
+            ->push(['resourceName' => 'people/c1', 'etag' => 'so-do-topo', 'metadata' => ['sources' => [['type' => 'PROFILE', 'id' => 'p9', 'etag' => 'P']]]], 200)
+            ->push($this->person('people/c1', 'E7'), 200)]);
+
+        $semFonte = $this->client()->getContact('people/c1');
+        $this->assertSame('', $semFonte?->etag, 'o etag do topo é de outro recurso: não serve para atualizar');
+        $this->assertSame('', $semFonte->sourceId);
+        $this->assertSame(['PROFILE'], $semFonte->sources);
+
+        $comFonte = $this->client()->getContact('people/c1');
+        $this->assertSame('E7', $comFonte?->etag);
+        $this->assertSame('c1', $comFonte->sourceId);
     }
 
     public function test_get_contact_devolve_null_quando_nao_existe(): void

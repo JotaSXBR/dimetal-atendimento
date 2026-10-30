@@ -91,7 +91,9 @@ class PeopleClient
     {
         $this->assertResourceName($current->resourceName);
 
-        $person['metadata'] = ['sources' => [['type' => 'CONTACT', 'etag' => $current->etag]]];
+        // A fonte que se atualiza é identificada por `type` + `id` e versionada pelo `etag`; sem o `id` o Google responde 400.
+        $source = array_filter(['type' => 'CONTACT', 'id' => $current->sourceId, 'etag' => $current->etag], fn (string $value): bool => $value !== '');
+        $person['metadata'] = ['sources' => [$source]];
 
         $response = $this->request('PATCH', '/'.$current->resourceName.':updateContact', [
             'updatePersonFields' => implode(',', $fields),

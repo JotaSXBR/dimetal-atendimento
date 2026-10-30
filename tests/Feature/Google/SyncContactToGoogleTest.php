@@ -171,6 +171,20 @@ class SyncContactToGoogleTest extends TestCase
         $this->assertNull($contact->fresh()?->google_error);
     }
 
+    public function test_busca_so_com_etag_do_topo_rele_e_manda_etag_e_id_da_fonte(): void
+    {
+        $this->connect();
+        $soTopo = ['resourceName' => 'people/c5', 'etag' => 'etag-da-pessoa', 'phoneNumbers' => [['value' => self::PHONE, 'canonicalForm' => self::PHONE]]];
+        $lido = $this->person('people/c5', 'E5');
+        $lido['metadata']['sources'][0]['id'] = 'c5';
+        $this->fakeGoogle(['search' => [self::PHONE => [$soTopo]], 'get' => Http::response($lido, 200)]);
+
+        $this->assertSame('updated', $this->sync($this->contact()));
+
+        $patch = $this->sent(':updateContact', 'PATCH')[0];
+        $this->assertSame([['type' => 'CONTACT', 'id' => 'c5', 'etag' => 'E5']], $patch->data()['metadata']['sources']);
+    }
+
     public function test_sem_etag_nem_depois_da_releitura_falha_sem_chamar_o_patch_e_explica_no_log(): void
     {
         Log::spy();
