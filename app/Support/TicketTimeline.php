@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\ClosedReason;
+use App\Enums\CloseOutcome;
 use App\Models\Sector;
 use App\Models\TicketEvent;
 use App\Models\User;
@@ -78,20 +80,49 @@ final class TicketTimeline
             ])),
             'reassigned', 'taken_over' => 'para '.$this->user($payload['to_user'] ?? null),
             'merged' => 'em outro ticket do mesmo cliente',
-            'closed', 'sla_breached' => TicketEventText::detail($event),
+            'closed' => $this->closedDetail($payload),
+            'sla_breached' => TicketEventText::detail($event),
             // Tipo que esta tela não conhece: a auditoria não esconde o dado, mostra o conteúdo como veio.
             default => array_key_exists($event->type, TicketEventText::TYPES) || $payload === [] ? '' : (string) json_encode($payload, JSON_UNESCAPED_UNICODE),
         };
     }
 
-    /** "Ana transferiu de Comercial para Financeiro"; sem ator, quem agiu foi o sistema. */
+    /**
+     * "Ana transferiu de Comercial para Financeiro". Sem ator, o evento é do sistema (ou do cliente) e lê como rótulo:
+     * "SLA estourado (esperando desde …)", "Ticket aberto", "Encerrado por inatividade".
+     */
     public function sentence(TicketEvent $event): string
     {
-        $verb = self::VERBS[$event->type] ?? mb_strtolower(TicketEventText::label($event->type));
-
+        $detail = $this->detail($event);
         $actor = $event->actor_user_id === null ? null : $event->actor;
 
-        return trim((($actor === null ? null : $actor->name) ?? 'Sistema').' '.$verb.' '.$this->detail($event));
+        if ($actor === null) {
+            $label = TicketEventText::label($event->type);
+
+            return match (true) {
+                $detail === '' => $label,
+                $event->type === 'closed' && str_starts_with($detail, 'por ') => $label.' '.$detail,
+                default => $label.' ('.$detail.')',
+            };
+        }
+
+        $verb = self::VERBS[$event->type] ?? mb_strtolower(TicketEventText::label($event->type));
+
+        return trim($actor->name.' '.$verb.($detail === '' ? '' : ($event->type === 'closed' ? ': ' : ' ').$detail));
+    }
+
+    /**
+     * Motivo e resumo do encerramento. O motivo automático só entra quando não houve motivo escolhido pelo atendente.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function closedDetail(array $payload): string
+    {
+        $outcome = is_string($payload['outcome'] ?? null) ? CloseOutcome::tryFrom($payload['outcome'])?->label() : null;
+        $summary = is_string($payload['summary'] ?? null) ? $payload['summary'] : null;
+        $automatic = $outcome === null && ($payload['reason'] ?? null) === ClosedReason::INATIVIDADE->value ? 'por inatividade' : null;
+
+        return implode(' · ', array_filter([$outcome, $summary, $automatic]));
     }
 
     private function sector(mixed $id): string

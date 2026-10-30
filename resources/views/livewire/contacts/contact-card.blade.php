@@ -28,7 +28,7 @@
             <ul class="mt-2 space-y-2">
                 @forelse ($history as $past)
                     <li class="text-xs" wire:key="history-{{ $past->id }}">
-                        @if ($past->status === \App\Enums\TicketStatus::ENCERRADO)
+                        @if ($past->status === \App\Enums\TicketStatus::ENCERRADO && auth()->user()?->can('view', $past))
                             <a href="{{ route('historico', ['ticketId' => $past->id]) }}" wire:navigate class="font-mono text-ink underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @else
                             <span class="font-mono text-ink">{{ $past->protocol }}</span>

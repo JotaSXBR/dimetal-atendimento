@@ -19,6 +19,7 @@ final class TicketEventText
         'taken_over' => 'Tomado',
         'merged' => 'Mesclado',
         'message_out' => 'Mensagem enviada',
+        'message_in' => 'Mensagem recebida',
         'after_hours_reply' => 'Resposta fora do horário',
         'media_purged' => 'Mídia apagada',
         'sla_breached' => 'SLA estourado',

@@ -10,11 +10,18 @@
     <flux:button size="sm" variant="subtle" icon="arrow-left" class="mb-3 lg:hidden" x-on:click="sheet = false">Voltar à conversa</flux:button>
 
     <h2 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Ticket</h2>
+    @php
+        $state = $readonly || $ticket->waiting_since === null || $ticket->sla_due_at === null ? null : $ticket->slaState();
+        $sla = $readonly || $ticket->waiting_since === null || $ticket->sla_due_at === null
+            ? null
+            : ($state === 'estourou' ? 'Estourado: venceu ' : 'Responder até ').app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now());
+    @endphp
     <dl class="mt-2 space-y-2 text-sm">
         @foreach (array_filter([
             'Canal' => $ticket->channel->name,
             'Setor' => $ticket->sector?->name ?? 'Fila geral',
             'Responsável' => $ticket->assignee?->name ?? 'Não atribuído',
+            'SLA' => $sla,
             'Aberto em' => $ticket->opened_at->timezone($tz)->format('d/m/Y H:i'),
             'Encerrado em' => $ticket->closed_at?->timezone($tz)->format('d/m/Y H:i'),
             'Motivo' => $readonly ? ($ticket->close_outcome?->label() ?? $ticket->closed_reason?->label()) : null,
@@ -33,7 +40,7 @@
 
     <hr class="my-4 border-line">
 
-    <livewire:contacts.contact-card :contact-id="$ticket->contact_id" :compact="true" :readonly="$readonly" :key="'contact-'.$ticket->contact_id" />
+    <livewire:contacts.contact-card :contact-id="$ticket->contact_id" :compact="true" :readonly="$readonly" :current-ticket-id="$ticket->id" :key="'contact-'.$ticket->contact_id" />
 
     @if ($events !== null && $timeline !== null)
         <hr class="my-4 border-line">

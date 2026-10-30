@@ -28,12 +28,17 @@ class ContactCard extends Component
 
     public bool $editing = false;
 
+    /** O ticket em que a ficha está aberta: não entra na lista de atendimentos anteriores. */
+    #[Locked]
+    public ?int $currentTicketId = null;
+
     /** Histórico: só leitura, sem o botão Editar. */
     #[Locked]
     public bool $readonly = false;
 
-    public function mount(int $contactId, bool $compact = false, bool $readonly = false): void
+    public function mount(int $contactId, bool $compact = false, bool $readonly = false, ?int $currentTicketId = null): void
     {
+        $this->currentTicketId = $currentTicketId;
         $this->contactId = $contactId;
         $this->compact = $compact;
         $this->readonly = $readonly;
@@ -51,6 +56,8 @@ class ContactCard extends Component
 
     public function save(SaveContact $saveContact): void
     {
+        abort_if($this->readonly, 403);
+
         $this->form->validate();
 
         $saveContact($this->contact(), $this->form->payload());
@@ -62,6 +69,8 @@ class ContactCard extends Component
     /** Reenvia ao Google um contato que deu erro: zera o erro e a tentativa e enfileira de novo. */
     public function resync(GoogleAccount $account): void
     {
+        abort_if($this->readonly, 403);
+
         if (! $account->isConnected()) {
             return;
         }
@@ -97,7 +106,7 @@ class ContactCard extends Component
         return view('livewire.contacts.contact-card', [
             'contact' => $contact,
             'google' => $syncStatus->describe($contact),
-            'history' => Ticket::query()->with('sector')->where('contact_id', $contact->id)->latest('opened_at')->limit(self::HISTORY_LIMIT)->get(),
+            'history' => Ticket::query()->with('sector')->where('contact_id', $contact->id)->when($this->currentTicketId !== null, fn ($query) => $query->whereKeyNot($this->currentTicketId))->latest('opened_at')->limit(self::HISTORY_LIMIT)->get(),
         ]);
     }
 }

@@ -3,9 +3,9 @@
 @endphp
 
 <div
-    class="grid h-dvh grid-cols-1 bg-surface"
+    class="grid h-dvh grid-cols-1 bg-surface lg:grid-cols-[360px_minmax(0,1fr)_var(--details-w,280px)]"
     x-data="{ details: localStorage.getItem('ticketDetailsOpen') !== '0', sheet: false, toggle() { this.details = ! this.details; localStorage.setItem('ticketDetailsOpen', this.details ? '1' : '0') } }"
-    x-bind:class="details ? 'lg:grid-cols-[360px_minmax(0,1fr)_280px]' : 'lg:grid-cols-[360px_minmax(0,1fr)]'"
+    x-bind:style="details ? '' : '--details-w: 0px'"
 >
     {{-- Busca e lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
