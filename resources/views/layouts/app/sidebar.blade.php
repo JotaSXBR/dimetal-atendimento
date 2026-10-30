@@ -62,6 +62,10 @@
                                 Empresa
                             </flux:sidebar.item>
 
+                            <flux:sidebar.item icon="archive-box" :href="route('configuracoes.retencao')" :current="request()->routeIs('configuracoes.retencao')" wire:navigate>
+                                Retenção
+                            </flux:sidebar.item>
+
                             <flux:sidebar.item icon="link" :href="route('configuracoes.google')" :current="request()->routeIs('configuracoes.google*')" wire:navigate>
                                 Google Contatos
                             </flux:sidebar.item>

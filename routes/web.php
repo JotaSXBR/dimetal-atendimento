@@ -12,6 +12,7 @@ use App\Livewire\Settings\Channels;
 use App\Livewire\Settings\Company;
 use App\Livewire\Settings\GoogleContacts;
 use App\Livewire\Settings\QuickReplies;
+use App\Livewire\Settings\Retention;
 use App\Livewire\Settings\Sectors;
 use App\Livewire\Settings\Users;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,7 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('configuracoes/google', GoogleContacts::class)->name('configuracoes.google');
     Route::get('configuracoes/google/redirect', [GoogleConnectionController::class, 'redirect'])->name('configuracoes.google.redirect');
     Route::get('configuracoes/google/callback', [GoogleConnectionController::class, 'callback'])->name('configuracoes.google.callback');
+    Route::get('configuracoes/retencao', Retention::class)->name('configuracoes.retencao');
     Route::get('configuracoes/setores', Sectors::class)->name('configuracoes.setores');
 });
 

@@ -23,7 +23,7 @@ etc.). (builder) Só eventos de ticket; sem IP, sem mudança de configuração e
 
 ## 3. Retenção (admin) — `configuracoes/retencao`
 
-Página de leitura: prazo de retenção (config `media.retention_days`, 90), espaço usado pelos anexos ainda guardados (soma de
+Página de leitura: prazo de retenção (constante `PurgeMediaCommand::RETENTION_DAYS`, 90), espaço usado pelos anexos ainda guardados (soma de
 `media_size`), quantos já passaram do prazo e o botão **Executar expurgo agora**, que roda `app:purge-media`. Texto e eventos
 ficam para sempre. (builder) Sem edição do prazo e sem backup na tela: o prazo é configuração de deploy.
 
