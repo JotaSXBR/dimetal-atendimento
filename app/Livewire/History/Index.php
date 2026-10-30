@@ -83,7 +83,7 @@ class Index extends Component
         $tickets = (new HistorySearch)
             ->query($user, $this->q, $this->from ?: null, $this->to ?: null, $this->sectorId, $this->userId, $this->outcome ?: null)
             ->with(['contact', 'sector', 'assignee'])
-            ->paginate(self::PER_PAGE);
+            ->simplePaginate(self::PER_PAGE);
 
         $ticket = $this->ticketId === null
             ? null
