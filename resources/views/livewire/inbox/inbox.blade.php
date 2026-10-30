@@ -81,6 +81,8 @@
                                 <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->preview }}</span>
                                 @if ($state = $item->slaState())
                                     <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium {{ $state === 'estourou' ? 'bg-danger/10 text-danger' : 'bg-warn/10 text-warn' }}">{{ $state === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span>
+                                @elseif ($item->waiting_since !== null && $item->sla_due_at !== null)
+                                    <span class="mt-1 block text-[10px] text-ink-3">Responder até {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($item->sla_due_at, now()) }}</span>
                                 @endif
                             </span>
                         </button>
@@ -121,7 +123,7 @@
                     @endif
                     @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
                         @php($slaState = $ticket->slaState())
-                        <p class="text-[11px] {{ $slaState === 'estourou' ? 'font-medium text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink-2') }}" role="status">
+                        <p class="text-xs font-medium {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
                             @if ($slaState === 'estourou')
                                 SLA estourado: venceu {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
                             @else

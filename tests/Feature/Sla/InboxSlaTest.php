@@ -87,6 +87,14 @@ class InboxSlaTest extends TestCase
         $this->assertSame(1, substr_count($html, 'SLA estourado'));
     }
 
+    public function test_cliente_esperando_dentro_do_prazo_mostra_o_horario_limite_na_lista(): void
+    {
+        $this->travelTo($this->sp('2026-10-30 10:00'));
+        $this->waiting('Tranquilo', ['sla_warn_at' => $this->sp('2026-10-30 10:30'), 'sla_due_at' => $this->sp('2026-10-30 10:40')]);
+
+        $this->inbox()->assertSee('Responder até hoje às 10h40')->assertDontSee('Perto de estourar');
+    }
+
     public function test_sem_espera_nao_ha_selo(): void
     {
         $this->travelTo($this->sp('2026-10-30 11:00'));

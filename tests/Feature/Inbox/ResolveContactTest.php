@@ -106,6 +106,32 @@ class ResolveContactTest extends TestCase
         $this->assertSame('Maria S.', $contact->fresh()?->name);
     }
 
+    public function test_lid_novo_com_o_mesmo_telefone_continua_o_mesmo_contato(): void
+    {
+        $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => self::LID]);
+
+        $resolved = $this->resolve('99999999999999@lid', '5516997524950:1@s.whatsapp.net');
+
+        $this->assertTrue($resolved->is($phone));
+        $this->assertSame('99999999999999@lid', $phone->fresh()?->lid, 'o lid atual passa a valer');
+        $this->assertSame(1, Contact::query()->count());
+    }
+
+    public function test_lid_novo_ja_visto_sem_telefone_e_fundido_quando_o_telefone_aparece(): void
+    {
+        $channel = Channel::factory()->create();
+        $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'lid' => self::LID]);
+        $lidOnly = Contact::factory()->create(['wa_id' => null, 'lid' => '99999999999999@lid']);
+        $ticket = Ticket::factory()->for($lidOnly)->for($channel)->create();
+
+        $resolved = $this->resolve('99999999999999@lid', '5516997524950:1@s.whatsapp.net');
+
+        $this->assertTrue($resolved->is($phone));
+        $this->assertNull(Contact::query()->find($lidOnly->id));
+        $this->assertSame($phone->id, $ticket->fresh()?->contact_id);
+        $this->assertSame('99999999999999@lid', $phone->fresh()?->lid);
+    }
+
     public function test_lid_so_com_ticket_ganha_o_telefone_e_o_ticket_segue(): void
     {
         $channel = Channel::factory()->create();
