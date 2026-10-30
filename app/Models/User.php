@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
+use App\Support\AlertSettings;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -27,6 +28,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property bool $active
  * @property bool $can_transfer
  * @property bool $sign_messages
+ * @property array<string, mixed>|null $alert_settings
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -55,7 +57,13 @@ class User extends Authenticatable implements PasskeyUser
             'active' => 'boolean',
             'can_transfer' => 'boolean',
             'sign_messages' => 'boolean',
+            'alert_settings' => 'array',
         ];
+    }
+
+    public function alertSettings(): AlertSettings
+    {
+        return AlertSettings::fromArray($this->alert_settings);
     }
 
     /**
