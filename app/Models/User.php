@@ -67,6 +67,20 @@ class User extends Authenticatable implements PasskeyUser
         return 'users.'.$this->id;
     }
 
+    /** Cala o som do alerta crítico por 15 min ou 1 h; qualquer outro prazo é recusado. A faixa visual não depende disto. */
+    public function muteCriticalFor(int $minutes): bool
+    {
+        if (! in_array($minutes, [15, 60], true)) {
+            return false;
+        }
+
+        $settings = $this->alertSettings()->toArray();
+        $settings['mute_critical_until'] = now()->addMinutes($minutes)->utc()->toIso8601String();
+        $this->forceFill(['alert_settings' => $settings])->save();
+
+        return true;
+    }
+
     public function alertSettings(): AlertSettings
     {
         return AlertSettings::fromArray($this->alert_settings);
