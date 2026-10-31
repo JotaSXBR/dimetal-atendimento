@@ -1,0 +1,47 @@
+# Deploy rápido Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (execução inline). Steps use checkbox (`- [ ]`).
+
+**Goal:** Cortar ~2 min do deploy do beta e eliminar o warning de build-time sem expor segredos.
+
+**Architecture:** Imagem base pré-compilada no GHCR, Dockerfile enxuto, variáveis do Coolify só de runtime.
+
+**Tech Stack:** Docker/BuildKit, GitHub Actions, Coolify API.
+
+**Spec:** `docs/superpowers/specs/2026-10-31-deploy-rapido-design.md`
+
+## Global Constraints
+- Actions fixados por SHA (login v4.7.0, buildx v4.4.1, build-push v7.4.0); commits em português com prefixo; nunca na `main`.
+- Só o beta; nunca imprimir token ou valores de variáveis.
+
+## Review Focus
+- Imagem base com a mesma lista de extensões do Dockerfile atual (`pdo_pgsql intl zip gd bcmath redis`).
+- `docker build --target runtime` continua funcionando (security-scan) e o `runtime` sai com `storage` e `bootstrap/cache` gravável pelo `www-data`.
+- Flags do Coolify revertíveis: snapshot salvo antes de alterar.
+
+### Task 1: Dockerfile enxuto
+**Files:** Modify `docker/Dockerfile`
+- [ ] Remover `&& chown -R www-data:www-data /var/www/html` do `RUN php artisan package:discover ...`; adicionar `ENV NPM_CONFIG_UPDATE_NOTIFIER=false` no estágio `assets`.
+- [ ] Verificar: `docker build --target runtime -f docker/Dockerfile -t dimetal-scan:local .` conclui e `docker run --rm --entrypoint sh dimetal-scan:local -c 'test -w storage && test -w bootstrap/cache && echo ok'` imprime `ok`.
+- [ ] Commit `perf: tira o chown recursivo redundante do Dockerfile`.
+
+### Task 2: Imagem base e workflow
+**Files:** Create `docker/base/Dockerfile`, `.github/workflows/base-image.yml`
+- [ ] `docker/base/Dockerfile`: `FROM serversideup/php:8.5.12-fpm-nginx-bookworm`, `USER root`, `RUN install-php-extensions pdo_pgsql intl zip gd bcmath redis`, `USER www-data`.
+- [ ] Workflow: `on: push (main, paths docker/base/**, o próprio workflow), schedule semanal, workflow_dispatch`; `permissions: contents: read, packages: write`; login no `ghcr.io` com `GITHUB_TOKEN`; buildx; `build-push-action` com `context: docker/base`, tags `ghcr.io/jotasxbr/dimetal-php-base:8.5` e `:sha-${{ github.sha }}`, `cache-from/to: type=gha`; em `pull_request` só constrói (`push: false`).
+- [ ] Verificar: build local `docker build -t base-test docker/base` e `docker run --rm base-test php -m | grep -E "intl|gd|bcmath|pdo_pgsql|redis|zip"` lista as seis; `actionlint` limpo.
+- [ ] Commit `feat: imagem base do PHP pré-compilada no GHCR`.
+
+### Task 3: Dependabot
+**Files:** Modify `.github/dependabot.yml`
+- [ ] Adicionar `package-ecosystem: docker` para `/docker` e `/docker/base`, semanal, com o mesmo `cooldown`.
+- [ ] Commit `chore: dependabot cobre as imagens Docker`.
+
+### Task 4: Coolify (fora do git)
+- [ ] Salvar snapshot dos flags de cada app (app, worker, scheduler, reverb) em `$TEMP`, sem valores.
+- [ ] `PATCH /applications/{uuid}/envs` por variável com `is_buildtime=false`, lendo o valor do próprio `GET` e sem imprimi-lo; conferir pelo `GET` que `is_buildtime` ficou `false` em todas.
+
+### Task 5 (depois do merge do PR A e do pacote público): trocar o FROM
+**Files:** Modify `docker/Dockerfile`
+- [ ] `FROM ghcr.io/jotasxbr/dimetal-php-base:8.5 AS base`; remover a linha `install-php-extensions` e `USER root` redundante só se o base já deixa root (manter `USER root` antes do `WORKDIR`).
+- [ ] Verificar o build do `runtime` e o deploy do beta com tempo menor no log.
