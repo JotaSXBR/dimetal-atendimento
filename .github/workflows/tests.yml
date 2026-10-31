@@ -89,9 +89,56 @@ jobs:
       - name: Setup Application
         run: composer setup
 
-      - name: Run CI Checks
-        run: composer ci:check
+      - name: Run tests with coverage
+        run: composer ci:tests
 
+  # Pint, Larastan e PHPMD não precisam de banco: rodam em paralelo com os testes, e o PR espera só o job mais lento.
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, intl, zip, gd
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/composer
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      # O cache só acelera: com ele frio o veredito é o mesmo (o Larastan reanalisa tudo).
+      - name: Cache Larastan and Pint
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            .phpstan.cache
+            .pint.cache
+          key: static-${{ runner.os }}-${{ hashFiles('composer.lock', 'phpstan.neon') }}-${{ github.sha }}
+          restore-keys: |
+            static-${{ runner.os }}-${{ hashFiles('composer.lock', 'phpstan.neon') }}-
+            static-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run static checks
+        run: composer ci:static
   # Separado dos testes: um aviso de segurança novo não deve reprovar um PR que não tem relação com ele.
   audit:
     runs-on: ubuntu-latest
