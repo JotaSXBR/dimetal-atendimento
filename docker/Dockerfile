@@ -35,8 +35,8 @@ RUN php artisan package:discover --ansi \
 USER www-data
 
 
-# Assets: Node 24 gera public/build (Vite + Tailwind + fontes do Bunny).
-FROM node:24-alpine AS assets
+# Assets: Node 26 gera public/build (Vite + Tailwind + fontes do Bunny).
+FROM node:26-alpine AS assets
 
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 
