@@ -45,3 +45,5 @@ yarn-error.log
 /GEMINI.md
 /.gemini
 /.codegraph
+/.phpstan.cache
+/.pint.cache
