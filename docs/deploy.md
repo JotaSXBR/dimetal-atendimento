@@ -105,8 +105,9 @@ ajustar; se algum dia essas variáveis forem reduzidas, mantenha ao menos 20 MB.
 
 ## 5. Fluxo de branches
 
-- `main` → produção. Recebe merge apenas por PR com o check `tests` verde.
+- `main` → produção. Recebe merge apenas por PR com os checks `tests` e `static` verdes.
 - `beta` → ambiente de teste.
+- Antes de empurrar: `composer hooks:install` (uma vez por clone) liga o `.githooks/pre-push`, que roda Pint e Larastan em segundos; a suíte fica no CI.
 - `beta` é sincronizada a partir de `main` (`git push origin main:beta`), não o contrário.
 
 O deploy **não** é automático no push do Coolify: `is_auto_deploy_enabled=false` nos Applications. Quem
