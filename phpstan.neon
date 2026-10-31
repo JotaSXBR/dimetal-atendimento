@@ -10,4 +10,5 @@ parameters:
         - database/
         - routes/
 
+    tmpDir: .phpstan.cache
     level: max

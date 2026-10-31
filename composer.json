@@ -60,17 +60,26 @@
             "@php artisan dev"
         ],
         "lint": [
-            "pint --parallel"
+            "pint --parallel --cache-file=.pint.cache"
         ],
         "lint:check": [
-            "pint --parallel --test"
+            "pint --parallel --test --cache-file=.pint.cache"
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
+            "@ci:static",
+            "@ci:tests"
+        ],
+        "ci:static": [
             "@lint:check",
             "@types:check",
-            "@complexity",
+            "@complexity"
+        ],
+        "ci:tests": [
             "@coverage"
+        ],
+        "hooks:install": [
+            "git config core.hooksPath .githooks"
         ],
         "types:check": [
             "phpstan analyse"

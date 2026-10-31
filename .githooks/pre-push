@@ -1,0 +1,5 @@
+#!/bin/sh
+# Estilo e tipos em segundos; a suíte (precisa de Postgres) fica no CI. Ativar: composer hooks:install
+[ -f vendor/autoload.php ] || { echo "pre-push: vendor/ ausente, rode 'composer install'" >&2; exit 1; }
+c=composer; command -v composer >/dev/null 2>&1 || c=composer.bat # no Windows o shim do Git não acha 'composer'
+$c lint:check && $c types:check || { echo "pre-push: falhou; 'composer lint' corrige o estilo" >&2; exit 1; }
