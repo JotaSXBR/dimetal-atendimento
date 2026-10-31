@@ -30,14 +30,15 @@ RUN composer install \
 COPY --chown=www-data:www-data . .
 
 RUN php artisan package:discover --ansi \
-    && php artisan vendor:publish --tag=laravel-assets --ansi --force \
-    && chown -R www-data:www-data /var/www/html
+    && php artisan vendor:publish --tag=laravel-assets --ansi --force
 
 USER www-data
 
 
 # Assets: Node 24 gera public/build (Vite + Tailwind + fontes do Bunny).
 FROM node:24-alpine AS assets
+
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 
 WORKDIR /build
 
