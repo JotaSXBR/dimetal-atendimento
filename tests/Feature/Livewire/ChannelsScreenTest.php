@@ -13,6 +13,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -250,9 +251,9 @@ class ChannelsScreenTest extends TestCase
         return Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => Contact::factory()->create()->id, 'status' => $status]);
     }
 
-    public function test_desativar_para_a_sessao_e_marca_inativo(): void
+    public function test_desativar_desvincula_a_sessao_no_waha(): void
     {
-        Http::fake(['*/api/sessions/main/stop' => Http::response([], 201)]);
+        Http::fake(['*/api/sessions/logout' => Http::response([], 200)]);
         $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
 
         Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
@@ -261,7 +262,21 @@ class ChannelsScreenTest extends TestCase
 
         $this->assertFalse($channel->fresh()->active);
         $this->assertSame(ChannelStatus::STOPPED, $channel->fresh()->status);
-        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/api/sessions/main/stop'));
+        Http::assertSent(fn ($request) => $request->method() === 'POST' && str_ends_with($request->url(), '/api/sessions/logout') && $request['name'] === 'main');
+        Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/stop'));
+    }
+
+    public function test_canal_desativado_em_aguardando_qr_nao_busca_qr_nem_alerta(): void
+    {
+        Notification::fake();
+        Http::fake(fn ($request) => str_contains($request->url(), '/auth/qr') ? Http::response(['value' => 'abc'], 200) : Http::response(['status' => 'SCAN_QR_CODE'], 200));
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main', 'active' => false]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('refreshStatus')->assertSet('qrValue', null)->assertSet('qr', null);
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/auth/qr'));
+        Notification::assertNothingSent();
     }
 
     public function test_confirmacao_mostra_a_contagem_de_tickets_abertos(): void
@@ -275,15 +290,27 @@ class ChannelsScreenTest extends TestCase
             ->call('ask', 'deactivate')->assertSee('2 tickets abertos');
     }
 
-    public function test_reativar_volta_a_ativo_sem_iniciar_a_sessao(): void
+    public function test_reativar_marca_ativo_e_inicia_a_sessao(): void
     {
-        Http::fake();
-        $channel = Channel::factory()->create(['active' => false]);
+        Http::fake(fn ($request) => $request->method() === 'GET' ? Http::response(['message' => 'not found'], 404) : Http::response(['status' => 'STARTING'], 201));
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'active' => false]);
 
         Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])->call('reactivate');
 
         $this->assertTrue($channel->fresh()->active);
-        Http::assertNothingSent();
+        $this->assertSame(ChannelStatus::STARTING, $channel->fresh()->status);
+        Http::assertSent(fn ($request) => $request->method() === 'POST' && str_ends_with($request->url(), '/api/sessions') && $request['name'] === 'main');
+    }
+
+    public function test_reativar_com_waha_fora_mantem_ativo_e_mostra_o_erro(): void
+    {
+        Http::fake(['*' => Http::response(['message' => 'fora do ar'], 500)]);
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'active' => false]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('reactivate')->assertSet('errorMessage', fn ($message) => str_contains((string) $message, 'WAHA'));
+
+        $this->assertTrue($channel->fresh()->active);
     }
 
     public function test_excluir_sessao_remove_no_waha_e_mantem_canal_e_tickets(): void

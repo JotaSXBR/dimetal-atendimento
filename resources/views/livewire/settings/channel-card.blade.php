@@ -21,7 +21,7 @@
     };
     $label = $inactive ? 'Desativado' : ($sessionMissing ? 'Sessão removida' : $status->label());
     $hint = match (true) {
-        $inactive => 'Desligado de propósito: sem alertas de queda e sem resposta nos tickets deste número.',
+        $inactive => 'Desligado de propósito: aparelho desvinculado, sem alertas e sem resposta nos tickets deste número. Reative e leia o QR para voltar.',
         $sessionMissing => 'A sessão não existe mais no WAHA. Conecte para criá-la de novo e reaproveitar os tickets.',
         $status === \App\Enums\ChannelStatus::WORKING => 'Sessão ativa. Para trocar o aparelho, gere um novo QR.',
         $status === \App\Enums\ChannelStatus::SCAN_QR_CODE => 'Escaneie com o WhatsApp deste número para conectar.',
@@ -114,6 +114,9 @@
                     Este canal tem {{ $openTickets }} {{ $openTickets === 1 ? 'ticket aberto' : 'tickets abertos' }}. Eles continuam no painel, mas não dá para responder até o canal voltar.
                 @else
                     Este canal não tem tickets abertos. Os tickets e as mensagens continuam guardados.
+                @endif
+                @if ($confirming === 'deactivate')
+                    O aparelho será desvinculado: para reativar é preciso escanear o QR de novo.
                 @endif
                 @if ($confirming === 'delete-session' && $channel->active)
                     Um canal ativo sem sessão conta como queda e dispara o alerta de canal desconectado. Para parar sem alerta, use Desativar.

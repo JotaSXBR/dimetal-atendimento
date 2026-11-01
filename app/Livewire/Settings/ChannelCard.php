@@ -114,13 +114,16 @@ class ChannelCard extends Component
         $this->confirming = null;
     }
 
-    /** Para a sessão e marca o canal como desligado de propósito: sem alerta de queda e sem resposta nos tickets dele. */
+    /**
+     * Desvincula o aparelho e marca o canal como desligado de propósito: sem alerta de queda e sem resposta nos tickets dele.
+     * Logout e não só parar: o WAHA religa as sessões paradas quando reinicia, e a desvinculada sobe em Aguardando QR.
+     */
     public function deactivate(): void
     {
         $this->reset('errorMessage', 'qr', 'qrValue', 'pairingCode', 'confirming');
 
         try {
-            (new WahaClient($this->channel))->stop();
+            (new WahaClient($this->channel))->logout();
         } catch (Throwable $exception) {
             $this->fail($exception);
 
@@ -131,10 +134,21 @@ class ChannelCard extends Component
         $this->setStatus(ChannelStatus::STOPPED);
     }
 
-    /** Só volta a valer o canal; conectar continua sendo uma ação do dono. */
+    /** O canal volta a valer e a sessão inicia: o aparelho foi desvinculado, então aparece o QR para ler de novo. */
     public function reactivate(): void
     {
+        $this->reset('errorMessage');
         $this->channel->update(['active' => true]);
+
+        try {
+            (new WahaClient($this->channel))->start();
+        } catch (Throwable $exception) {
+            $this->fail($exception);
+
+            return;
+        }
+
+        $this->setStatus(ChannelStatus::STARTING);
     }
 
     /** Remove a sessão no WAHA. O canal e os tickets ficam; readicionar a mesma sessão os reaproveita. */
@@ -207,7 +221,7 @@ class ChannelCard extends Component
             $this->setStatus($status);
         }
 
-        if ($status?->needsQr()) {
+        if ($status?->needsQr() && $this->channel->active) {
             $this->refreshQr();
         } elseif ($status !== null) {
             $this->reset('qr', 'qrValue');
