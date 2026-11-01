@@ -64,6 +64,25 @@
                 Desconectar
             </x-ui.button>
         </div>
+
+        @if ($confirming)
+            @php($open = $this->openTickets())
+            <div class="mt-3 rounded-[10px] border border-warn/30 bg-warn/10 px-3 py-2 text-xs text-warn" role="alert">
+                @if ($confirming === 'delete-channel')
+                    Apagar este canal de vez? Ele nunca atendeu ninguém, então nada é perdido.
+                @else
+                    @if ($open > 0)
+                        Este canal tem {{ $open }} {{ $open === 1 ? 'ticket aberto' : 'tickets abertos' }}. Eles continuam no painel, mas não dá para responder até o canal voltar.
+                    @else
+                        Este canal não tem tickets abertos.
+                    @endif
+                @endif
+                <div class="mt-2 flex gap-2">
+                    <x-ui.button variant="secondary" wire:click="{{ $confirming === 'deactivate' ? 'deactivate' : ($confirming === 'delete-session' ? 'deleteSession' : 'deleteChannel') }}">Confirmar</x-ui.button>
+                    <x-ui.button variant="secondary" wire:click="cancel">Cancelar</x-ui.button>
+                </div>
+            </div>
+        @endif
     </div>
 
     <div class="rounded-[14px] border border-line bg-surface p-5">

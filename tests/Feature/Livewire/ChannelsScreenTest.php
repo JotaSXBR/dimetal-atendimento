@@ -3,10 +3,13 @@
 namespace Tests\Feature\Livewire;
 
 use App\Enums\ChannelStatus;
+use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\Settings\ChannelCard;
 use App\Livewire\Settings\Channels;
 use App\Models\Channel;
+use App\Models\Contact;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -240,5 +243,121 @@ class ChannelsScreenTest extends TestCase
             ->call('rename');
 
         $this->assertSame('Comercial', $channel->fresh()->name);
+    }
+
+    private function ticketOn(Channel $channel, TicketStatus $status = TicketStatus::AGUARDANDO): Ticket
+    {
+        return Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => Contact::factory()->create()->id, 'status' => $status]);
+    }
+
+    public function test_desativar_para_a_sessao_e_marca_inativo(): void
+    {
+        Http::fake(['*/api/sessions/main/stop' => Http::response([], 201)]);
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('ask', 'deactivate')->assertSet('confirming', 'deactivate')
+            ->call('deactivate')->assertSet('confirming', null);
+
+        $this->assertFalse($channel->fresh()->active);
+        $this->assertSame(ChannelStatus::STOPPED, $channel->fresh()->status);
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/api/sessions/main/stop'));
+    }
+
+    public function test_confirmacao_mostra_a_contagem_de_tickets_abertos(): void
+    {
+        $channel = Channel::factory()->connected()->create();
+        $this->ticketOn($channel);
+        $this->ticketOn($channel, TicketStatus::EM_ATENDIMENTO);
+        $this->ticketOn($channel, TicketStatus::ENCERRADO);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('ask', 'deactivate')->assertSee('2 tickets abertos');
+    }
+
+    public function test_reativar_volta_a_ativo_sem_iniciar_a_sessao(): void
+    {
+        Http::fake();
+        $channel = Channel::factory()->create(['active' => false]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])->call('reactivate');
+
+        $this->assertTrue($channel->fresh()->active);
+        Http::assertNothingSent();
+    }
+
+    public function test_excluir_sessao_remove_no_waha_e_mantem_canal_e_tickets(): void
+    {
+        Http::fake(['*/api/sessions/main' => Http::response([], 200)]);
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
+        $ticket = $this->ticketOn($channel);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('ask', 'delete-session')->call('deleteSession')
+            ->assertSet('sessionMissing', true)->assertSet('errorMessage', null);
+
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE' && str_ends_with($request->url(), '/api/sessions/main'));
+        $this->assertSame(ChannelStatus::STOPPED, $channel->fresh()->status);
+        $this->assertSame($channel->id, $ticket->fresh()->channel_id);
+    }
+
+    public function test_excluir_sessao_com_404_nao_e_erro(): void
+    {
+        Http::fake(['*/api/sessions/main' => Http::response(['message' => 'not found'], 404)]);
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('deleteSession')->assertSet('errorMessage', null);
+
+        $this->assertSame(ChannelStatus::STOPPED, $channel->fresh()->status);
+    }
+
+    public function test_refresh_com_sessao_inexistente_mostra_sessao_removida_sem_erro(): void
+    {
+        Http::fake(['*/api/sessions/main' => Http::response(['message' => 'not found'], 404)]);
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('refreshStatus')->assertSet('sessionMissing', true)->assertSet('errorMessage', null);
+
+        $this->assertSame(ChannelStatus::STOPPED, $channel->fresh()->status);
+    }
+
+    public function test_readicionar_a_mesma_sessao_reaproveita_o_canal_e_os_tickets(): void
+    {
+        Http::fake(fn ($request) => $request->method() === 'GET' ? Http::response(['message' => 'not found'], 404) : Http::response(['status' => 'STARTING'], 201));
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
+        $ticket = $this->ticketOn($channel);
+
+        Livewire::actingAs($this->admin())->test(Channels::class)
+            ->set('sessionName', 'main')->call('addChannel')->assertHasErrors(['sessionName' => 'unique']);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])->call('connect');
+
+        Http::assertSent(fn ($request) => $request->method() === 'POST' && str_ends_with($request->url(), '/api/sessions') && $request['name'] === 'main');
+        $this->assertSame(1, Channel::query()->count());
+        $this->assertSame($channel->id, $ticket->fresh()->channel_id);
+    }
+
+    public function test_apagar_canal_so_vazio(): void
+    {
+        $empty = Channel::factory()->create(['waha_session' => 'vazio']);
+        $used = Channel::factory()->create(['waha_session' => 'usado']);
+        $this->ticketOn($used, TicketStatus::ENCERRADO);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $empty])
+            ->call('deleteChannel')->assertDispatched('channel-deleted');
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $used])
+            ->call('deleteChannel')->assertNotDispatched('channel-deleted')
+            ->assertSet('errorMessage', fn ($message) => str_contains($message, 'histórico'));
+
+        $this->assertNull(Channel::query()->find($empty->id));
+        $this->assertNotNull(Channel::query()->find($used->id));
+    }
+
+    public function test_ask_recusa_acao_desconhecida(): void
+    {
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => Channel::factory()->create()])
+            ->call('ask', 'drop')->assertSet('confirming', null);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use App\Models\Channel;
 use App\Models\WahaEvent;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -26,6 +27,10 @@ class Channels extends Component
 
         $this->reset('sessionName');
     }
+
+    /** Um cartão apagou o canal: só pede nova leitura da lista. */
+    #[On('channel-deleted')]
+    public function refreshList(): void {}
 
     public function render(): View
     {

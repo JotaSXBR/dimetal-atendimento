@@ -3,8 +3,11 @@
 namespace App\Livewire\Settings;
 
 use App\Enums\ChannelStatus;
+use App\Enums\TicketStatus;
 use App\Models\Channel;
+use App\Models\Ticket;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaRequestException;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Throwable;
@@ -16,7 +19,16 @@ class ChannelCard extends Component
 {
     public Channel $channel;
 
+    private const ACTIONS = ['deactivate', 'delete-session', 'delete-channel'];
+
     public ?string $qr = null;
+
+    /** O texto cru do QR, para o navegador desenhar com a logo; `qr` (PNG do WAHA) é o fallback. */
+    public ?string $qrValue = null;
+
+    public ?string $confirming = null;
+
+    public bool $sessionMissing = false;
 
     public ?string $errorMessage = null;
 
@@ -90,16 +102,99 @@ class ChannelCard extends Component
         $this->setStatus(ChannelStatus::STOPPED);
     }
 
-    public function refreshStatus(): void
+    /** Pede a confirmação (com a contagem de tickets abertos) antes de uma ação que derruba o atendimento do canal. */
+    public function ask(string $action): void
     {
+        $this->confirming = in_array($action, self::ACTIONS, true) ? $action : null;
+    }
+
+    public function cancel(): void
+    {
+        $this->confirming = null;
+    }
+
+    /** Para a sessão e marca o canal como desligado de propósito: sem alerta de queda e sem resposta nos tickets dele. */
+    public function deactivate(): void
+    {
+        $this->reset('errorMessage', 'qr', 'qrValue', 'pairingCode', 'confirming');
+
         try {
-            $newStatus = (new WahaClient($this->channel))->session()['status'] ?? null;
+            (new WahaClient($this->channel))->stop();
         } catch (Throwable $exception) {
             $this->fail($exception);
 
             return;
         }
 
+        $this->channel->active = false;
+        $this->setStatus(ChannelStatus::STOPPED);
+    }
+
+    /** Só volta a valer o canal; conectar continua sendo uma ação do dono. */
+    public function reactivate(): void
+    {
+        $this->channel->update(['active' => true]);
+    }
+
+    /** Remove a sessão no WAHA. O canal e os tickets ficam; readicionar a mesma sessão os reaproveita. */
+    public function deleteSession(): void
+    {
+        $this->reset('errorMessage', 'qr', 'qrValue', 'pairingCode', 'confirming');
+
+        try {
+            (new WahaClient($this->channel))->deleteSession();
+        } catch (Throwable $exception) {
+            $this->fail($exception);
+
+            return;
+        }
+
+        $this->sessionMissing = true;
+        $this->setStatus(ChannelStatus::STOPPED);
+    }
+
+    /** Remove a linha do canal, só se ele nunca atendeu ninguém (ticket e mensagem apontam para o canal). */
+    public function deleteChannel(): void
+    {
+        if (Ticket::query()->where('channel_id', $this->channel->id)->exists()) {
+            $this->errorMessage = 'Este canal tem histórico de atendimento e não pode ser apagado.';
+            $this->confirming = null;
+
+            return;
+        }
+
+        $this->channel->delete();
+        $this->dispatch('channel-deleted');
+    }
+
+    public function openTickets(): int
+    {
+        return Ticket::query()->where('channel_id', $this->channel->id)->where('status', '<>', TicketStatus::ENCERRADO->value)->count();
+    }
+
+    public function refreshStatus(): void
+    {
+        try {
+            $newStatus = (new WahaClient($this->channel))->session()['status'] ?? null;
+        } catch (WahaRequestException $exception) {
+            if ($exception->statusCode === 404) {
+                // Sessão que não existe no WAHA (excluída): não é erro, e o canal fica parado.
+                $this->sessionMissing = true;
+                $this->setStatus(ChannelStatus::STOPPED);
+
+                return;
+            }
+
+            $this->fail($exception);
+
+            return;
+        } catch (Throwable $exception) {
+            $this->fail($exception);
+
+            return;
+        }
+
+        $this->sessionMissing = false;
         $status = is_string($newStatus) ? ChannelStatus::tryFrom($newStatus) : null;
 
         if ($status !== null) {
