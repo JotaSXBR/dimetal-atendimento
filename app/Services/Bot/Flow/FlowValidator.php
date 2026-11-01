@@ -96,6 +96,10 @@ final class FlowValidator
             }
         }
 
+        if ($type === NodeType::Midia && $blank('path')) {
+            $errors[] = "{$id}: escolha o arquivo.";
+        }
+
         if ($type === NodeType::Pergunta && $blank('variavel')) {
             $errors[] = "{$id}: informe o nome da variável que guarda a resposta.";
         }

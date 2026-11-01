@@ -145,6 +145,16 @@ class FlowValidatorTest extends TestCase
         $this->assertHasError((new FlowValidator)->validate($graph), 'm: escreva o texto');
     }
 
+    public function test_midia_exige_o_arquivo(): void
+    {
+        $graph = $this->graph(
+            [['i', 'inicio', []], ['m', 'midia', ['path' => ' ']], ['t', 'transferir', []]],
+            [['i', 'out', 'm'], ['m', 'out', 't']],
+        );
+
+        $this->assertHasError((new FlowValidator)->validate($graph), 'm: escolha o arquivo');
+    }
+
     public function test_flow_graph_navega_pelas_ligacoes(): void
     {
         $flow = FlowGraph::fromArray($this->minimal());

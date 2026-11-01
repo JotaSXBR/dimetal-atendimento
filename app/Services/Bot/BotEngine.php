@@ -16,16 +16,21 @@ use App\Models\WorkflowVersion;
 use App\Services\Alerts\AlertDispatcher;
 use App\Services\Bot\Flow\FlowGraph;
 use App\Services\Bot\Flow\NodeType;
+use App\Services\Bot\Nodes\CondicaoNode;
 use App\Services\Bot\Nodes\EncerrarNode;
+use App\Services\Bot\Nodes\EsperarNode;
+use App\Services\Bot\Nodes\EtiquetarNode;
 use App\Services\Bot\Nodes\InicioNode;
 use App\Services\Bot\Nodes\MensagemNode;
 use App\Services\Bot\Nodes\MenuNode;
 use App\Services\Bot\Nodes\MenuSetoresNode;
+use App\Services\Bot\Nodes\MidiaNode;
 use App\Services\Bot\Nodes\Node;
+use App\Services\Bot\Nodes\PerguntaNode;
+use App\Services\Bot\Nodes\SalvarContatoNode;
 use App\Services\Bot\Nodes\TransferirNode;
 use App\Services\Inbox\SendTicketMessage;
 use Illuminate\Support\Facades\DB;
-use LogicException;
 
 /**
  * Conduz a conversa do cliente pelo grafo publicado. Uma sessão por ticket; o ticket fica `pendente` até o bot
@@ -231,7 +236,12 @@ class BotEngine
             NodeType::Menu => new MenuNode,
             NodeType::Transferir => new TransferirNode,
             NodeType::Encerrar => new EncerrarNode,
-            default => throw new LogicException("Bloco {$type->value} ainda sem implementação."),
+            NodeType::Pergunta => new PerguntaNode,
+            NodeType::Condicao => new CondicaoNode,
+            NodeType::Esperar => new EsperarNode,
+            NodeType::Midia => new MidiaNode,
+            NodeType::SalvarContato => new SalvarContatoNode,
+            NodeType::Etiquetar => new EtiquetarNode,
         };
     }
 }
