@@ -87,37 +87,6 @@ class WahaClient
         $this->acceptMissing($this->request()->delete('/api/sessions/'.$this->sessionName()));
     }
 
-    /** O texto do QR, para o navegador desenhá-lo (com a logo). `null` se o WAHA não entregar. */
-    public function qrRaw(): ?string
-    {
-        $response = $this->request()->get($this->sessionPath('/auth/qr'), ['format' => 'raw']);
-
-        if ($response->failed()) {
-            return null;
-        }
-
-        $value = $response->json('value');
-
-        return is_string($value) && $value !== '' ? $value : null;
-    }
-
-    public function qrDataUri(): ?string
-    {
-        $response = $this->request()
-            ->withHeaders(['Accept' => 'image/png'])
-            ->get($this->sessionPath('/auth/qr'), ['format' => 'image']);
-
-        if ($response->failed()) {
-            return null;
-        }
-
-        if (! str_starts_with((string) $response->header('Content-Type'), 'image/')) {
-            return null;
-        }
-
-        return 'data:image/png;base64,'.base64_encode($response->body());
-    }
-
     public function requestPairingCode(string $phoneNumber): string
     {
         $response = $this->request()->post($this->sessionPath('/auth/request-code'), [

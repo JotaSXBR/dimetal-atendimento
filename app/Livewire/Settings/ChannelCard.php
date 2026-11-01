@@ -7,6 +7,7 @@ use App\Enums\TicketStatus;
 use App\Models\Channel;
 use App\Models\Ticket;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaQr;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
@@ -272,7 +273,7 @@ class ChannelCard extends Component
     private function refreshQr(): void
     {
         try {
-            $this->qr = (new WahaClient($this->channel))->qrDataUri();
+            $this->qr = (new WahaQr(new WahaClient($this->channel)))->dataUri();
         } catch (Throwable $exception) {
             $this->qr = null;
             $this->fail($exception);

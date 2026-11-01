@@ -4,6 +4,7 @@ namespace Tests\Feature\Services;
 
 use App\Models\Channel;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaQr;
 use App\Services\Waha\WahaRequestException;
 use App\Settings\WahaSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -68,7 +69,7 @@ class WahaClientTest extends TestCase
 
         $this->assertStringStartsWith(
             'data:image/png;base64,',
-            (new WahaClient($channel))->qrDataUri()
+            (new WahaQr(new WahaClient($channel)))->dataUri()
         );
     }
 
@@ -126,11 +127,11 @@ class WahaClientTest extends TestCase
     public function test_qr_raw_devolve_o_valor_e_nulo_quando_falha(): void
     {
         Http::fake(['*/api/main/auth/qr*' => Http::sequence()->push(['value' => 'abc,def'], 200)->push([], 422)->push(['outro' => 'x'], 200)]);
-        $client = new WahaClient(Channel::factory()->create(['waha_session' => 'main']));
+        $qr = new WahaQr(new WahaClient(Channel::factory()->create(['waha_session' => 'main'])));
 
-        $this->assertSame('abc,def', $client->qrRaw());
+        $this->assertSame('abc,def', $qr->raw());
         Http::assertSent(fn ($request) => str_contains($request->url(), '/api/main/auth/qr') && $request['format'] === 'raw');
-        $this->assertNull($client->qrRaw());
-        $this->assertNull($client->qrRaw());
+        $this->assertNull($qr->raw());
+        $this->assertNull($qr->raw());
     }
 }
