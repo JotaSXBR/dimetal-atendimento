@@ -1,6 +1,8 @@
 <?php
 
+declare(strict_types=1);
+
 return [
-    'previous' => '&laquo; Anterior',
-    'next' => 'Próxima &raquo;',
+    'next'     => 'Próximo »',
+    'previous' => '« Anterior',
 ];

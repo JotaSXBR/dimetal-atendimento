@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 return [
-    'reset' => 'A sua senha foi redefinida.',
-    'sent' => 'Enviamos o link para redefinir a senha por e-mail.',
-    'throttled' => 'Aguarde um pouco antes de tentar de novo.',
-    'token' => 'Este link de redefinição de senha é inválido.',
-    'user' => 'Não encontramos um usuário com esse e-mail.',
+    'reset'     => 'A senha foi redefinida!',
+    'sent'      => 'O lembrete de senha foi enviado!',
+    'throttled' => 'Por favor, aguarde antes de tentar novamente.',
+    'token'     => 'Este código de recuperação de senha é inválido.',
+    'user'      => 'Não existe nenhum usuário com o e-mail indicado.',
 ];
