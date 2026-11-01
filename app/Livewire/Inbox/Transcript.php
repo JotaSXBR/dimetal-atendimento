@@ -23,7 +23,9 @@ class Transcript extends Component
     #[On('echo-private:inbox,.message.status')]
     public function refreshForEvent(array $payload = []): void
     {
-        if ((int) ($payload['ticket_id'] ?? 0) !== $this->ticketId) {
+        $id = $payload['ticket_id'] ?? null;
+
+        if (! is_numeric($id) || (int) $id !== $this->ticketId) {
             $this->skipRender();
         }
     }

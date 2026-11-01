@@ -41,3 +41,13 @@ no DOM. O objetivo é que só o que mudou seja renderizado.
 
 ## Fica com quem constrói
 Nome exato do envoltório e da view; como filtrar o evento por ticket (parâmetro do listener ou checagem no método).
+
+## Resultado da medição (local, ticket com 300 mensagens, 200 exibidas)
+| Interação | Antes | Depois |
+|---|---|---|
+| Atualização do `Inbox` (evento da lista, painel) | 155 a 250 ms, 260 KB | ~100 ms, 35,6 KB |
+| Digitar `/` (respostas rápidas) | 2 round-trips de 260 KB | 1 round-trip de 35,6 KB |
+| Evento de mensagem (só o transcript) | 260 KB junto com tudo | 225 KB, só do transcript |
+
+`artisan serve` não comprime; no nginx o tamanho trafegado é menor. O ganho está em não renderizar nem trafegar o transcript
+quando nada mudou nas mensagens. Medição do navegador (INP) não feita.
