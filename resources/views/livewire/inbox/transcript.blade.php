@@ -54,7 +54,7 @@
             <p class="mt-1 flex items-center justify-end gap-1 font-mono text-[10px] text-ink-3">
                 {{ $message->sent_at->timezone($tz)->format('H:i') }}
                 @if ($out)
-                    <span class="{{ $tick[2] }}" aria-label="{{ $tick[0] }}">{{ $tick[1] }}</span>
+                    <span class="font-bold {{ $tick[2] }}" aria-label="{{ $tick[0] }}">{{ $tick[1] }}</span>
                 @endif
             </p>
         </div>
