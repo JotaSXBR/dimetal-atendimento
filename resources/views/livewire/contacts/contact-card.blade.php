@@ -27,14 +27,24 @@
             <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Atendimentos anteriores</h3>
             <ul class="mt-2 space-y-2">
                 @forelse ($history as $past)
+                    @php($mine = in_array($past->id, $openable, true))
+                    @php($closed = $past->status === \App\Enums\TicketStatus::ENCERRADO)
+                    @php($otherNumber = $currentChannelId !== null && $past->channel_id !== $currentChannelId)
+                    @php($number = $past->channel?->phoneLabel() ?? $past->channel?->name ?? '')
                     <li class="text-xs" wire:key="history-{{ $past->id }}">
-                        @if ($past->status === \App\Enums\TicketStatus::ENCERRADO && auth()->user()?->can('view', $past))
+                        @if ($mine && $closed)
                             <a href="{{ route('historico', ['ticketId' => $past->id]) }}" wire:navigate class="font-mono text-ink underline-offset-2 hover:underline">{{ $past->protocol }}</a>
+                        @elseif ($mine && ! $readonly)
+                            <button type="button" wire:click="$parent.select({{ $past->id }})" class="font-mono text-accent underline-offset-2 hover:underline">{{ $past->protocol }}</button>
                         @else
                             <span class="font-mono text-ink">{{ $past->protocol }}</span>
                         @endif
-                        <span class="text-ink-3">· {{ $past->opened_at->timezone($tz)->format('d/m/Y') }} · {{ $past->sector?->name ?? 'Fila geral' }}</span>
-                        <p class="text-ink-2">{{ $past->status->label() }}@if ($past->close_outcome) · {{ $past->close_outcome->label() }}@endif</p>
+                        <span class="text-ink-3">· {{ $past->opened_at->timezone($tz)->format('d/m/Y') }}@if ($mine) · {{ $past->sector?->name ?? 'Fila geral' }}@endif</span>
+                        @if (! $closed && $otherNumber)
+                            <p class="font-semibold text-warn">também tem ticket aberto no número {{ $number }} ({{ $past->status->label() }})</p>
+                        @else
+                            <p class="text-ink-2">{{ $past->status->label() }}@if ($past->close_outcome) · {{ $past->close_outcome->label() }}@endif @if ($otherNumber)· número {{ $number }}@endif</p>
+                        @endif
                     </li>
                 @empty
                     <li class="text-xs text-ink-3">Nenhum atendimento ainda.</li>

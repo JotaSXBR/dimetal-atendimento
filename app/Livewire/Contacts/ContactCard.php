@@ -7,10 +7,12 @@ use App\Jobs\SyncContactToGoogleJob;
 use App\Livewire\Forms\ContactForm;
 use App\Models\Contact;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Services\Google\ContactSyncStatus;
 use App\Services\Google\GoogleAccount;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /** Ficha editável do contato: vive no painel do inbox e na tela Contatos. */
@@ -99,14 +101,29 @@ class ContactCard extends Component
         return Contact::query()->findOrFail($this->contactId);
     }
 
+    /** Um ticket do contato mudou: a lista de atendimentos anteriores se atualiza, menos com o formulário aberto. */
+    #[On('echo-private:inbox,.ticket.updated')]
+    public function refresh(): void
+    {
+        if ($this->editing || ! $this->compact) {
+            $this->skipRender();
+        }
+    }
+
     public function render(ContactSyncStatus $syncStatus): View
     {
         $contact = $this->contact();
+        $user = auth()->user();
+        assert($user instanceof User);
+
+        $history = Ticket::query()->with(['sector', 'channel'])->where('contact_id', $contact->id)->when($this->currentTicketId !== null, fn ($query) => $query->whereKeyNot($this->currentTicketId))->latest('opened_at')->limit(self::HISTORY_LIMIT)->get();
 
         return view('livewire.contacts.contact-card', [
             'contact' => $contact,
             'google' => $syncStatus->describe($contact),
-            'history' => Ticket::query()->with('sector')->where('contact_id', $contact->id)->when($this->currentTicketId !== null, fn ($query) => $query->whereKeyNot($this->currentTicketId))->latest('opened_at')->limit(self::HISTORY_LIMIT)->get(),
+            'history' => $history,
+            'openable' => Ticket::query()->readableBy($user)->whereIn('id', $history->modelKeys())->pluck('id')->all(),
+            'currentChannelId' => $this->currentTicketId === null ? null : Ticket::query()->whereKey($this->currentTicketId)->value('channel_id'),
         ]);
     }
 }

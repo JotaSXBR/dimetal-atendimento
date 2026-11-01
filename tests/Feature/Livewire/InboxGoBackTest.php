@@ -41,6 +41,17 @@ class InboxGoBackTest extends TestCase
             ->assertDontSee('Voltar ao ticket anterior');
     }
 
+    public function test_coluna_do_meio_nao_repete_os_outros_tickets_do_contato(): void
+    {
+        $contact = Contact::factory()->create();
+        $channel = Channel::factory()->connected()->create();
+        $first = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $contact->id, 'status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subDay()]);
+        $second = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $contact->id, 'status' => TicketStatus::AGUARDANDO]);
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class)
+            ->call('select', $second->id)->assertDontSee('Outros tickets deste contato')->assertSee((string) $first->protocol);
+    }
+
     public function test_selecionar_o_mesmo_ticket_nao_cria_anterior(): void
     {
         $first = $this->ticket('2026-000801');
