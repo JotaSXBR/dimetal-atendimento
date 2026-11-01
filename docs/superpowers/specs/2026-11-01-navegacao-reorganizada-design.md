@@ -105,3 +105,27 @@ O grupo da sidebar continua se chamando "Atendimento" (o teste `test_o_menu_se_c
   errado: o usuário clica de novo na lista.
 - Nenhuma validação com usuários reais foi feita; as tarefas de teste de achabilidade do estudo (T1–T14) ficam
   como roteiro para depois do PR.
+
+## Respostas à revisão do construtor
+
+Respondidas pelo código (nenhuma exigiu decisão do dono):
+
+- **Alertas e as outras 3 páginas pessoais** são visíveis a todos os papéis (`auth`, e `verified` nas três últimas).
+  "Minha conta" cobre as mesmas 4 páginas para todos. O teste de "ninguém vê mais nem menos" usa como base a
+  sidebar atual, não este documento.
+- **Cadastro (`register`)**: o Fortify só liga 2FA e passkeys (`config/fortify.php`) e `route:list` não tem rota
+  de cadastro. A afirmação do documento está correta e a view pode sair.
+- **Idioma**: `APP_LOCALE=pt_BR` já é o padrão; só falta o arquivo de traduções. Não há troca de locale.
+- **`CompanySettings::save()`** grava as 5 chaves de uma vez. Como o SLA muda de página, `save()` passa a gravar
+  só as chaves recebidas (ou ganha um método próprio para o SLA), para que Empresa e Horário e SLA nunca
+  sobrescrevam o valor um do outro. `CompanyPageTest` e `SignatureTest` acompanham.
+- **Link para ticket**: Relatórios e Auditoria só são acessíveis a supervisor e admin, que veem todos os setores
+  (`scopeReadableBy`), então não há link sem permissão. O filtro `from` do Histórico afeta só a lista; o painel
+  usa `ticketId`.
+
+Calls minhas (custo se errado entre parênteses):
+
+- A linha de irmãos mostra só os itens visíveis ao papel **dentro do grupo atual** e **some quando sobra um só**,
+  então o supervisor não vê uma linha de um item (custo: ajustar a regra no componente).
+- Tradução cobre as chaves `__()` do repositório e renderiza as páginas de login/2FA/recuperação em `pt_BR`
+  para confirmar que não sobra inglês (custo: um teste a mais).
