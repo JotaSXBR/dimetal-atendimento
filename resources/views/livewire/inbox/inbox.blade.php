@@ -228,6 +228,8 @@
                 </form>
             @endif
 
+            <livewire:inbox.contact-tickets :ticket-id="$ticket->id" :key="'contact-tickets-'.$ticket->id" />
+
             @if ($notice)
                 <div class="border-b border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="alert">{{ $notice }}</div>
             @endif
