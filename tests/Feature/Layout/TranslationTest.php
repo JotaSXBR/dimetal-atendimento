@@ -49,12 +49,14 @@ class TranslationTest extends TestCase
         $response->assertSessionHasErrors('email');
         $message = (string) session('errors')->first('email');
         $this->assertStringNotContainsString('credentials', $message);
-        $this->assertSame('Essas credenciais não conferem com os nossos registros.', $message);
+        $this->assertSame(trans('auth.failed'), $message);
+        $this->assertStringNotContainsString('These credentials', $message);
     }
 
     public function test_validacao_em_portugues(): void
     {
-        $this->from('/login')->post('/login', [])->assertSessionHasErrors(['email' => 'O campo e-mail é obrigatório.']);
+        $this->from('/login')->post('/login', [])->assertSessionHasErrors(['email' => trans('validation.required', ['attribute' => trans('validation.attributes.email')])]);
+        $this->assertStringNotContainsString('field is required', (string) session('errors')->first('email'));
     }
 
     public function test_telas_publicas_sem_ingles(): void
@@ -66,5 +68,33 @@ class TranslationTest extends TestCase
                 $this->assertStringNotContainsString($english, $html, $url.': '.$english);
             }
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $lines
+     * @return list<string>
+     */
+    private function flatKeys(array $lines, string $prefix = ''): array
+    {
+        $keys = [];
+
+        foreach ($lines as $key => $value) {
+            if ($prefix === '' && in_array($key, ['attributes', 'custom'], true)) {
+                continue;
+            }
+
+            $keys = [...$keys, ...(is_array($value) ? $this->flatKeys($value, $prefix.$key.'.') : [$prefix.$key])];
+        }
+
+        return $keys;
+    }
+
+    public function test_validation_cobre_todas_as_chaves_do_framework(): void
+    {
+        $framework = $this->flatKeys(require base_path('vendor/laravel/framework/src/Illuminate/Translation/lang/en/validation.php'));
+        $ptBr = $this->flatKeys(require lang_path('pt_BR/validation.php'));
+
+        $this->assertNotEmpty($framework);
+        $this->assertSame([], array_values(array_diff($framework, $ptBr)));
     }
 }
