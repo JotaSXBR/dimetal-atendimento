@@ -355,6 +355,55 @@ class ChannelsScreenTest extends TestCase
         $this->assertNotNull(Channel::query()->find($used->id));
     }
 
+    private function fakeQr(string $status, int $rawStatus = 200): void
+    {
+        Http::fake(fn ($request) => match (true) {
+            str_contains($request->url(), '/auth/qr') && ($request['format'] ?? null) === 'raw' => Http::response($rawStatus === 200 ? ['value' => 'abc,def'] : [], $rawStatus),
+            str_contains($request->url(), '/auth/qr') => Http::response('PNGDATA', 200, ['Content-Type' => 'image/png']),
+            default => Http::response(['status' => $status], 200),
+        });
+    }
+
+    public function test_refresh_status_guarda_o_texto_cru_do_qr(): void
+    {
+        $this->fakeQr('SCAN_QR_CODE');
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::SCAN_QR_CODE]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('refreshStatus')->assertSet('qrValue', 'abc,def')->assertSet('qr', null);
+    }
+
+    public function test_qr_raw_falho_usa_o_png_do_waha(): void
+    {
+        $this->fakeQr('SCAN_QR_CODE', 422);
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::SCAN_QR_CODE]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('refreshStatus')->assertSet('qrValue', null)
+            ->assertSet('qr', fn ($qr) => str_starts_with((string) $qr, 'data:image/png'));
+    }
+
+    public function test_falha_no_desenho_do_navegador_cai_no_png(): void
+    {
+        $this->fakeQr('SCAN_QR_CODE');
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::SCAN_QR_CODE]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('refreshStatus')->call('qrFallback')
+            ->assertSet('qrValue', null)->assertSet('qr', fn ($qr) => str_starts_with((string) $qr, 'data:image/png'))
+            ->call('refreshStatus')->assertSet('qrValue', null);
+    }
+
+    public function test_qr_some_quando_conecta(): void
+    {
+        $this->fakeQr('WORKING');
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::SCAN_QR_CODE]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->set('qr', 'data:image/png;base64,AAA')->set('qrValue', 'abc')
+            ->call('refreshStatus')->assertSet('qr', null)->assertSet('qrValue', null);
+    }
+
     public function test_ask_recusa_acao_desconhecida(): void
     {
         Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => Channel::factory()->create()])

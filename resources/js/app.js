@@ -9,3 +9,4 @@ import './audio-player';
 import './attach-tray';
 import './voice-recorder';
 import './alerts';
+import './channel-qr';

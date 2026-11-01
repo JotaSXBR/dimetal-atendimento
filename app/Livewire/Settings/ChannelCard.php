@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Enums\ChannelStatus;
 use App\Enums\TicketStatus;
+use App\Livewire\Settings\Concerns\SendsTestMessage;
 use App\Models\Channel;
 use App\Models\Ticket;
 use App\Services\Waha\WahaClient;
@@ -18,6 +19,8 @@ use Throwable;
  */
 class ChannelCard extends Component
 {
+    use SendsTestMessage;
+
     public Channel $channel;
 
     private const ACTIONS = ['deactivate', 'delete-session', 'delete-channel'];
@@ -26,6 +29,9 @@ class ChannelCard extends Component
 
     /** O texto cru do QR, para o navegador desenhar com a logo; `qr` (PNG do WAHA) é o fallback. */
     public ?string $qrValue = null;
+
+    /** Depois de uma falha no desenho do navegador, o cartão fica na imagem do WAHA. */
+    public bool $preferPng = false;
 
     public ?string $confirming = null;
 
@@ -44,12 +50,6 @@ class ChannelCard extends Component
     public bool $backfill = false;
 
     public int $backfillDays = 5;
-
-    public string $testPhone = '';
-
-    public string $testText = 'Teste do painel de atendimento';
-
-    public ?string $sentMessage = null;
 
     public function mount(Channel $channel): void
     {
@@ -204,6 +204,8 @@ class ChannelCard extends Component
 
         if ($status?->needsQr()) {
             $this->refreshQr();
+        } elseif ($status !== null) {
+            $this->reset('qr', 'qrValue');
         }
     }
 
@@ -227,37 +229,6 @@ class ChannelCard extends Component
         }
     }
 
-    public function sendTest(): void
-    {
-        $this->reset('errorMessage', 'sentMessage');
-
-        $this->validate([
-            'testPhone' => ['required', 'string'],
-            'testText' => ['required', 'string', 'max:4096'],
-        ]);
-
-        $phone = $this->onlyDigits($this->testPhone);
-
-        if (! preg_match('/^\d{12,13}$/', $phone)) {
-            $this->addError('testPhone', 'Informe o telefone com DDI e DDD, só números.');
-
-            return;
-        }
-
-        try {
-            $response = (new WahaClient($this->channel))->sendText($this->channel->normalizeChatId($phone), $this->testText);
-        } catch (Throwable $exception) {
-            $this->fail($exception);
-
-            return;
-        }
-
-        $this->leaveOffline();
-
-        $id = $response['id'] ?? null;
-        $this->sentMessage = 'Enviado: '.(is_string($id) ? $id : 'sem id');
-    }
-
     public function render(): View
     {
         return view('livewire.settings.channel-card');
@@ -273,24 +244,22 @@ class ChannelCard extends Component
     private function refreshQr(): void
     {
         try {
-            $this->qr = (new WahaQr(new WahaClient($this->channel)))->dataUri();
+            $waha = new WahaQr(new WahaClient($this->channel));
+
+            // O texto cru vai para o navegador desenhar com a logo; o PNG do WAHA só quando o texto não vem ou o desenho falhou.
+            $this->qrValue = $this->preferPng ? null : $waha->raw();
+            $this->qr = $this->qrValue === null ? $waha->dataUri() : null;
         } catch (Throwable $exception) {
-            $this->qr = null;
+            $this->reset('qr', 'qrValue');
             $this->fail($exception);
         }
     }
 
-    /**
-     * Depois de enviar, o WAHA precisa voltar a ficar offline para o celular
-     * do atendente receber notificação — presença online segura o push.
-     */
-    private function leaveOffline(): void
+    /** O navegador não conseguiu desenhar o QR (biblioteca bloqueada, por exemplo): volta à imagem do WAHA. */
+    public function qrFallback(): void
     {
-        try {
-            (new WahaClient($this->channel))->setPresence('offline');
-        } catch (Throwable) {
-            // Presença é best-effort: a mensagem já foi enviada.
-        }
+        $this->preferPng = true;
+        $this->refreshQr();
     }
 
     private function fail(Throwable $exception): void
