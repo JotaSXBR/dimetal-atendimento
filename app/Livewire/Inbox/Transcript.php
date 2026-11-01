@@ -5,6 +5,7 @@ namespace App\Livewire\Inbox;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -16,11 +17,13 @@ class Transcript extends Component
 {
     private const LIMIT = 200;
 
+    #[Locked]
     public int $ticketId;
 
     /** @param  array<string, mixed>  $payload */
     #[On('echo-private:inbox,.message.created')]
     #[On('echo-private:inbox,.message.status')]
+    #[On('echo-private:inbox,.ticket.updated')]
     public function refreshForEvent(array $payload = []): void
     {
         $id = $payload['ticket_id'] ?? null;

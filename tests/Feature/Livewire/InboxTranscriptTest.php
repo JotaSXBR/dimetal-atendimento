@@ -91,6 +91,20 @@ class InboxTranscriptTest extends TestCase
         $screen->dispatch('echo-private:inbox,.message.created', ['ticket_id' => $ticket->id])->assertSee('nova;');
     }
 
+    public function test_ticket_updated_do_ticket_aberto_atualiza(): void
+    {
+        // Eco do celular casando com a linha pendente e fusão de contatos mexem em mensagens e disparam só `ticket.updated`.
+        $ticket = $this->ticket();
+        $other = $this->ticket();
+        $screen = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))
+            ->test(Transcript::class, ['ticketId' => $ticket->id]);
+
+        $this->say($ticket, 'nova;');
+
+        $screen->dispatch('echo-private:inbox,.ticket.updated', ['ticket_id' => $other->id])->assertDontSee('nova;');
+        $screen->dispatch('echo-private:inbox,.ticket.updated', ['ticket_id' => $ticket->id])->assertSee('nova;');
+    }
+
     public function test_transcript_refresh_atualiza(): void
     {
         $ticket = $this->ticket();
