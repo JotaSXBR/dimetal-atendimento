@@ -68,6 +68,23 @@ class ChannelPhoneTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_poll_e_webhook_lendo_a_troca_ao_mesmo_tempo_alertam_uma_vez_so(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $channel = Channel::factory()->connected()->create(['phone' => self::NUMBER]);
+
+        // Duas cópias defasadas do mesmo canal, como no poll (requisição web) e no webhook (worker).
+        $poll = Channel::query()->findOrFail($channel->id);
+        $webhook = Channel::query()->findOrFail($channel->id);
+
+        app(ChannelPhone::class)->sync($poll, '5516988887777@c.us');
+        app(ChannelPhone::class)->sync($webhook, '5516988887777@c.us');
+
+        Notification::assertSentToTimes($user, ChannelNumberChanged::class, 1);
+        $this->assertSame(self::NUMBER, $channel->fresh()?->previous_phone);
+    }
+
     public function test_troca_de_numero_atualiza_guarda_o_anterior_e_alerta_uma_vez(): void
     {
         Notification::fake();

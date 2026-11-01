@@ -53,7 +53,14 @@ class ChannelPhone
             return;
         }
 
-        $channel->update(['phone' => $digits, 'previous_phone' => $current, 'phone_changed_at' => now()]);
-        $this->alerts->numberChanged($channel);
+        // Condicional ao número que esta cópia leu: poll e webhook podem ver a mesma troca ao mesmo tempo, e só quem a grava alerta.
+        $changed = Channel::query()->whereKey($channel->id)->where('phone', $channel->phone)
+            ->update(['phone' => $digits, 'previous_phone' => $current, 'phone_changed_at' => now(), 'updated_at' => now()]);
+
+        $channel->refresh();
+
+        if ($changed === 1) {
+            $this->alerts->numberChanged($channel);
+        }
     }
 }
