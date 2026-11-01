@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.etiquetas" title="Etiquetas" subtitle="Marcam tickets (pelo bot ou à mão) e filtram a fila. Apagar uma etiqueta a remove de todos os tickets." width="3xl">
+<x-settings-page route="configuracoes.etiquetas" title="Etiquetas" subtitle="O bot marca tickets com elas (bloco Etiquetar) e a fila pode ser filtrada por etiqueta. Apagar uma etiqueta a remove de todos os tickets." width="3xl">
     <x-slot:actions>
         <flux:button variant="primary" icon="plus" wire:click="newTag">Nova etiqueta</flux:button>
     </x-slot:actions>

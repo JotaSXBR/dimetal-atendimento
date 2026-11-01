@@ -59,6 +59,17 @@ class MarkTicketSeenTest extends TestCase
             && $r['messageIds'] === ['false_'.self::PEER.'_AAA']);
     }
 
+    public function test_ticket_em_triagem_do_bot_nao_recebe_visto_de_quem_so_esta_lendo(): void
+    {
+        Http::fake();
+        $this->ticket->update(['status' => TicketStatus::PENDENTE]);
+        $this->received('AAA');
+
+        (new MarkTicketSeenJob($this->ticket->id))->handle(app(Presence::class));
+
+        Http::assertNothingSent();
+    }
+
     public function test_job_nao_chama_o_waha_sem_mensagem_do_cliente(): void
     {
         Http::fake();
