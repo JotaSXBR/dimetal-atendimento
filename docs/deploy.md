@@ -119,7 +119,10 @@ compiladas (`docker/base/Dockerfile`). Compilá-las a cada deploy custava ~95 s,
 O workflow `base-image` reconstrói e publica a imagem quando `docker/base/**` muda, toda segunda-feira (correções do
 sistema) e sob demanda. **Uma vez só:** o pacote `dimetal-php-base` precisa estar público (GitHub → Packages → Package settings
 → Change visibility), senão o Coolify não consegue baixá-lo; em "Manage Actions access" o repositório deve ter permissão de escrita.
-Os assets são gerados com Node 26 (`node:26-alpine`), o mesmo do CI.
+Os assets são gerados com Node 26 (`node:26-alpine`), o mesmo do CI. **Versões:** o PHP do CI vem do `FROM serversideup/php`
+de `docker/base/Dockerfile` e o Node do `FROM node` de `docker/Dockerfile` (ação `.github/actions/versions`); o Dependabot atualiza esses
+dois `FROM`, e o CI acompanha. Postgres e Redis do CI devem ser iguais aos do `compose.yaml` (o job `static` confere). A imagem base é publicada com a tag da
+versão do PHP (`:8.5`, `:8.6`...); quando o PHP muda, o Dependabot (`/docker`) propõe o novo `FROM` do app.
 
 O deploy **não** é automático no push do Coolify: `is_auto_deploy_enabled=false` nos Applications. Quem
 dispara é o workflow `.github/workflows/deploy-beta.yml` (seção 7). Com healthcheck ligado, a versão

@@ -38,6 +38,12 @@ jobs:
         with:
           persist-credentials: false
 
+      # A tag segue a versão do PHP do próprio Dockerfile da base: quando o Dependabot sobe o serversideup/php, a imagem sai
+      # como :8.6 em vez de reaproveitar o rótulo :8.5.
+      - name: Read PHP version
+        id: versions
+        uses: ./.github/actions/versions
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
@@ -55,7 +61,7 @@ jobs:
           context: docker/base
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/jotasxbr/dimetal-php-base:8.5
+            ghcr.io/jotasxbr/dimetal-php-base:${{ steps.versions.outputs.php }}
             ghcr.io/jotasxbr/dimetal-php-base:sha-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

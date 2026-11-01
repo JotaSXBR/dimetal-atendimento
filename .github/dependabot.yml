@@ -1,4 +1,9 @@
 version: 2
+
+# Atualizações de patch e minor entram agrupadas num PR por ecossistema; versão MAIOR (major) abre um PR próprio, para que
+# uma quebra de compatibilidade não derrube o grupo inteiro (foi o que aconteceu com o fontaine 1.x no PR do npm).
+# Versões de PHP e Node do CI vêm dos Dockerfiles (ação local .github/actions/versions), então estes dois ecossistemas
+# docker também mantêm o CI atualizado. As imagens postgres/redis do compose.yaml têm conferência no job `static`.
 updates:
   - package-ecosystem: "composer"
     directory: "/"
@@ -7,10 +12,12 @@ updates:
     open-pull-requests-limit: 5
     cooldown:
       default-days: 5
+      semver-major-days: 14
     groups:
-      composer:
-        patterns:
-          - "*"
+      composer-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -19,10 +26,17 @@ updates:
     open-pull-requests-limit: 5
     cooldown:
       default-days: 5
+      semver-major-days: 14
     groups:
-      npm:
-        patterns:
-          - "*"
+      npm-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # O laravel-vite-plugin 3.x declara fontaine ^0.8 como peer opcional: a 1.x faz o npm recusar a instalação (ERESOLVE).
+      # Tirar daqui quando o plugin aceitar a 1.x.
+      - dependency-name: "fontaine"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -31,10 +45,12 @@ updates:
     cooldown:
       default-days: 5
     groups:
-      github-actions:
-        patterns:
-          - "*"
+      github-actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
+  # Imagem de assets (node) e base de execução do app.
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:
@@ -42,8 +58,17 @@ updates:
     cooldown:
       default-days: 5
 
+  # Base do PHP (serversideup/php): define a versão do PHP no CI e a imagem publicada no GHCR.
   - package-ecosystem: "docker"
     directory: "/docker/base"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 5
+
+  # Postgres e Redis do desenvolvimento local (o CI é conferido contra estas versões).
+  - package-ecosystem: "docker-compose"
+    directory: "/"
     schedule:
       interval: "weekly"
     cooldown:

@@ -1,0 +1,25 @@
+name: versions
+description: Lê as versões de PHP e Node dos Dockerfiles, que o Dependabot mantém atualizados (fonte única para o CI).
+
+outputs:
+  php:
+    description: "Versão menor do PHP, como 8.5, lida de docker/base/Dockerfile"
+    value: ${{ steps.read.outputs.php }}
+  node:
+    description: "Versão maior do Node, como 26, lida de docker/Dockerfile"
+    value: ${{ steps.read.outputs.node }}
+
+runs:
+  using: composite
+  steps:
+    - id: read
+      shell: bash
+      run: |
+        php=$(sed -nE 's#^FROM serversideup/php:([0-9]+\.[0-9]+).*#\1#p' docker/base/Dockerfile | head -1)
+        node=$(sed -nE 's#^FROM node:([0-9]+).*#\1#p' docker/Dockerfile | head -1)
+        if [ -z "$php" ] || [ -z "$node" ]; then
+          echo "Versão de PHP ou Node não encontrada nos Dockerfiles (php='$php', node='$node')" >&2
+          exit 1
+        fi
+        echo "php=$php" >> "$GITHUB_OUTPUT"
+        echo "node=$node" >> "$GITHUB_OUTPUT"
