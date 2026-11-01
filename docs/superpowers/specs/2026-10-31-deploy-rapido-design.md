@@ -31,3 +31,10 @@ variáveis de build no Coolify, o que gera o warning de `APP_ENV` e expõe os va
 - Tag `:8.5` mutável, reconstruída por semana: pega correções do SO, mas uma regressão da base chega sem PR. Custo: um deploy
   quebrado até reverter a tag.
 - Variáveis só de runtime: se algum dia o build precisar delas, o Vite não as verá; hoje o Dockerfile não declara `ARG`.
+
+## Atualização (mesma fatia, a pedido do dono)
+- **Um PR só:** a imagem base é publicada no GHCR a partir da máquina do dono antes do merge, e a troca do `FROM` entra no mesmo
+  PR. O pacote precisa ficar público (passo manual na interface do GitHub) e ter a etiqueta `org.opencontainers.image.source`.
+- **Node 26 LTS** no CI (`setup-node`) e na imagem de assets (`node:26-alpine`). Validado: `npm ci`, `npm run build` e `node --test tests/js`.
+- **Testes de JS no CI:** `tests/js` não rodava em lugar nenhum; passo `node --test tests/js` no job `tests`.
+- **Fora:** alinhar o CI ao `phpunit.xml` (array/sync). O Redis real do CI pega bugs que `array` esconde.

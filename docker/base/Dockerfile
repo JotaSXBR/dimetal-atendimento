@@ -4,6 +4,9 @@
 # deploy não recompilar intl, gd e bcmath a cada build (~95 s). O Dockerfile do app só usa esta imagem.
 FROM serversideup/php:8.5.12-fpm-nginx-bookworm
 
+# Liga o pacote do GHCR a este repositório (permissões e visibilidade).
+LABEL org.opencontainers.image.source="https://github.com/JotaSXBR/dimetal-atendimento"
+
 USER root
 
 RUN install-php-extensions pdo_pgsql intl zip gd bcmath redis

@@ -30,7 +30,9 @@ Recursos separados só se falam pela rede Docker `coolify`. Por isso:
 
 ## 2. Variáveis
 
-Tudo é configurado por recurso, na aba Environment. O que muda por projeto:
+Tudo é configurado por recurso, na aba Environment. **Toda variável é só de runtime** (desmarque "Available at Buildtime"
+em cada uma, inclusive as novas): o `docker/Dockerfile` não declara nenhum `ARG`, então o build não precisa delas, e marcadas
+como buildtime elas viram `--build-arg` no log do deploy (segredos inclusive) e disparam o aviso de `APP_ENV`. O que muda por projeto:
 
 ```
 APP_KEY=base64:...
@@ -109,6 +111,15 @@ ajustar; se algum dia essas variáveis forem reduzidas, mantenha ao menos 20 MB.
 - `beta` → ambiente de teste.
 - Antes de empurrar: `composer hooks:install` (uma vez por clone) liga o `.githooks/pre-push`, que roda Pint e Larastan em segundos; a suíte fica no CI.
 - `beta` é sincronizada a partir de `main` (`git push origin main:beta`), não o contrário.
+
+### Imagem base do PHP
+
+O `docker/Dockerfile` parte de `ghcr.io/jotasxbr/dimetal-php-base:8.5`, com `intl`, `gd`, `bcmath` e as demais extensões já
+compiladas (`docker/base/Dockerfile`). Compilá-las a cada deploy custava ~95 s, porque o Coolify descarta o cache de build.
+O workflow `base-image` reconstrói e publica a imagem quando `docker/base/**` muda, toda segunda-feira (correções do
+sistema) e sob demanda. **Uma vez só:** o pacote `dimetal-php-base` precisa estar público (GitHub → Packages → Package settings
+→ Change visibility), senão o Coolify não consegue baixá-lo; em "Manage Actions access" o repositório deve ter permissão de escrita.
+Os assets são gerados com Node 26 (`node:26-alpine`), o mesmo do CI.
 
 O deploy **não** é automático no push do Coolify: `is_auto_deploy_enabled=false` nos Applications. Quem
 dispara é o workflow `.github/workflows/deploy-beta.yml` (seção 7). Com healthcheck ligado, a versão

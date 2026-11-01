@@ -45,3 +45,8 @@
 **Files:** Modify `docker/Dockerfile`
 - [ ] `FROM ghcr.io/jotasxbr/dimetal-php-base:8.5 AS base`; remover a linha `install-php-extensions` e `USER root` redundante só se o base já deixa root (manter `USER root` antes do `WORKDIR`).
 - [ ] Verificar o build do `runtime` e o deploy do beta com tempo menor no log.
+
+## Atualização do escopo (um PR só)
+- Task 5 passa a fazer parte deste PR: publicar `dimetal-php-base:8.5` no GHCR antes do merge (`docker login ghcr.io` com token
+  `write:packages`, `docker push`), dono torna o pacote público, `docker logout` + `docker pull` anônimo prova a visibilidade, e então a troca do `FROM`.
+- Task 6: Node 26 em `tests.yml` e `docker/Dockerfile`. Task 7: passo `node --test tests/js` no job `tests`. Task 8: `docs/deploy.md`.
