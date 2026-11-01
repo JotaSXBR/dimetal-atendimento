@@ -1,11 +1,21 @@
 <section class="w-full">
     @include('partials.settings-heading')
 
-    <x-pages::settings.layout heading="Canais" subheading="Conexão do WhatsApp">
+    <x-pages::settings.layout heading="Canais" subheading="Conexão do WhatsApp" wide>
         <div class="space-y-6">
-            @foreach ($channels as $channel)
-                <livewire:settings.channel-card :channel="$channel" :key="'channel-'.$channel->id" />
-            @endforeach
+            <div class="flex gap-3 rounded-[14px] border border-warn/30 bg-warn/10 px-4 py-3 text-warn" role="note">
+                <flux:icon.exclamation-triangle class="mt-0.5 size-5 shrink-0" />
+                <div class="text-xs leading-relaxed">
+                    <p class="text-sm font-semibold">Sem failover entre números</p>
+                    <p>Se um número cair, o outro não assume a fila. Um alerta vai para supervisor e admin, e a equipe atende pelos dois inboxes.</p>
+                </div>
+            </div>
+
+            <div class="grid items-start gap-6 xl:grid-cols-2">
+                @foreach ($channels as $channel)
+                    <livewire:settings.channel-card :channel="$channel" :key="'channel-'.$channel->id" />
+                @endforeach
+            </div>
 
             <div class="rounded-[14px] border border-line bg-surface p-5">
                 <p class="text-sm font-semibold text-ink">Adicionar número</p>
@@ -24,7 +34,20 @@
 
                 <p class="mt-2 text-xs leading-relaxed text-ink-3">
                     Cada número tem sua sessão no WAHA. Depois de adicionar, use Conectar no cartão do número.
+                    Para voltar um número que você excluiu, use o mesmo nome de sessão: o canal e os tickets dele são reaproveitados.
+                    Outro nome cria um canal novo, sem o histórico.
                 </p>
+            </div>
+
+            <div class="rounded-[14px] border border-line bg-surface p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-ink">Webhook de entrada</p>
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $receiving ? 'bg-accent-soft text-accent-deep' : 'bg-canvas text-ink-2' }}">
+                        <span class="size-1.5 rounded-full {{ $receiving ? 'bg-accent' : 'bg-ink-3' }}"></span>
+                        {{ $receiving ? 'recebendo' : 'sem eventos recentes' }}
+                    </span>
+                </div>
+                <p class="mt-2 break-all font-mono text-xs text-ink-2">{{ $webhookUrl }}</p>
             </div>
 
             <div class="rounded-[14px] border border-line bg-surface p-5">
@@ -52,11 +75,6 @@
                         </tbody>
                     </table>
                 @endif
-
-                <p class="mt-3 text-xs text-warn">
-                    Se um número cair, o atendimento não migra sozinho para o outro: cada um precisa ser
-                    reconectado aqui.
-                </p>
             </div>
         </div>
     </x-pages::settings.layout>

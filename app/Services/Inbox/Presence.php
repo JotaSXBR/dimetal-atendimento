@@ -43,6 +43,16 @@ class Presence
         });
     }
 
+    /** O atendente viu a conversa: o cliente recebe o "visto" sem precisar de uma resposta. */
+    public function seen(Ticket $ticket): void
+    {
+        $this->attempt('visto', function () use ($ticket): void {
+            $contact = $ticket->contact()->firstOrFail();
+
+            $this->markSeen(new WahaClient($ticket->channel()->firstOrFail()), $ticket, $contact->wa_id ?? (string) $contact->lid);
+        });
+    }
+
     /** "Gravando áudio…" para o cliente enquanto o atendente grava; melhor esforço, como o resto da presença. */
     public function recording(WahaClient $client, string $chatId, bool $on): void
     {

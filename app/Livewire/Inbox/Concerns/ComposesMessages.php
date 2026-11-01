@@ -67,6 +67,23 @@ trait ComposesMessages
         $this->draft = QuickReply::forUser($this->user())->findOrFail($id)->body;
     }
 
+    private function expandTypedShortcut(): bool
+    {
+        if (preg_match('#^/([a-z0-9_-]+)$#i', $this->draft, $m) !== 1) {
+            return false;
+        }
+
+        $reply = QuickReply::forUser($this->user())->where('shortcut', strtolower($m[1]))->first();
+
+        if ($reply === null) {
+            return false;
+        }
+
+        $this->draft = $reply->body;
+
+        return true;
+    }
+
     /**
      * @return Collection<int, QuickReply>
      */
@@ -132,6 +149,12 @@ trait ComposesMessages
         $this->authorize('reply', $ticket);
 
         $this->draft = trim($this->draft);
+
+        // `/ok` + Enter vira o texto cadastrado, no campo e editável; o envio é o próximo Enter.
+        if ($this->expandTypedShortcut()) {
+            return;
+        }
+
         $this->resetErrorBag();
         $this->validateDraft();
 

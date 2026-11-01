@@ -26,7 +26,8 @@ class TicketPolicy
         return $user->active
             && $ticket->status === TicketStatus::EM_ATENDIMENTO
             && $ticket->assigned_user_id !== null
-            && ($ticket->assigned_user_id === $user->id || $user->canSeeAllSectors());
+            && ($ticket->assigned_user_id === $user->id || $user->canSeeAllSectors())
+            && $ticket->channel?->active === true;
     }
 
     public function close(User $user, Ticket $ticket): bool

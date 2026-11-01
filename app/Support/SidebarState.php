@@ -25,6 +25,9 @@ class SidebarState
     /** Há canal cadastrado e nenhum está conectado. */
     public function whatsappDown(): bool
     {
-        return Channel::query()->exists() && ! Channel::query()->where('status', ChannelStatus::WORKING->value)->exists();
+        // Canal desativado de propósito não é queda: só os ativos contam.
+        $active = fn () => Channel::query()->where('active', true);
+
+        return $active()->exists() && ! $active()->where('status', ChannelStatus::WORKING->value)->exists();
     }
 }

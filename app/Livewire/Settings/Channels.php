@@ -4,7 +4,9 @@ namespace App\Livewire\Settings;
 
 use App\Models\Channel;
 use App\Models\WahaEvent;
+use App\Settings\WahaSettings;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -27,10 +29,17 @@ class Channels extends Component
         $this->reset('sessionName');
     }
 
+    /** Um cartão apagou o canal: só pede nova leitura da lista. */
+    #[On('channel-deleted')]
+    public function refreshList(): void {}
+
     public function render(): View
     {
         return view('livewire.settings.channels', [
             'channels' => Channel::query()->orderBy('id')->get(),
+            'webhookUrl' => WahaSettings::webhookUrl(),
+            // "Recebendo" = chegou algum evento do WAHA nos últimos 10 minutos.
+            'receiving' => WahaEvent::query()->where('received_at', '>=', now()->subMinutes(10))->exists(),
             'lastEvents' => WahaEvent::query()
                 ->latest('id')
                 ->limit(10)

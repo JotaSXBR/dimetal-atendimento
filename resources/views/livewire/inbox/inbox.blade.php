@@ -333,6 +333,8 @@
                     </div>
                 @elseif ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                     <p class="text-center text-sm text-ink-3">Ticket encerrado. Somente leitura.</p>
+                @elseif (! $ticket->channel->active)
+                    <p class="text-center text-sm text-ink-3" role="status">Canal desativado. Reative para responder.</p>
                 @elseif ($ticket->assigned_user_id === null)
                     <p class="text-center text-sm text-ink-3">Assuma o ticket para responder.</p>
                 @else

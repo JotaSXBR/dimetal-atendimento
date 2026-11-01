@@ -81,21 +81,10 @@ class WahaClient
         ]));
     }
 
-    public function qrDataUri(): ?string
+    /** Remove a sessão no WAHA (idempotente). O canal e os tickets daqui não são tocados. */
+    public function deleteSession(): void
     {
-        $response = $this->request()
-            ->withHeaders(['Accept' => 'image/png'])
-            ->get($this->sessionPath('/auth/qr'), ['format' => 'image']);
-
-        if ($response->failed()) {
-            return null;
-        }
-
-        if (! str_starts_with((string) $response->header('Content-Type'), 'image/')) {
-            return null;
-        }
-
-        return 'data:image/png;base64,'.base64_encode($response->body());
+        $this->acceptMissing($this->request()->delete('/api/sessions/'.$this->sessionName()));
     }
 
     public function requestPairingCode(string $phoneNumber): string

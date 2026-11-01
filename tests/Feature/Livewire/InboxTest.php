@@ -165,7 +165,7 @@ class InboxTest extends TestCase
             ->call('send')
             ->assertHasErrors('draft');
 
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(SendTicketMessageJob::class);
     }
 
     public function test_atendente_nao_responde_ticket_nao_assumido(): void
@@ -179,7 +179,7 @@ class InboxTest extends TestCase
             ->call('send')
             ->assertForbidden();
 
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(SendTicketMessageJob::class);
     }
 
     public function test_encerrar_remove_da_fila_e_mostra_somente_leitura(): void
