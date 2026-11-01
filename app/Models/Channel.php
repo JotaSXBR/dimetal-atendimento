@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
@@ -38,6 +39,7 @@ use Illuminate\Database\Eloquent\Model;
     'backfill_days',
     'backfill_last_run_at',
     'active',
+    'workflow_id',
 ])]
 #[ObservedBy(ChannelObserver::class)]
 class Channel extends Model
@@ -61,6 +63,12 @@ class Channel extends Model
     }
 
     /** O número como o resto do app mostra, ou `null` enquanto o WAHA não o informou. */
+    /** @return BelongsTo<Workflow, $this> */
+    public function workflow(): BelongsTo
+    {
+        return $this->belongsTo(Workflow::class);
+    }
+
     public function phoneLabel(): ?string
     {
         return $this->phone === null ? null : PhoneFormat::display($this->phone);
