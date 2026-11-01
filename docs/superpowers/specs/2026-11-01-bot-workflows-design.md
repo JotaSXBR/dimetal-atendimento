@@ -88,8 +88,9 @@ Fluxo de uma mensagem do cliente:
    sessão na versão publicada; se há sessão ativa, entrega a mensagem a ela; se não, comportamento atual.
 2. Um job `AdvanceBotSession` (fila `inbound`, um por ticket sob lock, como a abertura de ticket de hoje) executa os nós
    até um bloco que espera o cliente, um nó final ou o teto de 50 passos (proteção contra laço).
-3. Mensagens do bot saem por `SendTicketMessage` com `MessageOrigin::BOT`, respeitando o envio humanizado existente
-   (visto, digitando, espera). O eco do WhatsApp continua casando pela janela de bot.
+3. Mensagens do bot saem por `SendTicketMessage` com `MessageOrigin::BOT`. Hoje esse caminho **não** finge visto nem
+   "digitando" (decisão da resposta automática), e o bloco Esperar é o único que mostra "digitando" de propósito. O eco do
+   WhatsApp continua casando pela janela de bot.
 4. `#sair` (sem diferenciar maiúsculas) em qualquer ponto: transfere à fila padrão com a mensagem de encaminhamento padrão.
 5. Rotina de minuto (scheduler, `withoutOverlapping`) encaminha as sessões com `expires_at` vencido à fila padrão.
 6. Mensagem enviada pelo celular numa conversa `pendente` encerra a sessão e o ticket segue o caminho de hoje
@@ -112,6 +113,9 @@ Eventos do ticket (`TicketEvent`): `bot_started`, `bot_handoff` (motivo: `fluxo`
 - Seed: workflow "Atendimento padrão" (saudação → menu de setores → encaminhamento com protocolo), **inativo** até o admin ativar.
 
 ## 8. Fila Pendente e inbox
+
+Regra que guia todo ponto do código: **`pendente` é a triagem automática, sem humano (workflow hoje, LLM depois);
+`aguardando` é a fila humana do setor.** Sem workflow ativo no canal o ticket nasce `aguardando`, como hoje.
 
 - `Ticket::open()` e as listas passam a conhecer `pendente`: aba/seção Pendentes em Inbox, visível a todos; o transcript abre
   em leitura (sem caixa de resposta, sem assumir). Ação disponível: Transferir (reusa `TransferTicket`, que já devolve a
