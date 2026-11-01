@@ -3,6 +3,7 @@
 namespace App\Services\Bot\Nodes;
 
 use App\Services\Bot\BotRun;
+use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
 
 /**
@@ -15,18 +16,12 @@ abstract class ChoiceNode extends Node
 
     private const DEFAULT_INVALID = 'Opção inválida. Responda com o número de uma das opções.';
 
-    /**
-     * @param  array<string, mixed>  $data
-     * @return list<array{label: string, value: int|string}>
-     */
-    abstract protected function choices(BotRun $run, array $data): array;
+    /** @return list<array{label: string, value: int|string}> */
+    abstract protected function choices(BotRun $run, NodeData $data): array;
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    abstract protected function picked(BotRun $run, array $data, int|string $value, int $number): Step;
+    abstract protected function picked(BotRun $run, NodeData $data, int|string $value, int $number): Step;
 
-    public function enter(BotRun $run, array $data): Step
+    public function enter(BotRun $run, NodeData $data): Step
     {
         $choices = $this->choices($run, $data);
 
@@ -34,20 +29,23 @@ abstract class ChoiceNode extends Node
             return Step::leave('erros');
         }
 
-        $run->set('_choices', array_column($choices, 'value'));
-        $run->set('_menu', $this->render($run, $data, $choices));
-        $run->say((string) $run->get('_menu'));
+        $menu = $this->render($data, $choices);
 
-        return Step::wait('menu', (int) ($data['timeout_min'] ?? 10));
+        $run->set('_choices', array_column($choices, 'value'));
+        $run->set('_menu', $menu);
+        $run->say($menu);
+
+        return Step::wait('menu', $data->int('timeout_min', 10));
     }
 
-    public function answer(BotRun $run, array $data, string $text): Step
+    public function answer(BotRun $run, NodeData $data, string $text): Step
     {
         $values = $run->get('_choices');
         $number = preg_match('/^\d{1,3}$/', $text) === 1 ? (int) $text : 0;
+        $picked = is_array($values) ? ($values[$number - 1] ?? null) : null;
 
-        if (is_array($values) && $number >= 1 && $number <= count($values)) {
-            return $this->picked($run, $data, $values[$number - 1], $number);
+        if (is_int($picked) || is_string($picked)) {
+            return $this->picked($run, $data, $picked, $number);
         }
 
         $run->session->attempts++;
@@ -56,23 +54,21 @@ abstract class ChoiceNode extends Node
             return Step::leave('erros');
         }
 
-        $run->say(is_string($data['invalido'] ?? null) && trim($data['invalido']) !== '' ? $data['invalido'] : self::DEFAULT_INVALID);
-        $run->say((string) $run->get('_menu'));
+        $menu = $run->get('_menu');
+        $run->say($data->filled('invalido') ? $data->string('invalido') : self::DEFAULT_INVALID);
+        $run->say(is_string($menu) ? $menu : '');
 
-        return Step::wait('menu', (int) ($data['timeout_min'] ?? 10));
+        return Step::wait('menu', $data->int('timeout_min', 10));
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     * @param  list<array{label: string, value: int|string}>  $choices
-     */
-    private function render(BotRun $run, array $data, array $choices): string
+    /** @param  list<array{label: string, value: int|string}>  $choices */
+    private function render(NodeData $data, array $choices): string
     {
         $lines = [];
         foreach ($choices as $i => $choice) {
             $lines[] = ($i + 1).' - '.$choice['label'];
         }
 
-        return trim((string) ($data['texto'] ?? ''))."\n\n".implode("\n", $lines)."\n\nPara falar com um atendente digite #sair";
+        return trim($data->string('texto'))."\n\n".implode("\n", $lines)."\n\nPara falar com um atendente digite #sair";
     }
 }

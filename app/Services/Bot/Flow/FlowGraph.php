@@ -17,34 +17,57 @@ final class FlowGraph
     /** @param  array<string, mixed>  $graph */
     public static function fromArray(array $graph): self
     {
+        return new self(self::parseNodes($graph['nodes'] ?? null), self::parseEdges($graph['edges'] ?? null));
+    }
+
+    /** @return array<string, array<string, mixed>> */
+    private static function parseNodes(mixed $raw): array
+    {
         $nodes = [];
-        foreach (is_array($graph['nodes'] ?? null) ? $graph['nodes'] : [] as $node) {
+
+        foreach (is_array($raw) ? $raw : [] as $node) {
             if (is_array($node) && is_string($node['id'] ?? null) && is_string($node['type'] ?? null)) {
-                $node['data'] = is_array($node['data'] ?? null) ? $node['data'] : [];
-                $nodes[$node['id']] = $node;
+                /** @var array<string, mixed> $data */
+                $data = is_array($node['data'] ?? null) ? $node['data'] : [];
+                $nodes[$node['id']] = ['id' => $node['id'], 'type' => $node['type'], 'x' => $node['x'] ?? 0, 'y' => $node['y'] ?? 0, 'data' => $data];
             }
         }
 
+        return $nodes;
+    }
+
+    /** @return array<string, array<string, string>> */
+    private static function parseEdges(mixed $raw): array
+    {
         $edges = [];
-        foreach (is_array($graph['edges'] ?? null) ? $graph['edges'] : [] as $edge) {
+
+        foreach (is_array($raw) ? $raw : [] as $edge) {
             if (is_array($edge) && is_string($edge['from'] ?? null) && is_string($edge['to'] ?? null)) {
                 $edges[$edge['from']][is_string($edge['port'] ?? null) ? $edge['port'] : 'out'] = $edge['to'];
             }
         }
 
-        return new self($nodes, $edges);
+        return $edges;
     }
 
-    /** @return array<string, array<string, mixed>> */
-    public function nodes(): array
+    /** @return list<string> */
+    public function ids(): array
     {
-        return $this->nodes;
+        return array_keys($this->nodes);
     }
 
     /** @return array<string, mixed>|null */
     public function node(string $id): ?array
     {
         return $this->nodes[$id] ?? null;
+    }
+
+    public function data(string $id): NodeData
+    {
+        /** @var array<string, mixed> $data */
+        $data = $this->nodes[$id]['data'] ?? [];
+
+        return new NodeData($data);
     }
 
     public function type(string $id): ?NodeType

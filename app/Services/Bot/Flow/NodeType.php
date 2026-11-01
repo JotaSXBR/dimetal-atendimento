@@ -51,16 +51,15 @@ enum NodeType: string
     /**
      * As portas de saída que precisam estar ligadas. `erro` é sempre opcional (sem ligação, o cliente vai à fila padrão).
      *
-     * @param  array<string, mixed>  $data
      * @return list<string>
      */
-    public function ports(array $data): array
+    public function ports(NodeData $data): array
     {
         return match ($this) {
             self::Transferir, self::Encerrar => [],
             self::MenuSetores => ['setor'],
             self::Condicao => ['true', 'false'],
-            self::Menu => array_map(fn (int $i): string => 'opt:'.$i, range(1, max(1, count(is_array($data['opcoes'] ?? null) ? $data['opcoes'] : [])))),
+            self::Menu => array_map(fn (int $i): string => 'opt:'.$i, range(1, max(1, count($data->list('opcoes'))))),
             default => ['out'],
         };
     }

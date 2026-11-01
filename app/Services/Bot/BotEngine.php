@@ -88,9 +88,7 @@ class BotEngine
         }
 
         $run = new BotRun($this, $session, $ticket, $flow);
-        $data = $flow->node($id)['data'] ?? [];
-
-        $this->advance($run, $id, $this->node($type)->answer($run, $data, $text));
+        $this->advance($run, $id, $this->node($type)->answer($run, $flow->data($id), $text));
     }
 
     /**
@@ -112,7 +110,7 @@ class BotEngine
             if ($reason !== 'fluxo') {
                 $this->say($ticket, Vars::render(
                     $sector !== null ? 'Vou encaminhar você para o setor {{setor}}. Seu protocolo é {{protocolo}}.' : 'Vou encaminhar você para um atendente. Seu protocolo é {{protocolo}}.',
-                    ['setor' => $sector?->name ?? '', 'protocolo' => (string) $ticket->protocol],
+                    ['setor' => $sector !== null ? $sector->name : '', 'protocolo' => (string) $ticket->protocol],
                 ));
             }
 
@@ -161,7 +159,7 @@ class BotEngine
             }
 
             $run->session->attempts = 0;
-            $step = $this->node($type)->enter($run, $run->flow->node($id)['data'] ?? []);
+            $step = $this->node($type)->enter($run, $run->flow->data($id));
 
             if ($step->kind !== Step::NEXT) {
                 $this->settle($run, $id, $step);

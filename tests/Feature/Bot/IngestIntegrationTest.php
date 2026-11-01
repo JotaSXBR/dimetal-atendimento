@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Bot;
 
+use App\Actions\Inbox\CloseTicket;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
@@ -18,7 +19,6 @@ use App\Models\TicketEvent;
 use App\Models\User;
 use App\Models\WahaEvent;
 use App\Models\WorkflowVersion;
-use App\Actions\Inbox\CloseTicket;
 use App\Services\Bot\BotEngine;
 use App\Services\Bot\BotEntry;
 use App\Services\Inbox\IngestMessage;

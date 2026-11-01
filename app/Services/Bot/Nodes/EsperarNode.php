@@ -3,6 +3,7 @@
 namespace App\Services\Bot\Nodes;
 
 use App\Services\Bot\BotRun;
+use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
 use App\Services\Waha\WahaClient;
 use Illuminate\Support\Facades\Log;
@@ -16,9 +17,9 @@ final class EsperarNode extends Node
 
     public const MAX_SECONDS = 30;
 
-    public function enter(BotRun $run, array $data): Step
+    public function enter(BotRun $run, NodeData $data): Step
     {
-        $seconds = max(self::MIN_SECONDS, min(self::MAX_SECONDS, (int) ($data['segundos'] ?? self::MIN_SECONDS)));
+        $seconds = max(self::MIN_SECONDS, min(self::MAX_SECONDS, $data->int('segundos', self::MIN_SECONDS)));
         $contact = $run->ticket->contact()->firstOrFail();
         $chatId = $contact->wa_id ?? (string) $contact->lid;
         $client = new WahaClient($run->ticket->channel()->firstOrFail());

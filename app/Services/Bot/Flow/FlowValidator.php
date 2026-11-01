@@ -19,51 +19,63 @@ final class FlowValidator
         $flow = FlowGraph::fromArray($graph);
         $errors = [];
 
-        $starts = array_filter($flow->nodes(), fn (array $n): bool => $n['type'] === NodeType::Inicio->value);
-        if (count($starts) !== 1) {
+        if (count(array_filter($flow->ids(), fn (string $id): bool => $flow->type($id) === NodeType::Inicio)) !== 1) {
             $errors[] = 'O workflow precisa de um bloco Início, e só um.';
         }
 
-        foreach ($flow->nodes() as $id => $node) {
-            $type = $flow->type($id);
-
-            if ($type === null) {
-                $errors[] = "{$id}: tipo desconhecido.";
-
-                continue;
-            }
-
-            $data = $node['data'];
-            array_push($errors, ...$this->checkData($id, $type, $data, $sectorIds, $tagIds));
-
-            foreach ($type->ports($data) as $port) {
-                if ($flow->next($id, $port) === null) {
-                    $errors[] = "{$id}: saída \"{$port}\" sem ligação.";
-                }
-            }
-
-            foreach ($flow->successors($id) as $target) {
-                if ($flow->node($target) === null) {
-                    $errors[] = "{$id}: ligação para um bloco que não existe ({$target}).";
-                }
-            }
+        foreach ($flow->ids() as $id) {
+            array_push($errors, ...$this->checkNode($flow, $id, $sectorIds, $tagIds));
         }
 
         $start = $flow->start();
-        if ($start === null) {
-            return $errors;
+
+        return $start === null ? $errors : [...$errors, ...$this->checkReachability($flow, $start)];
+    }
+
+    /**
+     * @param  list<int>|null  $sectorIds
+     * @param  list<int>|null  $tagIds
+     * @return list<string>
+     */
+    private function checkNode(FlowGraph $flow, string $id, ?array $sectorIds, ?array $tagIds): array
+    {
+        $type = $flow->type($id);
+
+        if ($type === null) {
+            return ["{$id}: tipo desconhecido."];
         }
 
+        $data = $flow->data($id);
+        $errors = [...$this->checkText($id, $type, $data), ...$this->checkReferences($id, $type, $data, $sectorIds, $tagIds)];
+
+        foreach ($type->ports($data) as $port) {
+            if ($flow->next($id, $port) === null) {
+                $errors[] = "{$id}: saída \"{$port}\" sem ligação.";
+            }
+        }
+
+        foreach ($flow->successors($id) as $target) {
+            if ($flow->node($target) === null) {
+                $errors[] = "{$id}: ligação para um bloco que não existe ({$target}).";
+            }
+        }
+
+        return $errors;
+    }
+
+    /** @return list<string> */
+    private function checkReachability(FlowGraph $flow, string $start): array
+    {
+        $errors = [];
         $reachable = $this->reachable($flow, $start);
 
-        foreach (array_keys($flow->nodes()) as $id) {
+        foreach ($flow->ids() as $id) {
             if (! isset($reachable[$id])) {
                 $errors[] = "{$id}: não é alcançado a partir do Início.";
             }
         }
 
-        $hasFinal = array_filter(array_keys($reachable), fn (string $id): bool => $flow->type($id)?->isFinal() === true) !== [];
-        if (! $hasFinal) {
+        if (array_filter(array_keys($reachable), fn (string $id): bool => $flow->type($id)?->isFinal() === true) === []) {
             $errors[] = 'Nenhum caminho termina em Transferir ou Encerrar.';
         }
 
@@ -74,45 +86,52 @@ final class FlowValidator
         return $errors;
     }
 
+    /** @return list<string> */
+    private function checkText(string $id, NodeType $type, NodeData $data): array
+    {
+        $errors = [];
+
+        if (in_array($type, [NodeType::Mensagem, NodeType::MenuSetores, NodeType::Menu, NodeType::Pergunta], true) && ! $data->filled('texto')) {
+            $errors[] = "{$id}: escreva o texto.";
+        }
+
+        if ($type === NodeType::Menu && ! $this->validOptions($data->list('opcoes'))) {
+            $errors[] = "{$id}: o menu precisa de ao menos uma opção, todas com texto.";
+        }
+
+        if ($type === NodeType::Midia && ! $data->filled('path')) {
+            $errors[] = "{$id}: escolha o arquivo.";
+        }
+
+        if ($type === NodeType::Pergunta && ! $data->filled('variavel')) {
+            $errors[] = "{$id}: informe o nome da variável que guarda a resposta.";
+        }
+
+        return $errors;
+    }
+
     /**
-     * @param  array<string, mixed>  $data
      * @param  list<int>|null  $sectorIds
      * @param  list<int>|null  $tagIds
      * @return list<string>
      */
-    private function checkData(string $id, NodeType $type, array $data, ?array $sectorIds, ?array $tagIds): array
+    private function checkReferences(string $id, NodeType $type, NodeData $data, ?array $sectorIds, ?array $tagIds): array
     {
-        $errors = [];
-        $blank = fn (string $key): bool => ! is_string($data[$key] ?? null) || trim($data[$key]) === '';
-
-        if (in_array($type, [NodeType::Mensagem, NodeType::MenuSetores, NodeType::Menu, NodeType::Pergunta], true) && $blank('texto')) {
-            $errors[] = "{$id}: escreva o texto.";
+        if ($type === NodeType::Transferir && $data->has('setor_id') && $sectorIds !== null && ! in_array($data->int('setor_id'), $sectorIds, true)) {
+            return ["{$id}: o setor {$data->string('setor_id')} não existe."];
         }
 
-        if ($type === NodeType::Menu) {
-            $options = is_array($data['opcoes'] ?? null) ? $data['opcoes'] : [];
-            if ($options === [] || array_filter($options, fn (mixed $o): bool => ! is_string($o) || trim($o) === '') !== []) {
-                $errors[] = "{$id}: o menu precisa de ao menos uma opção, todas com texto.";
-            }
+        if ($type === NodeType::Etiquetar && $tagIds !== null && ! in_array($data->int('tag_id'), $tagIds, true)) {
+            return ["{$id}: a etiqueta ".($data->has('tag_id') ? $data->string('tag_id') : '?').' não existe.'];
         }
 
-        if ($type === NodeType::Midia && $blank('path')) {
-            $errors[] = "{$id}: escolha o arquivo.";
-        }
+        return [];
+    }
 
-        if ($type === NodeType::Pergunta && $blank('variavel')) {
-            $errors[] = "{$id}: informe o nome da variável que guarda a resposta.";
-        }
-
-        if ($type === NodeType::Transferir && isset($data['setor_id']) && $sectorIds !== null && ! in_array((int) $data['setor_id'], $sectorIds, true)) {
-            $errors[] = "{$id}: o setor {$data['setor_id']} não existe.";
-        }
-
-        if ($type === NodeType::Etiquetar && $tagIds !== null && ! in_array((int) ($data['tag_id'] ?? 0), $tagIds, true)) {
-            $errors[] = "{$id}: a etiqueta ".($data['tag_id'] ?? '?').' não existe.';
-        }
-
-        return $errors;
+    /** @param  list<mixed>  $options */
+    private function validOptions(array $options): bool
+    {
+        return $options !== [] && array_filter($options, fn (mixed $o): bool => ! is_string($o) || trim($o) === '') === [];
     }
 
     /** @return array<string, true> */

@@ -121,13 +121,7 @@ class IngestMessage
 
     private function store(Channel $channel, Contact $contact, IncomingMessage $incoming): Message
     {
-        $ticket = $this->openTicketFor($channel, $contact, $incoming);
-
-        if ($incoming->fromMe && $ticket->status === TicketStatus::PENDENTE) {
-            // Alguém respondeu pelo celular durante a triagem automática: o bot sai de cena.
-            app(BotEntry::class)->humanTookOver($ticket);
-            $ticket->refresh();
-        }
+        $ticket = $this->ticketFor($channel, $contact, $incoming);
 
         $incoming->fromMe ? $ticket->recordOutbound($incoming->sentAt) : $ticket->recordInbound($incoming->sentAt);
 
@@ -170,6 +164,19 @@ class IngestMessage
         }
 
         return $message;
+    }
+
+    /** O ticket da mensagem; resposta pelo celular a uma conversa em triagem automática tira o ticket das mãos do bot. */
+    private function ticketFor(Channel $channel, Contact $contact, IncomingMessage $incoming): Ticket
+    {
+        $ticket = $this->openTicketFor($channel, $contact, $incoming);
+
+        if ($incoming->fromMe && $ticket->status === TicketStatus::PENDENTE) {
+            app(BotEntry::class)->humanTookOver($ticket);
+            $ticket->refresh();
+        }
+
+        return $ticket;
     }
 
     private function openTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming): Ticket

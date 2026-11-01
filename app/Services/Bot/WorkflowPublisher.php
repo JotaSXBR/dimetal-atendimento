@@ -42,8 +42,8 @@ class WorkflowPublisher
     {
         return $this->validator->validate(
             $workflow->draft,
-            Sector::query()->pluck('id')->map(fn (mixed $id): int => (int) $id)->all(),
-            Tag::query()->pluck('id')->map(fn (mixed $id): int => (int) $id)->all(),
+            array_values(Sector::query()->get(['id'])->map(fn (Sector $s): int => $s->id)->all()),
+            array_values(Tag::query()->get(['id'])->map(fn (Tag $t): int => $t->id)->all()),
         );
     }
 
@@ -59,9 +59,11 @@ class WorkflowPublisher
                 throw new InvalidFlowException($errors);
             }
 
+            $last = $locked->versions()->max('number');
+
             return WorkflowVersion::create([
                 'workflow_id' => $locked->id,
-                'number' => (int) $locked->versions()->max('number') + 1,
+                'number' => (is_numeric($last) ? (int) $last : 0) + 1,
                 'graph' => $locked->draft,
                 'published_by' => $by->id,
                 'published_at' => now(),

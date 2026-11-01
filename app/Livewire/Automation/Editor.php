@@ -4,6 +4,7 @@ namespace App\Livewire\Automation;
 
 use App\Models\Sector;
 use App\Models\Tag;
+use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
 use App\Services\Bot\Flow\NodeType;
@@ -28,7 +29,11 @@ class Editor extends Component
 
     public Workflow $workflow;
 
-    /** A resposta da última ação (também devolvida ao navegador). @var array<string, mixed> */
+    /**
+     * A resposta da última ação (também devolvida ao navegador).
+     *
+     * @var array<string, mixed>
+     */
     public array $result = [];
 
     public function mount(Workflow $workflow): void
@@ -115,7 +120,7 @@ class Editor extends Component
         $error = match (true) {
             count($nodes) > self::MAX_NODES || count($edges) > self::MAX_EDGES => 'O workflow passou do tamanho máximo.',
             strlen((string) json_encode($graph)) > self::MAX_BYTES => 'O workflow passou do tamanho máximo.',
-            array_filter($nodes, fn (mixed $n): bool => ! is_array($n) || ! is_string($n['id'] ?? null) || strlen($n['id']) > 40 || NodeType::tryFrom((string) ($n['type'] ?? '')) === null) !== [] => 'O workflow tem um bloco de tipo desconhecido.',
+            array_filter($nodes, fn (mixed $n): bool => ! $this->knownNode($n)) !== [] => 'O workflow tem um bloco de tipo desconhecido.',
             default => null,
         };
 
@@ -129,22 +134,30 @@ class Editor extends Component
         return false;
     }
 
+    /** Bloco com id simples e tipo que o motor conhece. */
+    private function knownNode(mixed $node): bool
+    {
+        return is_array($node)
+            && is_string($node['id'] ?? null) && strlen($node['id']) <= 40
+            && is_string($node['type'] ?? null) && NodeType::tryFrom($node['type']) !== null;
+    }
+
     /** @return list<array{id: int, number: int, at: string, by: string}> */
     private function versions(): array
     {
-        return $this->workflow->versions()->with('publisher')->orderByDesc('number')->get()
+        return array_values($this->workflow->versions()->with('publisher')->orderByDesc('number')->get()
             ->map(fn (WorkflowVersion $v): array => [
                 'id' => $v->id,
                 'number' => $v->number,
                 'at' => $v->published_at->timezone(config()->string('app.display_timezone'))->format('d/m/Y H:i'),
-                'by' => $v->publisher?->name ?? 'usuário removido',
-            ])->all();
+                'by' => $v->publisher->name ?? 'usuário removido',
+            ])->all());
     }
 
-    private function user(): \App\Models\User
+    private function user(): User
     {
         $user = auth()->user();
-        assert($user instanceof \App\Models\User);
+        assert($user instanceof User);
 
         return $user;
     }

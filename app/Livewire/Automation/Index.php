@@ -3,6 +3,7 @@
 namespace App\Livewire\Automation;
 
 use App\Models\Channel;
+use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
 use App\Services\Bot\WorkflowPublisher;
@@ -100,10 +101,10 @@ class Index extends Component
         }
     }
 
-    private function user(): \App\Models\User
+    private function user(): User
     {
         $user = auth()->user();
-        assert($user instanceof \App\Models\User);
+        assert($user instanceof User);
 
         return $user;
     }

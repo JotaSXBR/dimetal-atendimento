@@ -21,14 +21,20 @@ final class BotRun
     /** @return array<string, string|int|Closure(): string> */
     public function vars(): array
     {
-        $custom = array_filter($this->session->vars, fn (mixed $v, string $k): bool => is_scalar($v) && ! str_starts_with($k, '_'), ARRAY_FILTER_USE_BOTH);
+        $custom = [];
+        foreach ($this->session->vars as $key => $value) {
+            if (is_scalar($value) && ! str_starts_with($key, '_')) {
+                $custom[$key] = (string) $value;
+            }
+        }
+
         $name = trim((string) $this->ticket->contact()->first()?->name);
 
         return [
             ...$custom,
             'nome' => $name !== '' ? $name : 'cliente',
             'protocolo' => (string) $this->ticket->protocol,
-            'setor' => (string) ($this->session->vars['setor'] ?? ''),
+            'setor' => is_scalar($this->get('setor')) ? (string) $this->get('setor') : '',
             'horario' => fn (): string => app(BusinessHours::class)->summary(),
             'proximo_horario' => fn (): string => app(BusinessHours::class)->nextOpeningLabel(now()),
         ];

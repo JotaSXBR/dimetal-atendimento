@@ -3,6 +3,7 @@
 namespace App\Services\Bot\Nodes;
 
 use App\Services\Bot\BotRun;
+use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
 
 /** Pergunta e guarda a resposta numa variável. Resposta fora da validação repete a pergunta até duas vezes. */
@@ -10,18 +11,18 @@ final class PerguntaNode extends Node
 {
     private const DEFAULT_INVALID = 'Resposta inválida. Tente de novo.';
 
-    public function enter(BotRun $run, array $data): Step
+    public function enter(BotRun $run, NodeData $data): Step
     {
-        $run->say((string) ($data['texto'] ?? ''));
+        $run->say($data->string('texto'));
 
-        return Step::wait('input', (int) ($data['timeout_min'] ?? 10));
+        return Step::wait('input', $data->int('timeout_min', 10));
     }
 
-    public function answer(BotRun $run, array $data, string $text): Step
+    public function answer(BotRun $run, NodeData $data, string $text): Step
     {
-        $variable = (string) ($data['variavel'] ?? '');
+        $variable = $data->string('variavel');
 
-        if ($variable !== '' && $this->valid((string) ($data['validacao'] ?? 'texto'), $text)) {
+        if ($variable !== '' && $this->valid($data->string('validacao', 'texto'), $text)) {
             $run->set($variable, $text);
 
             return Step::next();
@@ -33,10 +34,10 @@ final class PerguntaNode extends Node
             return Step::leave('erros');
         }
 
-        $run->say(is_string($data['invalido'] ?? null) && trim($data['invalido']) !== '' ? $data['invalido'] : self::DEFAULT_INVALID);
-        $run->say((string) ($data['texto'] ?? ''));
+        $run->say($data->filled('invalido') ? $data->string('invalido') : self::DEFAULT_INVALID);
+        $run->say($data->string('texto'));
 
-        return Step::wait('input', (int) ($data['timeout_min'] ?? 10));
+        return Step::wait('input', $data->int('timeout_min', 10));
     }
 
     private function valid(string $kind, string $text): bool

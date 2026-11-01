@@ -59,28 +59,36 @@ class BotEntry
         $session = $ticket->botSession()->first();
 
         if ($session === null) {
-            $version = $this->versionFor($ticket->channel()->firstOrFail());
+            $this->begin($ticket, $message);
+        } elseif ($this->isAnswer($session, $message)) {
+            $session->update(['last_message_id' => $message->id]);
+            $this->engine->receive($session, $message);
+        }
+    }
 
-            if ($version === null) {
-                $this->engine->release($ticket);
+    /** Primeira mensagem do ticket: abre a sessão na versão publicada (ou, sem workflow, libera o ticket para a fila). */
+    private function begin(Ticket $ticket, Message $message): void
+    {
+        $version = $this->versionFor($ticket->channel()->firstOrFail());
 
-                return;
-            }
-
-            $this->engine->start($ticket, $version)->update(['last_message_id' => $message->id]);
+        if ($version === null) {
+            $this->engine->release($ticket);
 
             return;
         }
 
-        // Já respondida, ou escrita antes de a conversa com o bot começar (cliente que mandou "oi" duas vezes): não é resposta.
-        if ($session->state !== BotSession::ACTIVE
-            || ($session->last_message_id !== null && $message->id <= $session->last_message_id)
-            || $message->sent_at->lt($session->created_at)) {
-            return;
-        }
+        $this->engine->start($ticket, $version)->update(['last_message_id' => $message->id]);
+    }
 
-        $session->update(['last_message_id' => $message->id]);
-        $this->engine->receive($session, $message);
+    /**
+     * A mensagem responde ao bot: a sessão segue ativa, a mensagem é nova e não foi escrita antes de a conversa começar
+     * (cliente que mandou "oi" duas vezes: a segunda não é resposta ao menu).
+     */
+    private function isAnswer(BotSession $session, Message $message): bool
+    {
+        return $session->state === BotSession::ACTIVE
+            && ($session->last_message_id === null || $message->id > $session->last_message_id)
+            && ($session->created_at === null || ! $message->sent_at->lt($session->created_at));
     }
 
     /** Alguém respondeu pelo celular: a triagem automática acaba e o ticket segue com humanos. */

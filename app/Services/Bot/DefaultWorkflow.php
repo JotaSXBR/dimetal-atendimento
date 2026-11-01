@@ -29,7 +29,11 @@ final class DefaultWorkflow
         ];
     }
 
-    /** O fluxo mínimo de um workflow novo e vazio: só o Início. */
+    /**
+     * O fluxo mínimo de um workflow novo e vazio: só o Início.
+     *
+     * @return array<string, mixed>
+     */
     public static function blank(): array
     {
         return ['nodes' => [['id' => 'inicio', 'type' => 'inicio', 'x' => 0, 'y' => 0, 'data' => []]], 'edges' => []];
