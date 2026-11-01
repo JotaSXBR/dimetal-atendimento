@@ -169,4 +169,13 @@ class ReportsSlaTest extends TestCase
         Livewire::actingAs($this->agent)->test(Index::class)->assertForbidden();
         Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Index::class)->assertOk();
     }
+
+    public function test_cliente_em_espera_leva_para_a_fila(): void
+    {
+        $this->waiting('Vencido', '10:05', '10:10');
+
+        $html = $this->supervisorPage()->html();
+
+        $this->assertMatchesRegularExpression('#<a href="[^"]*/inbox"[^>]*>\s*Vencido\s*</a>#', $html);
+    }
 }

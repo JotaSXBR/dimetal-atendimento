@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\Audit\Index;
 use App\Models\Channel;
@@ -99,5 +100,19 @@ class AuditPageTest extends TestCase
         $this->event('closed', null, ['reason' => 'inatividade']);
 
         $this->page()->assertSee('Sistema')->assertSee('por inatividade');
+    }
+
+    public function test_protocolo_de_ticket_encerrado_leva_ao_historico_e_o_de_aberto_a_fila(): void
+    {
+        $channel = $this->channel ??= Channel::factory()->create();
+        $closed = Ticket::factory()->for($channel)->create(['status' => TicketStatus::ENCERRADO, 'closed_at' => now(), 'protocol' => '2026-000901']);
+        $open = Ticket::factory()->for($channel)->create(['status' => TicketStatus::AGUARDANDO, 'protocol' => '2026-000902']);
+        $this->event('closed', null, null, null, $closed);
+        $this->event('claimed', null, null, null, $open);
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('#<a href="[^"]*/historico\?ticketId='.$closed->id.'"[^>]*>\s*2026-000901\s*</a>#', $html);
+        $this->assertMatchesRegularExpression('#<a href="[^"]*/inbox"[^>]*>\s*2026-000902\s*</a>#', $html);
     }
 }
