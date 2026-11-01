@@ -34,3 +34,17 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 5
+
+  - package-ecosystem: "docker"
+    directory: "/docker/base"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 5

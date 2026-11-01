@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-# Base: nginx + php-fpm no mesmo container, unprivileged por padrão.
+# Base: nginx + php-fpm no mesmo container, unprivileged por padrão, com as extensões já compiladas
+# (docker/base/Dockerfile, publicada pelo workflow base-image).
 # O Vite precisa de vendor/livewire/flux/dist/flux.css, então o Composer roda antes dos assets.
-FROM serversideup/php:8.5.12-fpm-nginx-bookworm AS base
+FROM ghcr.io/jotasxbr/dimetal-php-base:8.5 AS base
 
 # Produção por padrão: sem isso a imagem avisa a cada boot que o OPcache está off.
 # Código é imutável (vem da imagem), então o OPcache nunca precisa revalidar timestamps.
@@ -13,8 +14,6 @@ ENV PHP_OPCACHE_ENABLE=1 \
     SHOW_WELCOME_MESSAGE=false
 
 USER root
-
-RUN install-php-extensions pdo_pgsql intl zip gd bcmath redis
 
 WORKDIR /var/www/html
 
@@ -30,14 +29,15 @@ RUN composer install \
 COPY --chown=www-data:www-data . .
 
 RUN php artisan package:discover --ansi \
-    && php artisan vendor:publish --tag=laravel-assets --ansi --force \
-    && chown -R www-data:www-data /var/www/html
+    && php artisan vendor:publish --tag=laravel-assets --ansi --force
 
 USER www-data
 
 
-# Assets: Node 24 gera public/build (Vite + Tailwind + fontes do Bunny).
-FROM node:24-alpine AS assets
+# Assets: Node 26 gera public/build (Vite + Tailwind + fontes do Bunny).
+FROM node:26-alpine AS assets
+
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 
 WORKDIR /build
 
