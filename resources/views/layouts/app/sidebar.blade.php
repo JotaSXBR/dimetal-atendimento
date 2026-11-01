@@ -83,7 +83,7 @@
 
                     <flux:menu.radio.group>
                         <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
-                            {{ __('Settings') }}
+                            Minha conta
                         </flux:menu.item>
                     </flux:menu.radio.group>
 
@@ -98,7 +98,7 @@
                             class="w-full cursor-pointer"
                             data-test="logout-button"
                         >
-                            {{ __('Log out') }}
+                            Sair
                         </flux:menu.item>
                     </form>
                 </flux:menu>
