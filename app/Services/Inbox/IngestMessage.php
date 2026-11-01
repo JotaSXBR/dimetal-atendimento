@@ -16,6 +16,7 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\WahaEvent;
 use App\Services\Alerts\AlertDispatcher;
+use App\Services\Bot\BotEntry;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
@@ -122,6 +123,12 @@ class IngestMessage
     {
         $ticket = $this->openTicketFor($channel, $contact, $incoming);
 
+        if ($incoming->fromMe && $ticket->status === TicketStatus::PENDENTE) {
+            // Alguém respondeu pelo celular durante a triagem automática: o bot sai de cena.
+            app(BotEntry::class)->humanTookOver($ticket);
+            $ticket->refresh();
+        }
+
         $incoming->fromMe ? $ticket->recordOutbound($incoming->sentAt) : $ticket->recordInbound($incoming->sentAt);
 
         $message = Message::create([
@@ -152,7 +159,10 @@ class IngestMessage
 
         if (! $incoming->fromMe) {
             // Depois do commit: só uma mensagem realmente gravada pode gerar resposta (a que perdeu a corrida é descartada).
-            DB::afterCommit(fn () => app(AfterHoursReply::class)($message));
+            DB::afterCommit(function () use ($message): void {
+                app(AfterHoursReply::class)($message);
+                app(BotEntry::class)->handle($message);
+            });
         }
 
         if ($message->hasMedia()) {
@@ -181,7 +191,12 @@ class IngestMessage
         $ticket = Ticket::create([
             'contact_id' => $contact->id,
             'channel_id' => $channel->id,
-            'status' => $incoming->fromMe ? TicketStatus::EM_ATENDIMENTO : TicketStatus::AGUARDANDO,
+            'status' => match (true) {
+                $incoming->fromMe => TicketStatus::EM_ATENDIMENTO,
+                // Canal com workflow: o bot conduz primeiro e só então o ticket entra na fila de um setor.
+                app(BotEntry::class)->shouldStart($channel, $incoming->sentAt) => TicketStatus::PENDENTE,
+                default => TicketStatus::AGUARDANDO,
+            },
             'opened_at' => $incoming->sentAt,
         ]);
 

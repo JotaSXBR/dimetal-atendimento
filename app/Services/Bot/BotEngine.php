@@ -120,6 +120,13 @@ class BotEngine
         $session->refresh();
     }
 
+    /** O canal deixou de ter workflow antes de a conversa começar: o ticket vai direto à fila geral. */
+    public function release(Ticket $ticket): void
+    {
+        $this->enterQueue($ticket, null);
+        TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => ['reason' => 'sem_workflow']]);
+    }
+
     /** O primeiro setor, na ordem do menu, que recebe tickets. */
     public function defaultSector(): ?Sector
     {

@@ -5,6 +5,7 @@ namespace App\Services\Inbox;
 use App\Enums\ClosedReason;
 use App\Enums\TicketStatus;
 use App\Events\TicketUpdated;
+use App\Models\BotSession;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Ticket;
@@ -74,6 +75,7 @@ class MergeLidContact
         ])->forceFill($this->mergedWait($survivor, $loser))->save();
 
         $loser->forceFill(['status' => TicketStatus::ENCERRADO, 'closed_at' => now(), 'closed_reason' => ClosedReason::MESCLADO])->save();
+        BotSession::query()->where('ticket_id', $loser->id)->active()->update(['state' => BotSession::ABANDONED, 'waiting' => null, 'expires_at' => null, 'updated_at' => now()]);
         TicketEvent::create(['ticket_id' => $loser->id, 'type' => 'merged', 'payload' => ['into_ticket_id' => $survivor->id]]);
 
         TicketUpdated::dispatch($survivor);
