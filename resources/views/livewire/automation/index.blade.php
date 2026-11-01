@@ -32,7 +32,7 @@
                             · rascunho editado {{ $workflow->updated_at?->timezone(config('app.display_timezone'))->format('d/m H:i') }}
                         </p>
                     </div>
-                    <flux:button size="sm" icon="pencil-square" :href="url('automacao/'.$workflow->id)" wire:navigate>Editar</flux:button>
+                    <flux:button size="sm" icon="pencil-square" :href="route('automacao.editar', $workflow)" wire:navigate>Editar</flux:button>
                     <flux:button size="sm" variant="subtle" wire:click="toggle({{ $workflow->id }})">Versões ({{ $workflow->versions_count }})</flux:button>
                     <flux:button size="sm" variant="subtle" icon="document-duplicate" wire:click="duplicate({{ $workflow->id }})" aria-label="Duplicar {{ $workflow->name }}" />
                     <flux:button size="sm" variant="subtle" icon="trash" wire:click="delete({{ $workflow->id }})" wire:confirm="Apagar o workflow {{ $workflow->name }}?" aria-label="Apagar {{ $workflow->name }}" />
