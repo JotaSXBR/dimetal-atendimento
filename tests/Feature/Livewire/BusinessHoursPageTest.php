@@ -8,6 +8,7 @@ use App\Models\BusinessHour;
 use App\Models\Holiday;
 use App\Models\Setting;
 use App\Models\User;
+use App\Settings\CompanySettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -150,5 +151,41 @@ class BusinessHoursPageTest extends TestCase
         $component->set('afterHoursMessage', '   ')->call('saveMessage')->assertHasNoErrors();
 
         $this->assertNull(Setting::get('after_hours_message'));
+    }
+
+    public function test_admin_salva_o_sla_sem_mexer_na_assinatura(): void
+    {
+        CompanySettings::save(['name' => 'Acme', 'signatureEnabled' => false, 'signatureTemplate' => 'x', 'signaturePosition' => 'fim']);
+
+        Livewire::actingAs($this->admin())->test(BusinessHoursPage::class)->set('slaMinutes', 15)->call('saveSla')->assertHasNoErrors();
+
+        $this->assertSame(15, CompanySettings::slaMinutes());
+        $this->assertSame('Acme', CompanySettings::name());
+        $this->assertFalse(CompanySettings::signatureEnabled());
+        $this->assertSame('fim', CompanySettings::signaturePosition());
+    }
+
+    public function test_a_tela_abre_com_o_sla_salvo(): void
+    {
+        CompanySettings::save(['slaMinutes' => 20]);
+
+        Livewire::actingAs($this->admin())->test(BusinessHoursPage::class)->assertSet('slaMinutes', 20);
+    }
+
+    /** @return array<string, array{int}> */
+    public static function slasInvalidos(): array
+    {
+        return ['zero' => [0], 'enorme' => [1441]];
+    }
+
+    #[DataProvider('slasInvalidos')]
+    public function test_sla_fora_de_1_a_1440_e_recusado(int $minutes): void
+    {
+        Livewire::actingAs($this->admin())->test(BusinessHoursPage::class)->set('slaMinutes', $minutes)->call('saveSla')->assertHasErrors(['slaMinutes']);
+    }
+
+    public function test_so_admin_salva_o_sla(): void
+    {
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::SUPERVISOR]))->test(BusinessHoursPage::class)->call('saveSla')->assertForbidden();
     }
 }

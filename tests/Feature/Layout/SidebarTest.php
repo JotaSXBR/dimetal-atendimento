@@ -38,22 +38,29 @@ class SidebarTest extends TestCase
     {
         $html = $this->page(UserRole::ATENDENTE);
 
-        $this->assertStringContainsString('Contatos', $html);
-        $this->assertStringNotContainsString('Gestão', $html);
-        $this->assertStringNotContainsString('Configurações', $html);
+        foreach (['Fila', 'Contatos', 'Histórico'] as $text) {
+            $this->assertStringContainsString($text, $html);
+        }
+        $this->assertStringNotContainsString('Acompanhamento', $html);
+        $this->assertStringNotContainsString('Configuração', $html);
     }
 
-    public function test_supervisor_ve_gestao_e_admin_ve_os_subgrupos_de_configuracoes(): void
+    public function test_supervisor_ve_acompanhamento_e_admin_ve_os_grupos_de_configuracao(): void
     {
         $supervisor = $this->page(UserRole::SUPERVISOR);
-        $this->assertStringContainsString('Gestão', $supervisor);
-        $this->assertStringContainsString('Relatórios', $supervisor);
-        $this->assertStringNotContainsString('Auditoria', $supervisor);
-        $this->assertStringNotContainsString('Dados e integrações', $supervisor);
+        foreach (['Acompanhamento', 'Relatórios', 'Respostas rápidas', 'Usuários'] as $text) {
+            $this->assertStringContainsString($text, $supervisor);
+        }
+        foreach (['Auditoria', 'Anexos e retenção', 'Conexões'] as $text) {
+            $this->assertStringNotContainsString($text, $supervisor);
+        }
 
         $admin = $this->page(UserRole::ADMIN);
-        foreach (['Auditoria', 'Operação', 'Pessoas e empresa', 'Dados e integrações'] as $text) {
+        foreach (['Auditoria', 'Horário e SLA', 'Empresa e assinatura', 'Anexos e retenção', 'Conexões', 'Equipe'] as $text) {
             $this->assertStringContainsString($text, $admin);
+        }
+        foreach (['Gestão', 'Pessoas e empresa', 'Dados e integrações'] as $text) {
+            $this->assertStringNotContainsString($text, $admin);
         }
     }
 

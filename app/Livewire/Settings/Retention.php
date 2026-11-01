@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Artisan;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Retenção')]
+#[Title('Anexos e retenção')]
 class Retention extends Component
 {
     public string $result = '';

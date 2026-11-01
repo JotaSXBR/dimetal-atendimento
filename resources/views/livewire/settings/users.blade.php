@@ -1,8 +1,7 @@
-<section class="mx-auto w-full max-w-6xl p-6">
-    <x-page-header title="Usuários" subtitle="Quem atende, em quais setores, e quem pode transferir tickets.">
+<x-settings-page route="configuracoes.usuarios" title="Usuários" subtitle="Quem atende, em quais setores, e quem pode transferir tickets." width="6xl">
+    <x-slot:actions>
         <flux:button variant="primary" size="sm" icon="plus" wire:click="newUser">Novo usuário</flux:button>
-    </x-page-header>
-
+    </x-slot:actions>
     @if ($showForm)
         <form wire:submit="save" class="mt-6 grid gap-4 rounded-[14px] border border-line bg-surface p-5 md:grid-cols-2">
             <div>
@@ -90,4 +89,4 @@
             </li>
         @endforeach
     </ul>
-</section>
+</x-settings-page>

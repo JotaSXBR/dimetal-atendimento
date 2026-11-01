@@ -45,15 +45,25 @@ final class CompanySettings
         return is_int($minutes) && $minutes > 0 ? $minutes : 10;
     }
 
+    private const KEYS = [
+        'name' => 'company.name',
+        'signatureEnabled' => 'company.signature_enabled',
+        'signatureTemplate' => 'company.signature_template',
+        'signaturePosition' => 'company.signature_position',
+        'slaMinutes' => 'company.sla_minutes',
+    ];
+
     /**
-     * @param  array{name: string, signatureEnabled: bool, signatureTemplate: string, signaturePosition: string, slaMinutes: int}  $values
+     * Grava só o que vier em `$values`: Empresa e Horário e SLA salvam partes diferentes e não se sobrescrevem.
+     *
+     * @param  array{name?: string, signatureEnabled?: bool, signatureTemplate?: string, signaturePosition?: string, slaMinutes?: int}  $values
      */
     public static function save(array $values): void
     {
-        Setting::put('company.name', $values['name']);
-        Setting::put('company.signature_enabled', $values['signatureEnabled']);
-        Setting::put('company.signature_template', $values['signatureTemplate']);
-        Setting::put('company.signature_position', $values['signaturePosition']);
-        Setting::put('company.sla_minutes', $values['slaMinutes']);
+        foreach (self::KEYS as $field => $key) {
+            if (array_key_exists($field, $values)) {
+                Setting::put($key, $values[$field]);
+            }
+        }
     }
 }

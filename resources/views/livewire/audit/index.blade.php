@@ -38,7 +38,14 @@
                         <td class="px-4 py-2 font-mono text-xs whitespace-nowrap text-ink-2">{{ $event->created_at->timezone(config()->string('app.display_timezone'))->format('d/m H:i') }}</td>
                         <td class="px-4 py-2 text-ink">{{ $event->actor?->name ?? 'Sistema' }}</td>
                         <td class="px-4 py-2 text-ink">{{ \App\Livewire\Audit\Index::typeLabel($event->type) }}</td>
-                        <td class="px-4 py-2 font-mono text-xs text-ink-2">{{ $event->ticket?->protocol ?? '—' }}</td>
+                        <td class="px-4 py-2 font-mono text-xs text-ink-2">
+                            @if ($event->ticket?->protocol)
+                                {{-- O Histórico só abre ticket encerrado; o aberto está na Fila. --}}
+                                <a href="{{ $event->ticket->status === \App\Enums\TicketStatus::ENCERRADO ? route('historico', ['ticketId' => $event->ticket->id]) : route('inbox') }}" wire:navigate class="underline-offset-2 hover:underline">{{ $event->ticket->protocol }}</a>
+                            @else
+                                —
+                            @endif
+                        </td>
                         <td class="px-4 py-2 break-words text-ink-2">{{ $timeline->detail($event) }}</td>
                     </tr>
                 @empty

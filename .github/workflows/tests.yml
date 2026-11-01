@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     services:
       postgres:
@@ -101,7 +101,7 @@ jobs:
 
   # Pint, Larastan e PHPMD não precisam de banco: rodam em paralelo com os testes, e o PR espera só o job mais lento.
   static:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
 
     steps:
@@ -162,7 +162,7 @@ jobs:
         run: composer ci:static
   # Separado dos testes: um aviso de segurança novo não deve reprovar um PR que não tem relação com ele.
   audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout code

@@ -55,7 +55,7 @@
                     <tbody class="divide-y divide-line">
                         @foreach ($data['waiting'] as $row)
                             <tr>
-                                <td class="py-2 pe-4 text-ink">{{ $row['contact'] }}</td>
+                                <td class="py-2 pe-4 text-ink"><a href="{{ route('inbox') }}" wire:navigate class="underline-offset-2 hover:underline">{{ $row['contact'] }}</a></td>
                                 <td class="px-4 py-2 text-ink-2">{{ $row['sector'] ?? 'Fila geral' }}</td>
                                 <td class="px-4 py-2 text-ink-2">{{ $row['agent'] ?? '—' }}</td>
                                 <td class="px-4 py-2 font-mono text-ink-2">{{ $row['since']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</td>

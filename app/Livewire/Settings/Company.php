@@ -10,7 +10,7 @@ use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Empresa')]
+#[Title('Empresa e assinatura')]
 class Company extends Component
 {
     public string $name = '';
@@ -20,8 +20,6 @@ class Company extends Component
     public string $signatureTemplate = '';
 
     public string $signaturePosition = 'inicio';
-
-    public int $slaMinutes = 10;
 
     public bool $saved = false;
 
@@ -33,7 +31,6 @@ class Company extends Component
         $this->signatureEnabled = CompanySettings::signatureEnabled();
         $this->signatureTemplate = CompanySettings::signatureTemplate();
         $this->signaturePosition = CompanySettings::signaturePosition();
-        $this->slaMinutes = CompanySettings::slaMinutes();
     }
 
     public function save(): void
@@ -45,13 +42,11 @@ class Company extends Component
             'signatureEnabled' => ['boolean'],
             'signatureTemplate' => ['required', 'string', 'max:300'],
             'signaturePosition' => ['required', 'in:'.implode(',', CompanySettings::POSITIONS)],
-            'slaMinutes' => ['required', 'integer', 'between:1,1440'],
         ], [
             'name.required' => 'Informe o nome da empresa.',
             'name.max' => 'O nome pode ter até 120 caracteres.',
             'signatureTemplate.required' => 'Escreva o modelo da assinatura ou desligue a assinatura.',
             'signatureTemplate.max' => 'O modelo pode ter até 300 caracteres.',
-            'slaMinutes.between' => 'O SLA vai de 1 a 1440 minutos.',
         ]);
 
         CompanySettings::save([
@@ -59,7 +54,6 @@ class Company extends Component
             'signatureEnabled' => $this->signatureEnabled,
             'signatureTemplate' => $this->signatureTemplate,
             'signaturePosition' => $this->signaturePosition,
-            'slaMinutes' => $this->slaMinutes,
         ]);
         $this->saved = true;
     }

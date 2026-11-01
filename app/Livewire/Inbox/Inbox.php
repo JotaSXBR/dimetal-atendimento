@@ -73,6 +73,16 @@ class Inbox extends Component
 
     public string $closeSummary = '';
 
+    /** Link de outra tela (`/inbox?ticket=ID`): abre o ticket, mas só se o usuário puder vê-lo. */
+    public function mount(): void
+    {
+        $id = request()->integer('ticket');
+
+        if ($id > 0 && Ticket::query()->readableBy($this->user())->whereKey($id)->exists()) {
+            $this->select($id);
+        }
+    }
+
     public function select(int $ticketId): void
     {
         $ticket = Ticket::findOrFail($ticketId);

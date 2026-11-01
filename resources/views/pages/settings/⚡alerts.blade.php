@@ -8,7 +8,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Alertas')] class extends Component {
+new #[Title('Meus alertas')] class extends Component {
     public bool $soundMessage = true;
     public bool $soundQueue = true;
     public bool $soundAssigned = true;
@@ -76,9 +76,9 @@ new #[Title('Alertas')] class extends Component {
 <section class="w-full">
     @include('partials.settings-heading')
 
-    <flux:heading level="2" class="sr-only">Alertas</flux:heading>
+    <flux:heading level="2" class="sr-only">Meus alertas</flux:heading>
 
-    <x-pages::settings.layout heading="Alertas" subheading="Som, repetição e balão do navegador. Valem só para o seu usuário.">
+    <x-pages::settings.layout heading="Meus alertas" subheading="Som, repetição e balão do navegador. Valem só para o seu usuário.">
         <form wire:submit="save" class="space-y-6">
             <div class="space-y-3">
                 <p class="font-mono text-[11px] font-semibold tracking-wider text-ink-3 uppercase">Som por tipo</p>

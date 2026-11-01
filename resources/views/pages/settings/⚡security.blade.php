@@ -17,7 +17,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 /* @end-chisel-2fa */
 
-new #[Title('Security settings')] class extends Component {
+new #[Title('Segurança')] class extends Component {
     use PasswordValidationRules;
 
     public string $current_password = '';

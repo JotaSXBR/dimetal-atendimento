@@ -39,7 +39,6 @@ class CompanyPageTest extends TestCase
             ->set('signatureEnabled', false)
             ->set('signatureTemplate', '_{{atendente}}_ ({{setor}})')
             ->set('signaturePosition', 'fim')
-            ->set('slaMinutes', 15)
             ->call('save')
             ->assertHasNoErrors();
 
@@ -47,14 +46,23 @@ class CompanyPageTest extends TestCase
         $this->assertFalse(CompanySettings::signatureEnabled());
         $this->assertSame('_{{atendente}}_ ({{setor}})', CompanySettings::signatureTemplate());
         $this->assertSame('fim', CompanySettings::signaturePosition());
-        $this->assertSame(15, CompanySettings::slaMinutes());
+    }
+
+    public function test_salvar_empresa_nao_mexe_no_sla(): void
+    {
+        CompanySettings::save(['slaMinutes' => 25]);
+
+        $this->page()->set('name', 'Outra Empresa')->call('save')->assertHasNoErrors();
+
+        $this->assertSame(25, CompanySettings::slaMinutes());
+        $this->assertSame('Outra Empresa', CompanySettings::name());
     }
 
     public function test_a_tela_abre_com_os_valores_salvos(): void
     {
-        CompanySettings::save(['name' => 'Acme', 'signatureEnabled' => true, 'signatureTemplate' => 'x', 'signaturePosition' => 'fim', 'slaMinutes' => 20]);
+        CompanySettings::save(['name' => 'Acme', 'signatureEnabled' => true, 'signatureTemplate' => 'x', 'signaturePosition' => 'fim']);
 
-        $this->page()->assertSet('name', 'Acme')->assertSet('signaturePosition', 'fim')->assertSet('slaMinutes', 20);
+        $this->page()->assertSet('name', 'Acme')->assertSet('signaturePosition', 'fim');
     }
 
     public function test_a_previa_mostra_a_assinatura_formatada_com_o_nome_de_quem_edita(): void
@@ -83,8 +91,6 @@ class CompanyPageTest extends TestCase
             'nome longo' => ['name', str_repeat('a', 121)],
             'modelo longo' => ['signatureTemplate', str_repeat('a', 301)],
             'posicao invalida' => ['signaturePosition', 'meio'],
-            'sla zero' => ['slaMinutes', 0],
-            'sla enorme' => ['slaMinutes', 1441],
         ];
     }
 

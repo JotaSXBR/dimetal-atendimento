@@ -1,8 +1,7 @@
-<section class="mx-auto w-full max-w-3xl p-6">
-    <x-page-header title="Respostas rápidas" subtitle="Digite / na mensagem para inserir. O texto entra editável: leia o histórico antes de enviar valores ou prazos.">
+<x-settings-page route="configuracoes.respostas" title="Respostas rápidas" subtitle="Digite / na mensagem para inserir. O texto entra editável: leia o histórico antes de enviar valores ou prazos." width="3xl">
+    <x-slot:actions>
         <flux:button variant="primary" icon="plus" wire:click="newReply">Nova resposta</flux:button>
-    </x-page-header>
-
+    </x-slot:actions>
     @if ($showForm)
         <form wire:submit="save" class="mt-4 space-y-3 rounded-[14px] border border-line bg-surface p-4">
             <flux:input label="Atalho" placeholder="preco" wire:model="shortcut" />
@@ -39,4 +38,4 @@
             <li class="px-4 py-6 text-center text-sm text-ink-3">Nenhuma resposta cadastrada.</li>
         @endforelse
     </ul>
-</section>
+</x-settings-page>

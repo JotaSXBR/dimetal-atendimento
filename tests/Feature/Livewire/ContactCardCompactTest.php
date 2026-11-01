@@ -118,6 +118,27 @@ class ContactCardCompactTest extends TestCase
         $this->assertStringNotContainsString('ticketId='.$hidden->id, $html);
     }
 
+    public function test_ticket_aberto_na_ficha_do_historico_leva_para_a_fila(): void
+    {
+        $channel = Channel::factory()->create();
+        $open = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::EM_ATENDIMENTO]);
+        $current = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::ENCERRADO, 'closed_at' => now()]);
+
+        $html = $this->card(['compact' => true, 'readonly' => true, 'currentTicketId' => $current->id])->html();
+
+        $this->assertStringContainsString(route('inbox', ['ticket' => $open->id]), $html);
+        $this->assertStringNotContainsString('$parent.select', $html);
+    }
+
+    public function test_na_fila_o_ticket_aberto_continua_abrindo_sem_recarregar(): void
+    {
+        $channel = $this->channelWith('a', '5516999990001');
+        Ticket::factory()->create(['channel_id' => $this->channelWith('b', '5516988887777')->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::EM_ATENDIMENTO]);
+        $current = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::AGUARDANDO]);
+
+        $this->assertStringContainsString('$parent.select', $this->card(['compact' => true, 'currentTicketId' => $current->id])->html());
+    }
+
     private function channelWith(string $session, string $phone): Channel
     {
         return Channel::factory()->connected()->create(['waha_session' => $session, 'phone' => $phone]);
