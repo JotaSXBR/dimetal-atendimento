@@ -109,11 +109,14 @@
         @if ($confirmAction)
             <div class="mt-3 rounded-[10px] border border-warn/30 bg-warn/10 px-3 py-2 text-xs text-warn" role="alert">
                 @if ($confirming === 'delete-channel')
-                    Apagar este canal de vez? Ele nunca atendeu ninguém, então nada é perdido.
+                    Apagar este canal de vez? Ele nunca atendeu ninguém, então nada é perdido. A sessão também sai do WAHA.
                 @elseif ($openTickets > 0)
                     Este canal tem {{ $openTickets }} {{ $openTickets === 1 ? 'ticket aberto' : 'tickets abertos' }}. Eles continuam no painel, mas não dá para responder até o canal voltar.
                 @else
                     Este canal não tem tickets abertos. Os tickets e as mensagens continuam guardados.
+                @endif
+                @if ($confirming === 'delete-session' && $channel->active)
+                    Um canal ativo sem sessão conta como queda e dispara o alerta de canal desconectado. Para parar sem alerta, use Desativar.
                 @endif
                 <div class="mt-2 flex gap-2">
                     <x-ui.button variant="primary" wire:click="{{ $confirmAction }}" wire:loading.attr="disabled">Confirmar {{ $confirmLabel }}</x-ui.button>

@@ -67,3 +67,21 @@ Dois números atendidos pela mesma equipe, mesmo contato (Google Contatos) poden
 - Um ticket por número (como o índice atual já impõe); **aviso em cada ticket** quando o contato tem ticket aberto no outro número **ou conversa nos últimos 30 dias** lá, com link para o outro.
 - O ticket mostra por qual número a conversa acontece (agentes se confundem sem isso).
 - A resposta sai **sempre pelo número do ticket**; trocar de número fica de fora.
+
+## Resultado (fatia 1)
+
+Entregue: excluir sessão, desativar/reativar, apagar canal vazio (agora também remove a sessão no WAHA antes da linha), canal desativado fora do aviso de queda e sem resposta nos tickets, QR com logo no navegador (fallback para o PNG do WAHA) e a tela no layout do Pencil (duas colunas, aviso de failover, QR no cartão, importar histórico no cartão, "Mais opções", cartão do Webhook).
+
+Conferido: testes (PHPUnit e `node --test`), Pint, Larastan, PHPMD, e a tela no Chrome contra um WAHA falso (layout, QR com a logo desenhado, confirmação com a contagem de tickets).
+
+**Sem prova ainda (depende do dono):**
+- A chave real `value` do `format=raw` na versão do WAHA do beta. Se for outra, cai no PNG (seguro, mas sem logo).
+- A leitura do QR com a logo pelo celular: condição para fechar a fatia.
+- A logo da Dimetal: hoje vai um monograma "D" provisório em `public/images/qr-logo.svg`.
+
+**Risco conhecido:** o beta roda o WAHA com `WHATSAPP_RESTART_ALL_SESSIONS=true`, que reinicia todas as sessões paradas quando o container reinicia. Um canal "Desativado" pode voltar a conectar sozinho e receber tickets que ninguém consegue responder. "Excluir sessão" não tem esse problema (a sessão deixa de existir).
+
+**Comportamento a saber:** "Excluir sessão" num canal ainda ativo conta como queda (alerta crítico e faixa vermelha). A janela de confirmação avisa e aponta o Desativar.
+
+**Diferenças para o Pencil:** o shell de Configurações foi mantido (sem a barra de abas do desenho, e com o título em inglês do starter kit); "Último evento" mostra a data completa.
+

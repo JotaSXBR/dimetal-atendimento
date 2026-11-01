@@ -339,8 +339,29 @@ class ChannelsScreenTest extends TestCase
         $this->assertSame($channel->id, $ticket->fresh()->channel_id);
     }
 
+    public function test_apagar_canal_remove_a_sessao_no_waha_antes_e_falha_do_waha_mantem_o_canal(): void
+    {
+        Http::fake(['*/api/sessions/vazio' => Http::sequence()->push([], 200)->push(['message' => 'boom'], 500)]);
+        $first = Channel::factory()->connected()->create(['waha_session' => 'vazio']);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $first])
+            ->call('deleteChannel')->assertDispatched('channel-deleted');
+
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE' && str_ends_with($request->url(), '/api/sessions/vazio'));
+        $this->assertNull(Channel::query()->find($first->id));
+
+        $second = Channel::factory()->connected()->create(['waha_session' => 'vazio']);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $second])
+            ->call('deleteChannel')->assertNotDispatched('channel-deleted')
+            ->assertSet('errorMessage', fn ($message) => str_contains((string) $message, 'WAHA'));
+
+        $this->assertNotNull(Channel::query()->find($second->id), 'se o WAHA falhar, o canal fica');
+    }
+
     public function test_apagar_canal_so_vazio(): void
     {
+        Http::fake(['*/api/sessions/*' => Http::response([], 200)]);
         $empty = Channel::factory()->create(['waha_session' => 'vazio']);
         $used = Channel::factory()->create(['waha_session' => 'usado']);
         $this->ticketOn($used, TicketStatus::ENCERRADO);

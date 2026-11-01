@@ -164,6 +164,16 @@ class ChannelCard extends Component
             return;
         }
 
+        // A sessão sai do WAHA antes da linha: uma sessão viva sem canal receberia mensagens que o app descarta.
+        try {
+            (new WahaClient($this->channel))->deleteSession();
+        } catch (Throwable $exception) {
+            $this->confirming = null;
+            $this->fail($exception);
+
+            return;
+        }
+
         $this->channel->delete();
         $this->dispatch('channel-deleted');
     }
