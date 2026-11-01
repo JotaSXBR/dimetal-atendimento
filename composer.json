@@ -134,6 +134,13 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "audit": {
+            "ignore-abandoned": [
+                "dragon-code/contracts",
+                "dragon-code/pretty-array",
+                "dragon-code/support"
+            ]
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
