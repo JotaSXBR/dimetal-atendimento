@@ -1,6 +1,4 @@
-<section class="mx-auto w-full max-w-3xl p-6">
-    <x-page-header title="Google Contatos" subtitle="Os contatos que você edita no sistema são copiados para o Google Contatos da empresa (só de ida). Contato que nunca foi editado não é enviado." />
-
+<x-settings-page route="configuracoes.google" title="Google Contatos" subtitle="Os contatos que você edita no sistema são copiados para o Google Contatos da empresa (só de ida). Contato que nunca foi editado não é enviado." width="3xl">
     @if (session('google_error'))
         <flux:callout class="mt-4" variant="danger" icon="exclamation-triangle" :text="session('google_error')" />
     @endif
@@ -34,4 +32,4 @@
             <flux:button class="mt-4" variant="primary" icon="link" :href="route('configuracoes.google.redirect')">Conectar conta Google</flux:button>
         @endif
     </div>
-</section>
+</x-settings-page>

@@ -10,7 +10,7 @@ use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Empresa')]
+#[Title('Empresa e assinatura')]
 class Company extends Component
 {
     public string $name = '';

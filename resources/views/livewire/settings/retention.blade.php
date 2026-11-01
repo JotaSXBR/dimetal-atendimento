@@ -1,6 +1,5 @@
-<section class="mx-auto w-full max-w-3xl space-y-6 p-6">
-    <x-page-header title="Retenção" subtitle="O texto das mensagens, o protocolo e a linha do tempo ficam para sempre. Só os arquivos têm prazo." />
-
+<x-settings-page route="configuracoes.retencao" title="Anexos e retenção" subtitle="O texto das mensagens, o protocolo e a linha do tempo ficam para sempre. Só os arquivos têm prazo." width="3xl">
+<div class="mt-6 space-y-6">
     <dl class="divide-y divide-line rounded-[14px] border border-line bg-surface text-sm">
         <div class="flex justify-between gap-4 px-4 py-3">
             <dt class="text-ink-2">Anexos e mídia</dt>
@@ -28,4 +27,5 @@
             <p class="mt-3 text-sm text-ink-2" role="status">{{ $result }}</p>
         @endif
     </div>
-</section>
+</div>
+</x-settings-page>

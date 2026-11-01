@@ -1,6 +1,4 @@
-<section class="mx-auto w-full max-w-3xl p-6">
-    <x-page-header title="Empresa" subtitle="Dados que aparecem nas mensagens e o prazo de primeira resposta usado nos relatórios." />
-
+<x-settings-page route="configuracoes.empresa" title="Empresa e assinatura" subtitle="Dados que aparecem nas mensagens e o prazo de primeira resposta usado nos relatórios." width="3xl">
     <form wire:submit="save" class="mt-6 space-y-6 rounded-[14px] border border-line bg-surface p-5">
         <flux:input label="Nome fantasia" wire:model="name" />
 
@@ -55,4 +53,4 @@
 
         <flux:button type="submit" variant="primary">Salvar alterações</flux:button>
     </form>
-</section>
+</x-settings-page>
