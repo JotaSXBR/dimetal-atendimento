@@ -8,6 +8,7 @@ use App\Livewire\Inbox\Inbox;
 use App\Livewire\Settings\QuickReplies;
 use App\Models\Channel;
 use App\Models\Contact;
+use App\Models\Message;
 use App\Models\QuickReply;
 use App\Models\Sector;
 use App\Models\Ticket;
@@ -130,6 +131,27 @@ class QuickRepliesTest extends TestCase
         $reply = QuickReply::query()->create(['shortcut' => 'preco', 'body' => 'Tabela de precos']);
 
         $this->sendBox(User::factory()->create(['role' => UserRole::ATENDENTE]))->set('draft', '/pre')->call('useQuickReply', $reply->id)->assertSet('draft', 'Tabela de precos');
+    }
+
+    public function test_enter_com_o_atalho_completo_troca_pelo_texto_sem_enviar(): void
+    {
+        QuickReply::query()->create(['shortcut' => 'ok', 'body' => 'Combinado, obrigado!']);
+        $screen = $this->sendBox(User::factory()->create(['role' => UserRole::ATENDENTE]));
+
+        $screen->set('draft', '/OK')->call('send')->assertSet('draft', 'Combinado, obrigado!');
+        $this->assertSame(0, Message::query()->count(), 'o primeiro Enter só expande; quem confirma é o segundo');
+
+        $screen->call('send')->assertSet('draft', '');
+        $this->assertStringContainsString('Combinado, obrigado!', Message::query()->sole()->body);
+    }
+
+    public function test_enter_nao_expande_atalho_de_outro_setor(): void
+    {
+        QuickReply::query()->create(['shortcut' => 'prem', 'body' => 'Segredo', 'sector_id' => Sector::factory()->create()->id]);
+
+        $this->sendBox(User::factory()->create(['role' => UserRole::ATENDENTE]))->set('draft', '/prem')->call('send');
+
+        $this->assertNotSame('Segredo', Message::query()->sole()->body, 'atalho que o usuário não enxerga não é expandido');
     }
 
     public function test_nao_usa_resposta_de_outro_setor(): void
