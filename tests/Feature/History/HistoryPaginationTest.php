@@ -77,7 +77,7 @@ class HistoryPaginationTest extends TestCase
         }
 
         $first = $this->page();
-        $first->assertSee('Próxima')->assertDontSee('Next');
+        $first->assertSee('Próximo')->assertDontSee('Next');
 
         $second = $first->call('nextPage');
         $second->assertSee('Anterior')->assertDontSee('Previous');
