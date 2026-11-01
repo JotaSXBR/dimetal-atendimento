@@ -64,16 +64,20 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Read PHP and Node versions
+        id: versions
+        uses: ./.github/actions/versions
+
       - name: Setup PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
-          php-version: '8.5'
+          php-version: ${{ steps.versions.outputs.php }}
           extensions: pdo_pgsql, pgsql, mbstring, intl, zip, gd
           tools: composer:v2
           coverage: pcov
 
       - name: Cache Composer packages
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/composer
           key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
@@ -83,7 +87,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '26'
+          node-version: ${{ steps.versions.outputs.node }}
           cache: npm
 
       - name: Setup Application
@@ -106,16 +110,20 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Read PHP and Node versions
+        id: versions
+        uses: ./.github/actions/versions
+
       - name: Setup PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
-          php-version: '8.5'
+          php-version: ${{ steps.versions.outputs.php }}
           extensions: mbstring, intl, zip, gd
           tools: composer:v2
           coverage: none
 
       - name: Cache Composer packages
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/composer
           key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
@@ -124,7 +132,7 @@ jobs:
 
       # O cache só acelera: com ele frio o veredito é o mesmo (o Larastan reanalisa tudo).
       - name: Cache Larastan and Pint
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .phpstan.cache
@@ -140,6 +148,16 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
+      # O Dependabot atualiza as imagens do compose.yaml, mas não as de `services:` deste arquivo. Sem esta conferência o CI
+      # testaria numa versão de Postgres/Redis diferente da do desenvolvimento.
+      - name: Check CI service images match compose.yaml
+        run: |
+          for name in postgres redis; do
+            image=$(sed -nE "s/^ *image: (${name}:[^ ]+).*/\1/p" compose.yaml | head -1)
+            [ -n "$image" ] || { echo "compose.yaml sem imagem $name" >&2; exit 1; }
+            grep -qE "^ *image: ${image}\$" .github/workflows/tests.yml || { echo "tests.yml deve usar ${image} (igual ao compose.yaml)" >&2; exit 1; }
+          done
+
       - name: Run static checks
         run: composer ci:static
   # Separado dos testes: um aviso de segurança novo não deve reprovar um PR que não tem relação com ele.
@@ -152,17 +170,21 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Read PHP and Node versions
+        id: versions
+        uses: ./.github/actions/versions
+
       - name: Setup PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
-          php-version: '8.5'
+          php-version: ${{ steps.versions.outputs.php }}
           tools: composer:v2
           coverage: none
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '26'
+          node-version: ${{ steps.versions.outputs.node }}
           cache: npm
 
       - name: Install dependencies
