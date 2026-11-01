@@ -14,7 +14,7 @@
 
     --color-ink: #101513;
     --color-ink-2: #46514d;
-    --color-ink-3: #6f7a75;
+    --color-ink-3: #5f6a65;
     --color-line: #e2e0d9;
     --color-canvas: #f5f4f0;
     --color-surface: #ffffff;
@@ -82,3 +82,8 @@ select:focus[data-flux-control] {
     }
 }
 } */
+
+/* O Flux pinta o título dos grupos do menu com zinc-400 (contraste 2,5:1); usa o cinza de texto secundário do app. */
+[data-flux-sidebar-group] > div.px-3 {
+    color: var(--color-ink-3);
+}

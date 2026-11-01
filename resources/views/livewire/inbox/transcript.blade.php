@@ -14,7 +14,10 @@
             \App\Enums\DeliveryStatus::QUEUED => ['Aguardando conexão', '⏳', 'text-warn'],
             default => ['Enviando', '…', ''],
         };
-        $resend = $out && ! $readonly ? app(\App\Services\Inbox\ResendTicketMessage::class)->kind($message, auth()->user()) : 'none';
+        // `kind` só devolve algo diferente de `none` para mensagem que falhou: poupa o cálculo nas demais (até 200 por render).
+        $resend = $out && ! $readonly && $message->delivery_status === \App\Enums\DeliveryStatus::FAILED
+            ? app(\App\Services\Inbox\ResendTicketMessage::class)->kind($message, auth()->user())
+            : 'none';
     @endphp
 
     <div wire:key="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
