@@ -49,12 +49,14 @@ class TranslationTest extends TestCase
         $response->assertSessionHasErrors('email');
         $message = (string) session('errors')->first('email');
         $this->assertStringNotContainsString('credentials', $message);
-        $this->assertSame('Essas credenciais não conferem com os nossos registros.', $message);
+        $this->assertSame(trans('auth.failed'), $message);
+        $this->assertStringNotContainsString('These credentials', $message);
     }
 
     public function test_validacao_em_portugues(): void
     {
-        $this->from('/login')->post('/login', [])->assertSessionHasErrors(['email' => 'O campo e-mail é obrigatório.']);
+        $this->from('/login')->post('/login', [])->assertSessionHasErrors(['email' => trans('validation.required', ['attribute' => trans('validation.attributes.email')])]);
+        $this->assertStringNotContainsString('field is required', (string) session('errors')->first('email'));
     }
 
     public function test_telas_publicas_sem_ingles(): void
