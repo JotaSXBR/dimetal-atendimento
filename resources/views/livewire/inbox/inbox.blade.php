@@ -359,6 +359,6 @@
 
     {{-- Detalhes --}}
     @if ($ticket)
-        <x-ticket-details :ticket="$ticket" :tz="$tz" />
+        <x-ticket-details :ticket="$ticket" :tz="$tz" :show-channel="$showChannel" />
     @endif
 </div>

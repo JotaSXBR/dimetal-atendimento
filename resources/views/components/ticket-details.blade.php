@@ -1,4 +1,4 @@
-@props(['ticket', 'tz', 'readonly' => false, 'events' => null, 'timeline' => null, 'closer' => null])
+@props(['ticket', 'tz', 'readonly' => false, 'events' => null, 'timeline' => null, 'closer' => null, 'showChannel' => false])
 
 {{-- Painel de detalhes: o estado (`details`, `sheet`) vive no x-data da tela que o contém. Em tela pequena abre por cima da conversa. --}}
 <aside
@@ -18,7 +18,7 @@
     @endphp
     <dl class="mt-2 space-y-2 text-sm">
         @foreach (array_filter([
-            'Canal' => $ticket->channel->name,
+            'Canal' => $ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : ''),
             'Setor' => $ticket->sector?->name ?? 'Fila geral',
             'Responsável' => $ticket->assignee?->name ?? 'Não atribuído',
             'SLA' => $sla,

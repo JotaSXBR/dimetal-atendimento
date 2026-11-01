@@ -6,9 +6,9 @@ Data: 01/11/2026. Fatia 2 de 2 da tela de Canais (a fatia 1 é `2026-11-01-canai
 
 O dono vai atender por dois números de WhatsApp com a mesma equipe, e o mesmo cliente (um só contato, no Google Contatos) pode escrever pelos dois. Hoje: (a) o cartão do canal diz "número ainda não lido" mesmo conectado, porque o app nunca grava o telefone; (b) o atendente não vê por qual número a conversa acontece nem que o cliente tem outro ticket no outro número; (c) ao abrir um ticket encerrado, o ticket que estava aberto some da tela e não há caminho de volta.
 
-## Pesquisa (resumo, não vai em commit nem PR)
+## Ponto de partida
 
-Ticketz, Whaticket e DeskcommCRM chaveiam a conversa por contato **e** conexão (sem vínculo entre números); Chatwoot e o fork da fazer-ai têm uma conversa por inbox com contato único. Nenhum dos que li mostra aviso de "mesmo contato em outro número"; agentes se confundem sobre qual número usam (pedido recorrente em ferramentas do tipo). O modelo atual do app já é o do mercado: contato único e um ticket por número.
+O padrão do mercado é contato único e um ticket por número, sem vínculo entre os números, e é o modelo que o app já tem. O aviso de "mesmo contato em outro número" não é padrão: fica por nossa conta. Atendentes se confundem sobre qual número usam, então o número aparece de forma explícita.
 
 ## Objetivos
 
@@ -67,3 +67,19 @@ Ticketz, Whaticket e DeskcommCRM chaveiam a conversa por contato **e** conexão 
 - Testes de feature: sincronizar número (primeira gravação sem alerta, igual não faz nada, diferente atualiza e alerta, vazio não apaga, três formatos de `me.id`), webhook e poll usam o mesmo caminho; selo só com 2+ canais ativos; faixa (abertos antes dos encerrados, janela de 30 dias, limite de 5, link só com acesso, sem vazamento de setor/atendente/texto, não recalcula ao digitar); botão Voltar (volta, some depois de usar, ticket que perdeu acesso não volta).
 - Conferência no Chrome contra um WAHA falso (cartão com o número, selo, faixa, voltar).
 - Depende do dono no beta: ler o número real do aparelho conectado.
+
+## Resultado
+
+Entregue: número do canal vindo do WAHA (poll e webhook pelo mesmo ponto, `ChannelPhone::sync`), aviso de troca de número (cartão por 7 dias e sino, sem som, alerta único mesmo com poll e webhook ao mesmo tempo), selo do número na lista, no cabeçalho e no painel de detalhes com 2 ou mais canais ativos, faixa "Outros tickets deste contato" e botão "Voltar ao ticket anterior". O Desativar passou a desvincular o aparelho (`POST /api/{sessão}/logout`, a rota atual do WAHA) e o Reativar inicia a sessão para mostrar o QR.
+
+Diferenças em relação ao combinado:
+- O número aparece como `(16) 99999-0001` (o formato do resto do app), não `+55 16 99999-0001`.
+- A faixa aparece também com um só canal: é o caminho de volta ao ticket aberto do mesmo cliente. Só o número é omitido quando o outro ticket é do mesmo canal.
+- O cabeçalho do ticket aberto já era apertado (os botões de ação empurram o texto); por isso o número também está no painel de detalhes.
+
+Conferido: testes, Pint, Larastan, PHPMD e a tela no Chrome contra um WAHA falso (número no cartão, selo, faixa e Voltar).
+
+Sem prova ainda (depende do beta): o formato real de `me.id` do GOWS (se vier `@lid`, o cartão continua em "número ainda não lido"); o Desativar com um aparelho real (desvincula o celular); canais desativados antes desta versão só foram parados, não desvinculados.
+
+Em aberto: a faixa e o painel "Atendimentos anteriores" mostram tickets parecidos (decidir depois se unem); a faixa consulta a cada `ticket.updated` de qualquer ticket.
+
