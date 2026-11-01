@@ -194,7 +194,7 @@ class InboxVoiceTest extends TestCase
             ->call('sendVoice', $other->id);
 
         $this->assertSame(0, Message::query()->where('direction', MessageDirection::OUT->value)->count());
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(SendTicketMessageJob::class);
     }
 
     public function test_aviso_de_que_parou_de_gravar_chega_ao_cliente_da_conversa_de_origem(): void

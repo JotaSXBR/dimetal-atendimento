@@ -11,6 +11,7 @@ use App\Enums\ClosedReason;
 use App\Enums\CloseOutcome;
 use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
+use App\Jobs\MarkTicketSeenJob;
 use App\Livewire\Inbox\Concerns\ComposesMessages;
 use App\Models\Message;
 use App\Models\Sector;
@@ -70,7 +71,12 @@ class Inbox extends Component
 
     public function select(int $ticketId): void
     {
-        $this->authorize('view', Ticket::findOrFail($ticketId));
+        $ticket = Ticket::findOrFail($ticketId);
+        $this->authorize('view', $ticket);
+
+        if ($ticket->status !== TicketStatus::ENCERRADO) {
+            MarkTicketSeenJob::dispatch($ticket->id);
+        }
 
         $this->ticketId = $ticketId;
         $this->notice = null;

@@ -140,7 +140,7 @@ class OutboxResendTest extends TestCase
         Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)
             ->call('resend', $unknown->id)
             ->assertSee('Confirme antes de reenviar');
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(SendTicketMessageJob::class);
 
         Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)->call('resend', $unknown->id, true);
         Queue::assertPushedOn('outbound', SendTicketMessageJob::class);

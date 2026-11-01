@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Inbox;
 
+use App\Jobs\MarkTicketSeenJob;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -30,6 +31,13 @@ class Transcript extends Component
 
         if (! is_numeric($id) || (int) $id !== $this->ticketId) {
             $this->skipRender();
+
+            return;
+        }
+
+        // Só `message.created` traz `direction`. Mensagem do cliente no ticket que está na tela: o atendente a vê, o cliente recebe o "visto".
+        if (($payload['direction'] ?? null) === 'in') {
+            MarkTicketSeenJob::dispatch($this->ticketId);
         }
     }
 
