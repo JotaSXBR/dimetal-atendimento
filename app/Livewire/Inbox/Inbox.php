@@ -52,6 +52,9 @@ class Inbox extends Component
 
     public ?int $ticketId = null;
 
+    /** O ticket que estava aberto antes do atual, para o botão "Voltar". */
+    public ?int $previousTicketId = null;
+
     #[Url]
     public string $tab = 'todos';
 
@@ -79,10 +82,27 @@ class Inbox extends Component
             MarkTicketSeenJob::dispatch($ticket->id);
         }
 
+        // Abrir outro ticket (um encerrado, por exemplo) não pode fazer o atual sumir sem volta.
+        if ($this->ticketId !== null && $this->ticketId !== $ticketId) {
+            $this->previousTicketId = $this->ticketId;
+        }
+
         $this->ticketId = $ticketId;
         $this->notice = null;
         $this->discardAttachments();
         $this->closePanel();
+    }
+
+    /** Reabre o ticket que estava na tela antes; o id vem do navegador, então só abre o que o usuário ainda pode ver. */
+    public function goBack(): void
+    {
+        $id = $this->previousTicketId;
+        $this->previousTicketId = null;
+
+        if ($id !== null && Ticket::query()->readableBy($this->user())->whereKey($id)->exists()) {
+            $this->select($id);
+            $this->previousTicketId = null;
+        }
     }
 
     public function claim(): void
@@ -224,6 +244,14 @@ class Inbox extends Component
     #[On('echo-private:inbox,.message.created')]
     public function refresh(): void {}
 
+    /** Só o protocolo, e só se o usuário ainda pode ver o ticket (ele pode ter sido transferido enquanto isso). */
+    private function previousTicket(User $user): ?Ticket
+    {
+        return $this->previousTicketId === null
+            ? null
+            : Ticket::query()->readableBy($user)->select(['id', 'protocol'])->find($this->previousTicketId);
+    }
+
     private function user(): User
     {
         $user = auth()->user();
@@ -315,6 +343,7 @@ class Inbox extends Component
             // O selo do número só ajuda quando há mais de um número ativo.
             'showChannel' => Channel::query()->where('active', true)->count() >= 2,
             'ticket' => $ticket,
+            'previous' => $this->previousTicket($user),
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),
             'canClose' => $ticket !== null && $user->can('close', $ticket),
             'canReply' => $ticket !== null && $user->can('reply', $ticket),

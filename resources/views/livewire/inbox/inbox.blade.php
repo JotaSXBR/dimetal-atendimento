@@ -228,6 +228,12 @@
                 </form>
             @endif
 
+            @if ($previous)
+                <div class="border-b border-line px-4 py-1.5 text-xs">
+                    <button type="button" wire:click="goBack" class="font-semibold text-accent hover:underline">← Voltar ao ticket anterior ({{ $previous->protocol ?? '#'.$previous->id }})</button>
+                </div>
+            @endif
+
             <livewire:inbox.contact-tickets :ticket-id="$ticket->id" :key="'contact-tickets-'.$ticket->id" />
 
             @if ($notice)
