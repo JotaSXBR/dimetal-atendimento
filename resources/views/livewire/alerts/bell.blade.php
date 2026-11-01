@@ -2,8 +2,9 @@
     $tones = ['danger' => 'bg-danger/10 text-danger', 'warn' => 'bg-warn/10 text-warn', 'accent' => 'bg-accent/10 text-accent'];
 @endphp
 
-<div class="relative" x-data="{ open: false }" @keydown.escape.window="open = false" @click.outside="open = false">
-    <button type="button" @click="open = !open" :aria-expanded="open" aria-haspopup="true" aria-label="Alertas{{ $unread > 0 ? ', '.$unread.' não lidos' : '' }}"
+<div class="relative" x-data="{ open: false, x: 0, y: 0 }" @keydown.escape.window="open = false" @click.outside="open = false">
+    {{-- O menu lateral rola (overflow) e cortaria o painel: ele é `fixed`, posicionado pelo botão. --}}
+    <button type="button" @click="const r = $el.getBoundingClientRect(); x = r.left; y = r.bottom + 8; open = !open" :aria-expanded="open" aria-haspopup="true" aria-label="Alertas{{ $unread > 0 ? ', '.$unread.' não lidos' : '' }}"
         class="relative flex size-8 items-center justify-center rounded-lg bg-white/10 text-sb-ink-1 hover:bg-white/20">
         <flux:icon.bell variant="micro" class="size-4" />
         @if ($unread > 0)
@@ -11,7 +12,7 @@
         @endif
     </button>
 
-    <div x-show="open" x-cloak x-transition.opacity class="absolute start-0 top-10 z-50 w-96 overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-xl" role="dialog" aria-label="Alertas">
+    <div x-show="open" x-cloak x-transition.opacity :style="`left: ${x}px; top: ${y}px`" class="fixed z-50 w-96 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-xl" role="dialog" aria-label="Alertas">
         <div class="flex items-center justify-between border-b border-line px-3.5 py-3">
             <p class="text-sm font-bold">Alertas <span class="ms-1 text-xs font-normal text-ink-3">{{ $unread }} {{ $unread === 1 ? 'novo' : 'novos' }}</span></p>
             @if ($unread > 0)
