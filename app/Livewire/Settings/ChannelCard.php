@@ -168,11 +168,6 @@ class ChannelCard extends Component
         $this->dispatch('channel-deleted');
     }
 
-    public function openTickets(): int
-    {
-        return Ticket::query()->where('channel_id', $this->channel->id)->where('status', '<>', TicketStatus::ENCERRADO->value)->count();
-    }
-
     public function refreshStatus(): void
     {
         try {
@@ -231,7 +226,15 @@ class ChannelCard extends Component
 
     public function render(): View
     {
-        return view('livewire.settings.channel-card');
+        $tickets = Ticket::query()->where('channel_id', $this->channel->id);
+
+        return view('livewire.settings.channel-card', [
+            'hasHistory' => $tickets->exists(),
+            // A contagem só importa na janela de confirmação.
+            'openTickets' => $this->confirming === null || $this->confirming === 'delete-channel'
+                ? 0
+                : $tickets->where('status', '<>', TicketStatus::ENCERRADO->value)->count(),
+        ]);
     }
 
     private function setStatus(ChannelStatus $status): void

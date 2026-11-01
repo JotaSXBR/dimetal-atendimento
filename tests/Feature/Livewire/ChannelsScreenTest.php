@@ -404,6 +404,60 @@ class ChannelsScreenTest extends TestCase
             ->call('refreshStatus')->assertSet('qr', null)->assertSet('qrValue', null);
     }
 
+    public function test_tela_mostra_o_aviso_de_failover_e_o_webhook(): void
+    {
+        Channel::factory()->create();
+
+        $this->actingAs($this->admin())->get('/configuracoes/canais')->assertOk()
+            ->assertSee('Sem failover entre números')
+            ->assertSee('Webhook de entrada')
+            ->assertSee(url('/webhooks/waha'))
+            ->assertSee('o mesmo nome de sessão');
+    }
+
+    public function test_cartao_conectado_com_historico_mostra_as_acoes_certas(): void
+    {
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
+        $this->ticketOn($channel, TicketStatus::ENCERRADO);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->assertSee(['Engine', 'Sessão', 'Último evento', 'Reconectar', 'Desconectar', 'Desativar', 'Excluir sessão'])
+            ->assertDontSee('Apagar canal')
+            ->assertDontSee('Reativar');
+    }
+
+    public function test_cartao_de_canal_vazio_oferece_apagar_canal(): void
+    {
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => Channel::factory()->create()])
+            ->assertSee('Apagar canal')->assertSee('Conectar');
+    }
+
+    public function test_cartao_aguardando_qr_oferece_gerar_novo_qr(): void
+    {
+        $channel = Channel::factory()->create(['status' => ChannelStatus::SCAN_QR_CODE]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])->assertSee('Gerar novo QR');
+    }
+
+    public function test_cartao_desativado_mostra_reativar_e_esconde_conectar(): void
+    {
+        $channel = Channel::factory()->create(['active' => false]);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->assertSee('Desativado')->assertSee('Reativar')->assertSee('Excluir sessão')
+            ->assertDontSee('Desconectar')->assertDontSee('Desativar');
+    }
+
+    public function test_cartao_mostra_sessao_removida_e_a_confirmacao(): void
+    {
+        Http::fake(['*/api/sessions/main' => Http::response(['message' => 'not found'], 404)]);
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
+
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('refreshStatus')->assertSee('Sessão removida')
+            ->call('ask', 'delete-session')->assertSee('Confirmar')->assertSee('Cancelar');
+    }
+
     public function test_ask_recusa_acao_desconhecida(): void
     {
         Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => Channel::factory()->create()])
