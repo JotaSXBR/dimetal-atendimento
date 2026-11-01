@@ -1,5 +1,7 @@
 # Dependabot: versões e grupos — Plano
 
+> **Status: em andamento** (PR #54). Acrescentado após a revisão: a tag da imagem base no `base-image.yml` segue a versão do PHP do Dockerfile, em vez de `:8.5` fixa.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans (inline).
 
 **Goal:** Dependabot enxerga PHP/Node/serviços do CI e não mistura major com patch/minor.
