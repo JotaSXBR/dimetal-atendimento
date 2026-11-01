@@ -121,6 +121,7 @@ class Ticket extends Model
 
         $query->where(fn (Builder $q) => $q
             ->where('assigned_user_id', $user->id)
+            ->orWhere('status', TicketStatus::PENDENTE->value)
             ->orWhere(fn (Builder $queue) => $queue
                 ->where('status', TicketStatus::AGUARDANDO->value)
                 ->where(fn (Builder $sector) => $sector->whereNull('sector_id')->orWhereIn('sector_id', $mySectors)))

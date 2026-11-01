@@ -17,7 +17,7 @@ class TicketPolicy
     {
         return $user->active
             && $ticket->assigned_user_id === null
-            && $ticket->status !== TicketStatus::ENCERRADO
+            && $ticket->status->inHumanQueue()
             && $user->canHandleSector($ticket->sector_id);
     }
 
@@ -44,7 +44,7 @@ class TicketPolicy
     {
         return $user->active
             && $ticket->status !== TicketStatus::ENCERRADO
-            && ($user->canSeeAllSectors() || ($user->can_transfer && $ticket->assigned_user_id === $user->id));
+            && ($user->canSeeAllSectors() || $ticket->status === TicketStatus::PENDENTE || ($user->can_transfer && $ticket->assigned_user_id === $user->id));
     }
 
     /**
