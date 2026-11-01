@@ -1,4 +1,4 @@
-@props(['wide' => false])
+@props(['heading' => '', 'subheading' => '', 'wide' => false])
 
 <div class="flex items-start max-md:flex-col">
     <div class="me-10 w-full pb-4 md:w-[220px]">
