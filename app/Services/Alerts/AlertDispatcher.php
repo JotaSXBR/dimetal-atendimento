@@ -9,6 +9,7 @@ use App\Models\Channel;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\ChannelDown;
+use App\Notifications\ChannelNumberChanged;
 use App\Notifications\ChannelUp;
 use App\Notifications\SlaBreached;
 use App\Notifications\SlaWarning;
@@ -39,6 +40,12 @@ final class AlertDispatcher
         } elseif (! $wasUp && $channel->isConnected()) {
             Notification::send($this->recipients->everyone(), new ChannelUp($channel));
         }
+    }
+
+    /** O WAHA informou outro número para a sessão: aviso informativo no sino, sem som e sem bloquear nada. */
+    public function numberChanged(Channel $channel): void
+    {
+        Notification::send($this->recipients->everyone(), new ChannelNumberChanged($channel));
     }
 
     public function sla(Ticket $ticket, bool $breached): void

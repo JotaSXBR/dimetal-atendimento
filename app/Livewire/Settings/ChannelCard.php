@@ -7,6 +7,7 @@ use App\Enums\TicketStatus;
 use App\Livewire\Settings\Concerns\SendsTestMessage;
 use App\Models\Channel;
 use App\Models\Ticket;
+use App\Services\Waha\ChannelPhone;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaQr;
 use App\Services\Waha\WahaRequestException;
@@ -195,7 +196,8 @@ class ChannelCard extends Component
     public function refreshStatus(): void
     {
         try {
-            $newStatus = (new WahaClient($this->channel))->session()['status'] ?? null;
+            $session = (new WahaClient($this->channel))->session();
+            $newStatus = $session['status'] ?? null;
         } catch (WahaRequestException $exception) {
             if ($exception->statusCode === 404) {
                 // Sessão que não existe no WAHA (excluída): não é erro, e o canal fica parado.
@@ -220,6 +222,9 @@ class ChannelCard extends Component
         if ($status !== null) {
             $this->setStatus($status);
         }
+
+        $me = data_get($session, 'me.id');
+        app(ChannelPhone::class)->sync($this->channel, is_string($me) ? $me : null);
 
         if ($status?->needsQr() && $this->channel->active) {
             $this->refreshQr();

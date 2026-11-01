@@ -37,7 +37,12 @@
         <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
                 <p class="truncate text-sm font-semibold text-ink">{{ $channel->name }}</p>
-                <p class="mt-0.5 font-mono text-xs text-ink-3">{{ $channel->phone ?? 'número ainda não lido' }}</p>
+                <p class="mt-0.5 font-mono text-xs text-ink-3">{{ $channel->phoneLabel() ?? 'número ainda não lido' }}</p>
+                @if ($channel->previous_phone && $channel->phone_changed_at?->gt(now()->subDays(7)))
+                    <p class="mt-1 text-xs text-warn" role="status">
+                        Número alterado de {{ \App\Support\PhoneFormat::display($channel->previous_phone) }} para {{ $channel->phoneLabel() }} em {{ $channel->phone_changed_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}.
+                    </p>
+                @endif
             </div>
 
             <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $badge }}">

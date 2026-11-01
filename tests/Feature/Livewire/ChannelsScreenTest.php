@@ -452,6 +452,21 @@ class ChannelsScreenTest extends TestCase
             ->call('refreshStatus')->assertSet('qr', null)->assertSet('qrValue', null);
     }
 
+    public function test_poll_grava_o_numero_e_o_cartao_mostra_a_troca(): void
+    {
+        Http::fake(['*/api/sessions/main' => Http::sequence()
+            ->push(['status' => 'WORKING', 'me' => ['id' => '5516999990001@c.us']], 200)
+            ->push(['status' => 'WORKING', 'me' => ['id' => '5516988887777@c.us']], 200)]);
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main', 'phone' => null]);
+
+        $card = Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->call('refreshStatus')->assertSee('(16) 99999-0001')->assertDontSee('número ainda não lido');
+
+        $card->call('refreshStatus')->assertSee('Número alterado')->assertSee('(16) 98888-7777');
+
+        $this->assertSame('5516999990001', $channel->fresh()->previous_phone);
+    }
+
     public function test_tela_mostra_o_aviso_de_failover_e_o_webhook(): void
     {
         Channel::factory()->create();

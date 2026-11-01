@@ -3,9 +3,11 @@
 namespace Tests\Feature\Alertas;
 
 use App\Livewire\Alerts\Bell;
+use App\Models\Channel;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\ChannelDown;
+use App\Notifications\ChannelNumberChanged;
 use App\Notifications\SlaBreached;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -73,6 +75,17 @@ class BellTest extends TestCase
         $this->actingAs($eu);
 
         Livewire::test(Bell::class)->assertDontSee('SLA estourado');
+    }
+
+    public function test_alerta_de_troca_de_numero_aparece_no_sino(): void
+    {
+        $eu = User::factory()->create();
+        $channel = Channel::factory()->create(['name' => 'Número 2']);
+        $eu->notify(new ChannelNumberChanged($channel));
+
+        $this->actingAs($eu);
+
+        Livewire::test(Bell::class)->assertSee('Número do WhatsApp mudou')->assertSee('Número 2');
     }
 
     public function test_o_menu_mostra_o_sino(): void

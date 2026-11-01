@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ChannelStatus;
 use App\Observers\ChannelObserver;
+use App\Support\PhoneFormat;
 use Carbon\CarbonImmutable;
 use Database\Factories\ChannelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $name
  * @property string $waha_session
  * @property string|null $phone
+ * @property string|null $previous_phone
+ * @property CarbonImmutable|null $phone_changed_at
  * @property ChannelStatus $status
  * @property CarbonImmutable|null $last_event_at
  * @property int $backfill_days
@@ -28,6 +31,8 @@ use Illuminate\Database\Eloquent\Model;
     'name',
     'waha_session',
     'phone',
+    'previous_phone',
+    'phone_changed_at',
     'status',
     'last_event_at',
     'backfill_days',
@@ -48,10 +53,17 @@ class Channel extends Model
         return [
             'status' => ChannelStatus::class,
             'last_event_at' => 'datetime',
+            'phone_changed_at' => 'datetime',
             'backfill_last_run_at' => 'datetime',
             'backfill_days' => 'integer',
             'active' => 'boolean',
         ];
+    }
+
+    /** O número como o resto do app mostra, ou `null` enquanto o WAHA não o informou. */
+    public function phoneLabel(): ?string
+    {
+        return $this->phone === null ? null : PhoneFormat::display($this->phone);
     }
 
     public function isConnected(): bool

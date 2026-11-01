@@ -35,6 +35,23 @@ class HandleWahaEventTest extends TestCase
         $this->assertNotNull($channel->fresh()->last_event_at);
     }
 
+    public function test_status_com_me_grava_o_numero_do_canal(): void
+    {
+        $channel = Channel::factory()->create(['waha_session' => 'main', 'status' => ChannelStatus::STARTING, 'phone' => null]);
+        $event = WahaEvent::create([
+            'waha_event_id' => 'evt_me',
+            'channel_id' => $channel->id,
+            'event' => 'session.status',
+            'session' => 'main',
+            'payload' => ['me' => ['id' => '5516999990001@c.us', 'pushName' => 'Dimetal'], 'payload' => ['status' => 'WORKING']],
+            'received_at' => now(),
+        ]);
+
+        (new HandleWahaEvent($event->id))->handle();
+
+        $this->assertSame('5516999990001', $channel->fresh()->phone);
+    }
+
     public function test_evento_message_waiting_de_visualizacao_unica_entra_pelo_job(): void
     {
         $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
