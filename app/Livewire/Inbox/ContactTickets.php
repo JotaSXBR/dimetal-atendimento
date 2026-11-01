@@ -62,7 +62,7 @@ class ContactTickets extends Component
                 'status' => $other->status->label(),
                 'closedAt' => $other->closed_at,
                 'otherNumber' => $other->channel_id !== $current->channel_id,
-                'number' => $other->channel?->phoneLabel() ?? $other->channel?->name ?? '',
+                'number' => $other->channel->phoneLabel() ?? $other->channel->name,
                 'link' => in_array($other->id, $openable, true),
             ])->all(),
         ]);
