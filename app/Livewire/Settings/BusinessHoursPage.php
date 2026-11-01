@@ -6,6 +6,7 @@ use App\Models\BusinessHour;
 use App\Models\Holiday;
 use App\Models\Setting;
 use App\Services\Inbox\AfterHoursReply;
+use App\Settings\CompanySettings;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +32,8 @@ class BusinessHoursPage extends Component
 
     public string $afterHoursMessage = '';
 
+    public int $slaMinutes = 10;
+
     public function mount(): void
     {
         foreach (BusinessHour::query()->orderBy('opens_at')->get() as $window) {
@@ -40,6 +43,7 @@ class BusinessHoursPage extends Component
             ];
         }
 
+        $this->slaMinutes = CompanySettings::slaMinutes();
         $this->afterHoursEnabled = (bool) Setting::get('after_hours_enabled', true);
         $message = Setting::get('after_hours_message');
         $this->afterHoursMessage = is_string($message) ? $message : '';
@@ -123,6 +127,19 @@ class BusinessHoursPage extends Component
     public function removeHoliday(int $id): void
     {
         Holiday::query()->whereKey($id)->delete();
+    }
+
+    public function saveSla(): void
+    {
+        $this->authorize('admin');
+
+        $this->validate(['slaMinutes' => ['required', 'integer', 'between:1,1440']], [
+            'slaMinutes.between' => 'O SLA vai de 1 a 1440 minutos.',
+        ]);
+
+        CompanySettings::save(['slaMinutes' => $this->slaMinutes]);
+
+        session()->flash('saved-sla', 'Prazo de primeira resposta salvo.');
     }
 
     public function saveMessage(): void

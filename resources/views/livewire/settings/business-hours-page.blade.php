@@ -71,6 +71,25 @@
                 </ul>
             </div>
 
+            <form wire:submit="saveSla" class="rounded-[14px] border border-line bg-surface p-5">
+                <p class="text-sm font-semibold text-ink">Prazo de primeira resposta (SLA)</p>
+                <p class="mt-1 text-xs text-ink-3">Minutos de funcionamento até a primeira resposta humana. Aparece nos relatórios e nos alertas de espera.</p>
+
+                <div class="mt-3 max-w-xs">
+                    <flux:input type="number" min="1" max="1440" label="Minutos" wire:model="slaMinutes" />
+                    @error('slaMinutes')
+                        <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="mt-4 flex items-center gap-3">
+                    <flux:button type="submit" variant="primary" size="sm">Salvar prazo</flux:button>
+                    @if (session('saved-sla'))
+                        <p class="text-xs text-accent" role="status">{{ session('saved-sla') }}</p>
+                    @endif
+                </div>
+            </form>
+
             <form wire:submit="saveMessage" class="rounded-[14px] border border-line bg-surface p-5">
                 <p class="text-sm font-semibold text-ink">Resposta automática fora do horário</p>
                 <p class="mt-1 text-xs text-ink-3">Enviada uma vez por ticket, só quando o cliente escreve primeiro e ninguém da equipe respondeu. Variáveis: <code>@{{horario}}</code> e <code>@{{proximo_horario}}</code>.</p>

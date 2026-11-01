@@ -1,8 +1,6 @@
-<x-settings-page route="configuracoes.empresa" title="Empresa e assinatura" subtitle="Dados que aparecem nas mensagens e o prazo de primeira resposta usado nos relatórios." width="3xl">
+<x-settings-page route="configuracoes.empresa" title="Empresa e assinatura" subtitle="Nome e assinatura que aparecem nas mensagens." width="3xl">
     <form wire:submit="save" class="mt-6 space-y-6 rounded-[14px] border border-line bg-surface p-5">
         <flux:input label="Nome fantasia" wire:model="name" />
-
-        <flux:input type="number" min="1" max="1440" label="SLA de primeira resposta (minutos)" wire:model="slaMinutes" />
 
         <div class="space-y-3 border-t border-line pt-5">
             <div class="flex items-center justify-between gap-3">
