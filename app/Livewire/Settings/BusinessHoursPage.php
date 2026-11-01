@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Horário de funcionamento')]
+#[Title('Horário e SLA')]
 class BusinessHoursPage extends Component
 {
     private const MAX_WINDOWS_PER_DAY = 4;

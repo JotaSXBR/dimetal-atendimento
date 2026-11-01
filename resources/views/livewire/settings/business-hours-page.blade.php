@@ -1,7 +1,5 @@
-<section class="w-full">
-    @include('partials.settings-heading')
-
-    <x-pages::settings.layout heading="Horário de funcionamento" subheading="Faixas por dia, feriados e a resposta automática fora do horário">
+<x-settings-page route="configuracoes.horario" title="Horário e SLA" subtitle="Faixas por dia, feriados, resposta fora do horário e prazo de primeira resposta" width="3xl">
+    <div class="mt-6">
         <div class="space-y-6">
             <form wire:submit="saveHours" class="rounded-[14px] border border-line bg-surface p-5">
                 <p class="text-sm font-semibold text-ink">Faixas de atendimento</p>
@@ -99,5 +97,5 @@
                 </div>
             </form>
         </div>
-    </x-pages::settings.layout>
-</section>
+    </div>
+</x-settings-page>

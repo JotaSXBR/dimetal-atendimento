@@ -39,4 +39,15 @@ class SettingsPageTest extends TestCase
             $this->assertStringContainsString('Configuração ›', $this->page(UserRole::ADMIN, '/configuracoes/'.$page), $page);
         }
     }
+
+    public function test_canais_e_horario_nao_mostram_o_menu_pessoal(): void
+    {
+        foreach (['canais', 'horario'] as $page) {
+            $html = $this->page(UserRole::ADMIN, '/configuracoes/'.$page);
+
+            foreach (['Gerencie seu perfil', 'Manage your profile', route('security.edit')] as $personal) {
+                $this->assertStringNotContainsString($personal, $html, $page);
+            }
+        }
+    }
 }
