@@ -2,8 +2,12 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\DeliveryStatus;
+use App\Enums\MessageDirection;
+use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Livewire\Inbox\Inbox;
 use App\Livewire\Inbox\Transcript;
 use App\Models\Channel;
 use App\Models\Contact;
@@ -11,8 +15,14 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\SendFailure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+use Livewire\Attributes\On;
 use Livewire\Livewire;
+use ReflectionAttribute;
+use ReflectionMethod;
 use Tests\TestCase;
 
 class InboxTranscriptTest extends TestCase
@@ -32,6 +42,16 @@ class InboxTranscriptTest extends TestCase
     private function say(Ticket $ticket, string $body): Message
     {
         return Message::factory()->for($ticket)->create(['body' => $body]);
+    }
+
+    /** @return array{0: User, 1: Ticket} um admin e um ticket em atendimento com ele */
+    private function mine(): array
+    {
+        $me = User::factory()->create(['role' => UserRole::ADMIN, 'sign_messages' => false]);
+        $ticket = $this->ticket();
+        $ticket->update(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $me->id]);
+
+        return [$me, $ticket];
     }
 
     public function test_mostra_as_200_ultimas_mensagens_em_ordem(): void
@@ -80,5 +100,53 @@ class InboxTranscriptTest extends TestCase
         $this->say($ticket, 'nova;');
 
         $screen->dispatch('transcript-refresh')->assertSee('nova;');
+    }
+
+    public function test_digitar_barra_nao_consulta_o_transcript(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $screen = Livewire::actingAs($me)->test(Inbox::class)->call('select', $ticket->id);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $screen->set('draft', '/');
+
+        $transcriptQueries = array_filter(DB::getQueryLog(), fn (array $q): bool => str_contains($q['query'], 'limit 200'));
+        $this->assertSame([], $transcriptQueries);
+    }
+
+    public function test_inbox_nao_escuta_message_status(): void
+    {
+        $events = array_map(
+            fn (ReflectionAttribute $a): string => $a->getArguments()[0],
+            (new ReflectionMethod(Inbox::class, 'refresh'))->getAttributes(On::class),
+        );
+
+        $this->assertNotContains('echo-private:inbox,.message.status', $events);
+        $this->assertContains('echo-private:inbox,.ticket.updated', $events);
+    }
+
+    public function test_envio_pelo_composer_avisa_o_transcript(): void
+    {
+        Queue::fake();
+        [$me, $ticket] = $this->mine();
+
+        Livewire::actingAs($me)->test(Inbox::class)->call('select', $ticket->id)
+            ->set('draft', 'oi do atendente')->call('send')
+            ->assertDispatched('transcript-refresh');
+    }
+
+    public function test_reenviar_avisa_o_transcript(): void
+    {
+        Queue::fake();
+        [$me, $ticket] = $this->mine();
+        $failed = Message::factory()->for($ticket)->create([
+            'direction' => MessageDirection::OUT, 'origin' => MessageOrigin::PAINEL, 'author_user_id' => $me->id,
+            'delivery_status' => DeliveryStatus::FAILED, 'failure_code' => SendFailure::EXPIRED, 'wa_message_id' => null,
+        ]);
+
+        Livewire::actingAs($me)->test(Inbox::class)->call('select', $ticket->id)
+            ->call('resend', $failed->id, true)
+            ->assertDispatched('transcript-refresh');
     }
 }

@@ -230,9 +230,7 @@
             @endif
 
             <div class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-4 py-4">
-                <div class="space-y-2">
-                    @include('livewire.inbox.transcript', ['messages' => $messages, 'readonly' => false])
-                </div>
+                <livewire:inbox.transcript :ticket-id="$ticket->id" :key="'transcript-'.$ticket->id" />
             </div>
 
             <footer class="border-t border-line bg-surface p-3">

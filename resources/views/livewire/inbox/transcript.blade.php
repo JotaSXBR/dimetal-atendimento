@@ -49,9 +49,9 @@
             @endif
 
             @if ($resend === 'safe')
-                <button type="button" wire:click="resend({{ $message->id }}, true)" class="mt-1 text-xs text-accent underline">Reenviar</button>
+                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" class="mt-1 text-xs text-accent underline">Reenviar</button>
             @elseif ($resend === 'confirm')
-                <button type="button" wire:click="resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent underline">Reenviar</button>
+                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent underline">Reenviar</button>
             @endif
 
             <p class="mt-1 flex items-center justify-end gap-1 font-mono text-[10px] text-ink-3">
