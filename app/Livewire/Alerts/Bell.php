@@ -76,16 +76,18 @@ class Bell extends Component
         $data = $n->data;
         $ticket = $tickets->get($this->ticketId($data));
         $detail = $ticket !== null ? 'Ticket '.($ticket->protocol ?? '#'.$ticket->id) : '';
-        $down = ($data['state'] ?? '') === 'down';
+        $state = $data['state'] ?? '';
         $channel = is_string($data['channel_name'] ?? null) ? $data['channel_name'] : 'WhatsApp';
 
         [$icon, $tone, $title, $detail] = match ($data['kind'] ?? '') {
             'sla_breached' => ['clock', 'danger', 'SLA estourado', $detail],
             'sla_warn' => ['clock', 'warn', 'SLA perto de estourar', $detail],
             'assigned' => ['user-plus', 'accent', 'Ticket atribuído a você', $detail],
-            'connection' => $down
-                ? ['exclamation-triangle', 'danger', 'WhatsApp desconectado', $channel]
-                : ['check-circle', 'accent', 'WhatsApp voltou', $channel],
+            'connection' => match ($state) {
+                'down' => ['exclamation-triangle', 'danger', 'WhatsApp desconectado', $channel],
+                'number_changed' => ['arrow-path', 'warn', 'Número do WhatsApp mudou', $channel],
+                default => ['check-circle', 'accent', 'WhatsApp voltou', $channel],
+            },
             default => ['bell', 'accent', 'Alerta', $detail],
         };
 

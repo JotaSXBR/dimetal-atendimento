@@ -76,9 +76,8 @@ class WahaClient
 
     public function logout(): void
     {
-        $this->acceptMissing($this->request()->post('/api/sessions/logout', [
-            'name' => $this->sessionName(),
-        ]));
+        // A rota `POST /api/sessions/logout` com corpo está marcada como deprecated no OpenAPI do WAHA; a atual é por sessão.
+        $this->acceptMissing($this->request()->post($this->sessionPath('/logout')));
     }
 
     /** Remove a sessão no WAHA (idempotente). O canal e os tickets daqui não são tocados. */

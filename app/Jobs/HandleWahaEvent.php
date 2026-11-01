@@ -6,6 +6,7 @@ use App\Enums\ChannelStatus;
 use App\Models\WahaEvent;
 use App\Services\Inbox\ApplyAck;
 use App\Services\Inbox\IngestMessage;
+use App\Services\Waha\ChannelPhone;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -83,5 +84,7 @@ class HandleWahaEvent implements ShouldQueue
         $channel->last_event_at = $event->received_at;
         $channel->save();
 
+        $me = data_get($event->payload, 'me.id');
+        app(ChannelPhone::class)->sync($channel, is_string($me) ? $me : null);
     }
 }

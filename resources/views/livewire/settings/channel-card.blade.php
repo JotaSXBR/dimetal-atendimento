@@ -21,7 +21,7 @@
     };
     $label = $inactive ? 'Desativado' : ($sessionMissing ? 'Sessão removida' : $status->label());
     $hint = match (true) {
-        $inactive => 'Desligado de propósito: sem alertas de queda e sem resposta nos tickets deste número.',
+        $inactive => 'Desligado de propósito: aparelho desvinculado, sem alertas e sem resposta nos tickets deste número. Reative e leia o QR para voltar.',
         $sessionMissing => 'A sessão não existe mais no WAHA. Conecte para criá-la de novo e reaproveitar os tickets.',
         $status === \App\Enums\ChannelStatus::WORKING => 'Sessão ativa. Para trocar o aparelho, gere um novo QR.',
         $status === \App\Enums\ChannelStatus::SCAN_QR_CODE => 'Escaneie com o WhatsApp deste número para conectar.',
@@ -37,7 +37,12 @@
         <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
                 <p class="truncate text-sm font-semibold text-ink">{{ $channel->name }}</p>
-                <p class="mt-0.5 font-mono text-xs text-ink-3">{{ $channel->phone ?? 'número ainda não lido' }}</p>
+                <p class="mt-0.5 font-mono text-xs text-ink-3">{{ $channel->phoneLabel() ?? 'número ainda não lido' }}</p>
+                @if ($channel->previous_phone && $channel->phone_changed_at?->gt(now()->subDays(7)))
+                    <p class="mt-1 text-xs text-warn" role="status">
+                        Número alterado de {{ \App\Support\PhoneFormat::display($channel->previous_phone) }} para {{ $channel->phoneLabel() }} em {{ $channel->phone_changed_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}.
+                    </p>
+                @endif
             </div>
 
             <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $badge }}">
@@ -114,6 +119,9 @@
                     Este canal tem {{ $openTickets }} {{ $openTickets === 1 ? 'ticket aberto' : 'tickets abertos' }}. Eles continuam no painel, mas não dá para responder até o canal voltar.
                 @else
                     Este canal não tem tickets abertos. Os tickets e as mensagens continuam guardados.
+                @endif
+                @if ($confirming === 'deactivate')
+                    O aparelho será desvinculado: para reativar é preciso escanear o QR de novo.
                 @endif
                 @if ($confirming === 'delete-session' && $channel->active)
                     Um canal ativo sem sessão conta como queda e dispara o alerta de canal desconectado. Para parar sem alerta, use Desativar.
