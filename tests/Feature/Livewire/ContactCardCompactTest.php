@@ -117,4 +117,88 @@ class ContactCardCompactTest extends TestCase
         $this->assertStringContainsString((string) $hidden->protocol, $html);
         $this->assertStringNotContainsString('ticketId='.$hidden->id, $html);
     }
+
+    private function channelWith(string $session, string $phone): Channel
+    {
+        return Channel::factory()->connected()->create(['waha_session' => $session, 'phone' => $phone]);
+    }
+
+    private function ticketOn(Channel $channel, TicketStatus $status, ?Sector $sector = null, ?User $assignee = null): Ticket
+    {
+        return Ticket::factory()->create([
+            'channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'sector_id' => $sector?->id,
+            'assigned_user_id' => $assignee?->id, 'status' => $status,
+            'closed_at' => $status === TicketStatus::ENCERRADO ? now()->subDay() : null,
+        ]);
+    }
+
+    public function test_ticket_de_outro_numero_mostra_o_numero_e_o_do_mesmo_numero_nao_repete(): void
+    {
+        $a = $this->channelWith('a', '5516999990001');
+        $b = $this->channelWith('b', '5516988887777');
+        $current = $this->ticketOn($a, TicketStatus::EM_ATENDIMENTO);
+        $this->ticketOn($b, TicketStatus::ENCERRADO);
+        $this->ticketOn($a, TicketStatus::ENCERRADO);
+
+        $html = $this->card(['compact' => true, 'currentTicketId' => $current->id])->assertSee('número (16) 98888-7777')->html();
+
+        $this->assertStringNotContainsString('(16) 99999-0001', $html);
+    }
+
+    public function test_ticket_aberto_em_outro_numero_ganha_destaque_e_link_para_o_inbox(): void
+    {
+        $current = $this->ticketOn($this->channelWith('a', '5516999990001'), TicketStatus::EM_ATENDIMENTO);
+        $open = $this->ticketOn($this->channelWith('b', '5516988887777'), TicketStatus::AGUARDANDO);
+
+        $this->card(['compact' => true, 'currentTicketId' => $current->id])
+            ->assertSee('também tem ticket aberto no número (16) 98888-7777')
+            ->assertSeeHtml('$parent.select('.$open->id.')');
+    }
+
+    public function test_ticket_aberto_no_mesmo_numero_tambem_linka_sem_destaque(): void
+    {
+        $channel = $this->channelWith('a', '5516999990001');
+        $current = $this->ticketOn($channel, TicketStatus::ENCERRADO);
+        $open = $this->ticketOn($channel, TicketStatus::AGUARDANDO);
+
+        $this->card(['compact' => true, 'currentTicketId' => $current->id])
+            ->assertSeeHtml('$parent.select('.$open->id.')')
+            ->assertDontSee('também tem ticket aberto');
+    }
+
+    public function test_somente_leitura_mostra_o_aberto_sem_link(): void
+    {
+        $current = $this->ticketOn($this->channelWith('a', '5516999990001'), TicketStatus::ENCERRADO);
+        $open = $this->ticketOn($this->channelWith('b', '5516988887777'), TicketStatus::AGUARDANDO);
+
+        $this->card(['compact' => true, 'readonly' => true, 'currentTicketId' => $current->id])
+            ->assertSee((string) $open->protocol)
+            ->assertDontSeeHtml('$parent.select(');
+    }
+
+    public function test_sem_acesso_nao_mostra_setor_nem_link(): void
+    {
+        $current = $this->ticketOn($this->channelWith('a', '5516999990001'), TicketStatus::AGUARDANDO);
+        $hidden = $this->ticketOn($this->channelWith('b', '5516988887777'), TicketStatus::EM_ATENDIMENTO, Sector::factory()->create(['name' => 'Setor Reservado']), User::factory()->create());
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))
+            ->test(ContactCard::class, ['contactId' => $this->contact->id, 'compact' => true, 'currentTicketId' => $current->id])
+            ->assertSee((string) $hidden->protocol)
+            ->assertDontSee('Setor Reservado')
+            ->assertDontSeeHtml('$parent.select(');
+    }
+
+    public function test_refresh_traz_ticket_novo_e_nao_mexe_na_edicao(): void
+    {
+        $channel = $this->channelWith('a', '5516999990001');
+        $current = $this->ticketOn($channel, TicketStatus::EM_ATENDIMENTO);
+        $screen = $this->card(['compact' => true, 'currentTicketId' => $current->id]);
+
+        $new = $this->ticketOn($this->channelWith('b', '5516988887777'), TicketStatus::AGUARDANDO);
+        $screen->call('refresh')->assertSee((string) $new->protocol);
+
+        $this->card(['compact' => true, 'currentTicketId' => $current->id])
+            ->call('toggleEdit')->set('form.name', 'Digitado')->call('refresh')
+            ->assertSet('editing', true)->assertSet('form.name', 'Digitado');
+    }
 }
