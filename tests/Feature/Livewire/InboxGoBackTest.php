@@ -41,6 +41,29 @@ class InboxGoBackTest extends TestCase
             ->assertDontSee('Voltar ao ticket anterior');
     }
 
+    public function test_link_com_ticket_na_url_abre_o_ticket_que_o_usuario_pode_ver(): void
+    {
+        $ticket = $this->ticket('2026-000811');
+
+        Livewire::withQueryParams(['ticket' => $ticket->id])
+            ->actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class)
+            ->assertSet('ticketId', $ticket->id);
+    }
+
+    public function test_ticket_da_url_de_outro_setor_nao_abre(): void
+    {
+        $ticket = Ticket::factory()->create([
+            'channel_id' => Channel::factory()->connected()->create()->id,
+            'contact_id' => Contact::factory()->create()->id,
+            'sector_id' => Sector::factory()->create()->id,
+            'status' => TicketStatus::AGUARDANDO,
+        ]);
+
+        Livewire::withQueryParams(['ticket' => $ticket->id])
+            ->actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))->test(Inbox::class)
+            ->assertSet('ticketId', null);
+    }
+
     public function test_coluna_do_meio_nao_repete_os_outros_tickets_do_contato(): void
     {
         $contact = Contact::factory()->create();

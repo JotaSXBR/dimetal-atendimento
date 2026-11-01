@@ -35,7 +35,10 @@
                         @if ($mine && $closed)
                             <a href="{{ route('historico', ['ticketId' => $past->id]) }}" wire:navigate class="font-mono text-ink underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @elseif ($mine && ! $readonly)
+                            {{-- Só a Fila tem `select`; no Histórico (somente leitura) o pai é outro componente. --}}
                             <button type="button" wire:click="$parent.select({{ $past->id }})" class="font-mono text-accent underline-offset-2 hover:underline">{{ $past->protocol }}</button>
+                        @elseif ($mine)
+                            <a href="{{ route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="font-mono text-accent underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @else
                             <span class="font-mono text-ink">{{ $past->protocol }}</span>
                         @endif
