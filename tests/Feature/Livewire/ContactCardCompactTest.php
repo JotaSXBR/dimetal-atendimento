@@ -139,6 +139,34 @@ class ContactCardCompactTest extends TestCase
         $this->assertStringContainsString('$parent.select', $this->card(['compact' => true, 'currentTicketId' => $current->id])->html());
     }
 
+    public function test_em_contatos_o_protocolo_leva_ao_ticket(): void
+    {
+        $channel = Channel::factory()->create();
+        $closed = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subDay(), 'protocol' => '2026-000951']);
+        $open = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'protocol' => '2026-000952']);
+
+        $html = $this->card()->html();
+
+        $this->assertMatchesRegularExpression('#<a href="[^"]*/historico\?ticketId='.$closed->id.'"[^>]*>\s*2026-000951\s*</a>#', $html);
+        $this->assertMatchesRegularExpression('#<a href="[^"]*/inbox\?ticket='.$open->id.'"[^>]*>\s*2026-000952\s*</a>#', $html);
+    }
+
+    public function test_em_contatos_ticket_que_o_usuario_nao_ve_fica_sem_link(): void
+    {
+        $mine = Sector::factory()->create();
+        $hidden = Ticket::factory()->create([
+            'channel_id' => Channel::factory()->create()->id, 'contact_id' => $this->contact->id, 'sector_id' => Sector::factory()->create()->id,
+            'status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subDay(), 'protocol' => '2026-000953',
+        ]);
+        $agent = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $agent->sectors()->attach($mine);
+
+        $html = Livewire::actingAs($agent)->test(ContactCard::class, ['contactId' => $this->contact->id])->html();
+
+        $this->assertStringContainsString('2026-000953', $html);
+        $this->assertStringNotContainsString('ticketId='.$hidden->id, $html);
+    }
+
     private function channelWith(string $session, string $phone): Channel
     {
         return Channel::factory()->connected()->create(['waha_session' => $session, 'phone' => $phone]);
