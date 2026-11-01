@@ -28,6 +28,13 @@ class ContactTickets extends Component
     #[On('echo-private:inbox,.ticket.updated')]
     public function refresh(): void {}
 
+    private function numberOf(Ticket $ticket): string
+    {
+        $channel = $ticket->channel;
+
+        return $channel === null ? '' : ($channel->phoneLabel() ?? $channel->name);
+    }
+
     public function render(): View
     {
         $user = auth()->user();
@@ -62,7 +69,7 @@ class ContactTickets extends Component
                 'status' => $other->status->label(),
                 'closedAt' => $other->closed_at,
                 'otherNumber' => $other->channel_id !== $current->channel_id,
-                'number' => $other->channel->phoneLabel() ?? $other->channel->name,
+                'number' => $this->numberOf($other),
                 'link' => in_array($other->id, $openable, true),
             ])->all(),
         ]);
