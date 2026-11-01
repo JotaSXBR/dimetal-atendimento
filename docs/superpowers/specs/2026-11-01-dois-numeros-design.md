@@ -15,7 +15,7 @@ O padrão do mercado é contato único e um ticket por número, sem vínculo ent
 1. **Número do canal.** O telefone vem do WAHA (`me.id` em `GET /api/sessions/{sessão}` e no webhook `session.status`) e fica gravado no canal. O cartão mostra `+55 16 99999-0001`.
 2. **Troca de número.** Se o WAHA informar um número diferente do gravado: atualiza, guarda o número anterior e a data, mostra aviso no cartão do canal e manda um alerta no sino para todos.
 3. **Número no Inbox.** Selo com nome do canal e número no item da lista e no cabeçalho do ticket, **só quando há 2 ou mais canais ativos**.
-4. **Faixa "Outros tickets deste contato".** No cabeçalho de qualquer ticket: os outros tickets do mesmo contato, abertos primeiro e depois os dos últimos 30 dias, em qualquer número. Link só para quem pode ver o ticket; quem não pode vê o aviso sem link e sem setor, atendente ou conteúdo. Ticket aberto do mesmo contato em outro número ganha destaque ("também tem ticket aberto no número X").
+4. **Faixa "Outros tickets deste contato".** No cabeçalho de qualquer ticket: os outros tickets do mesmo contato, abertos primeiro e depois os dos últimos 30 dias, em qualquer número. Link só para quem pode ver o ticket; quem não pode vê o aviso sem link e sem setor, atendente ou conteúdo. Ticket aberto do mesmo contato em outro número ganha destaque ("também tem ticket aberto no número X"). **Atualização (01/11/2026):** a faixa saiu da coluna do meio por repetir o painel da direita; essa informação agora mora em "Atendimentos anteriores", na ficha do contato, com as mesmas regras de acesso.
 5. **Voltar ao ticket anterior.** Ao selecionar outro ticket, o app lembra o anterior; um botão "Voltar ao ticket anterior (PROTOCOLO)" o reabre. Cobre o caso de abrir o encerrado de outro cliente.
 
 ## Não objetivos
@@ -81,5 +81,5 @@ Conferido: testes, Pint, Larastan, PHPMD e a tela no Chrome contra um WAHA falso
 
 Sem prova ainda (depende do beta): o formato real de `me.id` do GOWS (se vier `@lid`, o cartão continua em "número ainda não lido"); o Desativar com um aparelho real (desvincula o celular); canais desativados antes desta versão só foram parados, não desvinculados.
 
-Em aberto: a faixa e o painel "Atendimentos anteriores" mostram tickets parecidos (decidir depois se unem); a faixa consulta a cada `ticket.updated` de qualquer ticket.
+Resolvido: a faixa e o painel "Atendimentos anteriores" foram unidos no painel (a faixa e o componente `ContactTickets` foram removidos).
 
