@@ -84,6 +84,9 @@
                                     </span>
                                 </span>
                                 <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->preview }}</span>
+                                @if ($showChannel)
+                                    <span class="mt-0.5 block truncate font-mono text-[10px] text-ink-3">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
+                                @endif
                                 @if ($state = $item->slaState())
                                     <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium {{ $state === 'estourou' ? 'bg-danger/10 text-danger' : 'bg-warn/10 text-warn' }}">{{ $state === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span>
                                 @elseif ($item->waiting_since !== null && $item->sla_due_at !== null)
@@ -119,7 +122,7 @@
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
                     </p>
                     <p class="truncate font-mono text-[11px] text-ink-3">
-                        {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}
+                        {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}@if ($showChannel) · {{ $ticket->channel->phoneLabel() ?? 'sem número' }}@endif
                     </p>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">

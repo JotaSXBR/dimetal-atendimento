@@ -13,6 +13,7 @@ use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
 use App\Jobs\MarkTicketSeenJob;
 use App\Livewire\Inbox\Concerns\ComposesMessages;
+use App\Models\Channel;
 use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
@@ -295,7 +296,7 @@ class Inbox extends Component
         $list = Ticket::query()
             ->open()
             ->visibleTo($user)
-            ->with('contact')
+            ->with(['contact', 'channel'])
             ->addSelect(['preview' => Message::query()
                 ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->latest('id')->limit(1)])
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
@@ -311,6 +312,8 @@ class Inbox extends Component
                 'aguardando' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::AGUARDANDO->value)->count(),
                 'meus' => Ticket::query()->open()->where('assigned_user_id', $user->id)->count(),
             ],
+            // O selo do número só ajuda quando há mais de um número ativo.
+            'showChannel' => Channel::query()->where('active', true)->count() >= 2,
             'ticket' => $ticket,
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),
             'canClose' => $ticket !== null && $user->can('close', $ticket),
