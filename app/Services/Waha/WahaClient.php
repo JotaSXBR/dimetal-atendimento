@@ -81,6 +81,26 @@ class WahaClient
         ]));
     }
 
+    /** Remove a sessão no WAHA (idempotente). O canal e os tickets daqui não são tocados. */
+    public function deleteSession(): void
+    {
+        $this->acceptMissing($this->request()->delete('/api/sessions/'.$this->sessionName()));
+    }
+
+    /** O texto do QR, para o navegador desenhá-lo (com a logo). `null` se o WAHA não entregar. */
+    public function qrRaw(): ?string
+    {
+        $response = $this->request()->get($this->sessionPath('/auth/qr'), ['format' => 'raw']);
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $value = $response->json('value');
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
     public function qrDataUri(): ?string
     {
         $response = $this->request()

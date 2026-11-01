@@ -108,4 +108,29 @@ class WahaClientTest extends TestCase
         Http::assertSent(fn ($request) => $request->method() === 'POST' && $request['config']['webhooks'][0]['hmac']['key'] === WahaSettings::webhookSecret()
             && str_ends_with($request['config']['webhooks'][0]['url'], '/webhooks/waha'));
     }
+
+    public function test_delete_session_chama_delete_na_sessao_e_aceita_404(): void
+    {
+        Http::fake(['*/api/sessions/main' => Http::sequence()->push([], 200)->push(['message' => 'not found'], 404)->push(['message' => 'boom'], 500)]);
+        $client = new WahaClient(Channel::factory()->create(['waha_session' => 'main']));
+
+        $client->deleteSession();
+        $client->deleteSession();
+
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === 'http://waha.test:3000/api/sessions/main');
+
+        $this->expectException(WahaRequestException::class);
+        $client->deleteSession();
+    }
+
+    public function test_qr_raw_devolve_o_valor_e_nulo_quando_falha(): void
+    {
+        Http::fake(['*/api/main/auth/qr*' => Http::sequence()->push(['value' => 'abc,def'], 200)->push([], 422)->push(['outro' => 'x'], 200)]);
+        $client = new WahaClient(Channel::factory()->create(['waha_session' => 'main']));
+
+        $this->assertSame('abc,def', $client->qrRaw());
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/api/main/auth/qr') && $request['format'] === 'raw');
+        $this->assertNull($client->qrRaw());
+        $this->assertNull($client->qrRaw());
+    }
 }
