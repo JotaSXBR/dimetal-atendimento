@@ -33,6 +33,8 @@ class Navigation
             $item('Setores', 'configuracoes.setores', 'admin', $config, 'Atendimento', 'squares-2x2'),
             $item('Horário e SLA', 'configuracoes.horario', 'admin', $config, 'Atendimento', 'clock'),
             $item('Respostas rápidas', 'configuracoes.respostas', 'supervisor', $config, 'Atendimento', 'bolt'),
+            $item('Etiquetas', 'configuracoes.etiquetas', 'supervisor', $config, 'Atendimento', 'tag'),
+            $item('Automação', 'automacao', 'supervisor', $config, 'Atendimento', 'cpu-chip', 'automacao*'),
             $item('Usuários', 'configuracoes.usuarios', 'supervisor', $config, 'Equipe', 'users'),
             $item('Canais', 'configuracoes.canais', 'admin', $config, 'Conexões', 'chat-bubble-left-right'),
             $item('Google Contatos', 'configuracoes.google', 'admin', $config, 'Conexões', 'link', 'configuracoes.google*'),

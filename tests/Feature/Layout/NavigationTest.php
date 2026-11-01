@@ -47,7 +47,7 @@ class NavigationTest extends TestCase
         $this->assertSame([
             'Atendimento' => ['' => ['Fila', 'Contatos', 'Histórico']],
             'Acompanhamento' => ['' => ['Relatórios']],
-            'Configuração' => ['Atendimento' => ['Respostas rápidas'], 'Equipe' => ['Usuários']],
+            'Configuração' => ['Atendimento' => ['Respostas rápidas', 'Etiquetas', 'Automação'], 'Equipe' => ['Usuários']],
         ], $this->labels(UserRole::SUPERVISOR));
     }
 
@@ -57,7 +57,7 @@ class NavigationTest extends TestCase
             'Atendimento' => ['' => ['Fila', 'Contatos', 'Histórico']],
             'Acompanhamento' => ['' => ['Relatórios', 'Auditoria']],
             'Configuração' => [
-                'Atendimento' => ['Setores', 'Horário e SLA', 'Respostas rápidas'],
+                'Atendimento' => ['Setores', 'Horário e SLA', 'Respostas rápidas', 'Etiquetas', 'Automação'],
                 'Equipe' => ['Usuários'],
                 'Conexões' => ['Canais', 'Google Contatos'],
                 'Empresa' => ['Empresa e assinatura', 'Anexos e retenção'],
@@ -69,8 +69,9 @@ class NavigationTest extends TestCase
     {
         $names = fn (array $items): array => array_map(fn (NavItem $item): string => $item->label, $items);
 
-        $this->assertSame(['Setores', 'Horário e SLA', 'Respostas rápidas'], $names($this->nav()->siblings($this->user(UserRole::ADMIN), 'configuracoes.setores')));
-        $this->assertSame([], $this->nav()->siblings($this->user(UserRole::SUPERVISOR), 'configuracoes.respostas'));
+        $this->assertSame(['Setores', 'Horário e SLA', 'Respostas rápidas', 'Etiquetas', 'Automação'], $names($this->nav()->siblings($this->user(UserRole::ADMIN), 'configuracoes.setores')));
+        $this->assertSame(['Respostas rápidas', 'Etiquetas', 'Automação'], $names($this->nav()->siblings($this->user(UserRole::SUPERVISOR), 'configuracoes.respostas')));
+        $this->assertSame([], $this->nav()->siblings($this->user(UserRole::SUPERVISOR), 'configuracoes.usuarios'));
         $this->assertSame([], $this->nav()->siblings($this->user(UserRole::ADMIN), 'configuracoes.usuarios'));
         $this->assertSame([], $this->nav()->siblings($this->user(UserRole::ADMIN), 'rota.que.nao.existe'));
     }

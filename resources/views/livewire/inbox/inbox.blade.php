@@ -33,6 +33,17 @@
                     </button>
                 @endforeach
             </div>
+
+            @if ($tags->isNotEmpty())
+                <div class="mt-3">
+                    <flux:select wire:model.live="tagId" size="sm" aria-label="Filtrar por etiqueta">
+                        <flux:select.option value="">Todas as etiquetas</flux:select.option>
+                        @foreach ($tags as $tag)
+                            <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+            @endif
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
@@ -85,6 +96,13 @@
                                     </span>
                                 </span>
                                 <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->preview }}</span>
+                                @if ($item->tags->isNotEmpty())
+                                    <span class="mt-1 flex flex-wrap gap-1">
+                                        @foreach ($item->tags as $tag)
+                                            <span class="rounded-full px-2 py-0.5 text-[10px] font-medium text-white" style="background-color: {{ $tag->color }}">{{ $tag->name }}</span>
+                                        @endforeach
+                                    </span>
+                                @endif
                                 @if ($showChannel)
                                     <span class="mt-0.5 block truncate font-mono text-[10px] text-ink-3">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
                                 @endif

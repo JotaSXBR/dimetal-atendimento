@@ -39,6 +39,12 @@ class WorkflowVersion extends Model
         return ['graph' => 'array', 'published_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<User, $this> */
+    public function publisher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'published_by');
+    }
+
     /** @return BelongsTo<Workflow, $this> */
     public function workflow(): BelongsTo
     {

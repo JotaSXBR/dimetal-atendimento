@@ -4,6 +4,7 @@ use App\Http\Controllers\GoogleConnectionController;
 use App\Http\Controllers\MessageMediaController;
 use App\Http\Controllers\Webhooks\WahaWebhookController;
 use App\Livewire\Audit\Index as AuditIndex;
+use App\Livewire\Automation\Index as AutomationIndex;
 use App\Livewire\Contacts\Index as ContactsIndex;
 use App\Livewire\History\Index as HistoryIndex;
 use App\Livewire\Inbox\Inbox;
@@ -15,6 +16,7 @@ use App\Livewire\Settings\GoogleContacts;
 use App\Livewire\Settings\QuickReplies;
 use App\Livewire\Settings\Retention;
 use App\Livewire\Settings\Sectors;
+use App\Livewire\Settings\Tags;
 use App\Livewire\Settings\Users;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +35,8 @@ Route::middleware(['auth', 'can:supervisor'])->group(function () {
     Route::get('relatorios', ReportsIndex::class)->name('relatorios');
     Route::get('configuracoes/usuarios', Users::class)->name('configuracoes.usuarios');
     Route::get('configuracoes/respostas-rapidas', QuickReplies::class)->name('configuracoes.respostas');
+    Route::get('configuracoes/etiquetas', Tags::class)->name('configuracoes.etiquetas');
+    Route::get('automacao', AutomationIndex::class)->name('automacao');
 });
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
