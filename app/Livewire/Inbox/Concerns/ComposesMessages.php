@@ -165,6 +165,9 @@ trait ComposesMessages
         foreach ($failures as $failure) {
             $this->addError('attachments', $failure);
         }
+
+        // O transcript é um componente à parte: só ele sabe que há mensagem nova na linha.
+        $this->dispatch('transcript-refresh');
     }
 
     /**
@@ -238,6 +241,7 @@ trait ComposesMessages
         }
 
         $file->delete();
+        $this->dispatch('transcript-refresh');
     }
 
     private function storeVoice(Ticket $ticket, TemporaryUploadedFile $file): ?string

@@ -197,11 +197,17 @@ class Inbox extends Component
 
         $message = Message::query()->where('ticket_id', $ticket->id)->findOrFail($messageId);
 
-        $this->notice = match ((new ResendTicketMessage)($message, $this->user(), $confirmed)) {
+        $result = (new ResendTicketMessage)($message, $this->user(), $confirmed);
+
+        $this->notice = match ($result) {
             ResendTicketMessage::CONFIRM => 'Confirme antes de reenviar: a mensagem pode já ter sido enviada.',
             ResendTicketMessage::NONE => 'Esta mensagem não pode ser reenviada.',
             default => null,
         };
+
+        if ($result === 'sent') {
+            $this->dispatch('transcript-refresh');
+        }
     }
 
     /**
@@ -209,7 +215,6 @@ class Inbox extends Component
      */
     #[On('echo-private:inbox,.ticket.updated')]
     #[On('echo-private:inbox,.message.created')]
-    #[On('echo-private:inbox,.message.status')]
     public function refresh(): void {}
 
     private function user(): User
@@ -301,7 +306,6 @@ class Inbox extends Component
                 'meus' => Ticket::query()->open()->where('assigned_user_id', $user->id)->count(),
             ],
             'ticket' => $ticket,
-            'messages' => $ticket?->messages()->latest('id')->limit(200)->get()->reverse(),
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),
             'canClose' => $ticket !== null && $user->can('close', $ticket),
             'canReply' => $ticket !== null && $user->can('reply', $ticket),

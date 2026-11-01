@@ -1,5 +1,5 @@
 <x-layouts::app.sidebar :title="$title ?? null">
-    <flux:main class="flex h-dvh flex-col !p-0">
+    <flux:main role="main" class="flex h-dvh flex-col !p-0">
         <x-alerts-local />
         <livewire:alerts.banner />
         {{ $slot }}
