@@ -89,6 +89,9 @@ jobs:
       - name: Setup Application
         run: composer setup
 
+      - name: Run JS tests
+        run: node --test tests/js
+
       - name: Run tests with coverage
         run: composer ci:tests
 
