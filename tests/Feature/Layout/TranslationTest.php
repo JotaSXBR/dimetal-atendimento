@@ -67,4 +67,32 @@ class TranslationTest extends TestCase
             }
         }
     }
+
+    /**
+     * @param  array<string, mixed>  $lines
+     * @return list<string>
+     */
+    private function flatKeys(array $lines, string $prefix = ''): array
+    {
+        $keys = [];
+
+        foreach ($lines as $key => $value) {
+            if ($prefix === '' && in_array($key, ['attributes', 'custom'], true)) {
+                continue;
+            }
+
+            $keys = [...$keys, ...(is_array($value) ? $this->flatKeys($value, $prefix.$key.'.') : [$prefix.$key])];
+        }
+
+        return $keys;
+    }
+
+    public function test_validation_cobre_todas_as_chaves_do_framework(): void
+    {
+        $framework = $this->flatKeys(require base_path('vendor/laravel/framework/src/Illuminate/Translation/lang/en/validation.php'));
+        $ptBr = $this->flatKeys(require lang_path('pt_BR/validation.php'));
+
+        $this->assertNotEmpty($framework);
+        $this->assertSame([], array_values(array_diff($framework, $ptBr)));
+    }
 }
