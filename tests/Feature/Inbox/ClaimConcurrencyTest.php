@@ -31,7 +31,12 @@ class ClaimConcurrencyTest extends TestCase
 
         $startAt = microtime(true) + 3;
         $workers = array_map(function (User $user) use ($ticket, $startAt): Process {
-            $process = new Process([PHP_BINARY, base_path('tests/Support/claim_worker.php'), (string) $ticket->id, (string) $user->id, (string) $startAt]);
+            // Em teste paralelo cada processo tem o próprio banco (só na configuração): o filho precisa receber o nome dele.
+            $process = new Process(
+                [PHP_BINARY, base_path('tests/Support/claim_worker.php'), (string) $ticket->id, (string) $user->id, (string) $startAt],
+                null,
+                ['DB_DATABASE' => (string) config('database.connections.pgsql.database')],
+            );
             $process->start();
 
             return $process;
