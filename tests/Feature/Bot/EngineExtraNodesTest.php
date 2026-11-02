@@ -256,6 +256,49 @@ class EngineExtraNodesTest extends TestCase
         $this->assertSame('5516997524950@c.us', $this->contact->fresh()?->wa_id);
     }
 
+    public function test_menu_de_opcoes_escritas_a_mao_leva_cada_numero_ao_seu_caminho(): void
+    {
+        $version = WorkflowVersion::factory()->create(['graph' => [
+            'nodes' => [
+                ['id' => 'i', 'type' => 'inicio', 'data' => []],
+                ['id' => 'm', 'type' => 'menu', 'data' => ['texto' => 'Como podemos ajudar?', 'opcoes' => ['Orçamento', 'Segunda via']]],
+                ['id' => 'a', 'type' => 'mensagem', 'data' => ['texto' => 'CAMINHO A']],
+                ['id' => 'b', 'type' => 'mensagem', 'data' => ['texto' => 'CAMINHO B']],
+                ['id' => 't', 'type' => 'transferir', 'data' => []],
+            ],
+            'edges' => [
+                ['from' => 'i', 'port' => 'out', 'to' => 'm'], ['from' => 'm', 'port' => 'opt:1', 'to' => 'a'], ['from' => 'm', 'port' => 'opt:2', 'to' => 'b'],
+                ['from' => 'a', 'port' => 'out', 'to' => 't'], ['from' => 'b', 'port' => 'out', 'to' => 't'],
+            ],
+        ]]);
+
+        $session = app(BotEngine::class)->start($this->ticket, $version);
+        $this->assertSame("Como podemos ajudar?\n\n1 - Orçamento\n2 - Segunda via\n\nPara falar com um atendente digite #sair", $this->botTexts()[0]);
+
+        $this->answer($session, '2');
+
+        $this->assertSame('CAMINHO B', $this->botTexts()[1]);
+        $this->assertSame(TicketStatus::AGUARDANDO, $this->ticket->fresh()?->status);
+    }
+
+    public function test_menu_com_numero_fora_da_lista_e_invalido(): void
+    {
+        $version = WorkflowVersion::factory()->create(['graph' => [
+            'nodes' => [
+                ['id' => 'i', 'type' => 'inicio', 'data' => []],
+                ['id' => 'm', 'type' => 'menu', 'data' => ['texto' => 'Escolha', 'opcoes' => ['Só uma'], 'invalido' => 'Número inexistente']],
+                ['id' => 't', 'type' => 'transferir', 'data' => []],
+            ],
+            'edges' => [['from' => 'i', 'port' => 'out', 'to' => 'm'], ['from' => 'm', 'port' => 'opt:1', 'to' => 't']],
+        ]]);
+        $session = app(BotEngine::class)->start($this->ticket, $version);
+
+        $this->answer($session, '2');
+
+        $this->assertSame(TicketStatus::PENDENTE, $this->ticket->fresh()?->status);
+        $this->assertSame('Número inexistente', $this->botTexts()[1]);
+    }
+
     public function test_etiquetar_aplica_uma_vez_so(): void
     {
         $tag = Tag::factory()->create(['name' => 'Orçamento']);
