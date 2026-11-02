@@ -33,10 +33,11 @@ class TicketProtocolConcurrencyTest extends TestCase
 
         $startAt = microtime(true) + 3;
         $workers = $contacts->chunk(self::TICKETS_PER_PROCESS)->map(function ($ids) use ($channel, $startAt): Process {
+            // Em teste paralelo cada processo tem o próprio banco (só na configuração): o filho precisa receber o nome dele.
             $process = new Process([
                 PHP_BINARY, base_path('tests/Support/create_tickets_worker.php'),
                 (string) $channel->id, $ids->implode(','), (string) $startAt,
-            ]);
+            ], null, ['DB_DATABASE' => (string) config('database.connections.pgsql.database')]);
             $process->start();
 
             return $process;

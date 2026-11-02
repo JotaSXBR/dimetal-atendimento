@@ -11,6 +11,7 @@ Artisan::command('inspire', function () {
 // `withoutOverlapping()` sem argumento segura o bloqueio por 24 h se o processo morrer no meio (um deploy mata o container):
 // a tarefa pararia o dia inteiro. Com 10 minutos o bloqueio de uma rodada morta expira sozinho.
 Schedule::command('app:close-inactive-tickets')->everyTenMinutes()->withoutOverlapping(10);
+Schedule::command('app:expire-bot-sessions')->everyMinute()->withoutOverlapping(10);
 Schedule::command('app:drain-outbox')->everyMinute()->withoutOverlapping(10);
 Schedule::command('app:sync-google-contacts')->everyTenMinutes()->withoutOverlapping(10);
 Schedule::command('app:purge-media')->dailyAt('03:30')->withoutOverlapping(10);

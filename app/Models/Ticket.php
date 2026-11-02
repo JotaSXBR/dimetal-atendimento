@@ -14,7 +14,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -121,6 +123,7 @@ class Ticket extends Model
 
         $query->where(fn (Builder $q) => $q
             ->where('assigned_user_id', $user->id)
+            ->orWhere('status', TicketStatus::PENDENTE->value)
             ->orWhere(fn (Builder $queue) => $queue
                 ->where('status', TicketStatus::AGUARDANDO->value)
                 ->where(fn (Builder $sector) => $sector->whereNull('sector_id')->orWhereIn('sector_id', $mySectors)))
@@ -245,6 +248,18 @@ class Ticket extends Model
     private function databaseTime(CarbonInterface $at): CarbonImmutable
     {
         return CarbonImmutable::instance($at)->setTimezone(config()->string('app.timezone'));
+    }
+
+    /** @return HasOne<BotSession, $this> */
+    public function botSession(): HasOne
+    {
+        return $this->hasOne(BotSession::class);
+    }
+
+    /** @return BelongsToMany<Tag, $this> */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'ticket_tag');
     }
 
     /**

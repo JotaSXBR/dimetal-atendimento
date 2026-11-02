@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Services\Inbox\Presence;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -20,7 +21,8 @@ class MarkTicketSeenJob implements ShouldQueue
     {
         $ticket = Ticket::query()->find($this->ticketId);
 
-        if ($ticket !== null) {
+        // Em triagem do bot ninguém atendeu: quem abre o ticket pendente só está lendo, e o "visto" enganaria o cliente.
+        if ($ticket !== null && $ticket->status !== TicketStatus::PENDENTE) {
             $presence->seen($ticket);
         }
     }

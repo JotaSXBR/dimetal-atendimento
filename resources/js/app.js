@@ -10,3 +10,4 @@ import './attach-tray';
 import './voice-recorder';
 import './alerts';
 import './channel-qr';
+import './flow-editor';

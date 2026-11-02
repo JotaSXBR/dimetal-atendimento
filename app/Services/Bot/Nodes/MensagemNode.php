@@ -1,0 +1,17 @@
+<?php
+
+namespace App\Services\Bot\Nodes;
+
+use App\Services\Bot\BotRun;
+use App\Services\Bot\Flow\NodeData;
+use App\Services\Bot\Step;
+
+final class MensagemNode extends Node
+{
+    public function enter(BotRun $run, NodeData $data): Step
+    {
+        $run->say($data->string('texto'));
+
+        return Step::next();
+    }
+}

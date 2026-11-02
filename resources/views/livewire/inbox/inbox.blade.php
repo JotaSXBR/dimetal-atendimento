@@ -1,11 +1,12 @@
 @php
     $tz = config('app.display_timezone');
     $statusColor = fn (\App\Enums\TicketStatus $s) => match ($s) {
+        \App\Enums\TicketStatus::PENDENTE => 'sky',
         \App\Enums\TicketStatus::AGUARDANDO => 'amber',
         \App\Enums\TicketStatus::EM_ATENDIMENTO => 'green',
         default => 'zinc',
     };
-    $tabs = ['todos' => 'Todos', 'aguardando' => 'Aguardando', 'meus' => 'Meus', 'encerrados' => 'Encerrados'];
+    $tabs = ['todos' => 'Todos', 'pendentes' => 'Pendentes', 'aguardando' => 'Aguardando', 'meus' => 'Meus', 'encerrados' => 'Encerrados'];
 @endphp
 
 <div
@@ -32,6 +33,17 @@
                     </button>
                 @endforeach
             </div>
+
+            @if ($tags->isNotEmpty())
+                <div class="mt-3">
+                    <flux:select wire:model.live="tagId" size="sm" aria-label="Filtrar por etiqueta">
+                        <flux:select.option value="">Todas as etiquetas</flux:select.option>
+                        @foreach ($tags as $tag)
+                            <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+            @endif
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
@@ -61,7 +73,7 @@
 
                 <p class="p-4 text-center text-xs"><a href="{{ route('historico') }}" wire:navigate class="text-accent underline">Busca completa</a></p>
             @else
-            @foreach ([['Aguardando', $waiting, 'text-warn'], ['Em atendimento', $active, 'text-accent']] as [$heading, $group, $tone])
+            @foreach ([['Pendente', $pending, 'text-ink-3'], ['Aguardando', $waiting, 'text-warn'], ['Em atendimento', $active, 'text-accent']] as [$heading, $group, $tone])
                 @if ($group->isNotEmpty())
                     <p class="px-4 pt-4 pb-1 font-mono text-[10px] font-semibold tracking-wider uppercase {{ $tone }}">
                         {{ $heading }} · {{ $group->count() }}
@@ -84,6 +96,13 @@
                                     </span>
                                 </span>
                                 <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->preview }}</span>
+                                @if ($item->tags->isNotEmpty())
+                                    <span class="mt-1 flex flex-wrap gap-1">
+                                        @foreach ($item->tags as $tag)
+                                            <span class="rounded-full px-2 py-0.5 text-[10px] font-medium text-white" style="background-color: {{ $tag->color }}">{{ $tag->name }}</span>
+                                        @endforeach
+                                    </span>
+                                @endif
                                 @if ($showChannel)
                                     <span class="mt-0.5 block truncate font-mono text-[10px] text-ink-3">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
                                 @endif
@@ -98,7 +117,7 @@
                 @endif
             @endforeach
 
-            @if ($waiting->isEmpty() && $active->isEmpty())
+            @if ($pending->isEmpty() && $waiting->isEmpty() && $active->isEmpty())
                 <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket por aqui.</p>
             @endif
             @endif
@@ -228,6 +247,10 @@
                 </form>
             @endif
 
+            @if ($ticket->status === \App\Enums\TicketStatus::PENDENTE)
+                <div class="border-b border-line bg-surface px-4 py-2 text-xs text-ink-2" role="status">Em triagem automática: o bot ainda conduz esta conversa. Você pode ler e transferir.</div>
+            @endif
+
             @if ($previous)
                 <div class="border-b border-line px-4 py-1.5 text-xs">
                     <button type="button" wire:click="goBack" class="font-semibold text-accent hover:underline">← Voltar ao ticket anterior ({{ $previous->protocol ?? '#'.$previous->id }})</button>
@@ -344,6 +367,8 @@
                     <p class="text-center text-sm text-ink-3">Ticket encerrado. Somente leitura.</p>
                 @elseif (! $ticket->channel->active)
                     <p class="text-center text-sm text-ink-3" role="status">Canal desativado. Reative para responder.</p>
+                @elseif ($ticket->status === \App\Enums\TicketStatus::PENDENTE)
+                    <p class="text-center text-sm text-ink-3" role="status">Em triagem automática. Transfira para um setor para um atendente responder.</p>
                 @elseif ($ticket->assigned_user_id === null)
                     <p class="text-center text-sm text-ink-3">Assuma o ticket para responder.</p>
                 @else

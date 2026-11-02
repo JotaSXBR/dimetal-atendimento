@@ -16,6 +16,7 @@ use App\Livewire\Inbox\Concerns\ComposesMessages;
 use App\Models\Channel;
 use App\Models\Message;
 use App\Models\Sector;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Inbox\ResendTicketMessage;
@@ -57,6 +58,10 @@ class Inbox extends Component
 
     #[Url]
     public string $tab = 'todos';
+
+    /** Filtro da lista por etiqueta. */
+    #[Url]
+    public ?int $tagId = null;
 
     public ?string $notice = null;
 
@@ -334,19 +339,24 @@ class Inbox extends Component
         $list = Ticket::query()
             ->open()
             ->visibleTo($user)
-            ->with(['contact', 'channel'])
+            ->with(['contact', 'channel', 'tags'])
             ->addSelect(['preview' => Message::query()
                 ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->latest('id')->limit(1)])
+            ->when($this->tab === 'pendentes', fn (Builder $q) => $q->where('status', TicketStatus::PENDENTE->value))
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
             ->when($this->tab === 'meus', fn (Builder $q) => $q->where('assigned_user_id', $user->id))
+            ->when($this->tagId !== null, fn (Builder $q) => $q->whereHas('tags', fn (Builder $t) => $t->whereKey($this->tagId)))
             ->orderBy('last_inbound_at')
             ->get();
 
         return view('livewire.inbox.inbox', [
+            'tags' => Tag::query()->orderBy('name')->get(),
+            'pending' => $list->where('status', TicketStatus::PENDENTE),
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),
             'closed' => $this->recentlyClosed($user),
             'tabCounts' => [
+                'pendentes' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::PENDENTE->value)->count(),
                 'aguardando' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::AGUARDANDO->value)->count(),
                 'meus' => Ticket::query()->open()->where('assigned_user_id', $user->id)->count(),
             ],

@@ -6,6 +6,7 @@ use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
 use App\Jobs\SendTicketMessageJob;
+use App\Models\Channel;
 use App\Models\Message;
 use App\Models\Setting;
 use App\Models\Ticket;
@@ -62,6 +63,8 @@ class AfterHoursReply
         return $incoming->direction === MessageDirection::IN
             && $incoming->origin === MessageOrigin::CONTATO
             && (bool) Setting::get('after_hours_enabled', true)
+            // Canal com workflow: o fluxo decide o que dizer fora do horário (bloco Condição); duas respostas seriam ruído.
+            && Channel::query()->whereKey($incoming->channel_id)->whereNull('workflow_id')->exists()
             && abs(now()->diffInSeconds($incoming->sent_at)) <= self::FRESH_SECONDS
             && ! $this->hours->isOpen($incoming->sent_at);
     }

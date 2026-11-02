@@ -20,7 +20,7 @@ class ClaimTicket
             $won = Ticket::query()
                 ->whereKey($ticket->id)
                 ->whereNull('assigned_user_id')
-                ->where('status', '<>', TicketStatus::ENCERRADO->value)
+                ->whereNotIn('status', [TicketStatus::ENCERRADO->value, TicketStatus::PENDENTE->value])
                 ->update([
                     'assigned_user_id' => $user->id,
                     'status' => TicketStatus::EM_ATENDIMENTO->value,
