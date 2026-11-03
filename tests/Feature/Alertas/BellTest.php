@@ -52,6 +52,17 @@ class BellTest extends TestCase
             ->assertSee('Comercial: 12 mensagens em 4 conversas');
     }
 
+    public function test_importacao_limitada_avisa_no_sino(): void
+    {
+        $eu = User::factory()->create();
+        $canal = Channel::factory()->create(['name' => 'Comercial']);
+        $eu->notify(new MessagesRecovered($canal, 50000, 900, 'imported', 2, true));
+
+        $this->actingAs($eu);
+
+        Livewire::test(Bell::class)->assertSee('limitada a 50 mil mensagens');
+    }
+
     public function test_marcar_como_lida_so_vale_para_a_propria(): void
     {
         $eu = User::factory()->create();

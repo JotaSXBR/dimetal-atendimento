@@ -114,6 +114,8 @@ class Bell extends Component
         $open = is_int($data['open'] ?? null) ? $data['open'] : 0;
         $detail = sprintf('%s: %d %s em %d %s', $channel, $messages, $messages === 1 ? 'mensagem' : 'mensagens', $conversations, $conversations === 1 ? 'conversa' : 'conversas');
 
-        return $open > 0 ? sprintf('%s · %d aguardando resposta', $detail, $open) : $detail;
+        $detail = $open > 0 ? sprintf('%s · %d aguardando resposta', $detail, $open) : $detail;
+
+        return ($data['limited'] ?? 0) === 1 ? $detail.' · limitada a 50 mil mensagens' : $detail;
     }
 }

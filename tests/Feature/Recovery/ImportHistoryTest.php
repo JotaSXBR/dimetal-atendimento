@@ -23,6 +23,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -211,6 +212,36 @@ class ImportHistoryTest extends TestCase
         $this->assertSame(4, Message::query()->count());
         $this->assertSame(4, $first->messages + $second->messages);
         $this->assertSame(0, $service($this->channel)->messages);
+    }
+
+    public function test_passa_do_teto_de_mensagens_para_de_ler_e_avisa_no_log(): void
+    {
+        Log::spy();
+        $service = new class(app(RecoverMessages::class)) extends ImportHistory
+        {
+            protected const MAX_MESSAGES = 3;
+        };
+        Http::fake(['*/api/main/chats/all/messages*' => Http::response([
+            $this->in(self::A, 'A1', now()->subDays(2)), $this->out(self::A, 'A2', now()->subDays(2)->addMinute()),
+            $this->in(self::C, 'C1', now()->subDays(3)), $this->out(self::C, 'C2', now()->subDays(3)->addMinute()),
+            $this->in(self::B, 'B1', now()->subDays(4)),
+        ], 200)]);
+
+        $result = $service($this->channel);
+
+        $this->assertTrue($service->truncated);
+        $this->assertLessThan(5, $result->messages);
+        Log::shouldHaveReceived('warning')->withArgs(fn (string $message): bool => str_contains($message, 'teto'))->once();
+    }
+
+    public function test_abaixo_do_teto_nao_marca_como_limitada(): void
+    {
+        $service = app(ImportHistory::class);
+        Http::fake(['*/api/main/chats/all/messages*' => Http::response([$this->in(self::A, 'A1', now()->subDays(2)), $this->out(self::A, 'A2', now()->subDays(2)->addMinute())], 200)]);
+
+        $service($this->channel);
+
+        $this->assertFalse($service->truncated);
     }
 
     public function test_a_janela_e_limitada_a_30_dias(): void

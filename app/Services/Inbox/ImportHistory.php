@@ -7,6 +7,7 @@ use App\Models\WahaEvent;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaMessages;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Importação inicial: traz os últimos `backfill_days` dias (no máximo 30) como histórico. Cada chat vira um ticket
@@ -19,11 +20,17 @@ class ImportHistory
 
     private const OPEN_WINDOW_HOURS = 48;
 
+    /** A janela inteira fica na memória do worker para agrupar por chat: passar disso para a leitura (com aviso). */
+    protected const MAX_MESSAGES = 50000;
+
     /** Quantas conversas entraram abertas na última rodada (legível depois da chamada). */
     public int $open = 0;
 
     /** `false` quando a rodada parou no prazo: chamar de novo continua de onde parou (o que já entrou é pulado). */
     public bool $complete = false;
+
+    /** `true` quando a leitura parou no teto de mensagens (legível depois da chamada). */
+    public bool $truncated = false;
 
     public function __construct(private readonly RecoverMessages $recover) {}
 
@@ -37,6 +44,7 @@ class ImportHistory
         $openTickets = [];
         $this->open = 0;
         $this->complete = false;
+        $this->truncated = false;
 
         foreach ($this->chats($channel, $from, $to) as $items) {
             if ($deadline !== null && CarbonImmutable::now()->gte($deadline)) {
@@ -82,8 +90,16 @@ class ImportHistory
     private function chats(Channel $channel, CarbonImmutable $from, CarbonImmutable $to): array
     {
         $chats = [];
+        $read = 0;
 
         foreach ((new WahaMessages(new WahaClient($channel)))->between($from, $to) as $data) {
+            if (++$read > static::MAX_MESSAGES) {
+                $this->truncated = true;
+                Log::warning('Importação limitada ao teto de mensagens', ['canal' => $channel->id, 'teto' => static::MAX_MESSAGES]);
+
+                break;
+            }
+
             $incoming = IncomingMessage::fromEvent(new WahaEvent(['waha_event_id' => 'import-scan', 'payload' => ['payload' => $data], 'received_at' => $to]));
 
             if ($incoming !== null) {
