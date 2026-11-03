@@ -68,8 +68,8 @@ final readonly class IncomingMessage
             return null;
         }
 
-        // Reação não é mensagem: `message.reaction` a grava ligada ao destino (`ApplyMessageChange`); aqui ela viraria uma bolha solta.
-        if (($data['type'] ?? null) === 'reaction' || is_array($data['reaction'] ?? null)) {
+        // Reação, edição e apagamento têm tratador próprio (`ApplyMessageChange`); como mensagem viram uma bolha solta ou duplicada.
+        if (($data['type'] ?? null) === 'reaction' || array_filter(array_intersect_key($data, array_flip(['reaction', 'editedMessageId', 'revokedMessageId']))) !== []) {
             return null;
         }
 
@@ -172,9 +172,10 @@ final readonly class IncomingMessage
         return is_string($value) ? $value : null;
     }
 
-    private static function isIgnoredChat(string $chat): bool
+    /** Grupo, status e newsletter nunca viram ticket. Aceita também um id serializado (`false_{chat}_{id}`). */
+    public static function isIgnoredChat(string $chat): bool
     {
-        return str_ends_with($chat, '@g.us') || $chat === 'status@broadcast' || str_ends_with($chat, '@newsletter');
+        return str_contains($chat, '@g.us') || str_contains($chat, 'status@broadcast') || str_contains($chat, '@newsletter');
     }
 
     /**

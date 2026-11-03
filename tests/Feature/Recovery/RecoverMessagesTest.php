@@ -105,6 +105,23 @@ class RecoverMessagesTest extends TestCase
         $this->assertSame(2, Message::query()->count());
     }
 
+    public function test_mensagem_ja_recebida_pelo_webhook_nao_gera_evento_nem_conta(): void
+    {
+        $first = $this->window()[0];
+        $live = WahaEvent::create([
+            'waha_event_id' => 'evt_live_1', 'channel_id' => $this->channel->id, 'event' => 'message', 'session' => 'main',
+            'payload' => ['event' => 'message', 'session' => 'main', 'payload' => $first], 'received_at' => now(),
+        ]);
+        app(IngestMessage::class)($live);
+        $events = WahaEvent::query()->count();
+        $this->wahaReturns([$first]);
+
+        $result = $this->recover();
+
+        $this->assertSame(0, $result->messages);
+        $this->assertSame($events, WahaEvent::query()->count());
+    }
+
     public function test_janela_maior_que_7_dias_e_cortada(): void
     {
         $this->wahaReturns([]);

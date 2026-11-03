@@ -52,6 +52,11 @@ class RecoverMessages
             return null;
         }
 
+        // A varredura diária revê o dia inteiro: o que o webhook já gravou não ganha uma segunda cópia do envelope.
+        if (Message::query()->where('channel_id', $channel->id)->where('wa_message_id', Message::waKey($data['id']))->exists()) {
+            return null;
+        }
+
         try {
             $event = WahaEvent::query()->firstOrCreate(
                 ['waha_event_id' => $mode->value.':'.$channel->id.':'.Message::waKey($data['id'])],

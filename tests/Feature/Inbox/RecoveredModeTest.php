@@ -5,7 +5,9 @@ namespace Tests\Feature\Inbox;
 use App\Enums\DeliveryStatus;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
+use App\Events\MessageCreated;
 use App\Events\TicketQueued;
+use App\Events\TicketUpdated;
 use App\Jobs\AdvanceBotSessionJob;
 use App\Jobs\ResolveMessageMediaJob;
 use App\Models\Channel;
@@ -84,6 +86,36 @@ class RecoveredModeTest extends TestCase
         $this->ingest('AAA2', 7200);
 
         Queue::assertNotPushed(AdvanceBotSessionJob::class);
+    }
+
+    public function test_resposta_ao_vivo_atrasada_ainda_avanca_o_bot(): void
+    {
+        $this->withWorkflow();
+        $this->ingest('LATE1', 0, [], 'live');
+        Queue::fake();
+
+        $this->ingest('LATE2', 600, [], 'live');
+
+        Queue::assertPushed(AdvanceBotSessionJob::class);
+    }
+
+    public function test_recuperada_nao_dispara_message_created_mas_atualiza_o_ticket(): void
+    {
+        Event::fake([MessageCreated::class, TicketUpdated::class]);
+
+        $this->ingest('MC1', 7200);
+
+        Event::assertNotDispatched(MessageCreated::class);
+        Event::assertDispatched(TicketUpdated::class);
+    }
+
+    public function test_ao_vivo_dispara_message_created(): void
+    {
+        Event::fake([MessageCreated::class]);
+
+        $this->ingest('MC2', 0, [], 'live');
+
+        Event::assertDispatched(MessageCreated::class);
     }
 
     public function test_recuperada_sem_ticket_abre_aguardando_sem_som_e_sem_resposta_automatica(): void

@@ -159,6 +159,54 @@ class MessageChangesTest extends TestCase
         $this->assertSame(-1, $job->released);
     }
 
+    public function test_evento_de_grupo_nao_pede_nova_tentativa(): void
+    {
+        $group = '120363000000@g.us';
+        $events = [
+            $this->event('message.reaction', ['from' => $group, 'fromMe' => false, 'reaction' => ['text' => '👍', 'messageId' => 'false_'.$group.'_NOPE']]),
+            $this->event('message.edited', ['from' => $group, 'editedMessageId' => 'NOPE', 'body' => 'x']),
+            $this->event('message.revoked', ['after' => ['from' => $group], 'revokedMessageId' => 'NOPE']),
+        ];
+
+        foreach ($events as $event) {
+            $job = new class($event->id) extends HandleWahaEvent
+            {
+                public int $released = -1;
+
+                public function attempts(): int
+                {
+                    return 1;
+                }
+
+                public function release($delay = 0): void
+                {
+                    $this->released = (int) $delay;
+                }
+            };
+
+            $job->handle();
+
+            $this->assertSame(-1, $job->released, $event->event.' de grupo não deve voltar para a fila');
+        }
+    }
+
+    public function test_edicao_e_apagamento_em_message_any_nao_viram_mensagem(): void
+    {
+        $before = Message::query()->count();
+        $edited = $this->event('message.any', [
+            'id' => 'false_'.self::PEER.'_EDANY', 'from' => self::PEER, 'fromMe' => false, 'body' => 'Texto novo', 'editedMessageId' => 'TARGET1',
+            'timestamp' => now()->timestamp, 'hasMedia' => false,
+        ]);
+        $revoked = $this->event('message.any', [
+            'id' => 'false_'.self::PEER.'_RVANY', 'from' => self::PEER, 'fromMe' => false, 'body' => '', 'revokedMessageId' => 'TARGET1',
+            'timestamp' => now()->timestamp, 'hasMedia' => false,
+        ]);
+
+        $this->assertNull(app(IngestMessage::class)($edited));
+        $this->assertNull(app(IngestMessage::class)($revoked));
+        $this->assertSame($before, Message::query()->count());
+    }
+
     public function test_job_roteia_os_tres_eventos(): void
     {
         (new HandleWahaEvent($this->reaction('👍')->id))->handle();

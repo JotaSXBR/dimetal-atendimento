@@ -44,10 +44,6 @@ class BotEntry
     /** Chamado depois do commit da mensagem do cliente. */
     public function handle(Message $incoming): void
     {
-        if (! $this->isFresh($incoming->sent_at)) {
-            return;
-        }
-
         $status = Ticket::query()->whereKey($incoming->ticket_id)->value('status');
 
         if ($status === TicketStatus::PENDENTE->value || $status === TicketStatus::PENDENTE) {

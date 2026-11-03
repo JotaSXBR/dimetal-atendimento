@@ -19,6 +19,11 @@ class ApplyMessageChange
     public function reaction(WahaEvent $event): bool
     {
         $data = $this->payload($event);
+
+        if ($this->inIgnoredChat($data)) {
+            return true;
+        }
+
         $messageId = data_get($data, 'reaction.messageId');
         $text = data_get($data, 'reaction.text');
 
@@ -53,6 +58,11 @@ class ApplyMessageChange
     public function edited(WahaEvent $event): bool
     {
         $data = $this->payload($event);
+
+        if ($this->inIgnoredChat($data)) {
+            return true;
+        }
+
         $messageId = $data['editedMessageId'] ?? null;
         $body = $data['body'] ?? null;
 
@@ -74,7 +84,13 @@ class ApplyMessageChange
 
     public function revoked(WahaEvent $event): bool
     {
-        $messageId = $this->payload($event)['revokedMessageId'] ?? null;
+        $data = $this->payload($event);
+
+        if ($this->inIgnoredChat($data)) {
+            return true;
+        }
+
+        $messageId = $data['revokedMessageId'] ?? null;
 
         if (! is_string($messageId)) {
             return true;
@@ -91,6 +107,24 @@ class ApplyMessageChange
         MessageStatusChanged::dispatch($target);
 
         return true;
+    }
+
+    /**
+     * Grupos não são ingeridos, então o destino nunca existiria e o evento ficaria voltando para a fila à toa.
+     *
+     * @param  array<mixed>  $data
+     */
+    private function inIgnoredChat(array $data): bool
+    {
+        foreach (['from', 'to', 'after.from', 'after.to', 'reaction.messageId'] as $path) {
+            $value = data_get($data, $path);
+
+            if (is_string($value) && IncomingMessage::isIgnoredChat($value)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return array<mixed> */

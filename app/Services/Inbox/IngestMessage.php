@@ -139,7 +139,7 @@ class IngestMessage
         $message = Message::create($this->attributes($ticket, $contact, $incoming));
 
         if (! $imported) {
-            $this->announce($message, $ticket, $incoming);
+            $this->announce($message, $ticket, $incoming, $mode);
         }
 
         if ($message->hasMedia()) {
@@ -176,7 +176,7 @@ class IngestMessage
     }
 
     /** Linha do tempo, tempo real e, para mensagem do cliente, as respostas automáticas (só depois do commit). */
-    private function announce(Message $message, Ticket $ticket, IncomingMessage $incoming): void
+    private function announce(Message $message, Ticket $ticket, IncomingMessage $incoming, IngestMode $mode): void
     {
         TicketEvent::create([
             'ticket_id' => $ticket->id,
@@ -184,10 +184,15 @@ class IngestMessage
             'payload' => ['message_id' => $message->id],
         ]);
 
-        MessageCreated::dispatch($message);
+        // Recuperada não toca o som de "mensagem nova" nem manda "visto" ao cliente por mensagem antiga: só a lista e o ticket se atualizam.
+        if ($mode === IngestMode::LIVE) {
+            MessageCreated::dispatch($message);
+        }
+
         TicketUpdated::dispatch($ticket);
 
-        if (! $incoming->fromMe) {
+        // Ao vivo, o bot e a resposta fora do horário valem mesmo que o job tenha atrasado; recuperada só se o cliente ainda espera.
+        if (! $incoming->fromMe && ($mode === IngestMode::LIVE || app(BotEntry::class)->isFresh($incoming->sentAt))) {
             // Depois do commit: só uma mensagem realmente gravada pode gerar resposta (a que perdeu a corrida é descartada).
             DB::afterCommit(function () use ($message): void {
                 app(AfterHoursReply::class)($message);
