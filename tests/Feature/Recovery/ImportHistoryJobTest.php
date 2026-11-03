@@ -72,14 +72,30 @@ class ImportHistoryJobTest extends TestCase
         $this->assertNull($channel->fresh()->backfill_last_run_at);
     }
 
-    public function test_canal_inativo_ou_fora_de_working_nao_importa(): void
+    public function test_canal_inativo_ou_apagado_nao_importa_nem_reenfileira(): void
     {
         Notification::fake();
         $this->mock(ImportHistory::class, fn ($m) => $m->shouldNotReceive('__invoke'));
+        $inativo = $this->trackedJob(Channel::factory()->connected()->create(['active' => false])->id);
+        $apagado = $this->trackedJob(999999);
 
-        app()->call([new ImportHistoryJob(Channel::factory()->connected()->create(['active' => false])->id), 'handle']);
-        app()->call([new ImportHistoryJob(Channel::factory()->create(['status' => ChannelStatus::STARTING, 'waha_session' => 'outra'])->id), 'handle']);
+        app()->call([$inativo, 'handle']);
+        app()->call([$apagado, 'handle']);
 
+        $this->assertNull($inativo->released);
+        $this->assertNull($apagado->released);
+        Notification::assertNothingSent();
+    }
+
+    public function test_canal_ativo_fora_de_working_reenfileira_em_vez_de_perder_a_importacao(): void
+    {
+        Notification::fake();
+        $this->mock(ImportHistory::class, fn ($m) => $m->shouldNotReceive('__invoke'));
+        $job = $this->trackedJob(Channel::factory()->create(['status' => ChannelStatus::STARTING, 'waha_session' => 'outra'])->id);
+
+        app()->call([$job, 'handle']);
+
+        $this->assertSame(60, $job->released);
         Notification::assertNothingSent();
     }
 

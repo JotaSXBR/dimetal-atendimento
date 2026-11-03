@@ -3,6 +3,7 @@
 namespace Tests\Feature\Inbox;
 
 use App\Events\MessageCreated;
+use App\Jobs\ConfirmChannelDownJob;
 use App\Jobs\DrainOutboxJob;
 use App\Jobs\GoOfflineJob;
 use App\Jobs\HandleWahaEvent;
@@ -30,6 +31,7 @@ class QueueRoutingTest extends TestCase
             'download de midia' => [new ResolveMessageMediaJob(1), 'inbound'],
             'download de midia em recuperacao' => [new ResolveMessageMediaJob(1, 'media'), 'media'],
             'recuperacao de mensagens' => [new RecoverMessagesJob(1, CarbonImmutable::now(), CarbonImmutable::now()), 'history'],
+            'confirmacao de queda' => [new ConfirmChannelDownJob(1), 'realtime'],
             'envio ao cliente' => [new SendTicketMessageJob(1), 'outbound'],
             'caixa de saida' => [new DrainOutboxJob(1), 'outbound'],
             'offline' => [new GoOfflineJob(1, 'x'), 'outbound'],

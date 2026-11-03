@@ -54,7 +54,14 @@ class ImportHistoryJob implements ShouldBeUnique, ShouldQueue
     {
         $channel = Channel::query()->find($this->channelId);
 
-        if ($channel === null || ! $channel->active || ! $channel->isConnected()) {
+        if ($channel === null || ! $channel->active) {
+            return;
+        }
+
+        // Oscilou (ou ainda não voltou): a importação é de uma vez só e já foi reservada, então espera em vez de se perder.
+        if (! $channel->isConnected()) {
+            $this->release(60);
+
             return;
         }
 
