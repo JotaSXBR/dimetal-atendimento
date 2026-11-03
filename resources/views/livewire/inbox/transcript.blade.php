@@ -44,6 +44,14 @@
                 <p class="break-words whitespace-pre-wrap">[{{ $message->type }}]</p>
             @endif
 
+            @if ($message->edits->isNotEmpty())
+                <div class="mt-1 space-y-0.5 border-l-2 border-line pl-2 text-xs text-ink-3">
+                    @foreach ($message->edits as $edit)
+                        <p class="break-words whitespace-pre-wrap"><span class="font-mono text-[10px] uppercase">Antes:</span> {{ $edit->previous_body }}</p>
+                    @endforeach
+                </div>
+            @endif
+
             @if ($message->reactions->isNotEmpty())
                 <div class="mt-1 flex flex-wrap gap-1 text-xs">
                     @foreach ($message->reactions as $reaction)

@@ -8,6 +8,7 @@ use App\Jobs\HandleWahaEvent;
 use App\Livewire\Inbox\Transcript;
 use App\Models\Channel;
 use App\Models\Message;
+use App\Models\MessageEdit;
 use App\Models\MessageReaction;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
@@ -108,6 +109,68 @@ class MessageChangesTest extends TestCase
         $this->target->refresh();
         $this->assertSame('Texto corrigido', $this->target->body);
         $this->assertNotNull($this->target->edited_at);
+    }
+
+    private function edit(string $body, string $suffix = 'ED'): WahaEvent
+    {
+        return $this->event('message.edited', ['id' => 'false_'.self::PEER.'_'.$suffix.uniqid(), 'from' => self::PEER, 'fromMe' => false, 'body' => $body, 'editedMessageId' => 'TARGET1', 'timestamp' => now()->timestamp]);
+    }
+
+    public function test_edicao_guarda_a_versao_anterior(): void
+    {
+        app(ApplyMessageChange::class)->edited($this->edit('Texto corrigido'));
+
+        $edit = MessageEdit::query()->sole();
+        $this->assertSame('Texto original', $edit->previous_body);
+        $this->assertSame($this->target->id, $edit->message_id);
+    }
+
+    public function test_duas_edicoes_guardam_as_duas_anteriores_em_ordem(): void
+    {
+        $apply = app(ApplyMessageChange::class);
+
+        $apply->edited($this->edit('Segunda versao'));
+        $apply->edited($this->edit('Terceira versao'));
+
+        $this->assertSame(['Texto original', 'Segunda versao'], $this->target->fresh()->edits->pluck('previous_body')->all());
+        $this->assertSame('Terceira versao', $this->target->fresh()->body);
+    }
+
+    public function test_o_mesmo_evento_repetido_nao_duplica_a_versao(): void
+    {
+        $event = $this->edit('Texto corrigido');
+        $apply = app(ApplyMessageChange::class);
+
+        $apply->edited($event);
+        $apply->edited($event);
+
+        $this->assertSame(1, MessageEdit::query()->count());
+    }
+
+    public function test_evento_de_edicao_antigo_repetido_nao_reverte_o_texto(): void
+    {
+        $apply = app(ApplyMessageChange::class);
+        $segunda = $this->edit('Segunda versao');
+        $terceira = $this->edit('Terceira versao');
+        $apply->edited($segunda);
+        $apply->edited($terceira);
+
+        $apply->edited($segunda);
+
+        $this->assertSame('Terceira versao', $this->target->fresh()->body);
+        $this->assertSame(['Texto original', 'Segunda versao'], $this->target->fresh()->edits->pluck('previous_body')->all());
+    }
+
+    public function test_tela_mostra_o_texto_novo_com_as_versoes_anteriores(): void
+    {
+        app(ApplyMessageChange::class)->edited($this->edit('Texto corrigido'));
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))
+            ->test(Transcript::class, ['ticketId' => $this->ticket->id])
+            ->assertSee('Texto corrigido')
+            ->assertSee('editada')
+            ->assertSee('Antes:')
+            ->assertSee('Texto original');
     }
 
     public function test_apagada_grava_revoked_at_e_mantem_o_corpo(): void

@@ -141,12 +141,13 @@ class ImportHistoryJobTest extends TestCase
         }
     }
 
-    private function serviceReturns(RecoveryResult $result, int $open, bool $complete): void
+    private function serviceReturns(RecoveryResult $result, int $open, bool $complete, bool $truncated = false): void
     {
         $service = Mockery::mock(ImportHistory::class);
         $service->shouldReceive('__invoke')->once()->andReturn($result);
         $service->open = $open;
         $service->complete = $complete;
+        $service->truncated = $truncated;
         $this->instance(ImportHistory::class, $service);
     }
 
@@ -182,6 +183,27 @@ class ImportHistoryJobTest extends TestCase
         $this->assertNull($last->released);
         Notification::assertSentTo($user, MessagesRecovered::class, fn (MessagesRecovered $n): bool => $n->toArray($user)['messages'] === 5
             && $n->toArray($user)['conversations'] === 2 && $n->toArray($user)['open'] === 1);
+    }
+
+    public function test_repassa_o_limite_ao_aviso(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $channel = Channel::factory()->connected()->create();
+        $this->forgetTotals($channel->id);
+        $this->serviceReturns(new RecoveryResult(50000, 900), 3, true, true);
+
+        app()->call([$this->trackedJob($channel->id), 'handle']);
+
+        Notification::assertSentTo($user, MessagesRecovered::class, fn (MessagesRecovered $n): bool => ($n->toArray($user)['limit'] ?? 0) === ImportHistory::MAX_MESSAGES);
+    }
+
+    public function test_erro_do_waha_nao_vira_repeticao_imediata(): void
+    {
+        $job = new ImportHistoryJob(7);
+
+        $this->assertSame(60, $job->backoff);
+        $this->assertSame(3, $job->maxExceptions);
     }
 
     public function test_pode_continuar_por_horas_sem_estourar_as_tentativas(): void

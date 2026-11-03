@@ -99,6 +99,27 @@ class RecoveredModeTest extends TestCase
         Queue::assertPushed(AdvanceBotSessionJob::class);
     }
 
+    public function test_mensagem_ao_vivo_que_chegou_atrasada_ainda_passa_pelo_bot(): void
+    {
+        $this->withWorkflow();
+
+        // Escrita offline há 10 min e reentregue agora pelo webhook: o cliente está esperando, não é histórico.
+        $this->ingest('OFF1', 600, [], 'live');
+
+        $this->assertSame(TicketStatus::PENDENTE, Ticket::query()->sole()->status);
+        Queue::assertPushed(AdvanceBotSessionJob::class);
+    }
+
+    public function test_mensagem_ao_vivo_com_mais_de_30_min_de_atraso_continua_sem_bot(): void
+    {
+        $this->withWorkflow();
+
+        $this->ingest('OFF2', 1860, [], 'live');
+
+        $this->assertSame(TicketStatus::AGUARDANDO, Ticket::query()->sole()->status);
+        Queue::assertNotPushed(AdvanceBotSessionJob::class);
+    }
+
     public function test_recuperada_nao_dispara_message_created_mas_atualiza_o_ticket(): void
     {
         Event::fake([MessageCreated::class, TicketUpdated::class]);

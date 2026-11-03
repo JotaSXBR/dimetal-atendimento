@@ -22,9 +22,12 @@ class RecoverMessagesJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 1;
-
     public int $timeout = 840;
+
+    /** Erro do WAHA (por exemplo 422 enquanto a sessão reconecta) espera 60 s e desiste na 3ª exceção, em vez de repetir sem pausa. */
+    public int $backoff = 60;
+
+    public int $maxExceptions = 3;
 
     /** O lock de unicidade expira sozinho: um worker morto no meio do job (deploy) não pode travar o canal para sempre. */
     public int $uniqueFor = 900;
@@ -37,6 +40,12 @@ class RecoverMessagesJob implements ShouldBeUnique, ShouldQueue
         public ?CarbonImmutable $downSince = null,
     ) {
         $this->onQueue('history');
+    }
+
+    /** Reenfileira por até 1 h se o canal estiver fora de WORKING naquele instante (oscilação); o limite é de tempo. */
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addHour();
     }
 
     public function uniqueId(): string
@@ -54,7 +63,13 @@ class RecoverMessagesJob implements ShouldBeUnique, ShouldQueue
     {
         $channel = Channel::query()->find($this->channelId);
 
-        if ($channel === null || ! $channel->active || ! $channel->isConnected()) {
+        if ($channel === null || ! $channel->active) {
+            return;
+        }
+
+        if (! $channel->isConnected()) {
+            $this->release(60);
+
             return;
         }
 

@@ -188,12 +188,20 @@ roda. As filas normais continuam na conexão `redis`. Um teste (`QueueRoutingTes
 - **Recuperação:** automática após queda de 5 min ou mais, botão no card do canal e varredura diária às 04:15 (ver
   `docs/superpowers/specs/waha-config.md`). Idempotente.
 - **Importação inicial:** a caixa "Importar histórico" do card (máximo de **30 dias**) roda uma vez, na primeira vez que o
-  canal fica `WORKING`. Cada chat vira um ticket encerrado (`closed_reason = importado`), fora de relatórios e da aba
+  canal fica `WORKING`. O botão **Importar agora** (com o canal conectado, com confirmação e seletor próprio de 1, 5, 15 ou 30 dias) repete a importação
+  quantas vezes for preciso (idempotente: o que já existe é ignorado). Cada chat vira um ticket encerrado (`closed_reason = importado`), fora de relatórios e da aba
   "Encerrados"; chat com cliente sem resposta nas últimas 48 h entra aberto. Baixa a mídia na fila `media`: confira o
   espaço do volume `/app/.media` antes de importar muitos dias.
 - **Reações, edições e apagadas:** o webhook passa a assinar também `message.edited`. Canais **já conectados** só recebem a
   nova lista quando a configuração do webhook for reaplicada (botão de conectar do card: faz um `PUT` na sessão e custa uma
-  queda de cerca de 1 s).
+  queda de cerca de 1 s). Uma edição guarda as versões anteriores (tabela `message_edits`, migration nova: redeploy do `app-beta`; a ingestão e os jobs rodam no `worker-beta`, que também precisa de redeploy)
+  e a conversa mostra o texto novo com "Antes: …" embaixo. A conversa ordena por horário de envio, não por chegada.
+- **Teto da importação:** a janela inteira fica na memória do worker (~9,5 KB por mensagem, medidos; o worker tem 256 MB), então a
+  leitura para em **15 mil mensagens**, indo da mais nova para a mais antiga (o que sobra é o mais recente), grava
+  `Importação limitada ao teto de mensagens` no log e o resumo do sino diz "limitada a 15.000 mensagens"; repetir com menos dias.
+- **Mensagem escrita offline e reentregue ao vivo** (até 30 min de atraso) passa pelo bot e pela resposta de fora do horário.
+- **Listagem do WAHA:** a janela vai em fatias de 24 h; uma fatia que bate o teto de 20 mil mensagens grava um aviso no log
+  (`Listagem do WAHA bateu o teto de páginas`).
 
 ### Google Contatos (variáveis)
 

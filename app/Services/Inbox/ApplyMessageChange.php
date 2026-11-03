@@ -4,10 +4,12 @@ namespace App\Services\Inbox;
 
 use App\Events\MessageStatusChanged;
 use App\Models\Message;
+use App\Models\MessageEdit;
 use App\Models\MessageReaction;
 use App\Models\WahaEvent;
 use App\Services\Waha\WahaChat;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -77,8 +79,25 @@ class ApplyMessageChange
             return false;
         }
 
-        $target->update(['body' => $body, 'edited_at' => now()]);
-        MessageStatusChanged::dispatch($target);
+        $actionId = is_string($data['id'] ?? null) ? Message::waKey($data['id']) : null;
+
+        // Trava a linha: o mesmo evento repetido pelo WAHA (mesmo tarde, depois de outras edições) não vale duas vezes.
+        $changed = DB::transaction(function () use ($target, $body, $actionId): bool {
+            $locked = Message::query()->lockForUpdate()->findOrFail($target->id);
+
+            if ($locked->body === $body || ($actionId !== null && MessageEdit::query()->where('action_id', $actionId)->exists())) {
+                return false;
+            }
+
+            MessageEdit::query()->create(['message_id' => $locked->id, 'previous_body' => $locked->body, 'edited_at' => now(), 'action_id' => $actionId]);
+            $locked->update(['body' => $body, 'edited_at' => now()]);
+
+            return true;
+        });
+
+        if ($changed) {
+            MessageStatusChanged::dispatch($target->refresh());
+        }
 
         return true;
     }

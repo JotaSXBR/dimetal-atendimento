@@ -22,6 +22,11 @@ class ImportHistoryJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 840;
 
+    /** Erro do WAHA (por exemplo 422 enquanto a sessão reconecta) espera 60 s e desiste na 3ª exceção, em vez de repetir sem pausa. */
+    public int $backoff = 60;
+
+    public int $maxExceptions = 3;
+
     /** Quanto de uma rodada se usa antes de parar e continuar na seguinte (abaixo do `timeout`). */
     private const BUDGET_SECONDS = 780;
 
@@ -75,7 +80,7 @@ class ImportHistoryJob implements ShouldBeUnique, ShouldQueue
         }
 
         array_map(fn (string $name) => Cache::forget($this->counter($name)), ['messages', 'conversations', 'open']);
-        Notification::send(app(AlertRecipients::class)->everyone(), new MessagesRecovered($channel, $totals['messages'], $totals['conversations'], 'imported', $totals['open']));
+        Notification::send(app(AlertRecipients::class)->everyone(), new MessagesRecovered($channel, $totals['messages'], $totals['conversations'], 'imported', $totals['open'], $import->truncated ? ImportHistory::MAX_MESSAGES : null));
     }
 
     /**

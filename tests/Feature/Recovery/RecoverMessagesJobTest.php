@@ -56,14 +56,59 @@ class RecoverMessagesJobTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_canal_inativo_ou_fora_de_working_nao_recupera(): void
+    /** @return RecoverMessagesJob um job cujo `release` só anota o atraso */
+    private function trackedJob(int $channelId): RecoverMessagesJob
+    {
+        return new class($channelId, CarbonImmutable::now()->subHours(2), CarbonImmutable::now()) extends RecoverMessagesJob
+        {
+            public ?int $released = null;
+
+            public function release($delay = 0): void
+            {
+                $this->released = (int) $delay;
+            }
+        };
+    }
+
+    public function test_canal_inativo_ou_apagado_sai_sem_reenfileirar(): void
     {
         $this->serviceNeverRuns();
+        $inativo = $this->trackedJob(Channel::factory()->connected()->create(['active' => false])->id);
+        $apagado = $this->trackedJob(999999);
 
-        $this->runJob(Channel::factory()->connected()->create(['active' => false]));
-        $this->runJob(Channel::factory()->create(['status' => ChannelStatus::STARTING, 'waha_session' => 'outra']));
+        app()->call([$inativo, 'handle']);
+        app()->call([$apagado, 'handle']);
 
+        $this->assertNull($inativo->released);
+        $this->assertNull($apagado->released);
         Notification::assertNothingSent();
+    }
+
+    public function test_canal_ativo_fora_de_working_reenfileira_em_vez_de_sumir(): void
+    {
+        $this->serviceNeverRuns();
+        $job = $this->trackedJob(Channel::factory()->create(['status' => ChannelStatus::STARTING, 'waha_session' => 'outra'])->id);
+
+        app()->call([$job, 'handle']);
+
+        $this->assertSame(60, $job->released);
+        Notification::assertNothingSent();
+    }
+
+    public function test_erro_do_waha_nao_vira_repeticao_imediata(): void
+    {
+        $job = new RecoverMessagesJob(7, CarbonImmutable::now(), CarbonImmutable::now());
+
+        $this->assertSame(60, $job->backoff);
+        $this->assertSame(3, $job->maxExceptions);
+    }
+
+    public function test_pode_reenfileirar_por_ate_1_hora(): void
+    {
+        $until = (new RecoverMessagesJob(7, CarbonImmutable::now(), CarbonImmutable::now()))->retryUntil();
+
+        $this->assertGreaterThan(now()->addMinutes(50)->getTimestamp(), $until->getTimestamp());
+        $this->assertLessThanOrEqual(now()->addMinutes(61)->getTimestamp(), $until->getTimestamp());
     }
 
     public function test_avisa_quando_recuperou_algo(): void

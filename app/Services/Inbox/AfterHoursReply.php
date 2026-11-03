@@ -33,9 +33,10 @@ class AfterHoursReply
         private readonly SendTicketMessage $send,
     ) {}
 
-    public function __invoke(Message $incoming): ?Message
+    /** `$freshAt` é o que conta como "recente" (a hora em que a mensagem chegou, se ao vivo); sem ele, a hora de envio. */
+    public function __invoke(Message $incoming, ?CarbonInterface $freshAt = null): ?Message
     {
-        if (! $this->applies($incoming)) {
+        if (! $this->applies($incoming, $freshAt)) {
             return null;
         }
 
@@ -58,14 +59,14 @@ class AfterHoursReply
         return $reply;
     }
 
-    private function applies(Message $incoming): bool
+    private function applies(Message $incoming, ?CarbonInterface $freshAt): bool
     {
         return $incoming->direction === MessageDirection::IN
             && $incoming->origin === MessageOrigin::CONTATO
             && (bool) Setting::get('after_hours_enabled', true)
             // Canal com workflow: o fluxo decide o que dizer fora do horário (bloco Condição); duas respostas seriam ruído.
             && Channel::query()->whereKey($incoming->channel_id)->whereNull('workflow_id')->exists()
-            && abs(now()->diffInSeconds($incoming->sent_at)) <= self::FRESH_SECONDS
+            && abs(now()->diffInSeconds($freshAt ?? $incoming->sent_at)) <= self::FRESH_SECONDS
             && ! $this->hours->isOpen($incoming->sent_at);
     }
 

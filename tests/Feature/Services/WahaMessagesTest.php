@@ -8,6 +8,7 @@ use App\Services\Waha\WahaMessages;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class WahaMessagesTest extends TestCase
@@ -62,6 +63,33 @@ class WahaMessagesTest extends TestCase
 
         $this->assertCount(200 * 100, iterator_to_array($this->messages()->between(now()->subDay(), now()), false));
         Http::assertSentCount(200);
+    }
+
+    public function test_janela_de_varios_dias_vai_em_fatias_de_24h_sem_sobreposicao(): void
+    {
+        Http::fake(['*/api/main/chats/all/messages*' => Http::response([], 200)]);
+        $to = now();
+        $from = $to->copy()->subDays(3);
+
+        iterator_to_array($this->messages()->between($from, $to), false);
+
+        $requests = Http::recorded()->map(fn (array $pair) => $pair[0]->data())->values();
+        $this->assertCount(3, $requests);
+        $end = $to->getTimestamp();
+        // Da fatia mais nova para a mais antiga: se um teto parar a leitura, o que sobra é o mais recente.
+        $this->assertSame([$end - 86400, $end - 172801, $from->getTimestamp()], $requests->map(fn (array $r): int => (int) $r['filter.timestamp.gte'])->all());
+        $this->assertSame([$end, $end - 86401, $end - 172802], $requests->map(fn (array $r): int => (int) $r['filter.timestamp.lte'])->all());
+    }
+
+    public function test_fatia_que_bate_o_teto_de_paginas_avisa_no_log(): void
+    {
+        $full = array_map(fn (int $i): array => ['id' => "false_x@c.us_{$i}"], range(1, 100));
+        Http::fake(['*/api/main/chats/all/messages*' => Http::response($full, 200)]);
+        Log::spy();
+
+        iterator_to_array($this->messages()->between(now()->subDay(), now()), false);
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message): bool => str_contains($message, 'teto'));
     }
 
     public function test_falha_do_waha_lanca_waha_request_exception(): void

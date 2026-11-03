@@ -145,4 +145,14 @@ class Message extends Model
     {
         return $this->hasMany(MessageReaction::class);
     }
+
+    /**
+     * As versões anteriores, da mais antiga para a mais recente.
+     *
+     * @return HasMany<MessageEdit, $this>
+     */
+    public function edits(): HasMany
+    {
+        return $this->hasMany(MessageEdit::class)->orderBy('id');
+    }
 }
