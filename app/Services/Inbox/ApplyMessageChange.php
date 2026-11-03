@@ -93,7 +93,7 @@ class ApplyMessageChange
         return true;
     }
 
-    /** @return array<string, mixed> */
+    /** @return array<mixed> */
     private function payload(WahaEvent $event): array
     {
         $data = $event->payload['payload'] ?? null;

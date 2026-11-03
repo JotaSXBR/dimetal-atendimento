@@ -50,17 +50,18 @@ class IngestMessage
         }
 
         $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
+        $mode = IngestMode::of($event);
 
         // Já há ticket aberto do contato que começou antes desta mensagem: ela pertence a ele, não ao histórico.
-        if ($incoming->mode === IngestMode::IMPORTED && $this->hasOpenTicketBefore($channel, $contact, $incoming)) {
-            $incoming = $incoming->withMode(IngestMode::RECOVERED);
+        if ($mode === IngestMode::IMPORTED && $this->hasOpenTicketBefore($channel, $contact, $incoming)) {
+            $mode = IngestMode::RECOVERED;
         }
 
         if ($incoming->fromMe && in_array($incoming->type, ['text', 'media'], true) && ($pending = $this->matchPending($channel, $contact, $incoming)) !== null) {
             return $this->adoptEcho($pending, $incoming);
         }
 
-        return $this->storeOnce($channel, $contact, $incoming);
+        return $this->storeOnce($channel, $contact, $incoming, $mode);
     }
 
     private function find(Channel $channel, string $waId): ?Message
@@ -92,10 +93,10 @@ class IngestMessage
         return $pending;
     }
 
-    private function storeOnce(Channel $channel, Contact $contact, IncomingMessage $incoming): Message
+    private function storeOnce(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode): Message
     {
         try {
-            return DB::transaction(fn () => $this->store($channel, $contact, $incoming));
+            return DB::transaction(fn () => $this->store($channel, $contact, $incoming, $mode));
         } catch (UniqueConstraintViolationException $e) {
             // Corrida com outro job da mesma mensagem: a linha dele vale, a nossa é descartada.
             return $this->find($channel, $incoming->waId) ?? throw $e;
@@ -125,20 +126,40 @@ class IngestMessage
             ->first();
     }
 
-    private function store(Channel $channel, Contact $contact, IncomingMessage $incoming): Message
+    private function store(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode): Message
     {
-        $ticket = $this->ticketFor($channel, $contact, $incoming);
-
+        $ticket = $this->ticketFor($channel, $contact, $incoming, $mode);
         // Importada é histórico: não abre nem fecha espera de resposta, não gera evento de linha do tempo nem tempo real.
-        $imported = $incoming->mode === IngestMode::IMPORTED;
+        $imported = $mode === IngestMode::IMPORTED;
 
         if (! $imported) {
-            $incoming->fromMe ? $ticket->recordOutbound($incoming->sentAt) : $ticket->recordInbound($incoming->sentAt);
+            $this->recordActivity($ticket, $incoming);
         }
 
-        $message = Message::create([
+        $message = Message::create($this->attributes($ticket, $contact, $incoming));
+
+        if (! $imported) {
+            $this->announce($message, $ticket, $incoming);
+        }
+
+        if ($message->hasMedia()) {
+            ResolveMessageMediaJob::dispatch($message->id, $mode === IngestMode::LIVE ? 'inbound' : 'history')->afterCommit();
+        }
+
+        return $message;
+    }
+
+    private function recordActivity(Ticket $ticket, IncomingMessage $incoming): void
+    {
+        $incoming->fromMe ? $ticket->recordOutbound($incoming->sentAt) : $ticket->recordInbound($incoming->sentAt);
+    }
+
+    /** @return array<string, mixed> */
+    private function attributes(Ticket $ticket, Contact $contact, IncomingMessage $incoming): array
+    {
+        return [
             'ticket_id' => $ticket->id,
-            'channel_id' => $channel->id,
+            'channel_id' => $ticket->channel_id,
             'contact_id' => $contact->id,
             'wa_message_id' => $incoming->waId,
             'direction' => $incoming->fromMe ? MessageDirection::OUT : MessageDirection::IN,
@@ -151,40 +172,36 @@ class IngestMessage
             'origin' => $incoming->fromMe ? MessageOrigin::FORA_DO_PAINEL : MessageOrigin::CONTATO,
             'sent_at' => $incoming->sentAt,
             'delivery_status' => $incoming->fromMe ? (DeliveryStatus::fromAck($incoming->ack) ?? DeliveryStatus::SENT) : null,
+        ];
+    }
+
+    /** Linha do tempo, tempo real e, para mensagem do cliente, as respostas automáticas (só depois do commit). */
+    private function announce(Message $message, Ticket $ticket, IncomingMessage $incoming): void
+    {
+        TicketEvent::create([
+            'ticket_id' => $ticket->id,
+            'type' => $incoming->fromMe ? 'message_out' : 'message_in',
+            'payload' => ['message_id' => $message->id],
         ]);
 
-        if (! $imported) {
-            TicketEvent::create([
-                'ticket_id' => $ticket->id,
-                'type' => $incoming->fromMe ? 'message_out' : 'message_in',
-                'payload' => ['message_id' => $message->id],
-            ]);
+        MessageCreated::dispatch($message);
+        TicketUpdated::dispatch($ticket);
 
-            MessageCreated::dispatch($message);
-            TicketUpdated::dispatch($ticket);
-        }
-
-        if (! $incoming->fromMe && ! $imported) {
+        if (! $incoming->fromMe) {
             // Depois do commit: só uma mensagem realmente gravada pode gerar resposta (a que perdeu a corrida é descartada).
             DB::afterCommit(function () use ($message): void {
                 app(AfterHoursReply::class)($message);
                 app(BotEntry::class)->handle($message);
             });
         }
-
-        if ($message->hasMedia()) {
-            ResolveMessageMediaJob::dispatch($message->id, $incoming->mode === IngestMode::LIVE ? 'inbound' : 'history')->afterCommit();
-        }
-
-        return $message;
     }
 
     /** O ticket da mensagem; resposta pelo celular a uma conversa em triagem automática tira o ticket das mãos do bot. */
-    private function ticketFor(Channel $channel, Contact $contact, IncomingMessage $incoming): Ticket
+    private function ticketFor(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode): Ticket
     {
-        $ticket = $incoming->mode === IngestMode::IMPORTED
+        $ticket = $mode === IngestMode::IMPORTED
             ? $this->importedTicketFor($channel, $contact, $incoming)
-            : $this->openTicketFor($channel, $contact, $incoming);
+            : $this->openTicketFor($channel, $contact, $incoming, $mode);
 
         if ($incoming->fromMe && $ticket->status === TicketStatus::PENDENTE) {
             app(BotEntry::class)->humanTookOver($ticket);
@@ -232,7 +249,7 @@ class IngestMessage
         return $ticket;
     }
 
-    private function openTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming): Ticket
+    private function openTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode): Ticket
     {
         // Serializa a abertura de ticket por contato e canal: duas mensagens simultâneas do mesmo cliente
         // não disputam o índice único (o job perdedor perderia a mensagem, pois o WAHA não reenvia).
@@ -263,7 +280,7 @@ class IngestMessage
         TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'opened']);
 
         // Recuperação não toca o som de fila por ticket: o aviso é um só, no fim (ver `RecoverMessagesJob`).
-        if ($ticket->status === TicketStatus::AGUARDANDO && $incoming->mode === IngestMode::LIVE) {
+        if ($ticket->status === TicketStatus::AGUARDANDO && $mode === IngestMode::LIVE) {
             app(AlertDispatcher::class)->queued($ticket);
         }
 

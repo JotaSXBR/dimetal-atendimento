@@ -104,7 +104,7 @@ class Bell extends Component
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param  array<mixed>  $data
      */
     private function recoveryDetail(array $data, string $channel): string
     {

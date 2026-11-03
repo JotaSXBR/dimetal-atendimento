@@ -73,6 +73,17 @@ return [
             'after_commit' => false,
         ],
 
+        // Só o worker da fila `history` usa esta conexão (mesmas chaves do Redis que `redis`): os jobs dela passam de 10 minutos e o
+        // `retry_after` da `redis` (180 s) os reentregaria ainda rodando. Tem de ficar acima do `--timeout` do worker (docker/worker.sh).
+        'redis_history' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'history',
+            'retry_after' => (int) env('REDIS_HISTORY_QUEUE_RETRY_AFTER', 960),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],

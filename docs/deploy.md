@@ -154,7 +154,7 @@ Recursos do beta hoje:
 
 ### Filas (dentro do `worker-beta`)
 
-O estágio `worker` roda `docker/worker.sh`, que inicia **quatro** processos de fila no mesmo container, um por tipo de
+O estágio `worker` roda `docker/worker.sh`, que inicia **cinco** processos de fila no mesmo container, um por tipo de
 trabalho, para um lento não segurar os outros:
 
 | Fila | Processo | O que carrega |
@@ -163,6 +163,7 @@ trabalho, para um lento não segurar os outros:
 | `inbound` | `--tries=3` | ingestão do webhook do WAHA (`HandleWahaEvent`) e download de mídia (`ResolveMessageMediaJob`) |
 | `realtime`, `default` | `--tries=3` | avisos de tela (Reverb) e, por rede de segurança, o que cair em `default` |
 | `google` | `--tries=1`, **um único** | contatos para o Google (`SyncContactToGoogleJob`) |
+| `history` | `--tries=1`, `--timeout=900`, **um único** | recuperação de mensagens após queda (`RecoverMessagesJob`), importação inicial (`ImportHistoryJob`) e a mídia delas |
 
 O envio humanizado (visto, digitando, pausa, envio) leva segundos, e um só consumidor em `outbound` garante que as
 mensagens de cada conversa saiam na ordem. O People API do Google pede escrita sequencial, por isso `google` também tem
@@ -174,6 +175,24 @@ container pede uns 300 MB. Ao trocar o formato de um job (como o `SendTicketMess
 fila antiga antes do deploy: um job serializado pelo código velho falha no worker novo. Jobs que já estavam em `default`
 na hora do deploy continuam sendo processados (o processo `realtime` também lê `default`). Um teste
 (`QueueRoutingTest`) garante que toda fila usada pelo código tem consumidor no `worker.sh`.
+
+**Fila `history`:** quem faz o deploy desta fatia precisa **redeployar o `worker-beta`** (o `worker.sh` ganhou o processo
+novo). Sem isso, a recuperação, a importação e a mídia delas ficam paradas na fila. Esse worker usa a conexão
+`redis_history` (`config/queue.php`, `REDIS_HISTORY_QUEUE_RETRY_AFTER`, padrão 960 s), com `retry_after` acima do
+`--timeout` do worker (900 s) e do job (840 s): na conexão `redis` (180 s) um job longo seria reentregue enquanto ainda
+roda. As filas normais continuam na conexão `redis`. Um teste (`QueueRoutingTest`) confere essa relação.
+
+### Recuperação e importação de histórico
+
+- **Recuperação:** automática após queda de 5 min ou mais, botão no card do canal e varredura diária às 04:15 (ver
+  `docs/superpowers/specs/waha-config.md`). Idempotente.
+- **Importação inicial:** a caixa "Importar histórico" do card (máximo de **30 dias**) roda uma vez, na primeira vez que o
+  canal fica `WORKING`. Cada chat vira um ticket encerrado (`closed_reason = importado`), fora de relatórios e da aba
+  "Encerrados"; chat com cliente sem resposta nas últimas 48 h entra aberto. Baixa a mídia na fila `history`: confira o
+  espaço do volume `/app/.media` antes de importar muitos dias.
+- **Reações, edições e apagadas:** o webhook passa a assinar também `message.edited`. Canais **já conectados** só recebem a
+  nova lista quando a configuração do webhook for reaplicada (botão de conectar do card: faz um `PUT` na sessão e custa uma
+  queda de cerca de 1 s).
 
 ### Google Contatos (variáveis)
 
@@ -192,8 +211,8 @@ que arquivos antigos ainda expiram; se não, plano B: `find /app/.media -mtime +
 
 ### Tarefas agendadas
 
-O `scheduler-beta` roda `schedule:work`. Hoje há uma tarefa: `app:close-inactive-tickets`, a cada 10 minutos
-(encerra ticket parado há mais de 24 h cuja última mensagem é nossa). Nova tarefa em `routes/console.php` entra
+O `scheduler-beta` roda `schedule:work`. Entre as tarefas: `app:close-inactive-tickets`, a cada 10 minutos
+(encerra ticket parado há mais de 24 h cuja última mensagem é nossa), e `app:recover-messages`, todo dia às 04:15. Nova tarefa em `routes/console.php` entra
 sozinha no próximo deploy do scheduler; a opção "pode transferir" de um usuário se muda por
 `php artisan app:user-can-transfer {email} {on|off}` (terminal do `app-beta` no Coolify).
 
@@ -276,4 +295,7 @@ Rollback: reimplante o commit anterior. Migrações destrutivas exigem migraçã
 11. Enviar pelo painel e confirmar que **não** aparece uma segunda mensagem marcada como enviada
     fora do painel.
 12. Reiniciar o container `waha`: volta **Conectado** sem pedir QR.
-13. Repetir no `main` com o número real.
+13. Card do canal → *Recuperar mensagens* (1 h): o sino mostra o resumo; rodar de novo não cria mensagem nem ticket novo.
+14. Confirmar na resposta real do WAHA (terminal do `app-beta`) que `GET /api/{sessão}/chats/all/messages` funciona neste
+    GOWS e se a listagem traz reação, edição e apagamento; se `chats/all` falhar, implementar a varredura por chat.
+15. Repetir no `main` com o número real.

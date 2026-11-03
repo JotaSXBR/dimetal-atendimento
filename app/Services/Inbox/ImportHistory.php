@@ -5,6 +5,7 @@ namespace App\Services\Inbox;
 use App\Models\Channel;
 use App\Models\WahaEvent;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaMessages;
 use Carbon\CarbonImmutable;
 
 /**
@@ -34,7 +35,7 @@ class ImportHistory
         $this->open = 0;
 
         foreach ($this->chats($channel, $from, $to) as $items) {
-            $last = $items[array_key_last($items)][1];
+            $last = $items[count($items) - 1][1];
             $open = ! $last->fromMe && $last->sentAt->gte($to->subHours(self::OPEN_WINDOW_HOURS));
             $mode = $open ? IngestMode::RECOVERED : IngestMode::IMPORTED;
 
@@ -63,7 +64,7 @@ class ImportHistory
     {
         $chats = [];
 
-        foreach ((new WahaClient($channel))->messages($from, $to) as $data) {
+        foreach ((new WahaMessages(new WahaClient($channel)))->between($from, $to) as $data) {
             $incoming = IncomingMessage::fromEvent(new WahaEvent(['waha_event_id' => 'import-scan', 'payload' => ['payload' => $data], 'received_at' => $to]));
 
             if ($incoming !== null) {

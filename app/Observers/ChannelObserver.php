@@ -9,6 +9,7 @@ use App\Jobs\RecoverMessagesJob;
 use App\Models\Channel;
 use App\Services\Alerts\AlertDispatcher;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 
 /**
  * Um único lugar decide quando a caixa de saída esvazia: sempre que o canal passa a WORKING, venha a mudança do webhook
@@ -77,11 +78,11 @@ class ChannelObserver
 
         $stored = Channel::query()->whereKey($channel->id)->value('down_since');
 
-        if ($stored === null || Channel::query()->whereKey($channel->id)->where('down_since', $stored)->update(['down_since' => null]) !== 1) {
+        if (! $stored instanceof CarbonInterface || Channel::query()->whereKey($channel->id)->where('down_since', $stored)->update(['down_since' => null]) !== 1) {
             return;
         }
 
-        $since = CarbonImmutable::parse($stored);
+        $since = CarbonImmutable::instance($stored);
 
         if ($channel->active && $since->diffInMinutes(now(), true) >= self::MIN_OUTAGE_MINUTES) {
             RecoverMessagesJob::dispatch($channel->id, $since->subMinutes(self::MARGIN_MINUTES), now()->toImmutable(), false, $since)

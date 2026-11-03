@@ -6,6 +6,7 @@ use App\Events\MessageCreated;
 use App\Jobs\DrainOutboxJob;
 use App\Jobs\GoOfflineJob;
 use App\Jobs\HandleWahaEvent;
+use App\Jobs\ImportHistoryJob;
 use App\Jobs\RecoverMessagesJob;
 use App\Jobs\ResolveMessageMediaJob;
 use App\Jobs\SendTicketMessageJob;
@@ -47,6 +48,21 @@ class QueueRoutingTest extends TestCase
         $message = Message::factory()->create();
 
         $this->assertSame('realtime', (new MessageCreated($message))->broadcastQueue());
+    }
+
+    public function test_o_worker_da_fila_history_espera_mais_que_o_job_mais_longo(): void
+    {
+        $now = CarbonImmutable::now();
+        $longest = max((new RecoverMessagesJob(1, $now, $now))->timeout, (new ImportHistoryJob(1))->timeout);
+        $script = (string) file_get_contents(base_path('docker/worker.sh'));
+
+        $this->assertMatchesRegularExpression('/TIMEOUT=(\d+) start redis_history --queue=history/', $script);
+        preg_match('/TIMEOUT=(\d+) start redis_history/', $script, $workerTimeout);
+        $retryAfter = (int) config('queue.connections.redis_history.retry_after');
+
+        $this->assertSame('history', config('queue.connections.redis_history.queue'));
+        $this->assertGreaterThan((int) $workerTimeout[1], $retryAfter, 'retry_after deve passar do timeout do worker, senão o job é reentregue enquanto roda');
+        $this->assertGreaterThan($longest, (int) $workerTimeout[1]);
     }
 
     public function test_o_worker_consome_todas_as_filas_usadas(): void

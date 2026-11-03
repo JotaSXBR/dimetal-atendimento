@@ -18,7 +18,7 @@ start --queue=outbound --tries=1
 start --queue=inbound --tries=3
 start --queue=realtime,default --tries=3
 start --queue=google --tries=1
-TIMEOUT=900 start --queue=history --tries=1
+TIMEOUT=900 start redis_history --queue=history --tries=1
 
 trap 'kill -TERM "${pids[@]}" 2>/dev/null' TERM INT
 

@@ -6,6 +6,7 @@ use App\Models\Channel;
 use App\Models\Message;
 use App\Models\WahaEvent;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaMessages;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
@@ -28,7 +29,7 @@ class RecoverMessages
         $messages = 0;
         $tickets = [];
 
-        foreach ((new WahaClient($channel))->messages($from, $to) as $data) {
+        foreach ((new WahaMessages(new WahaClient($channel)))->between($from, $to) as $data) {
             $message = $this->ingest($channel, $data, IngestMode::RECOVERED);
 
             if ($message?->wasRecentlyCreated === true) {

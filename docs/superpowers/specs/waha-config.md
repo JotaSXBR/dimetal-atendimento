@@ -244,9 +244,18 @@ a mensagem sai e não chega. Não existe correção no código do app; é config
 
 ### Mensagem que chega com o WAHA fora do ar
 
-`session.status` não reentrega o que passou durante a queda. As mensagens perdidas chegam depois
-como *history sync*, não como evento `message`. Por isso existe catch-up na reconexão: ao ver a
-sessão voltar para `WORKING`, rodar a mesma rotina idempotente do backfill para a janela recente.
+`session.status` não reentrega o que passou durante a queda. O app busca o que faltou em
+`GET /api/{sessão}/chats/all/messages` (filtro de horário) e o entrega ao `IngestMessage` como evento sintético do modo
+`recovered` (ver `2026-11-03-recuperacao-historico-design.md`):
+
+- **Automática:** o canal voltando a `WORKING` depois de 5 min ou mais fora (`channels.down_since`) agenda a recuperação da
+  janela `[queda − 10 min, agora]`, 60 s depois da volta. Queda menor é reinício e não recupera nada. Número trocado na queda
+  cancela a recuperação.
+- **Manual:** card do canal, *Recuperar mensagens* (1 h, 6 h, 24 h ou 72 h). **Diária:** `app:recover-messages` às 04:15, 24 h.
+- Tudo é idempotente (`waha_event_id` sintético e `wa_message_id` por canal): rodar de novo não duplica.
+- A mensagem recuperada conta para SLA com a hora real, mas não toca som de fila nem dispara bot ou resposta fora do horário
+  (regra de 5 min de frescor).
+- O resumo chega ao sino (`MessagesRecovered`, sem som).
 
 ### Filtros na origem
 

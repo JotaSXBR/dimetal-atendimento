@@ -51,7 +51,11 @@ class ImportHistoryJob implements ShouldBeUnique, ShouldQueue
         Notification::send(app(AlertRecipients::class)->everyone(), new MessagesRecovered($channel, $result->messages, $result->conversations, 'imported', $import->open));
     }
 
-    /** A importação não terminou: libera a próxima conexão para tentar de novo. */
+    /**
+     * A importação não terminou: libera a próxima conexão para tentar de novo.
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
+     */
     public function failed(Throwable $e): void
     {
         Channel::query()->whereKey($this->channelId)->update(['backfill_last_run_at' => null]);
