@@ -217,6 +217,12 @@ O `scheduler-beta` roda `schedule:work`. Entre as tarefas: `app:close-inactive-t
 sozinha no próximo deploy do scheduler; a opção "pode transferir" de um usuário se muda por
 `php artisan app:user-can-transfer {email} {on|off}` (terminal do `app-beta` no Coolify).
 
+### Alerta de queda do WhatsApp
+
+A faixa vermelha, o som crítico e o aviso no sino só aparecem depois de **60 s** fora de "Conectado" (o GOWS reconecta sozinho
+em ~1 s algumas vezes por dia); "Aguardando QR" e "Falhou" avisam na hora. O job `ConfirmChannelDownJob` roda na fila
+`realtime`. Detalhes em `docs/superpowers/specs/waha-config.md`.
+
 ### Reverb (tempo real da Inbox)
 
 Origens aceitas no websocket: `config/reverb.php` lê `REVERB_ALLOWED_ORIGINS` (hosts ou URLs separados por
