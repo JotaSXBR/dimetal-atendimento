@@ -23,7 +23,14 @@ final readonly class IncomingMessage
         public ?string $alternateJid,
         public ?string $pushName,
         public ?IncomingMedia $media = null,
+        public IngestMode $mode = IngestMode::LIVE,
+        public ?int $ack = null,
     ) {}
+
+    public function withMode(IngestMode $mode): self
+    {
+        return new self($this->waId, $this->fromMe, $this->peer, $this->type, $this->body, $this->sentAt, $this->alternateJid, $this->pushName, $this->media, $mode, $this->ack);
+    }
 
     /**
      * `null` quando o evento deve ser ignorado (sem id, eco de entrada, grupo, broadcast ou sem conteúdo).
@@ -50,6 +57,8 @@ final readonly class IncomingMessage
             alternateJid: self::string(data_get($data, '_data.Info.'.($fromMe ? 'RecipientAlt' : 'SenderAlt'))),
             pushName: $fromMe ? null : self::string(data_get($data, '_data.Info.PushName') ?? $data['notifyName'] ?? null),
             media: $content['media'],
+            mode: IngestMode::tryFrom((string) ($event->payload['mode'] ?? '')) ?? IngestMode::LIVE,
+            ack: is_numeric($data['ack'] ?? null) ? (int) $data['ack'] : null,
         );
     }
 

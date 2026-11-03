@@ -24,7 +24,7 @@ class ApplyAck
         $data = $event->payload['payload'] ?? null;
         $data = is_array($data) ? $data : [];
         $waId = is_string($data['id'] ?? null) ? Message::waKey($data['id']) : null;
-        $status = $this->statusFor($data['ack'] ?? null);
+        $status = DeliveryStatus::fromAck($data['ack'] ?? null);
 
         if ($event->channel === null || $waId === null || $status === null) {
             return true;
@@ -76,16 +76,5 @@ class ApplyAck
         $rank = $current?->rank() ?? 0;
 
         return $new === DeliveryStatus::FAILED ? $rank <= 1 : $new->rank() > $rank;
-    }
-
-    private function statusFor(mixed $code): ?DeliveryStatus
-    {
-        return match (is_numeric($code) ? (int) $code : null) {
-            -1 => DeliveryStatus::FAILED,
-            1 => DeliveryStatus::SENT,
-            2 => DeliveryStatus::DELIVERED,
-            3, 4 => DeliveryStatus::READ,
-            default => null,
-        };
     }
 }

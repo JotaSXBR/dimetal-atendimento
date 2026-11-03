@@ -25,6 +25,7 @@ class QueueRoutingTest extends TestCase
         return [
             'webhook do WAHA' => [new HandleWahaEvent(1), 'inbound'],
             'download de midia' => [new ResolveMessageMediaJob(1), 'inbound'],
+            'download de midia em recuperacao' => [new ResolveMessageMediaJob(1, 'history'), 'history'],
             'envio ao cliente' => [new SendTicketMessageJob(1), 'outbound'],
             'caixa de saida' => [new DrainOutboxJob(1), 'outbound'],
             'offline' => [new GoOfflineJob(1, 'x'), 'outbound'],

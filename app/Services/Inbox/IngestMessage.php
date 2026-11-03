@@ -139,7 +139,7 @@ class IngestMessage
             'media_size' => $incoming->media?->size,
             'origin' => $incoming->fromMe ? MessageOrigin::FORA_DO_PAINEL : MessageOrigin::CONTATO,
             'sent_at' => $incoming->sentAt,
-            'delivery_status' => $incoming->fromMe ? DeliveryStatus::SENT : null,
+            'delivery_status' => $incoming->fromMe ? (DeliveryStatus::fromAck($incoming->ack) ?? DeliveryStatus::SENT) : null,
         ]);
 
         TicketEvent::create([
@@ -160,7 +160,7 @@ class IngestMessage
         }
 
         if ($message->hasMedia()) {
-            ResolveMessageMediaJob::dispatch($message->id)->afterCommit();
+            ResolveMessageMediaJob::dispatch($message->id, $incoming->mode === IngestMode::LIVE ? 'inbound' : 'history')->afterCommit();
         }
 
         return $message;
@@ -209,7 +209,8 @@ class IngestMessage
 
         TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'opened']);
 
-        if ($ticket->status === TicketStatus::AGUARDANDO) {
+        // Recuperação não toca o som de fila por ticket: o aviso é um só, no fim (ver `RecoverMessagesJob`).
+        if ($ticket->status === TicketStatus::AGUARDANDO && $incoming->mode === IngestMode::LIVE) {
             app(AlertDispatcher::class)->queued($ticket);
         }
 
