@@ -4,7 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Enums\ChannelStatus;
 use App\Enums\TicketStatus;
-use App\Jobs\RecoverMessagesJob;
+use App\Livewire\Settings\Concerns\RecoversHistory;
 use App\Livewire\Settings\Concerns\SendsTestMessage;
 use App\Models\Channel;
 use App\Models\Ticket;
@@ -13,7 +13,6 @@ use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaQr;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Contracts\View\View;
-use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Throwable;
 
@@ -22,6 +21,7 @@ use Throwable;
  */
 class ChannelCard extends Component
 {
+    use RecoversHistory;
     use SendsTestMessage;
 
     public Channel $channel;
@@ -54,11 +54,6 @@ class ChannelCard extends Component
 
     public int $backfillDays = 5;
 
-    /** Janela, em horas, da recuperação manual de mensagens. */
-    public int $recoverHours = 24;
-
-    public ?string $recoverNotice = null;
-
     public function mount(Channel $channel): void
     {
         $this->channel = $channel;
@@ -87,22 +82,6 @@ class ChannelCard extends Component
         }
 
         $this->setStatus(ChannelStatus::STARTING);
-    }
-
-    /** Puxa de novo as mensagens da janela escolhida; repetir não duplica nada. O resultado chega pelo sino. */
-    public function recover(): void
-    {
-        $this->reset('recoverNotice');
-        $this->validate(['recoverHours' => ['required', Rule::in([1, 6, 24, 72])]], ['recoverHours.in' => 'Escolha uma das janelas da lista.']);
-        $this->channel->refresh();
-
-        if (! $this->channel->active || ! $this->channel->isConnected()) {
-            return;
-        }
-
-        RecoverMessagesJob::dispatch($this->channel->id, now()->subHours($this->recoverHours)->toImmutable(), now()->toImmutable(), notifyAlways: true);
-
-        $this->recoverNotice = 'Recuperação pedida. Se já houver uma em andamento neste canal, ela é reaproveitada. O resultado aparece no sino.';
     }
 
     public function rename(): void

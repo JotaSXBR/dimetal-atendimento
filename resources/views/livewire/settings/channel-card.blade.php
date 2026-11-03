@@ -88,9 +88,15 @@
         @if (! $inactive)
             <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
                 <flux:checkbox wire:model="backfill" label="Importar histórico" />
-                <flux:input wire:model="backfillDays" type="number" min="1" max="30" class="max-w-24" :disabled="! $backfill" />
+                <flux:input wire:model="backfillDays" type="number" min="1" max="30" class="max-w-24" />
                 <span class="text-xs text-ink-3">dias</span>
-                <p class="basis-full text-xs leading-relaxed text-ink-3">Desmarcado por padrão. A importação roda depois da conexão e não bloqueia o atendimento.</p>
+                @if ($status === \App\Enums\ChannelStatus::WORKING)
+                    <x-ui.button variant="secondary" wire:click="importNow" wire:confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." wire:loading.attr="disabled">Importar agora</x-ui.button>
+                @endif
+                <p class="basis-full text-xs leading-relaxed text-ink-3">Desmarcado por padrão. A importação roda depois da conexão e não bloqueia o atendimento. Com o canal conectado, um botão ao lado repete a importação dos últimos dias informados.</p>
+                @if ($importNotice)
+                    <p class="basis-full text-xs text-ink-2" role="status">{{ $importNotice }}</p>
+                @endif
                 @error('backfillDays')
                     <p class="basis-full text-xs text-danger">{{ $message }}</p>
                 @enderror
