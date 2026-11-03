@@ -4,6 +4,7 @@ namespace App\Services\Inbox;
 
 use App\Models\Message;
 use App\Models\WahaEvent;
+use App\Services\Waha\WahaChat;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -83,9 +84,9 @@ final readonly class IncomingMessage
      */
     private static function peer(array $data, WahaEvent $event): ?string
     {
-        $peer = $data[($data['fromMe'] ?? false) ? 'to' : 'from'] ?? null;
+        $peer = ($data['fromMe'] ?? false) ? WahaChat::sentTo($data) : ($data['from'] ?? null);
 
-        if (is_string($peer) && ! self::isIgnoredChat($peer)) {
+        if (is_string($peer) && ! WahaChat::isIgnored($peer)) {
             return $peer;
         }
 
@@ -170,12 +171,6 @@ final readonly class IncomingMessage
     private static function string(mixed $value): ?string
     {
         return is_string($value) ? $value : null;
-    }
-
-    /** Grupo, status e newsletter nunca viram ticket. Aceita também um id serializado (`false_{chat}_{id}`). */
-    public static function isIgnoredChat(string $chat): bool
-    {
-        return str_contains($chat, '@g.us') || str_contains($chat, 'status@broadcast') || str_contains($chat, '@newsletter');
     }
 
     /**

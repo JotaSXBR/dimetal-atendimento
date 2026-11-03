@@ -6,6 +6,7 @@ use App\Events\MessageStatusChanged;
 use App\Models\Message;
 use App\Models\MessageReaction;
 use App\Models\WahaEvent;
+use App\Services\Waha\WahaChat;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 
@@ -119,7 +120,7 @@ class ApplyMessageChange
         foreach (['from', 'to', 'after.from', 'after.to', 'reaction.messageId'] as $path) {
             $value = data_get($data, $path);
 
-            if (is_string($value) && IncomingMessage::isIgnoredChat($value)) {
+            if (is_string($value) && WahaChat::isIgnored($value)) {
                 return true;
             }
         }
