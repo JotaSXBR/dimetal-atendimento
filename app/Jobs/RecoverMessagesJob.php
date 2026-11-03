@@ -26,6 +26,9 @@ class RecoverMessagesJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 840;
 
+    /** O lock de unicidade expira sozinho: um worker morto no meio do job (deploy) não pode travar o canal para sempre. */
+    public int $uniqueFor = 900;
+
     public function __construct(
         public int $channelId,
         public CarbonImmutable $from,

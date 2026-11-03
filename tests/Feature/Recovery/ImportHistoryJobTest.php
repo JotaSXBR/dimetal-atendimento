@@ -109,4 +109,12 @@ class ImportHistoryJobTest extends TestCase
         $this->assertSame('7', $job->uniqueId());
         $this->assertSame('history', $job->queue);
     }
+
+    public function test_o_lock_de_unicidade_expira_para_nao_travar_o_canal_se_o_worker_morrer(): void
+    {
+        $job = new ImportHistoryJob(7);
+
+        $this->assertGreaterThan(0, $job->uniqueFor);
+        $this->assertLessThanOrEqual(1800, $job->uniqueFor);
+    }
 }
