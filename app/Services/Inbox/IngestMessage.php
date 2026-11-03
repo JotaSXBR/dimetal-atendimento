@@ -18,6 +18,7 @@ use App\Models\TicketEvent;
 use App\Models\WahaEvent;
 use App\Services\Alerts\AlertDispatcher;
 use App\Services\Bot\BotEntry;
+use Carbon\CarbonInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +34,9 @@ class IngestMessage
 
     /** A resposta automática tem texto fixo e ninguém a digita no celular: casa por mais tempo, para o eco tardio não virar "fora do painel" e parar o relógio de SLA. */
     private const BOT_ECHO_WINDOW_SECONDS = 600;
+
+    /** Até quanto atraso uma mensagem ao vivo ainda conta como cliente esperando (queda do número, reentrega do WhatsApp). */
+    private const LATE_LIVE_SECONDS = 1800;
 
     public function __construct(private readonly ResolveContact $resolveContact) {}
 
@@ -61,7 +65,21 @@ class IngestMessage
             return $this->adoptEcho($pending, $incoming);
         }
 
-        return $this->storeOnce($channel, $contact, $incoming, $mode);
+        $freshAt = $this->freshAt($event, $incoming, $mode);
+
+        return $this->storeOnce($channel, $contact, $incoming, $mode, $freshAt);
+    }
+
+    /**
+     * A hora que o bot e a resposta automática chamam de "recente". Ao vivo e com até 30 min de atraso, é a hora em que a
+     * mensagem chegou: o cliente que escreveu com o número offline e foi reentregue na volta está esperando agora. Mais velha
+     * que isso, ou recuperada e importada, vale a hora de envio (é histórico reprocessado, não cliente esperando).
+     */
+    private function freshAt(WahaEvent $event, IncomingMessage $incoming, IngestMode $mode): CarbonInterface
+    {
+        $late = $event->received_at->diffInSeconds($incoming->sentAt, true) <= self::LATE_LIVE_SECONDS;
+
+        return $mode === IngestMode::LIVE && $late ? $event->received_at : $incoming->sentAt;
     }
 
     private function find(Channel $channel, string $waId): ?Message
@@ -93,10 +111,10 @@ class IngestMessage
         return $pending;
     }
 
-    private function storeOnce(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode): Message
+    private function storeOnce(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode, CarbonInterface $freshAt): Message
     {
         try {
-            return DB::transaction(fn () => $this->store($channel, $contact, $incoming, $mode));
+            return DB::transaction(fn () => $this->store($channel, $contact, $incoming, $mode, $freshAt));
         } catch (UniqueConstraintViolationException $e) {
             // Corrida com outro job da mesma mensagem: a linha dele vale, a nossa é descartada.
             return $this->find($channel, $incoming->waId) ?? throw $e;
@@ -126,9 +144,9 @@ class IngestMessage
             ->first();
     }
 
-    private function store(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode): Message
+    private function store(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode, CarbonInterface $freshAt): Message
     {
-        $ticket = $this->ticketFor($channel, $contact, $incoming, $mode);
+        $ticket = $this->ticketFor($channel, $contact, $incoming, $mode, $freshAt);
         // Importada é histórico: não abre nem fecha espera de resposta, não gera evento de linha do tempo nem tempo real.
         $imported = $mode === IngestMode::IMPORTED;
 
@@ -139,7 +157,7 @@ class IngestMessage
         $message = Message::create($this->attributes($ticket, $contact, $incoming));
 
         if (! $imported) {
-            $this->announce($message, $ticket, $incoming, $mode);
+            $this->announce($message, $ticket, $incoming, $mode, $freshAt);
         }
 
         if ($message->hasMedia()) {
@@ -176,7 +194,7 @@ class IngestMessage
     }
 
     /** Linha do tempo, tempo real e, para mensagem do cliente, as respostas automáticas (só depois do commit). */
-    private function announce(Message $message, Ticket $ticket, IncomingMessage $incoming, IngestMode $mode): void
+    private function announce(Message $message, Ticket $ticket, IncomingMessage $incoming, IngestMode $mode, CarbonInterface $freshAt): void
     {
         TicketEvent::create([
             'ticket_id' => $ticket->id,
@@ -192,7 +210,7 @@ class IngestMessage
         TicketUpdated::dispatch($ticket);
 
         // Ao vivo, o bot e a resposta fora do horário valem mesmo que o job tenha atrasado; recuperada só se o cliente ainda espera.
-        if (! $incoming->fromMe && ($mode === IngestMode::LIVE || app(BotEntry::class)->isFresh($incoming->sentAt))) {
+        if (! $incoming->fromMe && ($mode === IngestMode::LIVE || app(BotEntry::class)->isFresh($freshAt))) {
             // Depois do commit: só uma mensagem realmente gravada pode gerar resposta (a que perdeu a corrida é descartada).
             DB::afterCommit(function () use ($message): void {
                 app(AfterHoursReply::class)($message);
@@ -202,11 +220,11 @@ class IngestMessage
     }
 
     /** O ticket da mensagem; resposta pelo celular a uma conversa em triagem automática tira o ticket das mãos do bot. */
-    private function ticketFor(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode): Ticket
+    private function ticketFor(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode, CarbonInterface $freshAt): Ticket
     {
         $ticket = $mode === IngestMode::IMPORTED
             ? $this->importedTicketFor($channel, $contact, $incoming)
-            : $this->openTicketFor($channel, $contact, $incoming, $mode);
+            : $this->openTicketFor($channel, $contact, $incoming, $mode, $freshAt);
 
         if ($incoming->fromMe && $ticket->status === TicketStatus::PENDENTE) {
             app(BotEntry::class)->humanTookOver($ticket);
@@ -254,7 +272,7 @@ class IngestMessage
         return $ticket;
     }
 
-    private function openTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode): Ticket
+    private function openTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode, CarbonInterface $freshAt): Ticket
     {
         // Serializa a abertura de ticket por contato e canal: duas mensagens simultâneas do mesmo cliente
         // não disputam o índice único (o job perdedor perderia a mensagem, pois o WAHA não reenvia).
@@ -276,7 +294,7 @@ class IngestMessage
             'status' => match (true) {
                 $incoming->fromMe => TicketStatus::EM_ATENDIMENTO,
                 // Canal com workflow: o bot conduz primeiro e só então o ticket entra na fila de um setor.
-                app(BotEntry::class)->shouldStart($channel, $incoming->sentAt) => TicketStatus::PENDENTE,
+                app(BotEntry::class)->shouldStart($channel, $freshAt) => TicketStatus::PENDENTE,
                 default => TicketStatus::AGUARDANDO,
             },
             'opened_at' => $incoming->sentAt,
