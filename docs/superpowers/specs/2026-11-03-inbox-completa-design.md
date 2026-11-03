@@ -73,8 +73,25 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
   por evento `ClientPresence` no `private-inbox`, **sem gravar** `WahaEvent` desse tipo além do necessário. A primeira
   tarefa do plano assina e registra o payload real no beta (inclusive `@lid`); o parser tolera as variações de formato.
 - Webhook: `presence.update` não conta no limite de 300/min do webhook (ou tem limite próprio), para não sufocar mensagens.
-- Tela: "digitando…" ou "gravando áudio…" na linha do ticket da lista e no cabeçalho da conversa; some em ~10 s sem
-  novo evento (Alpine) ou ao receber `parou`. O contato que não compartilha presença simplesmente não aparece.
+- Tela: "digitando…" ou "gravando áudio…" na linha do ticket da lista e no cabeçalho da conversa. O estado **não tem
+  duração fixa**: segue os eventos, como o WhatsApp Web. Entra com `typing`/`recording` e sai com `paused`, `online`,
+  `offline` ou quando chega mensagem daquele contato; um novo `typing` renova. Só existe um tempo de segurança para o caso de
+  o `paused` nunca chegar, e ele **vem de medição, não de palpite** (ver abaixo). O contato que não compartilha presença
+  simplesmente não aparece.
+- **Pesquisa que embasa isto (03/11):** a doc do WAHA define o payload (`payload.id` = chat; `payload.presences[]` com
+  `participant`, `lastKnownPresence` ∈ `online|offline|typing|recording|paused`, `lastSeen`), manda assinar por conversa
+  (`POST /presence/{chat}/subscribe`), diz que `paused` encerra o "digitando" e **não documenta nenhuma duração do lado do
+  WhatsApp**; marca GOWS como suportado. Bibliotecas de referência (Baileys) citam expiração de ~10 s sem renovação, fonte
+  secundária e não confirmada. A issue pública devlikeapro/waha#1973 (GOWS, WAHA 2026.3.2) relata `presence.update` sem
+  disparar; foi fechada sem correção de código, com a orientação de assinar a conversa antes e usar presença "online" global.
+- **Risco real ligado à nossa configuração:** `WAHA_PRESENCE_AUTO_ONLINE=False` (decisão para o celular do atendente continuar
+  recebendo push) mantém a sessão "offline", e o WhatsApp só entrega a presença dos outros a quem está online. Isso é inferência
+  da issue e do protocolo, **não provada aqui**. A 1ª tarefa da fatia mede no beta: assinar, deixar o cliente digitar e gravar, e
+  registrar (a) se o evento chega com a sessão offline, (b) se só chega com `online` e qual o custo para o push do celular,
+  (c) o intervalo real entre eventos `typing` e entre `typing` e `paused`.
+- **Tempo de segurança dinâmico:** `ttl = max(piso, 2 × maior intervalo de renovação medido)`, guardado como configuração
+  (não constante no código), com valor provisório de 15 s **só até a medição**. Se a medição mostrar que o WhatsApp renova
+  sozinho a cada N s, o tempo segue N. Sem medição que o sustente, não se fixa número.
 
 ### Fatia 3: menu da mensagem (citação, reação, edição, apagar)
 
@@ -102,10 +119,19 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
 
 - Cartão de contato recebido (`SpecialContent::contacts`): botão "Adicionar aos contatos" (cria ou reaproveita via
   `ResolveContact`; sem duplicar) e botão "Conversar".
-- Na tela Contatos e na ficha: "Iniciar conversa" escolhe o canal ativo (e o setor), abre ticket **em atendimento do
-  próprio atendente** (`opened_by` = usuário, evento `opened_by_agent`), sem passar pelo bot, e entra no campo de resposta.
-  Só se o contato tem telefone WhatsApp válido; se já há ticket aberto naquele canal, abre o existente.
-- Respeita o horário e o ritmo de envio como qualquer envio humano; a primeira mensagem sai pelo caminho normal.
+- Na tela Contatos e na ficha: "Conversar" / "Iniciar conversa". **Decidido pelo dono (03/11), após pesquisa de mercado
+  (há plataformas que escolhem o dono do contato, quem criou ou ninguém; conversa iniciada sem dono é um buraco conhecido):**
+  - **Dono:** o atendente que iniciou (ticket nasce `em_atendimento` atribuído a ele; pode transferir depois).
+  - **Canal:** pré-seleciona o canal do ticket mais recente do contato (ou o único ativo) e permite trocar.
+  - **Setor:** o do atendente; se cobre mais de um, ele escolhe qual.
+  - **Ticket já aberto naquele canal:** abre o existente (nunca cria outro, mantém um aberto por contato e canal); se é de
+    outra pessoa, mostra de quem é e só deixa responder se a permissão deixar.
+  - **Primeira mensagem:** obrigatória no ato; a janela traz contato, canal, setor e o campo de mensagem, e o ticket só
+    nasce junto com o envio (não sobram tickets vazios).
+  - **SLA:** só passa a contar depois que o cliente responder (o relógio mede cliente esperando; ticket iniciado pela equipe
+    não tem "cliente esperando" até a resposta).
+  - Fixo: só contato com telefone WhatsApp válido; evento `opened_by_agent` com o autor; não passa pelo bot; ritmo e horário
+    como qualquer envio humano.
 
 ### Fatia 6: busca dentro da conversa
 
@@ -133,7 +159,8 @@ auditoria. Cobertura mínima de 80% e Pint, Larastan e PHPMD verdes.
 - **Edição e apagar** dependem do que o GOWS aceita (janela, ids com o chat `@lid`); verificar no beta com o número de
   teste antes de liberar a todos. Quebrar o ID completo (`false_{chat}_{id}`) é a armadilha já conhecida.
 - **Citação:** o transcript é paginado; citar mensagem fora da página mostra o bloco sem rolar.
-- **Escolhas minhas (podem ser contestadas):** teto de 3 s no "digitando" do bot; expiração da presença em 10 s; janela de
-  15 min para editar; rascunho no navegador, não no banco; "Conversar" abre ticket do atendente, não do setor.
+- **Escolhas minhas (podem ser contestadas):** teto de 3 s no "digitando" do bot; janela de 15 min para editar; rascunho no
+  navegador, não no banco. A duração da presença e as regras do "Conversar" não são escolhas minhas: a primeira segue eventos e
+  medição (fatia 2), as outras foram decididas pelo dono em rodada de perguntas (fatia 5).
 - **Fora deste pacote, anotado:** limpeza do store do WAHA e LGPD do acervo (com o RustFS/S3); regressão de dois números
   e chat de tipo desconhecido (`@newsletter`, `@broadcast`) viram testes na fatia 1.
