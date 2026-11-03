@@ -88,12 +88,31 @@
         @if (! $inactive)
             <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
                 <flux:checkbox wire:model="backfill" label="Importar histórico" />
-                <flux:input wire:model="backfillDays" type="number" min="1" max="365" class="max-w-24" :disabled="! $backfill" />
+                <flux:input wire:model="backfillDays" type="number" min="1" max="30" class="max-w-24" :disabled="! $backfill" />
                 <span class="text-xs text-ink-3">dias</span>
                 <p class="basis-full text-xs leading-relaxed text-ink-3">Desmarcado por padrão. A importação roda depois da conexão e não bloqueia o atendimento.</p>
                 @error('backfillDays')
                     <p class="basis-full text-xs text-danger">{{ $message }}</p>
                 @enderror
+            </div>
+        @endif
+
+        @if (! $inactive && $status === \App\Enums\ChannelStatus::WORKING)
+            <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-4">
+                <flux:select wire:model="recoverHours" class="max-w-44" aria-label="Janela da recuperação">
+                    <flux:select.option value="1">Última hora</flux:select.option>
+                    <flux:select.option value="6">Últimas 6 horas</flux:select.option>
+                    <flux:select.option value="24">Últimas 24 horas</flux:select.option>
+                    <flux:select.option value="72">Últimas 72 horas</flux:select.option>
+                </flux:select>
+                <x-ui.button variant="secondary" wire:click="recover" wire:loading.attr="disabled">Recuperar mensagens</x-ui.button>
+                <p class="basis-full text-xs leading-relaxed text-ink-3">Busca no WhatsApp o que não chegou ao sistema nesse período. Repetir não duplica nada. A recuperação roda sozinha depois de uma queda e todo dia de madrugada.</p>
+                @error('recoverHours')
+                    <p class="basis-full text-xs text-danger">{{ $message }}</p>
+                @enderror
+                @if ($recoverNotice)
+                    <p class="basis-full text-xs text-ink-2" role="status">{{ $recoverNotice }}</p>
+                @endif
             </div>
         @endif
 

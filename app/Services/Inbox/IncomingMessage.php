@@ -4,6 +4,7 @@ namespace App\Services\Inbox;
 
 use App\Models\Message;
 use App\Models\WahaEvent;
+use App\Services\Waha\WahaChat;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -23,6 +24,7 @@ final readonly class IncomingMessage
         public ?string $alternateJid,
         public ?string $pushName,
         public ?IncomingMedia $media = null,
+        public ?int $ack = null,
     ) {}
 
     /**
@@ -50,6 +52,7 @@ final readonly class IncomingMessage
             alternateJid: self::string(data_get($data, '_data.Info.'.($fromMe ? 'RecipientAlt' : 'SenderAlt'))),
             pushName: $fromMe ? null : self::string(data_get($data, '_data.Info.PushName') ?? $data['notifyName'] ?? null),
             media: $content['media'],
+            ack: is_numeric($data['ack'] ?? null) ? (int) $data['ack'] : null,
         );
     }
 
@@ -66,6 +69,11 @@ final readonly class IncomingMessage
             return null;
         }
 
+        // Reação, edição e apagamento têm tratador próprio (`ApplyMessageChange`); como mensagem viram uma bolha solta ou duplicada.
+        if (($data['type'] ?? null) === 'reaction' || array_filter(array_intersect_key($data, array_flip(['reaction', 'editedMessageId', 'revokedMessageId']))) !== []) {
+            return null;
+        }
+
         // `message.any` repete as recebidas, mas há mensagens (documento com legenda) que só chegam por ele; o id repetido é
         // descartado na ingestão, então aceitar os dois eventos não duplica.
         return $data;
@@ -76,9 +84,9 @@ final readonly class IncomingMessage
      */
     private static function peer(array $data, WahaEvent $event): ?string
     {
-        $peer = $data[($data['fromMe'] ?? false) ? 'to' : 'from'] ?? null;
+        $peer = ($data['fromMe'] ?? false) ? WahaChat::sentTo($data) : ($data['from'] ?? null);
 
-        if (is_string($peer) && ! self::isIgnoredChat($peer)) {
+        if (is_string($peer) && ! WahaChat::isIgnored($peer)) {
             return $peer;
         }
 
@@ -163,11 +171,6 @@ final readonly class IncomingMessage
     private static function string(mixed $value): ?string
     {
         return is_string($value) ? $value : null;
-    }
-
-    private static function isIgnoredChat(string $chat): bool
-    {
-        return str_ends_with($chat, '@g.us') || $chat === 'status@broadcast' || str_ends_with($chat, '@newsletter');
     }
 
     /**

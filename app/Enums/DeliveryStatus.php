@@ -11,6 +11,18 @@ enum DeliveryStatus: string
     case READ = 'read';
     case FAILED = 'failed';
 
+    /** O código `ack` do WAHA: -1 falhou, 1 enviado, 2 entregue, 3 lido, 4 reproduzido; 0 e demais não dizem nada. */
+    public static function fromAck(mixed $code): ?self
+    {
+        return match (is_numeric($code) ? (int) $code : null) {
+            -1 => self::FAILED,
+            1 => self::SENT,
+            2 => self::DELIVERED,
+            3, 4 => self::READ,
+            default => null,
+        };
+    }
+
     /** Posição na progressão de entrega; falha fica fora dela. */
     public function rank(): int
     {

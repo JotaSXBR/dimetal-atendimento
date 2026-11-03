@@ -1,0 +1,4 @@
+[
+  {"id": "false_5516999990001@c.us_3EB0AAAA0001", "from": "5516999990001@c.us", "fromMe": false, "body": "Quero um orcamento", "timestamp": 1793000000, "hasMedia": false, "ack": 0, "_data": {"Info": {"PushName": "Cliente Exemplo"}}},
+  {"id": "true_5516999990001@c.us_3EB0AAAA0002", "timestamp": 1793000100, "from": "5516999990001@c.us", "fromMe": true, "source": "api", "body": "Segue o orcamento", "to": null, "participant": null, "hasMedia": false, "media": null, "ack": 3, "ackName": "READ", "_data": {"Info": {"Chat": "5516999990001@s.whatsapp.net", "IsFromMe": true, "IsGroup": false, "PushName": ""}}}
+]

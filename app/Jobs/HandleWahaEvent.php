@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ChannelStatus;
 use App\Models\WahaEvent;
 use App\Services\Inbox\ApplyAck;
+use App\Services\Inbox\ApplyMessageChange;
 use App\Services\Inbox\IngestMessage;
 use App\Services\Waha\ChannelPhone;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,20 +44,23 @@ class HandleWahaEvent implements ShouldQueue
         match ($event->event) {
             'session.status' => $this->applyStatus($event),
             'message', 'message.any', 'message.waiting' => app(IngestMessage::class)($event),
-            'message.ack' => $this->applyAck($event),
+            'message.ack' => $this->retryUnlessDone(app(ApplyAck::class)($event), $event, 'Ack descartado: mensagem nunca apareceu'),
+            'message.reaction' => $this->retryUnlessDone(app(ApplyMessageChange::class)->reaction($event), $event, 'Reação descartada: mensagem nunca apareceu'),
+            'message.edited' => $this->retryUnlessDone(app(ApplyMessageChange::class)->edited($event), $event, 'Edição descartada: mensagem nunca apareceu'),
+            'message.revoked' => $this->retryUnlessDone(app(ApplyMessageChange::class)->revoked($event), $event, 'Apagamento descartado: mensagem nunca apareceu'),
             default => null,
         };
     }
 
-    /** O ack pode chegar antes da mensagem ser gravada: tenta de novo e, esgotadas as tentativas, descarta. */
-    private function applyAck(WahaEvent $event): void
+    /** Ack, reação, edição e apagamento podem chegar antes da mensagem ser gravada: tenta de novo e, esgotadas as tentativas, descarta. */
+    private function retryUnlessDone(bool $done, WahaEvent $event, string $discardMessage): void
     {
-        if (app(ApplyAck::class)($event)) {
+        if ($done) {
             return;
         }
 
         if ($this->attempts() >= self::ACK_MAX_ATTEMPTS) {
-            Log::warning('Ack descartado: mensagem nunca apareceu', ['event' => $event->waha_event_id]);
+            Log::warning($discardMessage, ['event' => $event->waha_event_id]);
 
             return;
         }

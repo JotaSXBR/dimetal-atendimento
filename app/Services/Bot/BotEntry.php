@@ -33,7 +33,12 @@ class BotEntry
     /** Um ticket novo nasce `pendente` quando o canal tem workflow e o cliente escreveu agora. */
     public function shouldStart(Channel $channel, CarbonInterface $sentAt): bool
     {
-        return abs(now()->diffInSeconds($sentAt)) <= self::FRESH_SECONDS && $this->versionFor($channel) !== null;
+        return $this->isFresh($sentAt) && $this->versionFor($channel) !== null;
+    }
+
+    public function isFresh(CarbonInterface $sentAt): bool
+    {
+        return abs(now()->diffInSeconds($sentAt)) <= self::FRESH_SECONDS;
     }
 
     /** Chamado depois do commit da mensagem do cliente. */

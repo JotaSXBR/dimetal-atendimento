@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\History;
 
+use App\Enums\ClosedReason;
 use App\Enums\CloseOutcome;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
@@ -63,6 +64,16 @@ class InboxClosedTabTest extends TestCase
             ->assertSee('Recente Seis')
             ->assertDontSee('Antigo Oito')
             ->assertDontSee('Outro Setor');
+    }
+
+    public function test_ticket_importado_nao_aparece_na_aba(): void
+    {
+        $this->closed('Atendido Hoje');
+        $this->closed('Historico Importado', ['closed_reason' => ClosedReason::IMPORTADO]);
+
+        $this->inbox()->set('tab', 'encerrados')
+            ->assertSee('Atendido Hoje')
+            ->assertDontSee('Historico Importado');
     }
 
     public function test_a_aba_limita_a_50_linhas_e_mostra_o_mais_recente_primeiro(): void

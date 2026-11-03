@@ -110,6 +110,19 @@ class WahaClientTest extends TestCase
             && str_ends_with($request['config']['webhooks'][0]['url'], '/webhooks/waha'));
     }
 
+    public function test_iniciar_assina_reacao_edicao_e_apagamento(): void
+    {
+        Http::fake([
+            '*/api/sessions/main' => Http::response(['message' => 'Session not found'], 404),
+            '*/api/sessions' => Http::response(['status' => 'STARTING'], 201),
+        ]);
+
+        (new WahaClient(Channel::factory()->create(['waha_session' => 'main'])))->start();
+
+        Http::assertSent(fn ($request) => $request->method() === 'POST'
+            && array_diff(['message.reaction', 'message.edited', 'message.revoked'], $request['config']['webhooks'][0]['events']) === []);
+    }
+
     public function test_delete_session_chama_delete_na_sessao_e_aceita_404(): void
     {
         Http::fake(['*/api/sessions/main' => Http::sequence()->push([], 200)->push(['message' => 'not found'], 404)->push(['message' => 'boom'], 500)]);

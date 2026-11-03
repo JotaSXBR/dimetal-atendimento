@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -38,6 +39,8 @@ use Illuminate\Support\Str;
  * @property int|null $media_size
  * @property string|null $local_path
  * @property CarbonImmutable|null $media_purged_at
+ * @property CarbonImmutable|null $edited_at
+ * @property CarbonImmutable|null $revoked_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -63,6 +66,8 @@ use Illuminate\Support\Str;
     'media_size',
     'local_path',
     'media_purged_at',
+    'edited_at',
+    'revoked_at',
 ])]
 class Message extends Model
 {
@@ -96,6 +101,8 @@ class Message extends Model
             'delivered_at' => 'datetime',
             'read_at' => 'datetime',
             'media_purged_at' => 'datetime',
+            'edited_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 
@@ -129,5 +136,13 @@ class Message extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_user_id');
+    }
+
+    /**
+     * @return HasMany<MessageReaction, $this>
+     */
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(MessageReaction::class);
     }
 }
