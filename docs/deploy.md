@@ -194,7 +194,7 @@ roda. As filas normais continuam na conexão `redis`. Um teste (`QueueRoutingTes
   espaço do volume `/app/.media` antes de importar muitos dias.
 - **Reações, edições e apagadas:** o webhook passa a assinar também `message.edited`. Canais **já conectados** só recebem a
   nova lista quando a configuração do webhook for reaplicada (botão de conectar do card: faz um `PUT` na sessão e custa uma
-  queda de cerca de 1 s). Uma edição guarda as versões anteriores (tabela `message_edits`, migration nova: redeploy do `app-beta`)
+  queda de cerca de 1 s). Uma edição guarda as versões anteriores (tabela `message_edits`, migration nova: redeploy do `app-beta`; a ingestão e os jobs rodam no `worker-beta`, que também precisa de redeploy)
   e a conversa mostra o texto novo com "Antes: …" embaixo. A conversa ordena por horário de envio, não por chegada.
 - **Listagem do WAHA:** a janela vai em fatias de 24 h; uma fatia que bate o teto de 20 mil mensagens grava um aviso no log
   (`Listagem do WAHA bateu o teto de páginas`).

@@ -184,6 +184,14 @@ class ImportHistoryJobTest extends TestCase
             && $n->toArray($user)['conversations'] === 2 && $n->toArray($user)['open'] === 1);
     }
 
+    public function test_erro_do_waha_nao_vira_repeticao_imediata(): void
+    {
+        $job = new ImportHistoryJob(7);
+
+        $this->assertSame(60, $job->backoff);
+        $this->assertSame(3, $job->maxExceptions);
+    }
+
     public function test_pode_continuar_por_horas_sem_estourar_as_tentativas(): void
     {
         $until = (new ImportHistoryJob(7))->retryUntil();

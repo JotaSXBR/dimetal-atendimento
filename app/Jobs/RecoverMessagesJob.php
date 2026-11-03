@@ -24,6 +24,11 @@ class RecoverMessagesJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 840;
 
+    /** Erro do WAHA (por exemplo 422 enquanto a sessão reconecta) espera 60 s e desiste na 3ª exceção, em vez de repetir sem pausa. */
+    public int $backoff = 60;
+
+    public int $maxExceptions = 3;
+
     /** O lock de unicidade expira sozinho: um worker morto no meio do job (deploy) não pode travar o canal para sempre. */
     public int $uniqueFor = 900;
 

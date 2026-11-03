@@ -22,6 +22,11 @@ class ImportHistoryJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 840;
 
+    /** Erro do WAHA (por exemplo 422 enquanto a sessão reconecta) espera 60 s e desiste na 3ª exceção, em vez de repetir sem pausa. */
+    public int $backoff = 60;
+
+    public int $maxExceptions = 3;
+
     /** Quanto de uma rodada se usa antes de parar e continuar na seguinte (abaixo do `timeout`). */
     private const BUDGET_SECONDS = 780;
 

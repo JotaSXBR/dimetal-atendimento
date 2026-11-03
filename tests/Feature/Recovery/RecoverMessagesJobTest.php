@@ -95,6 +95,14 @@ class RecoverMessagesJobTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_erro_do_waha_nao_vira_repeticao_imediata(): void
+    {
+        $job = new RecoverMessagesJob(7, CarbonImmutable::now(), CarbonImmutable::now());
+
+        $this->assertSame(60, $job->backoff);
+        $this->assertSame(3, $job->maxExceptions);
+    }
+
     public function test_pode_reenfileirar_por_ate_1_hora(): void
     {
         $until = (new RecoverMessagesJob(7, CarbonImmutable::now(), CarbonImmutable::now()))->retryUntil();
