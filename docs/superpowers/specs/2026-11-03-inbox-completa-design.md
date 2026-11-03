@@ -145,6 +145,16 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
 mensagem da fatia 3). Cada fatia: branch próprio, plano, TDD, revisão e merge separados. A fatia 5 é a única que muda a
 regra "só o cliente abre ticket" e leva o maior cuidado de permissão e auditoria.
 
+## 6.1 Anotado pelo dono (03/11), ainda sem desenho
+
+Entram no inbox como fatias futuras; precisam de brainstorming próprio antes do plano:
+
+- **Foto do contato do WhatsApp** na lista, no cabeçalho do ticket, na ficha e em Contatos (hoje só há iniciais). Pontos a
+  decidir: de onde vem (WAHA, endpoint de foto de perfil do contato), contato sem foto ou que não a compartilha (cai nas
+  iniciais), cache e renovação, onde guardar o arquivo (casa com o RustFS/S3 antes do v1) e privacidade/LGPD.
+- **Seletor de emoji** na área de envio (campo de resposta e legenda de anexo). Pontos a decidir: biblioteca ou componente
+  Flux, busca e recentes, atalho `:`, acessibilidade, peso no carregamento da tela.
+
 ## 7. Restrições
 
 Laravel 13, Livewire 4, Flux, Reverb, PostgreSQL 18. WAHA 2026.9.2 com GOWS. Textos em português, sem avisos novos de
