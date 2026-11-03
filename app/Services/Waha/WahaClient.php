@@ -4,6 +4,7 @@ namespace App\Services\Waha;
 
 use App\Models\Channel;
 use App\Settings\WahaSettings;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\Http;
 class WahaClient
 {
     private const TIMEOUT_SECONDS = 15;
+
+    private const MESSAGES_PAGE_SIZE = 100;
+
+    private const MESSAGES_MAX_PAGES = 200;
 
     public function __construct(private readonly Channel $channel) {}
 
@@ -156,6 +161,34 @@ class WahaClient
             'chatId' => $chatId,
             'presence' => $presence,
         ])));
+    }
+
+    /**
+     * As mensagens de todos os chats na janela (segundos Unix), página a página; cada item tem o formato do `payload` do webhook.
+     * A mídia não é baixada aqui: `ResolveMessageMediaJob` cuida dela.
+     *
+     * @return \Generator<int, array<string, mixed>>
+     */
+    public function messages(CarbonInterface $from, CarbonInterface $to): \Generator
+    {
+        for ($page = 0; $page < self::MESSAGES_MAX_PAGES; $page++) {
+            $response = $this->request()->get($this->sessionPath('/chats/all/messages'), [
+                'filter.timestamp.gte' => $from->getTimestamp(),
+                'filter.timestamp.lte' => $to->getTimestamp(),
+                'limit' => self::MESSAGES_PAGE_SIZE,
+                'offset' => $page * self::MESSAGES_PAGE_SIZE,
+                'downloadMedia' => 'false',
+            ]);
+            $this->ensureOk($response);
+
+            $items = array_values(array_filter((array) $response->json(), is_array(...)));
+
+            yield from $items;
+
+            if (count($items) < self::MESSAGES_PAGE_SIZE) {
+                return;
+            }
+        }
     }
 
     /**
