@@ -6,10 +6,12 @@ use App\Events\MessageCreated;
 use App\Jobs\DrainOutboxJob;
 use App\Jobs\GoOfflineJob;
 use App\Jobs\HandleWahaEvent;
+use App\Jobs\RecoverMessagesJob;
 use App\Jobs\ResolveMessageMediaJob;
 use App\Jobs\SendTicketMessageJob;
 use App\Jobs\SyncContactToGoogleJob;
 use App\Models\Message;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -26,6 +28,7 @@ class QueueRoutingTest extends TestCase
             'webhook do WAHA' => [new HandleWahaEvent(1), 'inbound'],
             'download de midia' => [new ResolveMessageMediaJob(1), 'inbound'],
             'download de midia em recuperacao' => [new ResolveMessageMediaJob(1, 'history'), 'history'],
+            'recuperacao de mensagens' => [new RecoverMessagesJob(1, CarbonImmutable::now(), CarbonImmutable::now()), 'history'],
             'envio ao cliente' => [new SendTicketMessageJob(1), 'outbound'],
             'caixa de saida' => [new DrainOutboxJob(1), 'outbound'],
             'offline' => [new GoOfflineJob(1, 'x'), 'outbound'],
@@ -50,7 +53,7 @@ class QueueRoutingTest extends TestCase
     {
         $script = (string) file_get_contents(base_path('docker/worker.sh'));
 
-        foreach (['inbound', 'outbound', 'realtime', 'google', 'default'] as $queue) {
+        foreach (['inbound', 'outbound', 'realtime', 'google', 'default', 'history'] as $queue) {
             $this->assertMatchesRegularExpression('/--queue=[a-z,]*\b'.$queue.'\b/', $script, "worker.sh não consome a fila {$queue}");
         }
     }

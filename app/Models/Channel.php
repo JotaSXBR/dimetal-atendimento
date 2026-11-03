@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $backfill_days
  * @property CarbonImmutable|null $backfill_last_run_at
  * @property bool $active
+ * @property CarbonImmutable|null $down_since
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -38,6 +39,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'last_event_at',
     'backfill_days',
     'backfill_last_run_at',
+    'down_since',
     'active',
     'workflow_id',
 ])]
@@ -57,6 +59,7 @@ class Channel extends Model
             'last_event_at' => 'datetime',
             'phone_changed_at' => 'datetime',
             'backfill_last_run_at' => 'datetime',
+            'down_since' => 'datetime',
             'backfill_days' => 'integer',
             'active' => 'boolean',
         ];

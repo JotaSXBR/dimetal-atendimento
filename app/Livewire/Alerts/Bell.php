@@ -88,6 +88,7 @@ class Bell extends Component
                 'number_changed' => ['arrow-path', 'warn', 'Número do WhatsApp mudou', $channel],
                 default => ['check-circle', 'accent', 'WhatsApp voltou', $channel],
             },
+            'recovery' => ['inbox-arrow-down', 'accent', ($data['state'] ?? '') === 'imported' ? 'Histórico importado' : 'Mensagens recuperadas', $this->recoveryDetail($data, $channel)],
             default => ['bell', 'accent', 'Alerta', $detail],
         };
 
@@ -100,5 +101,16 @@ class Bell extends Component
             'unread' => $n->read_at === null,
             'time' => $n->created_at?->diffForHumans() ?? '',
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function recoveryDetail(array $data, string $channel): string
+    {
+        $messages = is_int($data['messages'] ?? null) ? $data['messages'] : 0;
+        $conversations = is_int($data['conversations'] ?? null) ? $data['conversations'] : 0;
+
+        return sprintf('%s: %d %s em %d %s', $channel, $messages, $messages === 1 ? 'mensagem' : 'mensagens', $conversations, $conversations === 1 ? 'conversa' : 'conversas');
     }
 }

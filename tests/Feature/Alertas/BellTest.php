@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\ChannelDown;
 use App\Notifications\ChannelNumberChanged;
+use App\Notifications\MessagesRecovered;
 use App\Notifications\SlaBreached;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -33,6 +34,22 @@ class BellTest extends TestCase
             ->assertSee('2026-000142')
             ->assertSee('WhatsApp desconectado')
             ->assertViewHas('unread', 2);
+    }
+
+    public function test_mostra_a_recuperacao_de_mensagens_e_a_importacao(): void
+    {
+        $eu = User::factory()->create();
+        $canal = Channel::factory()->create(['name' => 'Comercial']);
+        $eu->notify(new MessagesRecovered($canal, 3, 1));
+        $eu->notify(new MessagesRecovered($canal, 12, 4, 'imported'));
+
+        $this->actingAs($eu);
+
+        Livewire::test(Bell::class)
+            ->assertSee('Mensagens recuperadas')
+            ->assertSee('Comercial: 3 mensagens em 1 conversa')
+            ->assertSee('Histórico importado')
+            ->assertSee('Comercial: 12 mensagens em 4 conversas');
     }
 
     public function test_marcar_como_lida_so_vale_para_a_propria(): void
