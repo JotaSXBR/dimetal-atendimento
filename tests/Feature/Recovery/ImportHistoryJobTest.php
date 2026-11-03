@@ -11,6 +11,7 @@ use App\Services\Inbox\ImportHistory;
 use App\Services\Inbox\RecoveryResult;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
@@ -132,6 +133,14 @@ class ImportHistoryJobTest extends TestCase
         };
     }
 
+    /** Os totais ficam no cache entre as rodadas; com cache compartilhado (Redis) não podem vazar para outro teste. */
+    private function forgetTotals(int $channelId): void
+    {
+        foreach (['messages', 'conversations', 'open'] as $name) {
+            Cache::forget('import-totals:'.$channelId.':'.$name);
+        }
+    }
+
     private function serviceReturns(RecoveryResult $result, int $open, bool $complete): void
     {
         $service = Mockery::mock(ImportHistory::class);
@@ -146,11 +155,13 @@ class ImportHistoryJobTest extends TestCase
         Notification::fake();
         User::factory()->create();
         $channel = Channel::factory()->connected()->create();
+        $this->forgetTotals($channel->id);
         $this->serviceReturns(new RecoveryResult(3, 1), 0, false);
         $job = $this->trackedJob($channel->id);
 
         app()->call([$job, 'handle']);
 
+        $this->forgetTotals($channel->id);
         $this->assertSame(30, $job->released);
         Notification::assertNothingSent();
     }
@@ -160,6 +171,7 @@ class ImportHistoryJobTest extends TestCase
         Notification::fake();
         $user = User::factory()->create();
         $channel = Channel::factory()->connected()->create();
+        $this->forgetTotals($channel->id);
 
         $this->serviceReturns(new RecoveryResult(3, 1), 0, false);
         app()->call([$this->trackedJob($channel->id), 'handle']);

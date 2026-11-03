@@ -103,7 +103,8 @@ class ImportHistoryJob implements ShouldBeUnique, ShouldQueue
     {
         $value = Cache::get($this->counter($name));
 
-        return is_int($value) ? $value : 0;
+        // O Redis devolve o contador como texto ("12"), o cache em memória como inteiro.
+        return is_numeric($value) ? (int) $value : 0;
     }
 
     /**
