@@ -91,6 +91,7 @@ class ImportHistoryJobTest extends TestCase
         $service = Mockery::mock(ImportHistory::class);
         $service->shouldReceive('__invoke')->once()->andReturn(new RecoveryResult(12, 4));
         $service->open = 1;
+        $service->complete = true;
         $this->instance(ImportHistory::class, $service);
 
         app()->call([new ImportHistoryJob($channel->id), 'handle']);
@@ -99,6 +100,67 @@ class ImportHistoryJobTest extends TestCase
             'kind' => 'recovery', 'level' => 'info', 'state' => 'imported',
             'channel_id' => $channel->id, 'channel_name' => $channel->name, 'messages' => 12, 'conversations' => 4, 'open' => 1,
         ]);
+    }
+
+    /** @return ImportHistoryJob um job cujo `release` só anota o atraso */
+    private function trackedJob(int $channelId): ImportHistoryJob
+    {
+        return new class($channelId) extends ImportHistoryJob
+        {
+            public ?int $released = null;
+
+            public function release($delay = 0): void
+            {
+                $this->released = (int) $delay;
+            }
+        };
+    }
+
+    private function serviceReturns(RecoveryResult $result, int $open, bool $complete): void
+    {
+        $service = Mockery::mock(ImportHistory::class);
+        $service->shouldReceive('__invoke')->once()->andReturn($result);
+        $service->open = $open;
+        $service->complete = $complete;
+        $this->instance(ImportHistory::class, $service);
+    }
+
+    public function test_incompleta_reenfileira_sem_avisar(): void
+    {
+        Notification::fake();
+        User::factory()->create();
+        $channel = Channel::factory()->connected()->create();
+        $this->serviceReturns(new RecoveryResult(3, 1), 0, false);
+        $job = $this->trackedJob($channel->id);
+
+        app()->call([$job, 'handle']);
+
+        $this->assertSame(30, $job->released);
+        Notification::assertNothingSent();
+    }
+
+    public function test_ultima_rodada_avisa_com_os_totais_acumulados(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $channel = Channel::factory()->connected()->create();
+
+        $this->serviceReturns(new RecoveryResult(3, 1), 0, false);
+        app()->call([$this->trackedJob($channel->id), 'handle']);
+        $this->serviceReturns(new RecoveryResult(2, 1), 1, true);
+        $last = $this->trackedJob($channel->id);
+        app()->call([$last, 'handle']);
+
+        $this->assertNull($last->released);
+        Notification::assertSentTo($user, MessagesRecovered::class, fn (MessagesRecovered $n): bool => $n->toArray($user)['messages'] === 5
+            && $n->toArray($user)['conversations'] === 2 && $n->toArray($user)['open'] === 1);
+    }
+
+    public function test_pode_continuar_por_horas_sem_estourar_as_tentativas(): void
+    {
+        $until = (new ImportHistoryJob(7))->retryUntil();
+
+        $this->assertGreaterThan(now()->addHours(2)->getTimestamp(), $until->getTimestamp());
     }
 
     public function test_e_unico_por_canal_e_vai_para_a_fila_history(): void

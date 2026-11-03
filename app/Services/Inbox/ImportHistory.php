@@ -19,12 +19,15 @@ class ImportHistory
 
     private const OPEN_WINDOW_HOURS = 48;
 
-    /** Quantas conversas entraram abertas na última importação (legível depois da chamada). */
+    /** Quantas conversas entraram abertas na última rodada (legível depois da chamada). */
     public int $open = 0;
+
+    /** `false` quando a rodada parou no prazo: chamar de novo continua de onde parou (o que já entrou é pulado). */
+    public bool $complete = false;
 
     public function __construct(private readonly RecoverMessages $recover) {}
 
-    public function __invoke(Channel $channel): RecoveryResult
+    public function __invoke(Channel $channel, ?CarbonImmutable $deadline = null): RecoveryResult
     {
         $to = CarbonImmutable::now();
         $from = $to->subDays(min(max($channel->backfill_days, 0), self::MAX_DAYS));
@@ -33,8 +36,13 @@ class ImportHistory
         $tickets = [];
         $openTickets = [];
         $this->open = 0;
+        $this->complete = false;
 
         foreach ($this->chats($channel, $from, $to) as $items) {
+            if ($deadline !== null && CarbonImmutable::now()->gte($deadline)) {
+                return $this->result($messages, $tickets, $openTickets);
+            }
+
             $last = $items[count($items) - 1][1];
             $open = ! $last->fromMe && $last->sentAt->gte($to->subHours(self::OPEN_WINDOW_HOURS));
             $mode = $open ? IngestMode::RECOVERED : IngestMode::IMPORTED;
@@ -50,6 +58,17 @@ class ImportHistory
             }
         }
 
+        $this->complete = true;
+
+        return $this->result($messages, $tickets, $openTickets);
+    }
+
+    /**
+     * @param  array<int, true>  $tickets
+     * @param  array<int, true>  $openTickets
+     */
+    private function result(int $messages, array $tickets, array $openTickets): RecoveryResult
+    {
         $this->open = count($openTickets);
 
         return new RecoveryResult($messages, count($tickets));

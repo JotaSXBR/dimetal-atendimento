@@ -16,8 +16,11 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
 use App\Services\Inbox\ImportHistory;
+use App\Services\Inbox\IngestMode;
+use App\Services\Inbox\RecoverMessages;
 use App\Services\Inbox\RecoveryResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -163,6 +166,51 @@ class ImportHistoryTest extends TestCase
         $this->import([$this->in(self::A, 'A1', now()->subDays(2), $media), $this->out(self::A, 'A2', now()->subDays(2)->addMinute())]);
 
         Queue::assertPushed(ResolveMessageMediaJob::class, fn (ResolveMessageMediaJob $job): bool => $job->queue === 'media');
+    }
+
+    public function test_para_no_prazo_e_marca_incompleta(): void
+    {
+        Http::fake(['*/api/main/chats/all/messages*' => Http::response([$this->in(self::A, 'A1', now()->subDays(2)), $this->out(self::A, 'A2', now()->subDays(2)->addMinute())], 200)]);
+        $service = app(ImportHistory::class);
+
+        $result = $service($this->channel, now()->subSecond()->toImmutable());
+
+        $this->assertFalse($service->complete);
+        $this->assertSame(0, $result->messages);
+        $this->assertSame(0, Message::query()->count());
+    }
+
+    public function test_continuar_depois_conclui_sem_duplicar(): void
+    {
+        // Cada mensagem gravada "gasta" 10 s: o prazo de 5 s vence depois do primeiro chat.
+        $this->app->bind(RecoverMessages::class, fn () => new class extends RecoverMessages
+        {
+            public function ingest(Channel $channel, array $data, IngestMode $mode): ?Message
+            {
+                $message = parent::ingest($channel, $data, $mode);
+                Carbon::setTestNow(Carbon::now()->addSeconds(10));
+
+                return $message;
+            }
+        });
+        $messages = [
+            $this->in(self::A, 'A1', now()->subDays(3)), $this->out(self::A, 'A2', now()->subDays(3)->addMinute()),
+            $this->in(self::C, 'C1', now()->subDays(4)), $this->out(self::C, 'C2', now()->subDays(4)->addMinute()),
+        ];
+        Http::fake(['*/api/main/chats/all/messages*' => Http::response($messages, 200)]);
+        $service = app(ImportHistory::class);
+
+        $first = $service($this->channel, now()->addSeconds(5)->toImmutable());
+        $this->assertFalse($service->complete);
+        $this->assertGreaterThan(0, $first->messages);
+        $this->assertLessThan(4, Message::query()->count());
+
+        $second = $service($this->channel);
+
+        $this->assertTrue($service->complete);
+        $this->assertSame(4, Message::query()->count());
+        $this->assertSame(4, $first->messages + $second->messages);
+        $this->assertSame(0, $service($this->channel)->messages);
     }
 
     public function test_a_janela_e_limitada_a_30_dias(): void
