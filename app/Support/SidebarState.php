@@ -22,12 +22,14 @@ class SidebarState
         ];
     }
 
-    /** Há canal cadastrado e nenhum está conectado. */
+    /** Há canal cadastrado, nenhum está conectado e a queda já foi confirmada (passou a tolerância de uma oscilação). */
     public function whatsappDown(): bool
     {
         // Canal desativado de propósito não é queda: só os ativos contam.
         $active = fn () => Channel::query()->where('active', true);
 
-        return $active()->exists() && ! $active()->where('status', ChannelStatus::WORKING->value)->exists();
+        return $active()->exists()
+            && ! $active()->where('status', ChannelStatus::WORKING->value)->exists()
+            && Channel::query()->confirmedDown()->exists();
     }
 }

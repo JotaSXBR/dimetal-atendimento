@@ -65,7 +65,8 @@ class DisparosTest extends TestCase
         Notification::fake();
         Queue::fake();
         $a = User::factory()->create();
-        $channel = Channel::factory()->create(['status' => ChannelStatus::FAILED]);
+        // A queda foi anunciada (estava conectado e caiu): só então o "voltou" faz sentido.
+        $channel = Channel::factory()->create(['status' => ChannelStatus::FAILED, 'down_since' => now()->subMinutes(5), 'down_alerted_at' => now()->subMinutes(4)]);
 
         $channel->update(['status' => ChannelStatus::WORKING]);
 
