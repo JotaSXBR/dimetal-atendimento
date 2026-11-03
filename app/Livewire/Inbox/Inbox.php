@@ -38,7 +38,8 @@ class Inbox extends Component
     use ComposesMessages;
 
     /** Prévia da lista: o texto ou, quando não há, o nome do tipo de conteúdo. */
-    private const PREVIEW_SQL = "case when type = 'location' then 'Localização' when type = 'contact' then 'Contato' "
+    private const PREVIEW_SQL = "case when revoked_at is not null then 'Apagada · ' else '' end || "
+        ."case when type = 'location' then 'Localização' when type = 'contact' then 'Contato' "
         ."when body <> '' then body when type = 'view_once' then 'Visualização única' "
         ."when media_mime = 'image/webp' then 'Figurinha' when media_mime like 'image/%' then 'Foto' "
         ."when media_mime like 'audio/%' then 'Áudio' when media_mime like 'video/%' then 'Vídeo' "

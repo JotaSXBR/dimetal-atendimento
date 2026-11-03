@@ -98,7 +98,7 @@ class Index extends Component
         $closer = null;
 
         if ($ticket !== null) {
-            $latest = $ticket->messages()->with('reactions')->latest('id')->limit(self::MESSAGE_LIMIT + 1)->get();
+            $latest = $ticket->messages()->with('reactions')->orderByDesc('sent_at')->orderByDesc('id')->limit(self::MESSAGE_LIMIT + 1)->get();
             $hasMore = $latest->count() > self::MESSAGE_LIMIT;
             $messages = $latest->take(self::MESSAGE_LIMIT)->reverse()->values();
             $events = $ticket->events()->with('actor')->orderBy('created_at')->orderBy('id')->get();
