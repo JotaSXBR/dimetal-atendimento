@@ -219,7 +219,7 @@ class ImportHistoryTest extends TestCase
         Log::spy();
         $service = new class(app(RecoverMessages::class)) extends ImportHistory
         {
-            protected const MAX_MESSAGES = 3;
+            public const MAX_MESSAGES = 3;
         };
         Http::fake(['*/api/main/chats/all/messages*' => Http::response([
             $this->in(self::A, 'A1', now()->subDays(2)), $this->out(self::A, 'A2', now()->subDays(2)->addMinute()),
@@ -232,6 +232,29 @@ class ImportHistoryTest extends TestCase
         $this->assertTrue($service->truncated);
         $this->assertLessThan(5, $result->messages);
         Log::shouldHaveReceived('warning')->withArgs(fn (string $message): bool => str_contains($message, 'teto'))->once();
+    }
+
+    public function test_o_teto_mantem_as_mensagens_mais_recentes(): void
+    {
+        $service = new class(app(RecoverMessages::class)) extends ImportHistory
+        {
+            public const MAX_MESSAGES = 2;
+        };
+        $all = [
+            $this->in(self::B, 'B1', now()->subDays(4)),
+            $this->in(self::C, 'C1', now()->subDays(2)),
+            $this->in(self::A, 'A1', now()->subDay()),
+        ];
+        // Cada fatia de 24 h só devolve o que cai dentro dela, como o WAHA de verdade.
+        Http::fake(['*/api/main/chats/all/messages*' => fn ($request) => Http::response(array_values(array_filter(
+            $all,
+            fn (array $m): bool => $m['timestamp'] >= (int) $request['filter.timestamp.gte'] && $m['timestamp'] <= (int) $request['filter.timestamp.lte'],
+        )), 200)]);
+
+        $service($this->channel);
+
+        $ids = Message::query()->pluck('wa_message_id')->sort()->values()->all();
+        $this->assertSame(['A1', 'C1'], $ids);
     }
 
     public function test_abaixo_do_teto_nao_marca_como_limitada(): void

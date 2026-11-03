@@ -56,11 +56,11 @@ class BellTest extends TestCase
     {
         $eu = User::factory()->create();
         $canal = Channel::factory()->create(['name' => 'Comercial']);
-        $eu->notify(new MessagesRecovered($canal, 50000, 900, 'imported', 2, true));
+        $eu->notify(new MessagesRecovered($canal, 15000, 900, 'imported', 2, 15000));
 
         $this->actingAs($eu);
 
-        Livewire::test(Bell::class)->assertSee('limitada a 50 mil mensagens');
+        Livewire::test(Bell::class)->assertSee('limitada a 15.000 mensagens');
     }
 
     public function test_marcar_como_lida_so_vale_para_a_propria(): void

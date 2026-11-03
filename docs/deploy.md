@@ -196,8 +196,9 @@ roda. As filas normais continuam na conexão `redis`. Um teste (`QueueRoutingTes
   nova lista quando a configuração do webhook for reaplicada (botão de conectar do card: faz um `PUT` na sessão e custa uma
   queda de cerca de 1 s). Uma edição guarda as versões anteriores (tabela `message_edits`, migration nova: redeploy do `app-beta`; a ingestão e os jobs rodam no `worker-beta`, que também precisa de redeploy)
   e a conversa mostra o texto novo com "Antes: …" embaixo. A conversa ordena por horário de envio, não por chegada.
-- **Teto da importação:** a janela inteira fica na memória do worker, então a leitura para em **50 mil mensagens**, grava
-  `Importação limitada ao teto de mensagens` no log e o resumo do sino diz "limitada a 50 mil mensagens"; repetir com menos dias.
+- **Teto da importação:** a janela inteira fica na memória do worker (~9,5 KB por mensagem, medidos; o worker tem 256 MB), então a
+  leitura para em **15 mil mensagens**, indo da mais nova para a mais antiga (o que sobra é o mais recente), grava
+  `Importação limitada ao teto de mensagens` no log e o resumo do sino diz "limitada a 15.000 mensagens"; repetir com menos dias.
 - **Mensagem escrita offline e reentregue ao vivo** (até 30 min de atraso) passa pelo bot e pela resposta de fora do horário.
 - **Listagem do WAHA:** a janela vai em fatias de 24 h; uma fatia que bate o teto de 20 mil mensagens grava um aviso no log
   (`Listagem do WAHA bateu o teto de páginas`).

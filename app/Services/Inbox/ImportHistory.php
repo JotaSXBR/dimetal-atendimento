@@ -20,8 +20,11 @@ class ImportHistory
 
     private const OPEN_WINDOW_HOURS = 48;
 
-    /** A janela inteira fica na memória do worker para agrupar por chat: passar disso para a leitura (com aviso). */
-    protected const MAX_MESSAGES = 50000;
+    /**
+     * A janela inteira fica na memória do worker para agrupar por chat (~9,5 KB por mensagem medidos, contra os 256 MB do
+     * worker): passar disso para a leitura, com aviso. A leitura vai da mensagem mais nova para a mais antiga.
+     */
+    public const MAX_MESSAGES = 15000;
 
     /** Quantas conversas entraram abertas na última rodada (legível depois da chamada). */
     public int $open = 0;

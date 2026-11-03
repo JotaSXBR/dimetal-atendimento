@@ -195,7 +195,7 @@ class ImportHistoryJobTest extends TestCase
 
         app()->call([$this->trackedJob($channel->id), 'handle']);
 
-        Notification::assertSentTo($user, MessagesRecovered::class, fn (MessagesRecovered $n): bool => ($n->toArray($user)['limited'] ?? 0) === 1);
+        Notification::assertSentTo($user, MessagesRecovered::class, fn (MessagesRecovered $n): bool => ($n->toArray($user)['limit'] ?? 0) === ImportHistory::MAX_MESSAGES);
     }
 
     public function test_erro_do_waha_nao_vira_repeticao_imediata(): void

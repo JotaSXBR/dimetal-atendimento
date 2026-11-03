@@ -80,7 +80,7 @@ class ImportHistoryJob implements ShouldBeUnique, ShouldQueue
         }
 
         array_map(fn (string $name) => Cache::forget($this->counter($name)), ['messages', 'conversations', 'open']);
-        Notification::send(app(AlertRecipients::class)->everyone(), new MessagesRecovered($channel, $totals['messages'], $totals['conversations'], 'imported', $totals['open'], $import->truncated));
+        Notification::send(app(AlertRecipients::class)->everyone(), new MessagesRecovered($channel, $totals['messages'], $totals['conversations'], 'imported', $totals['open'], $import->truncated ? ImportHistory::MAX_MESSAGES : null));
     }
 
     /**

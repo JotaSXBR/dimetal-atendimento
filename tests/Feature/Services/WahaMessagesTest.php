@@ -75,10 +75,10 @@ class WahaMessagesTest extends TestCase
 
         $requests = Http::recorded()->map(fn (array $pair) => $pair[0]->data())->values();
         $this->assertCount(3, $requests);
-        $start = $from->getTimestamp();
-        $this->assertSame([$start, $start + 86401, $start + 172802], $requests->map(fn (array $r): int => (int) $r['filter.timestamp.gte'])->all());
-        $this->assertSame($start + 86400, (int) $requests[0]['filter.timestamp.lte']);
-        $this->assertSame($to->getTimestamp(), (int) $requests[2]['filter.timestamp.lte']);
+        $end = $to->getTimestamp();
+        // Da fatia mais nova para a mais antiga: se um teto parar a leitura, o que sobra é o mais recente.
+        $this->assertSame([$end - 86400, $end - 172801, $from->getTimestamp()], $requests->map(fn (array $r): int => (int) $r['filter.timestamp.gte'])->all());
+        $this->assertSame([$end, $end - 86401, $end - 172802], $requests->map(fn (array $r): int => (int) $r['filter.timestamp.lte'])->all());
     }
 
     public function test_fatia_que_bate_o_teto_de_paginas_avisa_no_log(): void

@@ -15,7 +15,7 @@ class WahaMessages
 
     private const MAX_PAGES = 200;
 
-    /** Fatia de 24 h: de `gte` a `gte + 86400`, os dois inclusive; a próxima começa um segundo depois. */
+    /** Fatia de 24 h: de `lte - 86400` a `lte`, os dois inclusive; a próxima (mais antiga) termina um segundo antes. */
     private const SLICE_SECONDS = 86400;
 
     public function __construct(private readonly WahaClient $client) {}
@@ -28,10 +28,11 @@ class WahaMessages
      */
     public function between(CarbonInterface $from, CarbonInterface $to): \Generator
     {
-        $last = $to->getTimestamp();
+        $first = $from->getTimestamp();
 
-        for ($start = $from->getTimestamp(); $start <= $last; $start = $end + 1) {
-            $end = min($start + self::SLICE_SECONDS, $last);
+        // Da fatia mais nova para a mais antiga: se um teto parar a leitura, o que sobra é o mais recente.
+        for ($end = $to->getTimestamp(); $end >= $first; $end = $start - 1) {
+            $start = max($end - self::SLICE_SECONDS, $first);
 
             yield from $this->slice($start, $end);
         }
