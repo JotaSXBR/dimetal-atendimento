@@ -343,7 +343,7 @@ class Inbox extends Component
             ->visibleTo($user)
             ->with(['contact', 'channel', 'tags'])
             ->addSelect(['preview' => Message::query()
-                ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->latest('id')->limit(1)])
+                ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->orderByDesc('sent_at')->orderByDesc('id')->limit(1)])
             ->when($this->tab === 'pendentes', fn (Builder $q) => $q->where('status', TicketStatus::PENDENTE->value))
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
             ->when($this->tab === 'meus', fn (Builder $q) => $q->where('assigned_user_id', $user->id))

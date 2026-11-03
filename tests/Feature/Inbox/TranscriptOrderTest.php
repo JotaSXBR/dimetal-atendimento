@@ -62,6 +62,17 @@ class TranscriptOrderTest extends TestCase
             ->assertSeeInOrder(['chegou depois enviada antes', 'chegou primeiro enviada depois']);
     }
 
+    public function test_previa_da_fila_mostra_a_ultima_por_horario_de_envio(): void
+    {
+        $ticket = Ticket::factory()->create(['status' => TicketStatus::AGUARDANDO]);
+        Message::factory()->for($ticket)->create(['body' => 'enviada por ultimo chegou primeiro', 'sent_at' => now()->setTime(11, 47)]);
+        Message::factory()->for($ticket)->create(['body' => 'enviada antes chegou depois', 'sent_at' => now()->setTime(11, 46)]);
+
+        Livewire::actingAs($this->admin)->test(Inbox::class)
+            ->assertSee('enviada por ultimo chegou primeiro')
+            ->assertDontSee('enviada antes chegou depois');
+    }
+
     public function test_previa_da_fila_marca_a_mensagem_apagada(): void
     {
         $ticket = Ticket::factory()->create(['status' => TicketStatus::AGUARDANDO]);
