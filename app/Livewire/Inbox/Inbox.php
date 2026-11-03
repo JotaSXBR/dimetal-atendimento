@@ -328,6 +328,7 @@ class Inbox extends Component
         }
 
         return Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
+            ->where(fn (Builder $q) => $q->whereNull('closed_reason')->orWhere('closed_reason', '<>', ClosedReason::IMPORTADO->value))
             ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get();
     }
 

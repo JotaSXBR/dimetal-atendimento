@@ -199,6 +199,23 @@ class ChannelsScreenTest extends TestCase
         $this->assertSame(5, $channel->fresh()->backfill_days);
     }
 
+    public function test_importacao_de_historico_aceita_no_maximo_30_dias(): void
+    {
+        Http::fake(['*/api/sessions*' => Http::response(['status' => 'STARTING'], 200)]);
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
+
+        $card = Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
+            ->set('backfill', true)
+            ->set('backfillDays', 31)
+            ->call('connect')
+            ->assertHasErrors(['backfillDays'])
+            ->assertSee('No máximo 30 dias');
+
+        $this->assertSame(0, $channel->fresh()->backfill_days);
+        $card->set('backfillDays', 30)->call('connect')->assertHasNoErrors();
+        $this->assertSame(30, $channel->fresh()->backfill_days);
+    }
+
     public function test_envia_texto_de_teste_normalizando_o_telefone(): void
     {
         Http::fake([

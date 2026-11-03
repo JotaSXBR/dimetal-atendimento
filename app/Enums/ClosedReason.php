@@ -8,6 +8,8 @@ enum ClosedReason: string
     case INATIVIDADE = 'inatividade';
     case MESCLADO = 'mesclado';
     case BOT = 'bot';
+    /** Conversa trazida da importação inicial do histórico: nunca foi atendimento deste sistema. */
+    case IMPORTADO = 'importado';
 
     public function label(): string
     {
@@ -16,6 +18,7 @@ enum ClosedReason: string
             self::INATIVIDADE => 'Encerrado por inatividade',
             self::MESCLADO => 'Mesclado em outro ticket do mesmo cliente',
             self::BOT => 'Encerrado pelo bot',
+            self::IMPORTADO => 'Histórico importado',
         };
     }
 }

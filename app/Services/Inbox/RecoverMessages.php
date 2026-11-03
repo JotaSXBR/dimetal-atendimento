@@ -29,7 +29,7 @@ class RecoverMessages
         $tickets = [];
 
         foreach ((new WahaClient($channel))->messages($from, $to) as $data) {
-            $message = $this->ingest($channel, $data);
+            $message = $this->ingest($channel, $data, IngestMode::RECOVERED);
 
             if ($message?->wasRecentlyCreated === true) {
                 $messages++;
@@ -40,8 +40,12 @@ class RecoverMessages
         return new RecoveryResult($messages, count($tickets));
     }
 
-    /** @param  array<string, mixed>  $data */
-    private function ingest(Channel $channel, array $data): ?Message
+    /**
+     * Grava uma mensagem da listagem do WAHA pelo caminho do webhook, no modo dado. Nunca lança: devolve `null` se falhar.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function ingest(Channel $channel, array $data, IngestMode $mode): ?Message
     {
         if (! is_string($data['id'] ?? null) || $data['id'] === '') {
             return null;
@@ -49,12 +53,12 @@ class RecoverMessages
 
         try {
             $event = WahaEvent::query()->firstOrCreate(
-                ['waha_event_id' => 'recovered:'.$channel->id.':'.Message::waKey($data['id'])],
+                ['waha_event_id' => $mode->value.':'.$channel->id.':'.Message::waKey($data['id'])],
                 [
                     'channel_id' => $channel->id,
                     'event' => 'message',
                     'session' => $channel->waha_session,
-                    'payload' => ['event' => 'message', 'session' => $channel->waha_session, 'payload' => $data, 'mode' => IngestMode::RECOVERED->value],
+                    'payload' => ['event' => 'message', 'session' => $channel->waha_session, 'payload' => $data, 'mode' => $mode->value],
                     'received_at' => now(),
                 ],
             );

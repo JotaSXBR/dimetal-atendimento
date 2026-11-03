@@ -88,7 +88,7 @@
         @if (! $inactive)
             <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
                 <flux:checkbox wire:model="backfill" label="Importar histórico" />
-                <flux:input wire:model="backfillDays" type="number" min="1" max="365" class="max-w-24" :disabled="! $backfill" />
+                <flux:input wire:model="backfillDays" type="number" min="1" max="30" class="max-w-24" :disabled="! $backfill" />
                 <span class="text-xs text-ink-3">dias</span>
                 <p class="basis-full text-xs leading-relaxed text-ink-3">Desmarcado por padrão. A importação roda depois da conexão e não bloqueia o atendimento.</p>
                 @error('backfillDays')

@@ -111,6 +111,9 @@ class Bell extends Component
         $messages = is_int($data['messages'] ?? null) ? $data['messages'] : 0;
         $conversations = is_int($data['conversations'] ?? null) ? $data['conversations'] : 0;
 
-        return sprintf('%s: %d %s em %d %s', $channel, $messages, $messages === 1 ? 'mensagem' : 'mensagens', $conversations, $conversations === 1 ? 'conversa' : 'conversas');
+        $open = is_int($data['open'] ?? null) ? $data['open'] : 0;
+        $detail = sprintf('%s: %d %s em %d %s', $channel, $messages, $messages === 1 ? 'mensagem' : 'mensagens', $conversations, $conversations === 1 ? 'conversa' : 'conversas');
+
+        return $open > 0 ? sprintf('%s · %d aguardando resposta', $detail, $open) : $detail;
     }
 }

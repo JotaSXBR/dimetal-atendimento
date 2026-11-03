@@ -12,11 +12,12 @@ final class MessagesRecovered extends AlertNotification
         private readonly int $messages,
         private readonly int $conversations,
         private readonly string $state = 'recovered',
+        private readonly int $open = 0,
     ) {}
 
     public function toArray(object $notifiable): array
     {
-        return [
+        return array_filter([
             'kind' => 'recovery',
             'level' => 'info',
             'state' => $this->state,
@@ -24,6 +25,7 @@ final class MessagesRecovered extends AlertNotification
             'channel_name' => $this->channel->name,
             'messages' => $this->messages,
             'conversations' => $this->conversations,
-        ];
+            'open' => $this->state === 'imported' ? $this->open : null,
+        ], fn (mixed $value): bool => $value !== null);
     }
 }

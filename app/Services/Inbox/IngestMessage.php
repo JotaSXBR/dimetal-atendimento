@@ -2,6 +2,7 @@
 
 namespace App\Services\Inbox;
 
+use App\Enums\ClosedReason;
 use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
@@ -49,6 +50,11 @@ class IngestMessage
         }
 
         $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
+
+        // Já há ticket aberto do contato que começou antes desta mensagem: ela pertence a ele, não ao histórico.
+        if ($incoming->mode === IngestMode::IMPORTED && $this->hasOpenTicketBefore($channel, $contact, $incoming)) {
+            $incoming = $incoming->withMode(IngestMode::RECOVERED);
+        }
 
         if ($incoming->fromMe && in_array($incoming->type, ['text', 'media'], true) && ($pending = $this->matchPending($channel, $contact, $incoming)) !== null) {
             return $this->adoptEcho($pending, $incoming);
@@ -123,7 +129,12 @@ class IngestMessage
     {
         $ticket = $this->ticketFor($channel, $contact, $incoming);
 
-        $incoming->fromMe ? $ticket->recordOutbound($incoming->sentAt) : $ticket->recordInbound($incoming->sentAt);
+        // Importada é histórico: não abre nem fecha espera de resposta, não gera evento de linha do tempo nem tempo real.
+        $imported = $incoming->mode === IngestMode::IMPORTED;
+
+        if (! $imported) {
+            $incoming->fromMe ? $ticket->recordOutbound($incoming->sentAt) : $ticket->recordInbound($incoming->sentAt);
+        }
 
         $message = Message::create([
             'ticket_id' => $ticket->id,
@@ -142,16 +153,18 @@ class IngestMessage
             'delivery_status' => $incoming->fromMe ? (DeliveryStatus::fromAck($incoming->ack) ?? DeliveryStatus::SENT) : null,
         ]);
 
-        TicketEvent::create([
-            'ticket_id' => $ticket->id,
-            'type' => $incoming->fromMe ? 'message_out' : 'message_in',
-            'payload' => ['message_id' => $message->id],
-        ]);
+        if (! $imported) {
+            TicketEvent::create([
+                'ticket_id' => $ticket->id,
+                'type' => $incoming->fromMe ? 'message_out' : 'message_in',
+                'payload' => ['message_id' => $message->id],
+            ]);
 
-        MessageCreated::dispatch($message);
-        TicketUpdated::dispatch($ticket);
+            MessageCreated::dispatch($message);
+            TicketUpdated::dispatch($ticket);
+        }
 
-        if (! $incoming->fromMe) {
+        if (! $incoming->fromMe && ! $imported) {
             // Depois do commit: só uma mensagem realmente gravada pode gerar resposta (a que perdeu a corrida é descartada).
             DB::afterCommit(function () use ($message): void {
                 app(AfterHoursReply::class)($message);
@@ -169,12 +182,52 @@ class IngestMessage
     /** O ticket da mensagem; resposta pelo celular a uma conversa em triagem automática tira o ticket das mãos do bot. */
     private function ticketFor(Channel $channel, Contact $contact, IncomingMessage $incoming): Ticket
     {
-        $ticket = $this->openTicketFor($channel, $contact, $incoming);
+        $ticket = $incoming->mode === IngestMode::IMPORTED
+            ? $this->importedTicketFor($channel, $contact, $incoming)
+            : $this->openTicketFor($channel, $contact, $incoming);
 
         if ($incoming->fromMe && $ticket->status === TicketStatus::PENDENTE) {
             app(BotEntry::class)->humanTookOver($ticket);
             $ticket->refresh();
         }
+
+        return $ticket;
+    }
+
+    private function hasOpenTicketBefore(Channel $channel, Contact $contact, IncomingMessage $incoming): bool
+    {
+        return Ticket::query()->open()
+            ->where('contact_id', $contact->id)
+            ->where('channel_id', $channel->id)
+            ->where('opened_at', '<=', $incoming->sentAt)
+            ->exists();
+    }
+
+    /** O ticket encerrado de importação do contato neste canal (um só), com a abertura e o fechamento acompanhando as mensagens. */
+    private function importedTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming): Ticket
+    {
+        DB::select('select pg_advisory_xact_lock(hashtext(?))', ['ticket:'.$contact->id.':'.$channel->id]);
+
+        $ticket = Ticket::query()
+            ->where('contact_id', $contact->id)
+            ->where('channel_id', $channel->id)
+            ->where('closed_reason', ClosedReason::IMPORTADO->value)
+            ->first();
+
+        if ($ticket === null) {
+            return Ticket::create([
+                'contact_id' => $contact->id,
+                'channel_id' => $channel->id,
+                'status' => TicketStatus::ENCERRADO,
+                'opened_at' => $incoming->sentAt,
+                'closed_at' => $incoming->sentAt,
+                'closed_reason' => ClosedReason::IMPORTADO,
+            ]);
+        }
+
+        $ticket->opened_at = $ticket->opened_at->min($incoming->sentAt);
+        $ticket->closed_at = $ticket->closed_at === null ? $incoming->sentAt : $ticket->closed_at->max($incoming->sentAt);
+        $ticket->save();
 
         return $ticket;
     }

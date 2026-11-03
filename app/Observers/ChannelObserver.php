@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Enums\ChannelStatus;
 use App\Jobs\DrainOutboxJob;
+use App\Jobs\ImportHistoryJob;
 use App\Jobs\RecoverMessagesJob;
 use App\Models\Channel;
 use App\Services\Alerts\AlertDispatcher;
@@ -34,6 +35,7 @@ class ChannelObserver
         $from = is_string($raw) ? ChannelStatus::tryFrom($raw) : null;
 
         $this->trackOutage($channel, $from);
+        $this->startInitialImport($channel);
 
         if ($channel->status === ChannelStatus::WORKING) {
             DrainOutboxJob::dispatch($channel->id)->afterCommit();
@@ -41,6 +43,20 @@ class ChannelObserver
 
         if ($from !== null) {
             app(AlertDispatcher::class)->channelChanged($channel, $from);
+        }
+    }
+
+    /** Primeira vez em WORKING com a importação pedida: reserva a execução (uma só, mesmo com poll e webhook juntos) e agenda. */
+    private function startInitialImport(Channel $channel): void
+    {
+        if ($channel->status !== ChannelStatus::WORKING || ! $channel->active || $channel->backfill_days <= 0 || $channel->backfill_last_run_at !== null) {
+            return;
+        }
+
+        $claimed = Channel::query()->whereKey($channel->id)->whereNull('backfill_last_run_at')->update(['backfill_last_run_at' => now()]);
+
+        if ($claimed === 1) {
+            ImportHistoryJob::dispatch($channel->id)->delay(self::DELAY_SECONDS);
         }
     }
 
