@@ -14,8 +14,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $message_id
  * @property string $previous_body
  * @property CarbonImmutable $edited_at
+ * @property string|null $action_id
  */
-#[Fillable(['message_id', 'previous_body', 'edited_at'])]
+#[Fillable(['message_id', 'previous_body', 'edited_at', 'action_id'])]
 class MessageEdit extends Model
 {
     /** @return array<string, string> */

@@ -79,15 +79,17 @@ class ApplyMessageChange
             return false;
         }
 
-        // Trava a linha: o mesmo evento repetido pelo WAHA não pode gravar a versão anterior duas vezes.
-        $changed = DB::transaction(function () use ($target, $body): bool {
+        $actionId = is_string($data['id'] ?? null) ? Message::waKey($data['id']) : null;
+
+        // Trava a linha: o mesmo evento repetido pelo WAHA (mesmo tarde, depois de outras edições) não vale duas vezes.
+        $changed = DB::transaction(function () use ($target, $body, $actionId): bool {
             $locked = Message::query()->lockForUpdate()->findOrFail($target->id);
 
-            if ($locked->body === $body) {
+            if ($locked->body === $body || ($actionId !== null && MessageEdit::query()->where('action_id', $actionId)->exists())) {
                 return false;
             }
 
-            MessageEdit::query()->create(['message_id' => $locked->id, 'previous_body' => $locked->body, 'edited_at' => now()]);
+            MessageEdit::query()->create(['message_id' => $locked->id, 'previous_body' => $locked->body, 'edited_at' => now(), 'action_id' => $actionId]);
             $locked->update(['body' => $body, 'edited_at' => now()]);
 
             return true;

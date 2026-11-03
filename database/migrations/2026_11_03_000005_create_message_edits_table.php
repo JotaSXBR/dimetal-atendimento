@@ -14,6 +14,8 @@ return new class extends Migration
             // O texto que a mensagem tinha antes desta edição; `messages.body` guarda sempre a versão mais nova.
             $table->text('previous_body');
             $table->timestamp('edited_at');
+            // O id do evento de edição do WhatsApp: o mesmo evento repetido (mesmo tarde) não vale duas vezes.
+            $table->string('action_id')->nullable()->unique();
             $table->timestamps();
 
             $table->index('message_id');

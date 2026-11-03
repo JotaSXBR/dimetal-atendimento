@@ -147,6 +147,20 @@ class MessageChangesTest extends TestCase
         $this->assertSame(1, MessageEdit::query()->count());
     }
 
+    public function test_evento_de_edicao_antigo_repetido_nao_reverte_o_texto(): void
+    {
+        $apply = app(ApplyMessageChange::class);
+        $segunda = $this->edit('Segunda versao');
+        $terceira = $this->edit('Terceira versao');
+        $apply->edited($segunda);
+        $apply->edited($terceira);
+
+        $apply->edited($segunda);
+
+        $this->assertSame('Terceira versao', $this->target->fresh()->body);
+        $this->assertSame(['Texto original', 'Segunda versao'], $this->target->fresh()->edits->pluck('previous_body')->all());
+    }
+
     public function test_tela_mostra_o_texto_novo_com_as_versoes_anteriores(): void
     {
         app(ApplyMessageChange::class)->edited($this->edit('Texto corrigido'));
