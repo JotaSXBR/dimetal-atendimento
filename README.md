@@ -32,7 +32,7 @@ composer setup
 php artisan db:seed
 npm run dev
 php artisan serve
-php artisan queue:work --queue=outbound,inbound,realtime,default,google
+php artisan queue:work --queue=outbound,inbound,realtime,default,google,history,media
 ```
 
 A aplicação fica em `http://localhost:8000`. O `queue:work` é necessário para o webhook do WhatsApp:

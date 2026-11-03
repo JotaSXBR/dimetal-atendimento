@@ -35,7 +35,7 @@ class RecoverMessagesCardTest extends TestCase
     {
         $channel = Channel::factory()->connected()->create();
 
-        $this->card($channel)->set('recoverHours', 6)->call('recover')->assertSee('Recuperação iniciada');
+        $this->card($channel)->set('recoverHours', 6)->call('recover')->assertSee('Recuperação pedida')->assertSee('reaproveitada');
 
         Queue::assertPushed(RecoverMessagesJob::class, fn (RecoverMessagesJob $job): bool => $job->channelId === $channel->id
             && $job->notifyAlways

@@ -150,6 +150,16 @@ class ChannelDownGraceTest extends TestCase
         $this->assertSame([$channel->id], Channel::query()->confirmedDown()->pluck('id')->all());
     }
 
+    public function test_primeiro_pareamento_passa_por_aguardando_qr_sem_alerta(): void
+    {
+        $channel = Channel::factory()->create(['status' => ChannelStatus::STOPPED]);
+
+        $channel->update(['status' => ChannelStatus::STARTING]);
+        $channel->update(['status' => ChannelStatus::SCAN_QR_CODE]);
+
+        Notification::assertNothingSent();
+    }
+
     public function test_canal_desativado_nao_alerta(): void
     {
         $channel = Channel::factory()->connected()->create(['active' => false]);

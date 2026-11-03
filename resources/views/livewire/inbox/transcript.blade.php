@@ -31,7 +31,7 @@
             @endif
 
             @if ($message->revoked_at)
-                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-danger uppercase">Mensagem apagada pelo cliente</p>
+                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-danger uppercase">{{ $out ? 'Mensagem apagada no celular' : 'Mensagem apagada pelo cliente' }}</p>
             @endif
 
             @if ($message->hasMedia() || in_array($message->type, ['view_once', 'location', 'contact'], true))

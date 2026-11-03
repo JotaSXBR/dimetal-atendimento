@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inbox;
 
+use App\Enums\MessageDirection;
 use App\Enums\UserRole;
 use App\Jobs\HandleWahaEvent;
 use App\Livewire\Inbox\Transcript;
@@ -230,6 +231,17 @@ class MessageChangesTest extends TestCase
 
         $this->assertNull(app(IngestMessage::class)($event));
         $this->assertSame($before, Message::query()->count());
+    }
+
+    public function test_mensagem_enviada_apagada_mostra_que_foi_no_celular(): void
+    {
+        $this->target->update(['revoked_at' => now(), 'direction' => MessageDirection::OUT]);
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))
+            ->test(Transcript::class, ['ticketId' => $this->ticket->id])
+            ->assertSee('Mensagem apagada no celular')
+            ->assertDontSee('apagada pelo cliente')
+            ->assertSee('Texto original');
     }
 
     public function test_tela_mostra_apagada_com_o_texto_editada_e_a_reacao(): void

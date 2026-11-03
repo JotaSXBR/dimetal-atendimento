@@ -102,7 +102,7 @@ class ChannelCard extends Component
 
         RecoverMessagesJob::dispatch($this->channel->id, now()->subHours($this->recoverHours)->toImmutable(), now()->toImmutable(), notifyAlways: true);
 
-        $this->recoverNotice = 'Recuperação iniciada. O resultado aparece no sino.';
+        $this->recoverNotice = 'Recuperação pedida. Se já houver uma em andamento neste canal, ela é reaproveitada. O resultado aparece no sino.';
     }
 
     public function rename(): void
