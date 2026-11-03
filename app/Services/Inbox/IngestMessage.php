@@ -212,8 +212,8 @@ class IngestMessage
         // Ao vivo, o bot e a resposta fora do horário valem mesmo que o job tenha atrasado; recuperada só se o cliente ainda espera.
         if (! $incoming->fromMe && ($mode === IngestMode::LIVE || app(BotEntry::class)->isFresh($freshAt))) {
             // Depois do commit: só uma mensagem realmente gravada pode gerar resposta (a que perdeu a corrida é descartada).
-            DB::afterCommit(function () use ($message): void {
-                app(AfterHoursReply::class)($message);
+            DB::afterCommit(function () use ($message, $freshAt): void {
+                app(AfterHoursReply::class)($message, $freshAt);
                 app(BotEntry::class)->handle($message);
             });
         }

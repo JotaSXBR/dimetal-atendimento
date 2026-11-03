@@ -123,6 +123,21 @@ class AfterHoursReplyTest extends TestCase
         $this->assertSame(1, $reply->ticket->events()->where('type', 'after_hours_reply')->count());
     }
 
+    public function test_mensagem_ao_vivo_que_chegou_10_min_atrasada_recebe_a_resposta(): void
+    {
+        // Escrita com o número offline e reentregue agora pelo webhook: o cliente está esperando.
+        $this->ingest($this->inbound('false_5516997524950@c.us_L1', ['timestamp' => now()->subMinutes(10)->timestamp]));
+
+        $this->assertSame(1, $this->botMessages());
+    }
+
+    public function test_mensagem_ao_vivo_com_40_min_de_atraso_nao_recebe_resposta(): void
+    {
+        $this->ingest($this->inbound('false_5516997524950@c.us_L2', ['timestamp' => now()->subMinutes(40)->timestamp]));
+
+        $this->assertSame(0, $this->botMessages());
+    }
+
     public function test_cinco_mensagens_seguidas_recebem_uma_unica_resposta(): void
     {
         foreach (range(1, 5) as $i) {
@@ -175,7 +190,8 @@ class AfterHoursReplyTest extends TestCase
 
     public function test_mensagem_antiga_do_historico_nao_dispara_resposta(): void
     {
-        $this->ingest($this->inbound(extra: ['timestamp' => now()->subMinutes(10)->timestamp]));
+        // Mais velha que a tolerância de 30 min das mensagens ao vivo: é histórico reprocessado, não cliente esperando.
+        $this->ingest($this->inbound(extra: ['timestamp' => now()->subHour()->timestamp]));
 
         $this->assertSame(0, $this->botMessages());
     }
