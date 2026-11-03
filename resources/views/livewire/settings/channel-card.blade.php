@@ -88,12 +88,9 @@
         @if (! $inactive)
             <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
                 <flux:checkbox wire:model="backfill" label="Importar histórico" />
-                <flux:input wire:model="backfillDays" type="number" min="1" max="30" class="max-w-24" />
+                <flux:input wire:model="backfillDays" type="number" min="1" max="30" class="max-w-24" :disabled="! $backfill" />
                 <span class="text-xs text-ink-3">dias</span>
-                @if ($status === \App\Enums\ChannelStatus::WORKING)
-                    <x-ui.button variant="secondary" wire:click="importNow" wire:confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." wire:loading.attr="disabled">Importar agora</x-ui.button>
-                @endif
-                <p class="basis-full text-xs leading-relaxed text-ink-3">Desmarcado por padrão. A importação roda depois da conexão e não bloqueia o atendimento. Com o canal conectado, um botão ao lado repete a importação dos últimos dias informados.</p>
+                <p class="basis-full text-xs leading-relaxed text-ink-3">Desmarcado por padrão. A importação roda depois da conexão e não bloqueia o atendimento. Com o canal conectado, o botão logo abaixo repete a importação.</p>
                 @if ($importNotice)
                     <p class="basis-full text-xs text-ink-2" role="status">{{ $importNotice }}</p>
                 @endif
@@ -104,6 +101,19 @@
         @endif
 
         @if (! $inactive && $status === \App\Enums\ChannelStatus::WORKING)
+            <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-4">
+                <flux:select wire:model="importDays" class="max-w-44" aria-label="Dias a importar">
+                    <flux:select.option value="1">Último dia</flux:select.option>
+                    <flux:select.option value="5">Últimos 5 dias</flux:select.option>
+                    <flux:select.option value="15">Últimos 15 dias</flux:select.option>
+                    <flux:select.option value="30">Últimos 30 dias</flux:select.option>
+                </flux:select>
+                <x-ui.button variant="secondary" wire:click="importNow" wire:confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." wire:loading.attr="disabled">Importar agora</x-ui.button>
+                @error('importDays')
+                    <p class="basis-full text-xs text-danger">{{ $message }}</p>
+                @enderror
+            </div>
+
             <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-4">
                 <flux:select wire:model="recoverHours" class="max-w-44" aria-label="Janela da recuperação">
                     <flux:select.option value="1">Última hora</flux:select.option>

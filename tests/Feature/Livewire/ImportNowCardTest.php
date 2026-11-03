@@ -35,22 +35,32 @@ class ImportNowCardTest extends TestCase
     {
         $channel = Channel::factory()->connected()->create(['backfill_last_run_at' => now()->subDay()]);
 
-        $this->card($channel)->set('backfillDays', 10)->call('importNow')->assertSee('Importação pedida');
+        $this->card($channel)->set('importDays', 15)->call('importNow')->assertSee('Importação pedida');
 
         Queue::assertPushed(ImportHistoryJob::class, fn (ImportHistoryJob $job): bool => $job->channelId === $channel->id);
         $fresh = $channel->fresh();
-        $this->assertSame(10, $fresh->backfill_days);
+        $this->assertSame(15, $fresh->backfill_days);
         $this->assertTrue($fresh->backfill_last_run_at?->equalTo(now()));
     }
 
-    public function test_recusa_dias_fora_de_1_a_30(): void
+    public function test_recusa_dias_fora_das_opcoes(): void
     {
         $channel = Channel::factory()->connected()->create();
 
-        $this->card($channel)->set('backfillDays', 31)->call('importNow')->assertHasErrors(['backfillDays'])->assertSee('No máximo 30 dias');
-        $this->card($channel)->set('backfillDays', 0)->call('importNow')->assertHasErrors(['backfillDays']);
+        $this->card($channel)->set('importDays', 31)->call('importNow')->assertHasErrors(['importDays'])->assertSee('Escolha uma das opções');
+        $this->card($channel)->set('importDays', 7)->call('importNow')->assertHasErrors(['importDays']);
 
         Queue::assertNotPushed(ImportHistoryJob::class);
+    }
+
+    public function test_campo_de_dias_da_conexao_so_habilita_com_a_caixa_marcada(): void
+    {
+        $card = $this->card(Channel::factory()->connected()->create());
+        // O atributo `disabled`, não a classe `disabled:shadow-none` do Flux.
+        $isDisabled = fn (string $html): bool => preg_match('/<input[^>]*wire:model="backfillDays"[^>]*\sdisabled[\s=>]/', $html) === 1;
+
+        $this->assertTrue($isDisabled($card->html()));
+        $this->assertFalse($isDisabled($card->set('backfill', true)->html()));
     }
 
     public function test_canal_desconectado_nao_mostra_o_botao_nem_despacha(): void
