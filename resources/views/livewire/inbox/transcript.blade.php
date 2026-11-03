@@ -30,6 +30,10 @@
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-warn uppercase">Celular · fora do painel</p>
             @endif
 
+            @if ($message->revoked_at)
+                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-danger uppercase">Mensagem apagada pelo cliente</p>
+            @endif
+
             @if ($message->hasMedia() || in_array($message->type, ['view_once', 'location', 'contact'], true))
                 @include('livewire.inbox.media', ['message' => $message])
             @endif
@@ -38,6 +42,14 @@
                 <p class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}</p>
             @elseif ($message->body === '' && ! $message->hasMedia() && $message->type !== 'view_once')
                 <p class="break-words whitespace-pre-wrap">[{{ $message->type }}]</p>
+            @endif
+
+            @if ($message->reactions->isNotEmpty())
+                <div class="mt-1 flex flex-wrap gap-1 text-xs">
+                    @foreach ($message->reactions as $reaction)
+                        <span class="rounded-full border border-line bg-canvas px-1.5 py-0.5" title="{{ $reaction->by === 'me' ? 'Reação do número da empresa' : 'Reação do cliente' }}">{{ $reaction->emoji }}</span>
+                    @endforeach
+                </div>
             @endif
 
             @if ($message->failure_reason)
@@ -55,6 +67,9 @@
             @endif
 
             <p class="mt-1 flex items-center justify-end gap-1 font-mono text-[10px] text-ink-3">
+                @if ($message->edited_at)
+                    <span>editada</span>
+                @endif
                 {{ $message->sent_at->timezone($tz)->format('H:i') }}
                 @if ($out)
                     <span class="font-bold {{ $tick[2] }}" aria-label="{{ $tick[0] }}">{{ $tick[1] }}</span>

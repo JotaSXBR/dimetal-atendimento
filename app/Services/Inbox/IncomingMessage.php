@@ -75,6 +75,11 @@ final readonly class IncomingMessage
             return null;
         }
 
+        // Reação não é mensagem: `message.reaction` a grava ligada ao destino (`ApplyMessageChange`); aqui ela viraria uma bolha solta.
+        if (($data['type'] ?? null) === 'reaction' || is_array($data['reaction'] ?? null)) {
+            return null;
+        }
+
         // `message.any` repete as recebidas, mas há mensagens (documento com legenda) que só chegam por ele; o id repetido é
         // descartado na ingestão, então aceitar os dois eventos não duplica.
         return $data;
