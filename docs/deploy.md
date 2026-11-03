@@ -154,7 +154,7 @@ Recursos do beta hoje:
 
 ### Filas (dentro do `worker-beta`)
 
-O estágio `worker` roda `docker/worker.sh`, que inicia **cinco** processos de fila no mesmo container, um por tipo de
+O estágio `worker` roda `docker/worker.sh`, que inicia **seis** processos de fila no mesmo container, um por tipo de
 trabalho, para um lento não segurar os outros:
 
 | Fila | Processo | O que carrega |
@@ -163,7 +163,8 @@ trabalho, para um lento não segurar os outros:
 | `inbound` | `--tries=3` | ingestão do webhook do WAHA (`HandleWahaEvent`) e download de mídia (`ResolveMessageMediaJob`) |
 | `realtime`, `default` | `--tries=3` | avisos de tela (Reverb) e, por rede de segurança, o que cair em `default` |
 | `google` | `--tries=1`, **um único** | contatos para o Google (`SyncContactToGoogleJob`) |
-| `history` | `--tries=1`, `--timeout=900`, **um único** | recuperação de mensagens após queda (`RecoverMessagesJob`), importação inicial (`ImportHistoryJob`) e a mídia delas |
+| `history` | `--tries=1`, `--timeout=900`, **um único** | recuperação de mensagens após queda (`RecoverMessagesJob`) e importação inicial (`ImportHistoryJob`) |
+| `media` | `--tries=3` | download da mídia das mensagens recuperadas e importadas (`ResolveMessageMediaJob`), para o backlog não atrasar a recuperação |
 
 O envio humanizado (visto, digitando, pausa, envio) leva segundos, e um só consumidor em `outbound` garante que as
 mensagens de cada conversa saiam na ordem. O People API do Google pede escrita sequencial, por isso `google` também tem
@@ -176,7 +177,7 @@ fila antiga antes do deploy: um job serializado pelo código velho falha no work
 na hora do deploy continuam sendo processados (o processo `realtime` também lê `default`). Um teste
 (`QueueRoutingTest`) garante que toda fila usada pelo código tem consumidor no `worker.sh`.
 
-**Fila `history`:** quem faz o deploy desta fatia precisa **redeployar o `worker-beta`** (o `worker.sh` ganhou o processo
+**Filas `history` e `media`:** quem faz o deploy desta fatia precisa **redeployar o `worker-beta`** (o `worker.sh` ganhou o processo
 novo). Sem isso, a recuperação, a importação e a mídia delas ficam paradas na fila. Esse worker usa a conexão
 `redis_history` (`config/queue.php`, `REDIS_HISTORY_QUEUE_RETRY_AFTER`, padrão 960 s), com `retry_after` acima do
 `--timeout` do worker (900 s) e do job (840 s): na conexão `redis` (180 s) um job longo seria reentregue enquanto ainda
@@ -188,7 +189,7 @@ roda. As filas normais continuam na conexão `redis`. Um teste (`QueueRoutingTes
   `docs/superpowers/specs/waha-config.md`). Idempotente.
 - **Importação inicial:** a caixa "Importar histórico" do card (máximo de **30 dias**) roda uma vez, na primeira vez que o
   canal fica `WORKING`. Cada chat vira um ticket encerrado (`closed_reason = importado`), fora de relatórios e da aba
-  "Encerrados"; chat com cliente sem resposta nas últimas 48 h entra aberto. Baixa a mídia na fila `history`: confira o
+  "Encerrados"; chat com cliente sem resposta nas últimas 48 h entra aberto. Baixa a mídia na fila `media`: confira o
   espaço do volume `/app/.media` antes de importar muitos dias.
 - **Reações, edições e apagadas:** o webhook passa a assinar também `message.edited`. Canais **já conectados** só recebem a
   nova lista quando a configuração do webhook for reaplicada (botão de conectar do card: faz um `PUT` na sessão e custa uma

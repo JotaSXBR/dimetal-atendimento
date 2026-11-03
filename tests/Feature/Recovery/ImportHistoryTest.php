@@ -156,13 +156,13 @@ class ImportHistoryTest extends TestCase
         $this->assertSame($counts, [Ticket::query()->count(), Message::query()->count(), Contact::query()->count()]);
     }
 
-    public function test_midia_importada_vai_para_a_fila_history(): void
+    public function test_midia_importada_vai_para_a_fila_media(): void
     {
         $media = ['hasMedia' => true, 'body' => '', 'media' => ['filename' => 'a.jpg', 'mimetype' => 'image/jpeg', 'size' => 10]];
 
         $this->import([$this->in(self::A, 'A1', now()->subDays(2), $media), $this->out(self::A, 'A2', now()->subDays(2)->addMinute())]);
 
-        Queue::assertPushed(ResolveMessageMediaJob::class, fn (ResolveMessageMediaJob $job): bool => $job->queue === 'history');
+        Queue::assertPushed(ResolveMessageMediaJob::class, fn (ResolveMessageMediaJob $job): bool => $job->queue === 'media');
     }
 
     public function test_a_janela_e_limitada_a_30_dias(): void

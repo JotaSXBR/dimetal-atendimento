@@ -28,7 +28,7 @@ class QueueRoutingTest extends TestCase
         return [
             'webhook do WAHA' => [new HandleWahaEvent(1), 'inbound'],
             'download de midia' => [new ResolveMessageMediaJob(1), 'inbound'],
-            'download de midia em recuperacao' => [new ResolveMessageMediaJob(1, 'history'), 'history'],
+            'download de midia em recuperacao' => [new ResolveMessageMediaJob(1, 'media'), 'media'],
             'recuperacao de mensagens' => [new RecoverMessagesJob(1, CarbonImmutable::now(), CarbonImmutable::now()), 'history'],
             'envio ao cliente' => [new SendTicketMessageJob(1), 'outbound'],
             'caixa de saida' => [new DrainOutboxJob(1), 'outbound'],
@@ -69,7 +69,7 @@ class QueueRoutingTest extends TestCase
     {
         $script = (string) file_get_contents(base_path('docker/worker.sh'));
 
-        foreach (['inbound', 'outbound', 'realtime', 'google', 'default', 'history'] as $queue) {
+        foreach (['inbound', 'outbound', 'realtime', 'google', 'default', 'history', 'media'] as $queue) {
             $this->assertMatchesRegularExpression('/--queue=[a-z,]*\b'.$queue.'\b/', $script, "worker.sh não consome a fila {$queue}");
         }
     }

@@ -143,7 +143,7 @@ class IngestMessage
         }
 
         if ($message->hasMedia()) {
-            ResolveMessageMediaJob::dispatch($message->id, $mode === IngestMode::LIVE ? 'inbound' : 'history')->afterCommit();
+            ResolveMessageMediaJob::dispatch($message->id, $mode === IngestMode::LIVE ? 'inbound' : 'media')->afterCommit();
         }
 
         return $message;

@@ -165,7 +165,7 @@ class RecoveredModeTest extends TestCase
         $this->assertSame(DeliveryStatus::SENT, $semAck?->delivery_status);
     }
 
-    public function test_midia_recuperada_vai_para_a_fila_history_e_a_ao_vivo_para_inbound(): void
+    public function test_midia_recuperada_vai_para_a_fila_media_e_a_ao_vivo_para_inbound(): void
     {
         $media = ['hasMedia' => true, 'body' => '', 'media' => ['filename' => 'a.jpg', 'mimetype' => 'image/jpeg', 'size' => 10]];
 
@@ -173,6 +173,6 @@ class RecoveredModeTest extends TestCase
         $this->ingest('GGG2', 0, $media, 'live');
 
         $queues = Queue::pushed(ResolveMessageMediaJob::class)->map(fn (ResolveMessageMediaJob $job) => $job->queue)->values()->all();
-        $this->assertSame(['history', 'inbound'], $queues);
+        $this->assertSame(['media', 'inbound'], $queues);
     }
 }
