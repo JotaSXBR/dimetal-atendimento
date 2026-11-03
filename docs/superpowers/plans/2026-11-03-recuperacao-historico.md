@@ -30,7 +30,7 @@
 
 ---
 
-### Tarefa 1: `WahaClient::messages()` com contrato real
+### Task 1: `WahaClient::messages()` com contrato real
 
 **Arquivos:**
 - Modificar: `app/Services/Waha/WahaClient.php`
@@ -52,7 +52,7 @@
 
 ---
 
-### Tarefa 2: modos de ingestão (`recovered`), regra de frescor no bot, ack e fila da mídia
+### Task 2: modos de ingestão (`recovered`), regra de frescor no bot, ack e fila da mídia
 
 **Arquivos:**
 - Criar: `app/Services/Inbox/IngestMode.php`
@@ -81,7 +81,7 @@
 
 ---
 
-### Tarefa 3: recuperação automática após queda
+### Task 3: recuperação automática após queda
 
 **Arquivos:**
 - Criar: `database/migrations/2026_11_03_000001_add_down_since_to_channels.php`, `app/Services/Inbox/RecoverMessages.php`, `app/Services/Inbox/RecoveryResult.php`, `app/Jobs/RecoverMessagesJob.php`, `app/Notifications/MessagesRecovered.php`
@@ -109,7 +109,7 @@
 
 ---
 
-### Tarefa 4: botão manual e varredura diária
+### Task 4: botão manual e varredura diária
 
 **Arquivos:**
 - Criar: `app/Console/Commands/RecoverMessagesCommand.php`
@@ -129,7 +129,7 @@
 
 ---
 
-### Tarefa 5: reações, edições e mensagens apagadas
+### Task 5: reações, edições e mensagens apagadas
 
 **Arquivos:**
 - Criar: `database/migrations/2026_11_03_000002_create_message_reactions_table.php`, `database/migrations/2026_11_03_000003_add_edit_and_revoke_to_messages.php`, `app/Models/MessageReaction.php`, `app/Services/Inbox/ApplyMessageChange.php`
@@ -157,7 +157,7 @@
 
 ---
 
-### Tarefa 6: importação inicial
+### Task 6: importação inicial
 
 **Arquivos:**
 - Criar: `app/Services/Inbox/ImportHistory.php`, `app/Jobs/ImportHistoryJob.php`
@@ -182,7 +182,7 @@
 
 ---
 
-### Tarefa 7: documentação e verificação final
+### Task 7: documentação e verificação final
 
 **Arquivos:**
 - Modificar: `docs/superpowers/specs/waha-config.md` (o parágrafo "Mensagem que chega com o WAHA fora do ar" passa a descrever a recuperação implementada), `docs/deploy.md` (fila `history` e redeploy do `worker-beta`; reaplicar a configuração do webhook nos canais conectados para assinar `message.edited`: o `Connect` do card faz `PUT` e causa uma queda de cerca de 1 s; `backfill_days` máximo de 30)
