@@ -3,9 +3,11 @@
 namespace App\Livewire\Inbox\Concerns;
 
 use App\Models\Message;
+use App\Services\Inbox\EditTicketMessage;
 use App\Services\Inbox\MessageActionFailed;
 use App\Services\Inbox\Quote;
 use App\Services\Inbox\ReactToMessage;
+use App\Services\Inbox\RevokeTicketMessage;
 use Closure;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -40,6 +42,18 @@ trait ActsOnMessages
     public function react(int $messageId, string $emoji): void
     {
         $this->act($messageId, 'react', fn (Message $message) => app(ReactToMessage::class)($message, $this->user(), $emoji));
+    }
+
+    /** Editar o próprio texto (até 15 min); o texto novo aparece quando o WhatsApp confirma. O campo de edição fica na bolha. */
+    public function editMessage(int $messageId, string $text): void
+    {
+        $this->act($messageId, 'edit', fn (Message $message) => app(EditTicketMessage::class)($message, $this->user(), $text));
+    }
+
+    /** Apagar para todos a própria mensagem; o painel marca "apagada" quando o WhatsApp confirma. */
+    public function revoke(int $messageId): void
+    {
+        $this->act($messageId, 'revoke', fn (Message $message) => app(RevokeTicketMessage::class)($message, $this->user()));
     }
 
     /**

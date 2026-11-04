@@ -28,6 +28,8 @@ final class TicketTimeline
         'merged' => 'mesclou o ticket',
         'sla_breached' => 'estourou o SLA',
         'message_reacted' => 'reagiu a uma mensagem',
+        'message_edited' => 'editou uma mensagem',
+        'message_revoked_by_agent' => 'apagou uma mensagem para todos',
     ];
 
     /** @var Collection<int, string> */

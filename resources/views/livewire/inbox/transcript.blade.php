@@ -26,7 +26,7 @@
     @endphp
 
     <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
-        <div class="max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
+        <div x-data="{ editing: false, text: @js($message->body) }" class="max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
             @endif
@@ -43,7 +43,7 @@
             @endif
 
             @if ($message->revoked_at)
-                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-danger uppercase">{{ $out ? 'Mensagem apagada no celular' : 'Mensagem apagada pelo cliente' }}</p>
+                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-danger uppercase">{{ $out ? ($message->origin === \App\Enums\MessageOrigin::PAINEL ? 'Mensagem apagada pelo atendente' : 'Mensagem apagada no celular') : 'Mensagem apagada pelo cliente' }}</p>
             @endif
 
             @if ($message->hasMedia() || in_array($message->type, ['view_once', 'location', 'contact'], true))
@@ -51,7 +51,18 @@
             @endif
 
             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                <p class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}</p>
+                <p x-show="! editing" class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}</p>
+                @if (! $readonly)
+                    @can('edit', $message)
+                        <div x-cloak x-show="editing" class="space-y-1">
+                            <textarea x-model="text" rows="3" maxlength="4096" class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm" aria-label="Novo texto da mensagem"></textarea>
+                            <div class="flex justify-end gap-2 text-xs">
+                                <button type="button" x-on:click="editing = false; text = @js($message->body)" class="text-ink-3 hover:text-ink">Cancelar</button>
+                                <button type="button" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false" class="font-semibold text-accent">Salvar</button>
+                            </div>
+                        </div>
+                    @endcan
+                @endif
             @elseif ($message->body === '' && ! $message->hasMedia() && $message->type !== 'view_once')
                 <p class="break-words whitespace-pre-wrap">[{{ $message->type }}]</p>
             @endif
@@ -99,6 +110,12 @@
                                 </div>
                             @endcan
                             <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="mt-1 block w-full rounded px-2 py-1 text-start hover:bg-canvas">Responder</button>
+                            @can('edit', $message)
+                                <button type="button" role="menuitem" x-on:click="editing = true" class="block w-full rounded px-2 py-1 text-start hover:bg-canvas">Editar</button>
+                            @endcan
+                            @can('revoke', $message)
+                                <button type="button" role="menuitem" wire:click="$parent.revoke({{ $message->id }})" wire:confirm="Apagar esta mensagem para todos? O cliente deixa de vê-la; o painel guarda o original." class="block w-full rounded px-2 py-1 text-start text-danger hover:bg-canvas">Apagar para todos</button>
+                            @endcan
                         </div>
                     </div>
                 @endcan

@@ -93,13 +93,21 @@ class Message extends Model
      */
     public function fullWaId(): ?string
     {
-        $contact = $this->contact;
+        $chat = $this->chatId();
 
-        if ($this->wa_message_id === null || $contact === null) {
+        if ($this->wa_message_id === null || $chat === null) {
             return null;
         }
 
-        return ($this->direction === MessageDirection::OUT ? 'true' : 'false').'_'.($contact->wa_id ?? (string) $contact->lid).'_'.$this->wa_message_id;
+        return ($this->direction === MessageDirection::OUT ? 'true' : 'false').'_'.$chat.'_'.$this->wa_message_id;
+    }
+
+    /** O chat da conversa no WAHA: o `wa_id` do contato ou, sem ele, o `lid`. */
+    public function chatId(): ?string
+    {
+        $contact = $this->contact;
+
+        return $contact === null ? null : ($contact->wa_id ?? (string) $contact->lid);
     }
 
     public function hasMedia(): bool

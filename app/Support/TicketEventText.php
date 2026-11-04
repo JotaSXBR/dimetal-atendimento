@@ -24,6 +24,8 @@ final class TicketEventText
         'media_purged' => 'Mídia apagada',
         'sla_breached' => 'SLA estourado',
         'message_reacted' => 'Reação a mensagem',
+        'message_edited' => 'Mensagem editada',
+        'message_revoked_by_agent' => 'Mensagem apagada para todos',
     ];
 
     public static function label(string $type): string

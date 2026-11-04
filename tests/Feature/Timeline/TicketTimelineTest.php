@@ -59,6 +59,15 @@ class TicketTimelineTest extends TestCase
         $this->assertSame('Ana Atendente reagiu a uma mensagem (reação removida)', $this->timeline([$removed])->sentence($removed));
     }
 
+    public function test_editar_e_apagar_para_todos_viram_frase_com_o_autor(): void
+    {
+        $edited = $this->event('message_edited', $this->ana, ['message_id' => 1]);
+        $revoked = $this->event('message_revoked_by_agent', $this->ana, ['message_id' => 1]);
+
+        $this->assertSame('Ana Atendente editou uma mensagem', $this->timeline([$edited])->sentence($edited));
+        $this->assertSame('Ana Atendente apagou uma mensagem para todos', $this->timeline([$revoked])->sentence($revoked));
+    }
+
     public function test_sem_setor_de_origem_vira_fila_geral(): void
     {
         $to = Sector::factory()->create(['name' => 'Financeiro']);
