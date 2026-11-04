@@ -26,8 +26,13 @@
 @elseif ($url === null)
     <p class="text-ink-2 italic">{{ $message->created_at?->gt(now()->subMinutes(2)) ? 'Carregando mídia…' : 'Mídia indisponível' }}</p>
 @elseif (str_starts_with($mime, 'image/'))
-    {{-- Figurinha (webp) é pequena; foto usa a altura cheia. --}}
-    <a href="{{ $url }}" target="_blank" rel="noopener"><img src="{{ $url }}" alt="{{ $mime === 'image/webp' ? 'Figurinha recebida' : 'Imagem recebida' }}" loading="lazy" class="{{ $mime === 'image/webp' ? 'max-h-40' : 'max-h-72' }} rounded-lg"></a>
+    @if ($mime === 'image/webp')
+        {{-- Figurinha (webp) é pequena. --}}
+        <a href="{{ $url }}" target="_blank" rel="noopener"><img src="{{ $url }}" alt="Figurinha recebida" loading="lazy" class="max-h-40 rounded-lg"></a>
+    @else
+        {{-- Foto como no WhatsApp: largura fixa e altura máxima; a mais alta que o limite é cortada. --}}
+        <a data-photo-box href="{{ $url }}" target="_blank" rel="noopener" class="block w-72 max-w-full overflow-hidden rounded-lg"><img src="{{ $url }}" alt="Imagem recebida" loading="lazy" class="max-h-80 w-full object-cover"></a>
+    @endif
 @elseif (str_starts_with($mime, 'audio/'))
     @include('livewire.inbox.audio-player', ['url' => $url])
 @elseif (str_starts_with($mime, 'video/'))

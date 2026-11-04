@@ -95,6 +95,28 @@ class InboxMediaTest extends TestCase
         $this->screen(['type' => 'view_once', 'media_mime' => 'image/jpeg'])->assertSee('Foto de visualização única');
     }
 
+    public function test_foto_tem_largura_fixa_e_altura_maxima_com_corte(): void
+    {
+        $this->screen(['media_ref' => 'f.jpg', 'media_mime' => 'image/jpeg'])
+            ->assertSeeHtml('data-photo-box')
+            ->assertSeeHtml('w-72 max-w-full')
+            ->assertSeeHtml('max-h-80 w-full object-cover')
+            ->assertDontSeeHtml('max-h-72');
+    }
+
+    public function test_foto_continua_abrindo_em_nova_aba(): void
+    {
+        $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'body' => '', 'media_ref' => 'f.jpg', 'media_mime' => 'image/png']);
+
+        Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)
+            ->assertSeeHtml('href="'.route('midia', $message).'" target="_blank" rel="noopener"');
+    }
+
+    public function test_figurinha_nao_ganha_a_caixa_da_foto(): void
+    {
+        $this->screen(['media_ref' => 's.webp', 'media_mime' => 'image/webp'])->assertDontSeeHtml('data-photo-box')->assertSeeHtml('max-h-40');
+    }
+
     public function test_figurinha_aparece_menor_que_uma_foto(): void
     {
         $this->screen(['media_ref' => 's.webp', 'media_mime' => 'image/webp'])->assertSeeHtml('max-h-40')->assertDontSeeHtml('max-h-72');
