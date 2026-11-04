@@ -1,7 +1,13 @@
 # Inbox completa: bot humanizado, presença do cliente e menu da mensagem — design
 
 Data: 2026-11-03
-Status: **aguardando aprovação do dono** (nada foi construído). Próximo passo depois de aprovado: `superpowers:writing-plans`.
+Status: **decisões fechadas em 04/11 (rodada de perguntas), aguardando aprovação final do dono** (nada foi construído).
+Próximo passo depois de aprovado: `superpowers:writing-plans`.
+
+**Decisões de 04/11:** (1) fatia 6 (busca no ticket) **cortada**, fica a busca de histórico que já existe; (2) rascunho só no
+navegador; (3) "digitando" do bot com teto de 3 s; (4) editar e apagar para todos **só pelo autor da mensagem**; (5) foto do
+contato e seletor de emoji **fora do pacote**; (6) "Conversar" **a qualquer hora**, sem bloqueio por horário comercial;
+(7) presença: ver "Ordem de presença" na fatia 2.
 
 ## 1. Por que
 
@@ -58,6 +64,31 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
 - `deliver` deixa de excluir `BOT` da presença. Para o bot: `sendSeen` **uma vez por rodada** (antes da 1ª mensagem do
   lote, não por mensagem), "digitando" antes de cada mensagem, tempo = `TypingDelay` com teto de ~3 s. Falha de presença
   nunca impede o envio (já é `attempt`). Chamada de visto com teto de tempo curto, para um WAHA lento não segurar a fila.
+- **A presença do bot não pode atropelar a do humano (apontado pelo dono em 04/11).** Causa verificada no código: (a)
+  `deliver` chama `scheduleOffline` após **toda** mensagem, inclusive a do bot, e o `offline` agendado só é cancelado por outro
+  `scheduleOffline`; o início de "gravando" (`recording(on)`) **não** invalida um `offline` já agendado, então um envio do bot
+  derruba a sessão para offline no meio da gravação do atendente; (b) com a fatia 1 o bot passaria a mandar `paused`
+  (`stopTyping`) na mesma conversa, apagando o "digitando/gravando" do humano. Regras: o atendente iniciar presença
+  (`recording(on)` ou o "digitando" do envio) **invalida o `offline` pendente** (troca o token) e marca a conversa como
+  "humano ativo" por um tempo curto (chave de cache por canal e conversa); enquanto a marca existir, o bot **não** envia
+  `typing`/`paused` nem agenda `offline` naquela conversa (só o visto e o envio). O `offline` do canal só sai quando nenhuma
+  conversa do canal tem presença ativa. Teste: bot enviando durante "gravando" do atendente não derruba a presença.
+- **Sequência de presença do atendente (dono, 04/11: a fonte da verdade é a doc do WAHA).** Ao assumir a conversa e começar
+  a digitar, o painel segue a ordem da doc, no mesmo caminho para bot e humano (`Presence`): `sendSeen` → `startTyping` →
+  espera aleatória proporcional ao tamanho do texto → `stopTyping` → `sendText` (páginas "How to avoid blocking" e "Send
+  messages"); mais `POST /api/{sessão}/presence` `online` antes e `offline` depois, que a doc de presença trata à parte (o
+  WAHA marca `online` sozinho por 90 s após qualquer requisição, a menos que `WAHA_PRESENCE_AUTO_ONLINE=False`, o nosso caso, e
+  manda `offline` depois de uma presença para o celular voltar a receber push). A doc **não** fixa a ordem do `online`/`offline`
+  em relação ao resto: a escolha é minha, `online` no início e `offline` agendado no fim, e a 1ª tarefa do plano confere no beta.
+  Diferença para o bot: o humano que **realmente digita** no campo manda `typing` pelo navegador e `paused` ao parar ou enviar.
+  **Desenho de qualidade, não só da doc (pesquisa de 04/11):** o padrão comum dos SDKs de chat (Sendbird, PubNub, Ably) é
+  *throttle* no início (no máximo um `typing` a cada N s enquanto há digitação, nunca por tecla), *debounce* no fim (`paused`
+  após ~3 s sem digitar) e `paused` imediato ao enviar. O limite de 20/min do servidor (como o "gravando") fica só como teto de
+  segurança, **não** como regra de funcionamento: o throttle no navegador mantém a chamada abaixo dele, para o "digitando" não
+  sumir no meio da digitação. N provisório de 5 s (≤12 chamadas/min por conversa), a confirmar na medição da fatia 2, que
+  também mede a duração do indicador no WhatsApp; nesse caso o `Presence` **não** repete a espera artificial antes do
+  envio, só o bot e o envio sem digitação (resposta rápida, `/atalho`) usam a espera. O `typing` do humano segue as regras
+  "humano ativo" acima.
 - A resposta de fora do horário (canal sem workflow) segue o mesmo caminho.
 - Eco `fromMe` do bot, inclusive de contato `@lid`, chegando durante o "digitando" **não** pode chamar `humanTookOver`.
 - Frescor: `BotEntry::isFresh` passa a comparar a hora de **chegada do webhook** (`received_at`) com o relógio do job, não
@@ -89,6 +120,12 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
   da issue e do protocolo, **não provada aqui**. A 1ª tarefa da fatia mede no beta: assinar, deixar o cliente digitar e gravar, e
   registrar (a) se o evento chega com a sessão offline, (b) se só chega com `online` e qual o custo para o push do celular,
   (c) o intervalo real entre eventos `typing` e entre `typing` e `paused`.
+- **Ordem de presença (decidida pelo dono em 04/11, segue a doc do WAHA):** em cada ação, `POST /api/{sessão}/presence`
+  `{"presence":"online"}` primeiro, depois visto, "digitando" e o envio, e `{"presence":"offline"}` no fim, para o push do
+  celular voltar (a doc diz que o WhatsApp não notifica o aparelho enquanto há cliente web ativo). A assinatura do chat
+  (`/presence/{chat}/subscribe`) também vai dentro dessa janela `online`. Isto substitui a ideia de deixar a sessão sempre online.
+  A medição da 1ª tarefa passa a responder: o cliente aparece digitando com `online` só durante a janela da ação, ou exige
+  `online` contínuo? Se exigir contínuo, voltar ao dono (custo: push do celular), sem decidir sozinho.
 - **Tempo de segurança dinâmico:** `ttl = max(piso, 2 × maior intervalo de renovação medido)`, guardado como configuração
   (não constante no código), com valor provisório de 15 s **só até a medição**. Se a medição mostrar que o WhatsApp renova
   sozinho a cada N s, o tempo segue N. Sem medição que o sustente, não se fixa número.
@@ -104,7 +141,8 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
   /api/{sessão}/chats/{chat}/messages/{id}`; grava a versão anterior em `MessageEdit` ("Antes:"), como no cliente.
 - **Apagar para todos:** `DELETE` no WAHA; marca `revoked_at` e mantém o texto original visível como "apagada pelo
   atendente", igual ao que já fazemos com as do cliente. Evento de auditoria `message_revoked_by_agent` com o autor.
-- Menu respeita papel: atendente age só nas mensagens do próprio ticket; mensagem do cliente só aceita Responder e Reagir.
+- Menu respeita papel: **editar e apagar só pelo autor da mensagem** (supervisor e admin também não mexem na alheia);
+  mensagem do cliente e do bot só aceitam Responder e Reagir.
 - Falha do WAHA (fora da janela, sessão caída) mostra o motivo e não altera o painel.
 
 ### Fatia 4: notas internas e rascunho por ticket
@@ -130,24 +168,21 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
     nasce junto com o envio (não sobram tickets vazios).
   - **SLA:** só passa a contar depois que o cliente responder (o relógio mede cliente esperando; ticket iniciado pela equipe
     não tem "cliente esperando" até a resposta).
-  - Fixo: só contato com telefone WhatsApp válido; evento `opened_by_agent` com o autor; não passa pelo bot; ritmo e horário
-    como qualquer envio humano.
+  - Fixo: só contato com telefone WhatsApp válido; evento `opened_by_agent` com o autor; não passa pelo bot. **Sem bloqueio
+    por horário comercial** (decidido em 04/11: pode iniciar a qualquer hora); o ritmo de envio é o de qualquer envio humano.
 
-### Fatia 6: busca dentro da conversa
+### Fatia 6: busca dentro da conversa — CORTADA (04/11)
 
-- Campo de busca no cabeçalho do ticket aberto; pesquisa no texto e legendas do ticket (`pg_trgm` já existe); setas
-  próximo/anterior e destaque; ao escolher, rola até a mensagem (reaproveita o rolar da citação, fatia 3) carregando o
-  trecho se o transcript estiver paginado.
+Fica a busca de histórico que já existe (`HistorySearch`). Reabrir só se o atendente sentir falta da busca dentro do ticket.
 
 ## 6. Ordem e dependências
 
-1 (bot) → 2 (presença) → 3 (menu da mensagem) → 4 (notas e rascunho) → 5 (contato) → 6 (busca; depende do rolar até a
-mensagem da fatia 3). Cada fatia: branch próprio, plano, TDD, revisão e merge separados. A fatia 5 é a única que muda a
+1 (bot) → 2 (presença) → 3 (menu da mensagem) → 4 (notas e rascunho) → 5 (contato). Cada fatia: branch próprio, plano, TDD, revisão e merge separados. A fatia 5 é a única que muda a
 regra "só o cliente abre ticket" e leva o maior cuidado de permissão e auditoria.
 
-## 6.1 Anotado pelo dono (03/11), ainda sem desenho
+## 6.1 Anotado pelo dono (03/11), ainda sem desenho — **fora deste pacote** (decidido em 04/11)
 
-Entram no inbox como fatias futuras; precisam de brainstorming próprio antes do plano:
+Ficam como fatias futuras; precisam de brainstorming próprio antes do plano (a foto casa com o RustFS/S3):
 
 - **Foto do contato do WhatsApp** na lista, no cabeçalho do ticket, na ficha e em Contatos (hoje só há iniciais). Pontos a
   decidir: de onde vem (WAHA, endpoint de foto de perfil do contato), contato sem foto ou que não a compartilha (cai nas
