@@ -15,7 +15,7 @@ class MessagePolicy
 {
     public function reply(User $user, Message $message): bool
     {
-        $ticket = $message->ticket()->first();
+        $ticket = $message->ticket;
 
         return $ticket !== null && $user->can('reply', $ticket);
     }

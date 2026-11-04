@@ -53,7 +53,7 @@ class Transcript extends Component
         $ticket = Ticket::query()->readableBy($user)->find($this->ticketId);
 
         return view('livewire.inbox.messages', [
-            'messages' => $ticket?->messages()->with(['reactions', 'edits'])->orderByDesc('sent_at')->orderByDesc('id')->limit(self::LIMIT)->get()->reverse() ?? collect(),
+            'messages' => $ticket?->messages()->with(['reactions', 'edits', 'ticket.channel', 'contact'])->orderByDesc('sent_at')->orderByDesc('id')->limit(self::LIMIT)->get()->reverse() ?? collect(),
         ]);
     }
 }

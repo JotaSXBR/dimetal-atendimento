@@ -274,6 +274,16 @@
             </div>
 
             <footer class="border-t border-line bg-surface p-3">
+                @if ($replyTo)
+                    <div class="mb-2 flex items-start gap-2 rounded-md border-l-4 border-accent bg-canvas px-3 py-2 text-xs" role="status">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-semibold text-accent">Respondendo a {{ $replyTo['author'] }}</p>
+                            <p class="truncate text-ink-2">{{ $replyTo['excerpt'] }}</p>
+                        </div>
+                        <button type="button" wire:click="cancelReply" class="text-ink-3 hover:text-ink" aria-label="Cancelar resposta">✕</button>
+                    </div>
+                @endif
+
                 @if ($canReply && $ticket->channel->status !== \App\Enums\ChannelStatus::WORKING)
                     <p class="mb-2 rounded-md bg-warn/10 px-3 py-2 text-xs text-warn" role="status">
                         O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).

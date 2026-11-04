@@ -12,6 +12,7 @@ use App\Enums\CloseOutcome;
 use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
 use App\Jobs\MarkTicketSeenJob;
+use App\Livewire\Inbox\Concerns\ActsOnMessages;
 use App\Livewire\Inbox\Concerns\ComposesMessages;
 use App\Models\Channel;
 use App\Models\Message;
@@ -36,6 +37,7 @@ use Livewire\Component;
 #[Layout('layouts::inbox')]
 class Inbox extends Component
 {
+    use ActsOnMessages;
     use ComposesMessages;
 
     /** Prévia da lista: o texto ou, quando não há, o nome do tipo de conteúdo. */
@@ -106,6 +108,7 @@ class Inbox extends Component
 
         $this->ticketId = $ticketId;
         $this->notice = null;
+        $this->replyToId = null;
         $this->discardAttachments();
         $this->closePanel();
     }
@@ -379,6 +382,7 @@ class Inbox extends Component
             // O selo do número só ajuda quando há mais de um número ativo.
             'showChannel' => Channel::query()->where('active', true)->count() >= 2,
             'ticket' => $ticket,
+            'replyTo' => $this->replyBar($ticket?->id),
             'previous' => $this->previousTicket($user),
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),
             'canClose' => $ticket !== null && $user->can('close', $ticket),

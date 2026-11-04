@@ -86,6 +86,17 @@
                 <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent underline">Reenviar</button>
             @endif
 
+            @if (! $readonly && ! $message->revoked_at)
+                @can('reply', $message)
+                    <div x-data="{ open: false }" class="relative mt-1 flex justify-end">
+                        <button type="button" x-on:click="open = ! open" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="text-xs text-ink-3 hover:text-ink">⋯</button>
+                        <div x-cloak x-show="open" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="absolute end-0 top-full z-10 mt-1 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md">
+                            <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="block w-full rounded px-2 py-1 text-start hover:bg-canvas">Responder</button>
+                        </div>
+                    </div>
+                @endcan
+            @endif
+
             <p class="mt-1 flex items-center justify-end gap-1 font-mono text-[10px] text-ink-3">
                 @if ($message->edited_at)
                     <span>editada</span>

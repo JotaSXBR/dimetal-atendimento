@@ -3,6 +3,7 @@
 namespace App\Livewire\Inbox\Concerns;
 
 use App\Jobs\SendTicketMessageJob;
+use App\Models\Message;
 use App\Models\QuickReply;
 use App\Models\Ticket;
 use App\Services\Inbox\AttachmentRules;
@@ -178,13 +179,18 @@ trait ComposesMessages
             return;
         }
 
+        // Só a primeira mensagem do envio cita: o texto separado ou, sem ele, o primeiro arquivo.
+        $quoted = $this->quotedMessage($ticket->id);
+
         if ($separateText) {
-            SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $text)->id);
+            SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $text, quoted: $quoted)->id);
+            $quoted = null;
         }
 
-        $failures = $this->sendAttachments($ticket, $captioned);
+        $failures = $this->sendAttachments($ticket, $captioned, $quoted);
 
         $this->reset('draft', 'attachments');
+        $this->cancelReply();
 
         foreach ($failures as $failure) {
             $this->addError('attachments', $failure);
@@ -319,13 +325,13 @@ trait ComposesMessages
     /**
      * @return list<string> mensagens de erro dos arquivos que o servidor recusou na hora de enviar
      */
-    private function sendAttachments(Ticket $ticket, bool $captioned): array
+    private function sendAttachments(Ticket $ticket, bool $captioned, ?Message $quoted = null): array
     {
         $failures = [];
 
         foreach ($this->attachments as $position => $file) {
             try {
-                app(SendTicketMedia::class)($ticket, $this->user(), $file, $captioned && $position === 0 ? $this->draft : '');
+                app(SendTicketMedia::class)($ticket, $this->user(), $file, $captioned && $position === 0 ? $this->draft : '', false, $position === 0 ? $quoted : null);
             } catch (InvalidArgumentException $e) {
                 $failures[] = $e->getMessage();
             }

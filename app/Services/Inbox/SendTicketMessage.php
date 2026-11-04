@@ -38,9 +38,20 @@ class SendTicketMessage
         return $message;
     }
 
-    public function create(Ticket $ticket, ?User $author, string $text, MessageOrigin $origin = MessageOrigin::PAINEL): Message
+    /** @param  Message|null  $quoted  a mensagem que esta responde (o WhatsApp a mostra como citação) */
+    public function create(Ticket $ticket, ?User $author, string $text, MessageOrigin $origin = MessageOrigin::PAINEL, ?Message $quoted = null): Message
     {
-        return $this->record($ticket, $author, 'text', $text, $origin);
+        return $this->record($ticket, $author, 'text', $text, $origin, self::quoteColumns($quoted));
+    }
+
+    /**
+     * As colunas da citação de uma mensagem que sai.
+     *
+     * @return array<string, mixed>
+     */
+    public static function quoteColumns(?Message $quoted): array
+    {
+        return $quoted === null ? [] : ['quoted_wa_message_id' => $quoted->wa_message_id, 'quoted_snapshot' => Quote::snapshot($quoted)];
     }
 
     /**
@@ -116,8 +127,10 @@ class SendTicketMessage
      */
     private function transmit(WahaClient $client, Message $message, string $chatId, ?string $file): array
     {
+        $replyTo = $this->replyTo($message);
+
         if ($file === null) {
-            return $client->sendText($chatId, $message->body);
+            return $client->sendText($chatId, $message->body, $replyTo);
         }
 
         return (new WahaMedia($client))->send(
@@ -127,7 +140,18 @@ class SendTicketMessage
             (string) ($message->media_name ?? 'arquivo'),
             base64_encode($file),
             $message->body,
+            $replyTo,
         );
+    }
+
+    /** O id completo da mensagem que esta responde, ou nulo quando não responde a nenhuma (ou ela já não existe). */
+    private function replyTo(Message $message): ?string
+    {
+        if ($message->quoted_wa_message_id === null) {
+            return null;
+        }
+
+        return Message::query()->where('channel_id', $message->channel_id)->where('wa_message_id', $message->quoted_wa_message_id)->first()?->fullWaId();
     }
 
     /**

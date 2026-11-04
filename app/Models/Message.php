@@ -93,7 +93,7 @@ class Message extends Model
      */
     public function fullWaId(): ?string
     {
-        $contact = $this->contact()->first();
+        $contact = $this->contact;
 
         if ($this->wa_message_id === null || $contact === null) {
             return null;

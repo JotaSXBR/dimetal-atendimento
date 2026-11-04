@@ -110,13 +110,14 @@ class WahaClient
     /**
      * @return array<string, mixed>
      */
-    public function sendText(string $chatId, string $text): array
+    public function sendText(string $chatId, string $text, ?string $replyTo = null): array
     {
-        return $this->decode($this->request()->post('/api/sendText', [
+        return $this->decode($this->request()->post('/api/sendText', array_filter([
             'session' => $this->sessionName(),
             'chatId' => $chatId,
             'text' => $text,
-        ]));
+            'reply_to' => $replyTo,
+        ], fn ($value) => $value !== null)));
     }
 
     /**
