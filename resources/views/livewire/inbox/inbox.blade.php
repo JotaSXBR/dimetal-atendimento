@@ -277,8 +277,7 @@
                 @if ($replyTo)
                     <div class="mb-2 flex items-start gap-2 rounded-md border-l-4 border-accent bg-canvas px-3 py-2 text-xs" role="status">
                         <div class="min-w-0 flex-1">
-                            <p class="font-semibold text-accent">Respondendo a {{ $replyTo['author'] }}</p>
-                            <p class="truncate text-ink-2">{{ $replyTo['excerpt'] }}</p>
+                            @include('livewire.inbox.quote-preview', ['quote' => $replyTo, 'heading' => 'Respondendo a '.$replyTo['author']])
                         </div>
                         <button type="button" wire:click="cancelReply" class="text-ink-3 hover:text-ink" aria-label="Cancelar resposta">✕</button>
                     </div>
