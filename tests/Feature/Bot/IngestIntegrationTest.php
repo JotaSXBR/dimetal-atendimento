@@ -214,6 +214,30 @@ class IngestIntegrationTest extends TestCase
         Queue::assertNotPushed(AdvanceBotSessionJob::class);
     }
 
+    public function test_eco_lid_do_bot_chegando_durante_o_digitando_nao_chama_human_took_over(): void
+    {
+        $this->activate();
+        $this->ingest('false_A1');
+        $this->runBotJobs();
+
+        $greeting = Message::query()->where('origin', MessageOrigin::BOT->value)->orderBy('id')->firstOrFail();
+        $greeting->touch(); // o envio começou: o eco pode chegar antes da resposta do WAHA
+
+        // O WhatsApp devolve o eco pelo chat `@lid` do cliente, com o telefone em `RecipientAlt`.
+        $this->ingest('true_ECHOLID', $greeting->body, [
+            'fromMe' => true,
+            'from' => '5516999990001@c.us',
+            'to' => '184226598404250@lid',
+            '_data' => ['Info' => ['RecipientAlt' => '5516997524950@s.whatsapp.net']],
+        ]);
+
+        $this->assertSame(TicketStatus::PENDENTE, $this->ticket()->status);
+        $this->assertSame(BotSession::ACTIVE, BotSession::query()->firstOrFail()->state);
+        $this->assertSame(0, Message::query()->where('origin', MessageOrigin::FORA_DO_PAINEL->value)->count());
+        $this->assertNull(TicketEvent::query()->where('type', 'bot_abandoned')->first());
+        $this->assertSame('ECHOLID', $greeting->fresh()?->wa_message_id, 'o eco foi adotado pela linha do bot');
+    }
+
     public function test_mensagem_do_celular_encerra_o_bot_e_o_ticket_segue_em_atendimento(): void
     {
         $this->activate();
