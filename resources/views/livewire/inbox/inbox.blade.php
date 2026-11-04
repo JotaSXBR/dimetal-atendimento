@@ -144,7 +144,6 @@
                         <span class="truncate">{{ $name }}</span>
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
                     </p>
-                    <p x-cloak x-show="$store.clientPresence.label({{ $ticket->id }})" x-text="$store.clientPresence.label({{ $ticket->id }})" aria-live="polite" class="text-[11px] font-medium text-accent"></p>
                     <p class="truncate font-mono text-[11px] text-ink-3">
                         {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}@if ($showChannel) · {{ $ticket->channel->phoneLabel() ?? 'sem número' }}@endif
                     </p>
@@ -267,6 +266,10 @@
             @endif
 
             <div class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-4 py-4">
+                {{-- Primeiro filho de um `flex-col-reverse` fica no fim da conversa: o "digitando…" do cliente, como uma bolha dele. --}}
+                <div x-cloak x-show="$store.clientPresence.label({{ $ticket->id }})" class="flex justify-start pt-2" role="status" aria-live="polite">
+                    <div class="animate-pulse rounded-xl bg-surface px-3 py-2 text-sm font-medium text-accent" x-text="$store.clientPresence.label({{ $ticket->id }})"></div>
+                </div>
                 <livewire:inbox.transcript :ticket-id="$ticket->id" :key="'transcript-'.$ticket->id" />
             </div>
 
