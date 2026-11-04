@@ -41,6 +41,8 @@ use Illuminate\Support\Str;
  * @property CarbonImmutable|null $media_purged_at
  * @property CarbonImmutable|null $edited_at
  * @property CarbonImmutable|null $revoked_at
+ * @property string|null $quoted_wa_message_id
+ * @property array{author: string, type: string, excerpt: string}|null $quoted_snapshot
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -68,6 +70,8 @@ use Illuminate\Support\Str;
     'media_purged_at',
     'edited_at',
     'revoked_at',
+    'quoted_wa_message_id',
+    'quoted_snapshot',
 ])]
 class Message extends Model
 {
@@ -121,6 +125,7 @@ class Message extends Model
             'media_purged_at' => 'datetime',
             'edited_at' => 'datetime',
             'revoked_at' => 'datetime',
+            'quoted_snapshot' => 'array',
         ];
     }
 

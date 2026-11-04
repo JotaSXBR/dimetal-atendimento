@@ -2,6 +2,11 @@
     $tz = config('app.display_timezone');
 @endphp
 
+@php
+    // Só as mensagens que estão na página têm âncora; a citada que ficou para trás aparece sem rolar até ela.
+    $localIds = $messages->pluck('id', 'wa_message_id');
+@endphp
+
 @foreach ($messages as $message)
     @php
         $out = $message->direction === \App\Enums\MessageDirection::OUT;
@@ -20,7 +25,7 @@
             : 'none';
     @endphp
 
-    <div wire:key="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
+    <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
         <div class="max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
@@ -28,6 +33,13 @@
 
             @if ($outside)
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-warn uppercase">Celular · fora do painel</p>
+            @endif
+
+            @if ($message->quoted_snapshot)
+                <button type="button" data-quote-target="{{ $localIds[$message->quoted_wa_message_id] ?? '' }}" class="mb-1 block w-full rounded-md border-l-4 border-accent bg-canvas/60 px-2 py-1 text-start text-xs">
+                    <span class="block font-semibold text-accent">{{ $message->quoted_snapshot['author'] ?? '' }}</span>
+                    <span class="block truncate text-ink-2">{{ $message->quoted_snapshot['excerpt'] ?? '' }}</span>
+                </button>
             @endif
 
             @if ($message->revoked_at)
