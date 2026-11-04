@@ -75,6 +75,49 @@ class InboxMediaTest extends TestCase
             ->assertSee('orcamento.pdf');
     }
 
+    public function test_documento_vira_cartao_com_icone_nome_tipo_e_tamanho(): void
+    {
+        $this->screen(['media_ref' => 'c.docx', 'media_mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'media_name' => 'COTAÇÃO DIMETAL.docx', 'media_size' => 22528])
+            ->assertSeeHtml('data-document-card')
+            ->assertSee('COTAÇÃO DIMETAL.docx')
+            ->assertSee('DOCX · 22 KB')
+            ->assertSeeHtml('bg-blue-600');
+    }
+
+    public function test_cartao_tem_abrir_em_nova_aba_e_salvar_como_com_download(): void
+    {
+        $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'body' => '', 'media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'orcamento.pdf']);
+        $url = route('midia', $message);
+
+        Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)
+            ->assertSeeHtml('href="'.$url.'" target="_blank" rel="noopener" class="py-1.5')
+            ->assertSeeHtml('href="'.$url.'" download')
+            ->assertSee('Abrir')
+            ->assertSee('Salvar como…');
+    }
+
+    public function test_documento_sem_nome_sem_tamanho_e_sem_extensao_usa_padroes(): void
+    {
+        $this->screen(['media_ref' => 'x.bin', 'media_mime' => 'application/octet-stream', 'media_name' => null, 'media_size' => null])
+            ->assertSee('Arquivo')
+            ->assertSeeHtml('data-document-card')
+            ->assertDontSeeHtml('data-document-meta')
+            ->assertDontSee('0 KB');
+    }
+
+    public function test_nome_do_documento_sai_escapado(): void
+    {
+        $this->screen(['media_ref' => 'x.pdf', 'media_mime' => 'application/pdf', 'media_name' => '<b>x</b>.pdf'])
+            ->assertDontSeeHtml('<b>x</b>')
+            ->assertSeeHtml('&lt;b&gt;x&lt;/b&gt;.pdf');
+    }
+
+    public function test_pdf_e_planilha_usam_a_etiqueta_certa(): void
+    {
+        $this->screen(['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf'])->assertSeeHtml('bg-red-600');
+        $this->screen(['media_ref' => 'a.xlsx', 'media_mime' => 'application/octet-stream', 'media_name' => 'dados.xlsx'])->assertSeeHtml('bg-green-600');
+    }
+
     public function test_midia_antiga_sem_referencia_mostra_indisponivel(): void
     {
         $this->screen(['media_ref' => null, 'created_at' => now()->subMinutes(10)])->assertSee('Mídia indisponível');
@@ -93,6 +136,28 @@ class InboxMediaTest extends TestCase
     public function test_aviso_de_visualizacao_unica_nomeia_o_tipo_da_midia(): void
     {
         $this->screen(['type' => 'view_once', 'media_mime' => 'image/jpeg'])->assertSee('Foto de visualização única');
+    }
+
+    public function test_foto_tem_largura_fixa_e_altura_maxima_com_corte(): void
+    {
+        $this->screen(['media_ref' => 'f.jpg', 'media_mime' => 'image/jpeg'])
+            ->assertSeeHtml('data-photo-box')
+            ->assertSeeHtml('w-72 max-w-full')
+            ->assertSeeHtml('max-h-80 w-full object-cover')
+            ->assertDontSeeHtml('max-h-72');
+    }
+
+    public function test_foto_continua_abrindo_em_nova_aba(): void
+    {
+        $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'body' => '', 'media_ref' => 'f.jpg', 'media_mime' => 'image/png']);
+
+        Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)
+            ->assertSeeHtml('href="'.route('midia', $message).'" target="_blank" rel="noopener"');
+    }
+
+    public function test_figurinha_nao_ganha_a_caixa_da_foto(): void
+    {
+        $this->screen(['media_ref' => 's.webp', 'media_mime' => 'image/webp'])->assertDontSeeHtml('data-photo-box')->assertSeeHtml('max-h-40');
     }
 
     public function test_figurinha_aparece_menor_que_uma_foto(): void

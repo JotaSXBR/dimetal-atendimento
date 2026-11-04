@@ -129,6 +129,55 @@ class InboxTranscriptTest extends TestCase
         $this->assertStringContainsString('id="message-'.$original->id.'"', $html);
     }
 
+    /** @param array<string, mixed> $snapshot */
+    private function quotedReply(Ticket $ticket, array $snapshot): string
+    {
+        $user = User::factory()->create(['role' => UserRole::ADMIN]);
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'ORIGM', 'body' => 'resposta', 'quoted_wa_message_id' => 'ORIGM', 'quoted_snapshot' => $snapshot]);
+
+        return Livewire::actingAs($user)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+    }
+
+    public function test_bloco_citado_de_foto_mostra_a_miniatura_e_o_rotulo(): void
+    {
+        $ticket = $this->ticket();
+        $photo = Message::factory()->for($ticket)->create(['type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'foto.jpg', 'media_ref' => 'files/foto.jpg']);
+
+        $html = $this->quotedReply($ticket, ['author' => 'Maria', 'type' => 'media', 'excerpt' => 'Foto', 'media' => ['message_id' => $photo->id, 'kind' => 'image', 'name' => 'foto.jpg']]);
+
+        $this->assertSame(1, preg_match('/<img[^>]*size-14[^>]*>/', $html, $thumb));
+        $this->assertStringContainsString(route('midia', $photo), $thumb[0]);
+        $this->assertStringContainsString('x-on:error', $thumb[0], 'a miniatura some sozinha se a mídia expirou');
+        $this->assertStringNotContainsString('onerror', $thumb[0], 'sem atributo inline: a CSP vai ficar em modo de bloqueio');
+        $this->assertStringContainsString('Foto', $html);
+    }
+
+    public function test_bloco_citado_de_documento_mostra_o_nome_e_nenhuma_imagem(): void
+    {
+        $ticket = $this->ticket();
+
+        $html = $this->quotedReply($ticket, ['author' => 'Maria', 'type' => 'media', 'excerpt' => 'COTAÇÃO DIMETAL.docx', 'media' => ['message_id' => 1, 'kind' => 'document', 'name' => 'COTAÇÃO DIMETAL.docx']]);
+
+        $this->assertStringContainsString('COTAÇÃO DIMETAL.docx', $html);
+        $this->assertStringNotContainsString('size-14', $html);
+    }
+
+    public function test_bloco_citado_antigo_sem_media_continua_so_com_texto(): void
+    {
+        $html = $this->quotedReply($this->ticket(), ['author' => 'Maria', 'type' => 'media', 'excerpt' => 'Foto']);
+
+        $this->assertStringContainsString('Foto', $html);
+        $this->assertStringNotContainsString('size-14', $html);
+    }
+
+    public function test_nome_do_arquivo_citado_sai_escapado(): void
+    {
+        $html = $this->quotedReply($this->ticket(), ['author' => 'Maria', 'type' => 'media', 'excerpt' => '<b>x</b>.docx', 'media' => ['message_id' => 1, 'kind' => 'document', 'name' => '<b>x</b>.docx']]);
+
+        $this->assertStringNotContainsString('<b>x</b>', $html);
+        $this->assertStringContainsString('&lt;b&gt;x&lt;/b&gt;.docx', $html);
+    }
+
     public function test_transcript_refresh_atualiza(): void
     {
         $ticket = $this->ticket();

@@ -37,8 +37,7 @@
 
             @if ($message->quoted_snapshot)
                 <button type="button" data-quote-target="{{ $localIds[$message->quoted_wa_message_id] ?? '' }}" class="mb-1 block w-full rounded-md border-l-4 border-accent bg-canvas/60 px-2 py-1 text-start text-xs">
-                    <span class="block font-semibold text-accent">{{ $message->quoted_snapshot['author'] ?? '' }}</span>
-                    <span class="block truncate text-ink-2">{{ \App\Support\WhatsAppText::html((string) ($message->quoted_snapshot['excerpt'] ?? '')) }}</span>
+                    @include('livewire.inbox.quote-preview', ['quote' => $message->quoted_snapshot])
                 </button>
             @endif
 
@@ -99,9 +98,42 @@
 
             @if (! $readonly && ! $message->revoked_at)
                 @can('reply', $message)
-                    <div x-data="{ open: false }" class="relative mt-1 flex justify-end">
-                        <button type="button" x-on:click="open = ! open" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="text-xs text-ink-3 hover:text-ink">⋯</button>
-                        <div x-cloak x-show="open" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="absolute end-0 top-full z-10 mt-1 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md">
+                    {{-- O menu é `fixed`: dentro da área rolável da conversa ele seria cortado pelo `overflow` e passaria por baixo do campo de resposta.
+                         A posição vem do botão: abaixo dele, ou acima se não couber, e sempre dentro da tela. --}}
+                    <div
+                        x-data="{
+                            open: false,
+                            style: '',
+                            toggle() {
+                                this.open = ! this.open;
+
+                                if (this.open) {
+                                    this.style = 'top:0;left:0;visibility:hidden';
+                                    this.$nextTick(() => this.place());
+                                }
+                            },
+                            place() {
+                                const button = this.$refs.button.getBoundingClientRect();
+                                const menu = this.$refs.menu;
+                                const margin = 8;
+                                // O limite é a área da conversa (acima do campo de resposta), não a tela inteira.
+                                const area = this.$el.closest('.overflow-y-auto')?.getBoundingClientRect();
+                                const floor = Math.min(area?.bottom ?? window.innerHeight, window.innerHeight) - margin;
+                                const ceiling = Math.max(area?.top ?? 0, 0) + margin;
+                                const below = button.bottom + 4;
+                                const wanted = below + menu.offsetHeight > floor ? button.top - menu.offsetHeight - 4 : below;
+                                const top = Math.max(Math.min(wanted, floor - menu.offsetHeight), ceiling);
+                                const left = Math.min(Math.max(button.right - menu.offsetWidth, margin), window.innerWidth - menu.offsetWidth - margin);
+
+                                this.style = `top:${top}px;left:${left}px`;
+                            },
+                        }"
+                        x-on:scroll.window.capture="open = false"
+                        x-on:resize.window="open = false"
+                        class="mt-1 flex justify-end"
+                    >
+                        <button type="button" x-ref="button" x-on:click="toggle()" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="text-xs text-ink-3 hover:text-ink">⋯</button>
+                        <div x-ref="menu" x-cloak x-show="open" x-bind:style="style" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="fixed z-50 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md">
                             @can('react', $message)
                                 <div class="flex gap-0.5 border-b border-line pb-1" role="group" aria-label="Reagir">
                                     @foreach (\App\Services\Inbox\ReactToMessage::EMOJIS as $emoji)

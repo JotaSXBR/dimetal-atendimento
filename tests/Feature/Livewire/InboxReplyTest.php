@@ -70,6 +70,22 @@ class InboxReplyTest extends TestCase
         Queue::assertPushed(SendTicketMessageJob::class, 1);
     }
 
+    public function test_barra_responder_a_foto_mostra_a_miniatura(): void
+    {
+        $photo = Message::factory()->for($this->ticket)->create(['wa_message_id' => 'PH1', 'type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'foto.jpg', 'media_ref' => 'files/foto.jpg']);
+
+        $html = $this->inbox()->call('reply', $photo->id)->assertSee('Respondendo a')->html();
+
+        $this->assertMatchesRegularExpression('/<img[^>]*size-14[^>]*midia\/'.$photo->id.'[^>]*>|<img[^>]*midia\/'.$photo->id.'[^>]*size-14[^>]*>/', $html);
+    }
+
+    public function test_barra_responder_a_documento_mostra_o_nome(): void
+    {
+        $document = Message::factory()->for($this->ticket)->create(['wa_message_id' => 'DOC1', 'type' => 'media', 'body' => '', 'media_mime' => 'application/pdf', 'media_name' => 'orcamento.pdf', 'media_ref' => 'files/o.pdf']);
+
+        $this->inbox()->call('reply', $document->id)->assertSee('Respondendo a')->assertSee('orcamento.pdf');
+    }
+
     public function test_cancelar_tira_a_barra(): void
     {
         $this->inbox()->call('reply', $this->original->id)->call('cancelReply')->assertSet('replyToId', null)->assertDontSee('Respondendo a');

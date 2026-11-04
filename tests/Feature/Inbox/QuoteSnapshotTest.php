@@ -63,4 +63,29 @@ class QuoteSnapshotTest extends TestCase
             $this->assertSame('media', $snapshot['type']);
         }
     }
+
+    public function test_midia_traz_o_id_local_o_tipo_e_o_nome(): void
+    {
+        $photo = $this->message(['type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'foto.jpg']);
+        $document = $this->message(['type' => 'media', 'body' => 'Segue', 'media_mime' => 'application/pdf', 'media_name' => 'orcamento.pdf']);
+
+        $this->assertSame(['message_id' => $photo->id, 'kind' => 'image', 'name' => 'foto.jpg'], Quote::snapshot($photo)['media']);
+        $this->assertSame(['message_id' => $document->id, 'kind' => 'document', 'name' => 'orcamento.pdf'], Quote::snapshot($document)['media']);
+    }
+
+    public function test_documento_sem_legenda_usa_o_nome_do_arquivo_como_trecho(): void
+    {
+        $named = $this->message(['type' => 'media', 'body' => '', 'media_mime' => 'application/pdf', 'media_name' => 'COTAÇÃO DIMETAL.docx']);
+        $unnamed = $this->message(['type' => 'media', 'body' => '', 'media_mime' => 'application/pdf', 'media_name' => null]);
+        $photo = $this->message(['type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'foto.jpg']);
+
+        $this->assertSame('COTAÇÃO DIMETAL.docx', Quote::snapshot($named)['excerpt']);
+        $this->assertSame('Arquivo', Quote::snapshot($unnamed)['excerpt']);
+        $this->assertSame('Foto', Quote::snapshot($photo)['excerpt'], 'foto segue com o rótulo; a miniatura é que a mostra');
+    }
+
+    public function test_texto_continua_sem_a_chave_media(): void
+    {
+        $this->assertArrayNotHasKey('media', Quote::snapshot($this->message(['body' => 'oi'])));
+    }
 }

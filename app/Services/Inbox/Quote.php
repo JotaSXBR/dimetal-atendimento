@@ -6,6 +6,7 @@ use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use App\Models\Channel;
 use App\Models\Message;
+use App\Support\MediaPresentation;
 use Illuminate\Support\Str;
 
 /** A mensagem citada numa resposta: quem escreveu, o tipo e um trecho de até 200 caracteres. */
@@ -13,14 +14,22 @@ final class Quote
 {
     private const EXCERPT_LIMIT = 200;
 
-    /** @return array{author: string, type: string, excerpt: string} */
+    /**
+     * `media` só existe quando a citada é mídia: o id local dela (a miniatura vem da rota `midia`), o tipo e o nome do arquivo.
+     *
+     * @return array{author: string, type: string, excerpt: string, media?: array{message_id: int, kind: string, name: string|null}}
+     */
     public static function snapshot(Message $target): array
     {
-        return [
+        $snapshot = [
             'author' => self::author($target),
             'type' => $target->type,
             'excerpt' => $target->body !== '' ? Str::limit($target->body, self::EXCERPT_LIMIT, '') : self::kind($target),
         ];
+
+        return $target->hasMedia()
+            ? [...$snapshot, 'media' => ['message_id' => $target->id, 'kind' => MediaPresentation::kind($target->media_mime), 'name' => $target->media_name]]
+            : $snapshot;
     }
 
     /**
@@ -112,14 +121,15 @@ final class Quote
     /** O nome do tipo quando não há texto, como a prévia da lista. */
     private static function kind(Message $message): string
     {
-        $mime = (string) $message->media_mime;
-
         return match (true) {
-            $mime === 'image/webp' => 'Figurinha',
-            str_starts_with($mime, 'image/') => 'Foto',
-            str_starts_with($mime, 'audio/') => 'Áudio',
-            str_starts_with($mime, 'video/') => 'Vídeo',
-            default => $message->hasMedia() ? 'Arquivo' : '['.$message->type.']',
+            ! $message->hasMedia() => '['.$message->type.']',
+            default => match (MediaPresentation::kind($message->media_mime)) {
+                'sticker' => 'Figurinha',
+                'image' => 'Foto',
+                'audio' => 'Áudio',
+                'video' => 'Vídeo',
+                default => $message->media_name ?? 'Arquivo',
+            },
         };
     }
 }
