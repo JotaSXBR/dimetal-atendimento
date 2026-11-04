@@ -80,6 +80,24 @@ class Message extends Model
         return Str::afterLast($waId, '_');
     }
 
+    /** Janela em que o WhatsApp deixa editar uma mensagem enviada. */
+    public const EDIT_WINDOW_MINUTES = 15;
+
+    /**
+     * O id que o WAHA exige para reagir, editar e apagar: `{fromMe}_{chat}_{id}`. O chat é o do contato (`wa_id` ou `lid`).
+     * Sem `wa_message_id` a mensagem ainda não saiu e não há como agir sobre ela.
+     */
+    public function fullWaId(): ?string
+    {
+        $contact = $this->contact()->first();
+
+        if ($this->wa_message_id === null || $contact === null) {
+            return null;
+        }
+
+        return ($this->direction === MessageDirection::OUT ? 'true' : 'false').'_'.($contact->wa_id ?? (string) $contact->lid).'_'.$this->wa_message_id;
+    }
+
     public function hasMedia(): bool
     {
         return $this->type === 'media';
