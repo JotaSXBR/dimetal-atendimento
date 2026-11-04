@@ -221,11 +221,11 @@ trait ComposesMessages
         }
 
         $presence = app(Presence::class);
-        $presence->recording(new WahaClient($channel), $contact->wa_id ?? (string) $contact->lid, $on);
+        $chatId = $contact->wa_id ?? (string) $contact->lid;
+        $presence->recording(new WahaClient($channel), $chatId, $on);
 
-        if (! $on) {
-            $presence->scheduleOffline($channel);
-        }
+        // Gravando: a conversa fica marcada e o `offline` pendente (de um envio do bot, por exemplo) perde a vez.
+        $on ? $presence->humanActive($channel, $chatId) : $presence->scheduleOffline($channel);
     }
 
     /** Envia a gravação que o navegador acabou de subir (`voice`) como mensagem de voz do WhatsApp. */

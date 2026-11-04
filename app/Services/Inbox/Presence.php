@@ -32,6 +32,9 @@ class Presence
     /** O visto do bot é por rodada (mensagens seguidas do mesmo ticket); este é o tamanho da rodada. */
     private const BOT_ROUND_SECONDS = 30;
 
+    /** Quanto tempo a marca "atendente ativo" vale sem ser renovada (o navegador renova a cada poucos segundos). */
+    private const HUMAN_ACTIVE_SECONDS = 10;
+
     /** Um WAHA lento não pode segurar a fila por causa de um visto. */
     private const BOT_SEEN_TIMEOUT_SECONDS = 3;
 
@@ -40,6 +43,11 @@ class Presence
     {
         $chatId = $contact->wa_id ?? (string) $contact->lid;
         $bot = $origin === MessageOrigin::BOT;
+        $channel = $ticket->channel()->firstOrFail();
+
+        if (! $bot) {
+            $this->markHuman($channel, $chatId);
+        }
 
         // O WAHA só marca `online` sozinho se `WAHA_PRESENCE_AUTO_ONLINE` estiver ligado (aqui não está).
         $this->attempt('online', fn () => $client->setPresence('online'));
@@ -48,7 +56,8 @@ class Presence
             $this->attempt('visto', fn () => $this->markSeen($client, $ticket, $chatId, $bot ? self::BOT_SEEN_TIMEOUT_SECONDS : null));
         }
 
-        if (! $typing) {
+        // Atendente digitando ou gravando nesta conversa: o `paused` do bot apagaria o indicador dele.
+        if (! $typing || ($bot && $this->isHumanActive($channel, $chatId))) {
             return;
         }
 
@@ -75,6 +84,34 @@ class Presence
         $this->attempt($on ? 'gravando' : 'parou de gravar', fn () => $client->setPresence($on ? 'recording' : 'paused', $chatId));
     }
 
+    /**
+     * O atendente está digitando ou gravando nesta conversa: o bot não mexe na presença dela e o `offline` do canal espera.
+     * Agendar de novo troca o token, então o `offline` que um envio do bot deixou pendente perde a vez.
+     */
+    public function humanActive(Channel $channel, string $chatId): void
+    {
+        $this->markHuman($channel, $chatId);
+        $this->scheduleOffline($channel);
+    }
+
+    public function isHumanActive(Channel $channel, ?string $chatId = null): bool
+    {
+        return Cache::has($this->humanKey($channel->id, $chatId));
+    }
+
+    private function markHuman(Channel $channel, string $chatId): void
+    {
+        $until = now()->addSeconds(self::HUMAN_ACTIVE_SECONDS);
+
+        Cache::put($this->humanKey($channel->id, $chatId), 1, $until);
+        Cache::put($this->humanKey($channel->id), 1, $until);
+    }
+
+    private function humanKey(int $channelId, ?string $chatId = null): string
+    {
+        return "presence-human:{$channelId}".($chatId === null ? '' : ":{$chatId}");
+    }
+
     public function scheduleOffline(Channel $channel): void
     {
         $token = Str::random(16);
@@ -85,9 +122,17 @@ class Presence
 
     public function goOffline(Channel $channel, string $token): void
     {
-        if (Cache::get($this->key($channel->id)) === $token) {
-            $this->attempt('offline', fn () => (new WahaClient($channel))->setPresence('offline'));
+        if (Cache::get($this->key($channel->id)) !== $token) {
+            return;
         }
+
+        if ($this->isHumanActive($channel)) {
+            $this->scheduleOffline($channel);
+
+            return;
+        }
+
+        $this->attempt('offline', fn () => (new WahaClient($channel))->setPresence('offline'));
     }
 
     private function markSeen(WahaClient $client, Ticket $ticket, string $chatId, ?int $timeoutSeconds = null): void

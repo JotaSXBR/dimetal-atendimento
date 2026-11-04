@@ -14,6 +14,7 @@ use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\Presence;
 use App\Services\Inbox\SendTicketMessage;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -129,6 +130,59 @@ class PresenceSendTest extends TestCase
         $this->assertSame(DeliveryStatus::SENT, $message->fresh()?->delivery_status);
     }
 
+    public function test_bot_nao_manda_typing_nem_paused_com_humano_ativo_na_conversa(): void
+    {
+        Queue::fake();
+        Http::fake(['*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
+        app(Presence::class)->humanActive($this->channel, self::PEER);
+
+        $this->botSays('Olá!');
+
+        Http::assertNotSent(fn (Request $r) => str_ends_with($r->url(), '/api/startTyping') || str_ends_with($r->url(), '/api/stopTyping'));
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/sendText'));
+    }
+
+    public function test_gravacao_do_atendente_pelo_livewire_segura_o_digitando_do_bot(): void
+    {
+        Queue::fake();
+        Http::fake(['*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
+
+        Livewire::actingAs($this->author)->test(Inbox::class)->call('select', $this->ticket->id)->call('recording', true, $this->ticket->id);
+        $this->botSays('Olá!');
+
+        Http::assertNotSent(fn (Request $r) => str_ends_with($r->url(), '/api/startTyping') || str_ends_with($r->url(), '/api/stopTyping'));
+    }
+
+    public function test_offline_pendente_do_bot_nao_derruba_a_gravacao_do_atendente(): void
+    {
+        Queue::fake();
+        Http::fake(['*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
+
+        $this->botSays('Olá!');
+        app(Presence::class)->humanActive($this->channel, self::PEER);
+
+        $jobs = Queue::pushed(GoOfflineJob::class)->values();
+        $this->assertCount(2, $jobs, 'o do bot e o que a gravação do atendente agendou');
+
+        app()->call([$jobs[0], 'handle']);
+        app()->call([$jobs[1], 'handle']);
+
+        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/presence') && $r['presence'] === 'offline');
+        $this->assertCount(3, Queue::pushed(GoOfflineJob::class), 'com o humano ainda ativo, o offline é reagendado');
+    }
+
+    public function test_offline_sai_quando_nenhum_humano_esta_ativo(): void
+    {
+        Queue::fake();
+        Http::fake(['*' => Http::response([], 201)]);
+        app(Presence::class)->humanActive($this->channel, self::PEER);
+
+        $this->travel(11)->seconds();
+        app()->call([Queue::pushed(GoOfflineJob::class)->first(), 'handle']);
+
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'offline');
+    }
+
     public function test_falha_no_digitando_nao_impede_o_envio(): void
     {
         Http::fake(['*/api/startTyping' => Http::response('boom', 500), '*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
@@ -162,6 +216,7 @@ class PresenceSendTest extends TestCase
         app()->call([$jobs[0], 'handle']);
         Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/presence') && $r['presence'] === 'offline');
 
+        $this->travel(46)->seconds(); // o job só roda 45 s depois do envio, quando a marca "atendente ativo" já expirou
         app()->call([$jobs[1], 'handle']);
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'offline');
     }
