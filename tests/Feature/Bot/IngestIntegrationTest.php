@@ -72,8 +72,10 @@ class IngestIntegrationTest extends TestCase
     }
 
     /** @param  array<string, mixed>  $extra */
-    private function ingest(string $id, string $body = 'oi', array $extra = []): ?Message
+    private function ingest(string $id, string $body = 'oi', array $extra = [], ?CarbonImmutable $receivedAt = null): ?Message
     {
+        $mode = $extra['_mode'] ?? null;
+        unset($extra['_mode']);
         $payload = array_merge(['id' => $id, 'from' => self::PEER, 'fromMe' => false, 'body' => $body, 'timestamp' => now()->timestamp, 'hasMedia' => false, '_data' => ['Info' => ['PushName' => 'Maria']]], $extra);
 
         $event = WahaEvent::create([
@@ -81,8 +83,8 @@ class IngestIntegrationTest extends TestCase
             'channel_id' => $this->channel->id,
             'event' => 'message',
             'session' => 'main',
-            'payload' => ['event' => 'message', 'session' => 'main', 'payload' => $payload],
-            'received_at' => now(),
+            'payload' => ['event' => 'message', 'session' => 'main', 'payload' => $payload] + ($mode === null ? [] : ['mode' => $mode]),
+            'received_at' => $receivedAt ?? now(),
         ]);
 
         return app(IngestMessage::class)($event);
@@ -184,6 +186,29 @@ class IngestIntegrationTest extends TestCase
         $this->activate();
 
         $this->ingest('false_OLD', 'oi', ['timestamp' => now()->subHour()->timestamp]);
+
+        $this->assertSame(TicketStatus::AGUARDANDO, $this->ticket()->status);
+        Queue::assertNotPushed(AdvanceBotSessionJob::class);
+    }
+
+    public function test_fila_inbound_atrasada_nao_derruba_o_bot(): void
+    {
+        $this->activate();
+        $arrived = CarbonImmutable::now();
+
+        // O webhook chegou agora, mas o job só roda 10 min depois (fila `inbound` represada).
+        $this->travel(10)->minutes();
+        $this->ingest('false_LATE', 'oi', ['timestamp' => $arrived->timestamp], $arrived);
+
+        $this->assertSame(TicketStatus::PENDENTE, $this->ticket()->status);
+        Queue::assertPushed(AdvanceBotSessionJob::class, 1);
+    }
+
+    public function test_mensagem_recuperada_antiga_continua_sem_bot(): void
+    {
+        $this->activate();
+
+        $this->ingest('false_REC', 'oi', ['timestamp' => now()->subHour()->timestamp, '_mode' => 'recovered']);
 
         $this->assertSame(TicketStatus::AGUARDANDO, $this->ticket()->status);
         Queue::assertNotPushed(AdvanceBotSessionJob::class);
