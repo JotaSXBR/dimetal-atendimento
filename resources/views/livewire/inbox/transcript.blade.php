@@ -2,6 +2,11 @@
     $tz = config('app.display_timezone');
 @endphp
 
+@php
+    // Só as mensagens que estão na página têm âncora; a citada que ficou para trás aparece sem rolar até ela.
+    $localIds = $messages->pluck('id', 'wa_message_id');
+@endphp
+
 @foreach ($messages as $message)
     @php
         $out = $message->direction === \App\Enums\MessageDirection::OUT;
@@ -20,8 +25,8 @@
             : 'none';
     @endphp
 
-    <div wire:key="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
-        <div class="max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
+    <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
+        <div x-data="{ editing: false, text: '' }" class="max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
             @endif
@@ -30,8 +35,15 @@
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-warn uppercase">Celular · fora do painel</p>
             @endif
 
+            @if ($message->quoted_snapshot)
+                <button type="button" data-quote-target="{{ $localIds[$message->quoted_wa_message_id] ?? '' }}" class="mb-1 block w-full rounded-md border-l-4 border-accent bg-canvas/60 px-2 py-1 text-start text-xs">
+                    <span class="block font-semibold text-accent">{{ $message->quoted_snapshot['author'] ?? '' }}</span>
+                    <span class="block truncate text-ink-2">{{ \App\Support\WhatsAppText::html((string) ($message->quoted_snapshot['excerpt'] ?? '')) }}</span>
+                </button>
+            @endif
+
             @if ($message->revoked_at)
-                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-danger uppercase">{{ $out ? 'Mensagem apagada no celular' : 'Mensagem apagada pelo cliente' }}</p>
+                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-danger uppercase">{{ $out ? ($message->origin === \App\Enums\MessageOrigin::PAINEL ? 'Mensagem apagada pelo atendente' : 'Mensagem apagada no celular') : 'Mensagem apagada pelo cliente' }}</p>
             @endif
 
             @if ($message->hasMedia() || in_array($message->type, ['view_once', 'location', 'contact'], true))
@@ -39,7 +51,18 @@
             @endif
 
             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                <p class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}</p>
+                <p x-show="! editing" class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}</p>
+                @if (! $readonly)
+                    @can('edit', $message)
+                        <div x-cloak x-show="editing" class="space-y-1">
+                            <textarea x-model="text" rows="3" maxlength="4096" class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm" aria-label="Novo texto da mensagem"></textarea>
+                            <div class="flex justify-end gap-2 text-xs">
+                                <button type="button" x-on:click="editing = false" class="text-ink-3 hover:text-ink">Cancelar</button>
+                                <button type="button" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false" class="font-semibold text-accent">Salvar</button>
+                            </div>
+                        </div>
+                    @endcan
+                @endif
             @elseif ($message->body === '' && ! $message->hasMedia() && $message->type !== 'view_once')
                 <p class="break-words whitespace-pre-wrap">[{{ $message->type }}]</p>
             @endif
@@ -72,6 +95,30 @@
                 <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" class="mt-1 text-xs text-accent underline">Reenviar</button>
             @elseif ($resend === 'confirm')
                 <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent underline">Reenviar</button>
+            @endif
+
+            @if (! $readonly && ! $message->revoked_at)
+                @can('reply', $message)
+                    <div x-data="{ open: false }" class="relative mt-1 flex justify-end">
+                        <button type="button" x-on:click="open = ! open" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="text-xs text-ink-3 hover:text-ink">⋯</button>
+                        <div x-cloak x-show="open" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="absolute end-0 top-full z-10 mt-1 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md">
+                            @can('react', $message)
+                                <div class="flex gap-0.5 border-b border-line pb-1" role="group" aria-label="Reagir">
+                                    @foreach (\App\Services\Inbox\ReactToMessage::EMOJIS as $emoji)
+                                        <button type="button" role="menuitem" wire:click="$parent.react({{ $message->id }}, '{{ $emoji }}')" class="rounded px-1 py-0.5 text-base hover:bg-canvas">{{ $emoji }}</button>
+                                    @endforeach
+                                </div>
+                            @endcan
+                            <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="mt-1 block w-full rounded px-2 py-1 text-start hover:bg-canvas">Responder</button>
+                            @can('edit', $message)
+                                <button type="button" role="menuitem" x-on:click="editing = true; text = @js($message->body)" class="block w-full rounded px-2 py-1 text-start hover:bg-canvas">Editar</button>
+                            @endcan
+                            @can('revoke', $message)
+                                <button type="button" role="menuitem" wire:click="$parent.revoke({{ $message->id }})" wire:confirm="Apagar esta mensagem para todos? O cliente deixa de vê-la; o painel guarda o original." class="block w-full rounded px-2 py-1 text-start text-danger hover:bg-canvas">Apagar para todos</button>
+                            @endcan
+                        </div>
+                    </div>
+                @endcan
             @endif
 
             <p class="mt-1 flex items-center justify-end gap-1 font-mono text-[10px] text-ink-3">

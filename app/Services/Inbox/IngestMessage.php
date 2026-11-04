@@ -191,6 +191,7 @@ class IngestMessage
             'origin' => $incoming->fromMe ? MessageOrigin::FORA_DO_PAINEL : MessageOrigin::CONTATO,
             'sent_at' => $incoming->sentAt,
             'delivery_status' => $incoming->fromMe ? (DeliveryStatus::fromAck($incoming->ack) ?? DeliveryStatus::SENT) : null,
+            ...$incoming->quoteColumns(),
         ];
     }
 

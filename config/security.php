@@ -27,4 +27,7 @@ return [
 
     'send_message_per_minute' => 30,
 
+    /** Reagir, editar e apagar mensagem pelo painel: por usuário, junto (cada ação chama o WhatsApp). */
+    'message_action_per_minute' => 30,
+
 ];

@@ -27,6 +27,9 @@ final class TicketTimeline
         'taken_over' => 'tomou o ticket',
         'merged' => 'mesclou o ticket',
         'sla_breached' => 'estourou o SLA',
+        'message_reacted' => 'reagiu a uma mensagem',
+        'message_edited' => 'editou uma mensagem',
+        'message_revoked_by_agent' => 'apagou uma mensagem para todos',
     ];
 
     /** @var Collection<int, string> */
@@ -82,6 +85,7 @@ final class TicketTimeline
             'merged' => 'em outro ticket do mesmo cliente',
             'closed' => $this->closedDetail($payload),
             'sla_breached' => TicketEventText::detail($event),
+            'message_reacted' => is_string($payload['emoji'] ?? null) ? 'com '.$payload['emoji'] : '(reação removida)',
             // Tipo que esta tela não conhece: a auditoria não esconde o dado, mostra o conteúdo como veio.
             default => array_key_exists($event->type, TicketEventText::TYPES) || $payload === [] ? '' : (string) json_encode($payload, JSON_UNESCAPED_UNICODE),
         };

@@ -10,6 +10,7 @@ import './attach-tray';
 import './voice-recorder';
 import './typing-presence';
 import './client-presence';
+import './quote-jump';
 import './alerts';
 import './channel-qr';
 import './flow-editor';
