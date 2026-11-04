@@ -55,11 +55,19 @@ class Presence
             $this->attempt('visto', fn () => $this->markSeen($client, $ticket, $chatId, $bot ? self::BOT_SEEN_TIMEOUT_SECONDS : null));
         }
 
+        if ($typing) {
+            $this->showTyping($client, $channel, $ticket, $chatId, $text, $bot);
+        }
+    }
+
+    /** O "digitando…" antes do envio: espera artificial, ou nada quando o atendente já digitou de verdade ou o bot já esperou. */
+    private function showTyping(WahaClient $client, Channel $channel, Ticket $ticket, string $chatId, string $text, bool $bot): void
+    {
         // Atendente digitando ou gravando nesta conversa: o `paused` do bot apagaria o indicador dele.
         $humanActive = $this->isHumanActive($channel, $chatId);
         $botAlreadyTyped = $bot && Cache::pull('presence-typed:'.$ticket->id) !== null;
 
-        if (! $typing || $botAlreadyTyped || ($bot && $humanActive)) {
+        if ($botAlreadyTyped || ($bot && $humanActive)) {
             return;
         }
 
