@@ -12,7 +12,7 @@ document.addEventListener('alpine:init', () => {
     Alpine.store('clientPresence', {
         states: {},
         timers: {},
-        ttlMs: 15000,
+        ttlMs: 25000,
 
         // Estado guardado no servidor (Redis) no momento em que a tela foi montada; quem abre no meio da digitação o vê.
         seed(states, ttlSeconds) {

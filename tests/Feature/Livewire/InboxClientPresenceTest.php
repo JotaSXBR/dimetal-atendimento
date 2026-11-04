@@ -61,13 +61,27 @@ class InboxClientPresenceTest extends TestCase
         $this->assertStringNotContainsString('gravando', $html);
     }
 
-    public function test_linha_e_cabecalho_usam_o_mesmo_store(): void
+    public function test_aviso_aparece_na_lista_e_na_conversa_e_nao_no_cabecalho(): void
     {
         $ticket = $this->ticket();
+        $label = 'x-text="$store.clientPresence.label('.$ticket->id.')"';
 
         $html = Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $ticket->id)->html();
 
-        $this->assertGreaterThanOrEqual(2, substr_count($html, '$store.clientPresence.label('.$ticket->id.')'), 'linha e cabeçalho');
+        // A conversa é o container `flex-col-reverse`: tudo o que vem antes dele (lista e cabeçalho) só pode ter o aviso da linha da lista.
+        $conversation = strpos($html, 'flex-col-reverse');
+        $this->assertNotFalse($conversation);
+        $this->assertSame(1, substr_count(substr($html, 0, $conversation), $label), 'só a linha da lista, nada no cabeçalho');
+        $this->assertSame(1, substr_count(substr($html, $conversation), $label), 'a bolha do cliente dentro da conversa');
+    }
+
+    public function test_na_lista_o_aviso_toma_o_lugar_da_previa_e_a_ultima_mensagem_volta_ao_parar(): void
+    {
+        $ticket = $this->ticket();
+
+        $html = Livewire::actingAs($this->me)->test(Inbox::class)->html();
+
+        $this->assertSame(1, substr_count($html, 'x-show="! $store.clientPresence.label('.$ticket->id.')"'), 'a prévia só some enquanto há aviso');
     }
 
     public function test_ticket_que_o_usuario_nao_ve_nao_entra_no_seed(): void
