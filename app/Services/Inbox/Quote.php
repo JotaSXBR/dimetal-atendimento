@@ -28,7 +28,7 @@ final class Quote
             return $message->contact()->first()?->label() ?? 'Cliente';
         }
 
-        return $message->origin === MessageOrigin::PAINEL ? ($message->author()->first()?->name ?? 'Atendente') : 'Empresa';
+        return $message->origin === MessageOrigin::PAINEL ? ($message->author()->first()->name ?? 'Atendente') : 'Empresa';
     }
 
     /** O nome do tipo quando não há texto, como a prévia da lista. */
