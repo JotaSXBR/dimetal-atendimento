@@ -14,6 +14,11 @@ use Illuminate\Support\Str;
  */
 final readonly class IncomingMessage
 {
+    /**
+     * DTO imutável: cada parâmetro é um dado da mensagem que chegou, sem lógica que justifique agrupar.
+     *
+     * @SuppressWarnings("PHPMD.ExcessiveParameterList")
+     */
     public function __construct(
         public string $waId,
         public bool $fromMe,
@@ -25,7 +30,19 @@ final readonly class IncomingMessage
         public ?string $pushName,
         public ?IncomingMedia $media = null,
         public ?int $ack = null,
+        /** @var array{wa_id: string, snapshot: array{author: string, type: string, excerpt: string}}|null */
+        public ?array $quote = null,
     ) {}
+
+    /**
+     * As colunas da citação desta mensagem, vazias quando ela não responde a nenhuma.
+     *
+     * @return array<string, mixed>
+     */
+    public function quoteColumns(): array
+    {
+        return $this->quote === null ? [] : ['quoted_wa_message_id' => $this->quote['wa_id'], 'quoted_snapshot' => $this->quote['snapshot']];
+    }
 
     /**
      * `null` quando o evento deve ser ignorado (sem id, eco de entrada, grupo, broadcast ou sem conteúdo).
@@ -53,6 +70,7 @@ final readonly class IncomingMessage
             pushName: $fromMe ? null : self::string(data_get($data, '_data.Info.PushName') ?? $data['notifyName'] ?? null),
             media: $content['media'],
             ack: is_numeric($data['ack'] ?? null) ? (int) $data['ack'] : null,
+            quote: Quote::fromPayload($data, $event->channel),
         );
     }
 

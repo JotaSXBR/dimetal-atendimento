@@ -38,7 +38,7 @@
             @if ($message->quoted_snapshot)
                 <button type="button" data-quote-target="{{ $localIds[$message->quoted_wa_message_id] ?? '' }}" class="mb-1 block w-full rounded-md border-l-4 border-accent bg-canvas/60 px-2 py-1 text-start text-xs">
                     <span class="block font-semibold text-accent">{{ $message->quoted_snapshot['author'] ?? '' }}</span>
-                    <span class="block truncate text-ink-2">{{ $message->quoted_snapshot['excerpt'] ?? '' }}</span>
+                    <span class="block truncate text-ink-2">{{ \App\Support\WhatsAppText::html((string) ($message->quoted_snapshot['excerpt'] ?? '')) }}</span>
                 </button>
             @endif
 
