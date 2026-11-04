@@ -42,7 +42,8 @@ final class MediaPresentation
     {
         $fromName = $name === null ? '' : pathinfo($name, PATHINFO_EXTENSION);
 
-        return $fromName !== '' ? strtoupper($fromName) : (self::MIME_EXTENSIONS[$mime ?? ''] ?? '');
+        // Só vale o que parece extensão: "Relatório v2.1 final" não é um arquivo do tipo "1 FINAL".
+        return preg_match('/^[A-Za-z0-9]{1,5}$/', $fromName) === 1 ? strtoupper($fromName) : (self::MIME_EXTENSIONS[$mime ?? ''] ?? '');
     }
 
     /** @return array{label: string, tone: string} a letra do ícone e a cor (`blue`, `green`, `orange`, `red` ou `gray`) */

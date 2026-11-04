@@ -28,6 +28,15 @@ class MediaPresentationTest extends TestCase
         $this->assertSame('', MediaPresentation::extension(null, null));
     }
 
+    public function test_depois_do_ultimo_ponto_so_vale_extensao_de_verdade(): void
+    {
+        $this->assertSame('', MediaPresentation::extension('Relatório v2.1 final', null));
+        $this->assertSame('PDF', MediaPresentation::extension('Relatório v2.1 final', 'application/pdf'));
+        $this->assertSame('', MediaPresentation::extension('nota.', null));
+        $this->assertSame('', MediaPresentation::extension('a.extensaomuitolonga', null));
+        $this->assertSame('GZ', MediaPresentation::extension('backup.tar.gz', null));
+    }
+
     public function test_etiqueta_do_icone_por_extensao(): void
     {
         $this->assertSame(['label' => 'W', 'tone' => 'blue'], MediaPresentation::badge('DOCX'));
