@@ -147,6 +147,8 @@ class InboxTranscriptTest extends TestCase
 
         $this->assertSame(1, preg_match('/<img[^>]*size-14[^>]*>/', $html, $thumb));
         $this->assertStringContainsString(route('midia', $photo), $thumb[0]);
+        $this->assertStringContainsString('x-on:error', $thumb[0], 'a miniatura some sozinha se a mídia expirou');
+        $this->assertStringNotContainsString('onerror', $thumb[0], 'sem atributo inline: a CSP vai ficar em modo de bloqueio');
         $this->assertStringContainsString('Foto', $html);
     }
 
