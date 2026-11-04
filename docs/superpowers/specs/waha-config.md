@@ -244,9 +244,29 @@ a mensagem sai e não chega. Não existe correção no código do app; é config
 
 ### Mensagem que chega com o WAHA fora do ar
 
-`session.status` não reentrega o que passou durante a queda. As mensagens perdidas chegam depois
-como *history sync*, não como evento `message`. Por isso existe catch-up na reconexão: ao ver a
-sessão voltar para `WORKING`, rodar a mesma rotina idempotente do backfill para a janela recente.
+`session.status` não reentrega o que passou durante a queda. O app busca o que faltou em
+`GET /api/{sessão}/chats/all/messages` (filtro de horário) e o entrega ao `IngestMessage` como evento sintético do modo
+`recovered` (ver `2026-11-03-recuperacao-historico-design.md`):
+
+- **Automática:** o canal voltando a `WORKING` depois de 5 min ou mais fora (`channels.down_since`) agenda a recuperação da
+  janela `[queda − 10 min, agora]`, 60 s depois da volta. Queda menor é reinício e não recupera nada. Número trocado na queda
+  cancela a recuperação.
+- **Manual:** card do canal, *Recuperar mensagens* (1 h, 6 h, 24 h ou 72 h). **Diária:** `app:recover-messages` às 04:15, 24 h.
+- Tudo é idempotente (`waha_event_id` sintético e `wa_message_id` por canal): rodar de novo não duplica.
+- A mensagem recuperada conta para SLA com a hora real, mas não toca som de fila nem dispara bot ou resposta fora do horário
+  (regra de 5 min de frescor).
+- O resumo chega ao sino (`MessagesRecovered`, sem som).
+- **Formato da listagem (capturado no beta, 03/11/2026):** `chats/all/messages` funciona no GOWS e devolve itens parecidos com o
+  `payload` do webhook, com uma diferença que importa: numa mensagem **enviada por nós** (`fromMe: true`) a listagem traz
+  `to: null` e `from` igual ao chat do cliente; o webhook traz o cliente em `to`. O chat também vem em `_data.Info.Chat`
+  (com `@s.whatsapp.net`). `WahaChat::sentTo` lê os dois formatos. O `ack` vem como número (3 = lida) e o `timestamp` em segundos.
+
+### Alerta de queda do WhatsApp
+
+O WhatsApp oscila por ~1 s várias vezes ao dia (o GOWS reconecta sozinho). Faixa, som crítico e sino só reagem a uma queda
+**confirmada**: o canal saiu de `WORKING` e continuou fora por 60 s (`ConfirmChannelDownJob`), ou entrou em `SCAN_QR_CODE` ou
+`FAILED` (pedem uma pessoa e avisam na hora). `channels.down_alerted_at` marca a queda anunciada; o "voltou" só sai se o "caiu"
+saiu. Canal que nunca esteve conectado (sem `down_since`) mostra a faixa na hora, como antes.
 
 ### Filtros na origem
 

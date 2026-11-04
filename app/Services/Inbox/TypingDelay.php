@@ -16,10 +16,11 @@ final class TypingDelay
 
     private const JITTER_MS = 800;
 
-    public static function milliseconds(string $text): int
+    /** @param  int  $max  teto em ms; a resposta automática usa um menor, para não segurar a fila de saída */
+    public static function milliseconds(string $text, int $max = self::MAX_MS): int
     {
         $base = self::MIN_MS + mb_strlen($text) * self::PER_CHARACTER_MS;
 
-        return min(self::MAX_MS, max(self::MIN_MS, $base + random_int(-self::JITTER_MS, self::JITTER_MS)));
+        return min($max, max(self::MIN_MS, $base + random_int(-self::JITTER_MS, self::JITTER_MS)));
     }
 }

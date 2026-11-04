@@ -25,10 +25,11 @@ class SendTicketMedia
     /**
      * @param  string  $caption  legenda (o texto digitado vai no primeiro arquivo)
      * @param  bool  $voice  gravação do microfone: vai como mensagem de voz
+     * @param  Message|null  $quoted  a mensagem que este arquivo responde
      *
      * @throws InvalidArgumentException arquivo recusado pelas regras (quem chama valida antes e mostra o erro)
      */
-    public function __invoke(Ticket $ticket, ?User $author, UploadedFile $file, string $caption = '', bool $voice = false): Message
+    public function __invoke(Ticket $ticket, ?User $author, UploadedFile $file, string $caption = '', bool $voice = false, ?Message $quoted = null): Message
     {
         $info = AttachmentRules::inspect($file, $voice);
 
@@ -49,6 +50,7 @@ class SendTicketMedia
                 'media_name' => $voice ? 'audio.'.$info['ext'] : $info['name'],
                 'media_size' => $file->getSize(),
                 'local_path' => $path,
+                ...SendTicketMessage::quoteColumns($quoted),
             ]);
         } catch (Throwable $e) {
             // Sem linha não há dono para a cópia: ela não pode ficar órfã no disco.

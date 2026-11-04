@@ -31,9 +31,15 @@ class BotEntry
     }
 
     /** Um ticket novo nasce `pendente` quando o canal tem workflow e o cliente escreveu agora. */
-    public function shouldStart(Channel $channel, CarbonInterface $sentAt): bool
+    public function shouldStart(Channel $channel, CarbonInterface $freshAt, CarbonInterface $arrivedAt): bool
     {
-        return abs(now()->diffInSeconds($sentAt)) <= self::FRESH_SECONDS && $this->versionFor($channel) !== null;
+        return $this->isFresh($freshAt, $arrivedAt) && $this->versionFor($channel) !== null;
+    }
+
+    /** Mede contra a chegada do webhook, não contra o relógio do job: fila `inbound` represada não derruba o bot. */
+    public function isFresh(CarbonInterface $freshAt, CarbonInterface $arrivedAt): bool
+    {
+        return abs($arrivedAt->diffInSeconds($freshAt)) <= self::FRESH_SECONDS;
     }
 
     /** Chamado depois do commit da mensagem do cliente. */

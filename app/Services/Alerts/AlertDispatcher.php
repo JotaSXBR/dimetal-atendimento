@@ -5,6 +5,7 @@ namespace App\Services\Alerts;
 use App\Enums\ChannelStatus;
 use App\Events\ChannelStatusChanged;
 use App\Events\TicketQueued;
+use App\Jobs\ConfirmChannelDownJob;
 use App\Models\Channel;
 use App\Models\Ticket;
 use App\Models\User;
@@ -21,9 +22,12 @@ final class AlertDispatcher
 {
     public function __construct(private readonly AlertRecipients $recipients) {}
 
+    /** Quanto o canal pode ficar fora de WORKING sem ser queda: o WhatsApp oscila por ~1 s várias vezes ao dia. */
+    public const GRACE_SECONDS = 60;
+
     /**
-     * Só a travessia de "conectado" para "não conectado" (e de volta) alerta: ir de STARTING para SCAN_QR_CODE não repete o aviso.
-     * A faixa se atualiza em qualquer mudança de estado.
+     * Estados que pedem uma pessoa (QR novo ou sessão perdida): não são reconexão automática, então avisam na hora.
+     * Os demais esperam {@see self::GRACE_SECONDS}. A faixa se atualiza em qualquer mudança de estado.
      */
     public function channelChanged(Channel $channel, ChannelStatus $from): void
     {
@@ -33,11 +37,42 @@ final class AlertDispatcher
             return;
         }
 
-        $wasUp = $from === ChannelStatus::WORKING;
+        if ($channel->isConnected()) {
+            $this->announceUp($channel);
+        } elseif (in_array($channel->status, [ChannelStatus::SCAN_QR_CODE, ChannelStatus::FAILED], true)) {
+            $this->confirmDown($channel);
+        } elseif ($from === ChannelStatus::WORKING) {
+            ConfirmChannelDownJob::dispatch($channel->id)->delay(self::GRACE_SECONDS);
+        }
+    }
 
-        if ($wasUp && ! $channel->isConnected()) {
-            Notification::send($this->recipients->everyone(), new ChannelDown($channel));
-        } elseif (! $wasUp && $channel->isConnected()) {
+    /**
+     * Anuncia a queda uma única vez por episódio (faixa, som e sino). Só vale para quem já esteve conectado nesta
+     * queda (`down_since`): o primeiro pareamento passa por "Aguardando QR" sem ser queda.
+     */
+    public function confirmDown(Channel $channel): void
+    {
+        $claimed = Channel::query()->whereKey($channel->id)
+            ->where('active', true)
+            ->where('status', '<>', ChannelStatus::WORKING->value)
+            ->whereNotNull('down_since')
+            ->whereNull('down_alerted_at')
+            ->update(['down_alerted_at' => now()]);
+
+        if ($claimed !== 1) {
+            return;
+        }
+
+        Notification::send($this->recipients->everyone(), new ChannelDown($channel));
+        ChannelStatusChanged::dispatch($channel->id, $channel->status->value);
+    }
+
+    /** "Voltou" só existe se o "caiu" foi anunciado: uma oscilação que ninguém viu não ganha aviso de volta. */
+    private function announceUp(Channel $channel): void
+    {
+        $announced = Channel::query()->whereKey($channel->id)->whereNotNull('down_alerted_at')->update(['down_alerted_at' => null]);
+
+        if ($announced === 1) {
             Notification::send($this->recipients->everyone(), new ChannelUp($channel));
         }
     }

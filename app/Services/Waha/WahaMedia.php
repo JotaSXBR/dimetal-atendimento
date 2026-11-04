@@ -23,7 +23,7 @@ class WahaMedia
      * @param  string  $kind  `image`, `video`, `audio` ou `document` (qualquer outro valor vai como arquivo)
      * @return array<string, mixed> a resposta do WAHA (traz o `id` da mensagem)
      */
-    public function send(string $kind, string $chatId, string $mimetype, string $filename, string $data, string $caption = ''): array
+    public function send(string $kind, string $chatId, string $mimetype, string $filename, string $data, string $caption = '', ?string $replyTo = null): array
     {
         $endpoint = match ($kind) {
             'image' => '/api/sendImage',
@@ -37,6 +37,10 @@ class WahaMedia
             'chatId' => $chatId,
             'file' => ['mimetype' => $mimetype, 'filename' => $filename, 'data' => $data],
         ];
+
+        if ($replyTo !== null) {
+            $body['reply_to'] = $replyTo;
+        }
 
         if ($kind === 'audio') {
             $body['convert'] = true;

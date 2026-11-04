@@ -22,6 +22,12 @@ return [
 
     'webhook_per_minute' => 300,
 
+    /** Presença do cliente (`presence.update`) tem teto próprio: chega em rajada e não pode gastar o das mensagens. */
+    'presence_per_minute' => 600,
+
     'send_message_per_minute' => 30,
+
+    /** Reagir, editar e apagar mensagem pelo painel: por usuário, junto (cada ação chama o WhatsApp). */
+    'message_action_per_minute' => 30,
 
 ];

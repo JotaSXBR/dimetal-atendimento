@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Reports;
 
+use App\Enums\ClosedReason;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\Reports\Index;
@@ -82,6 +83,18 @@ class AttendanceReportTest extends TestCase
         $this->assertSame(300, $report['median_seconds']);
         $this->assertSame(66.7, $report['sla_percent']);
         $this->assertSame(1, $report['overdue'], 'só o ticket que estourou o vencimento do SLA conta');
+    }
+
+    public function test_ticket_importado_nao_entra_no_relatorio_de_atendimento(): void
+    {
+        $this->seedTickets();
+        $this->ticket($this->a, '09:00', '09:01', TicketStatus::ENCERRADO, $this->ana, ['closed_reason' => ClosedReason::IMPORTADO]);
+
+        $report = $this->report();
+
+        $this->assertSame(5, $report['opened']);
+        $this->assertSame(300, $report['median_seconds']);
+        $this->assertSame([['name' => 'Financeiro', 'count' => 3], ['name' => 'Comercial', 'count' => 2]], $report['by_sector']);
     }
 
     public function test_volume_por_setor_e_desempenho_por_atendente(): void

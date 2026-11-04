@@ -58,7 +58,7 @@ class WahaClient
     {
         return ['webhooks' => [[
             'url' => WahaSettings::webhookUrl(),
-            'events' => ['session.status', 'message', 'message.any', 'message.waiting', 'message.ack', 'message.reaction', 'message.revoked', 'presence.update'],
+            'events' => ['session.status', 'message', 'message.any', 'message.waiting', 'message.ack', 'message.reaction', 'message.edited', 'message.revoked', 'presence.update'],
             'hmac' => ['key' => WahaSettings::webhookSecret()],
             'retries' => ['policy' => 'exponential', 'delaySeconds' => 3, 'attempts' => 8],
         ]]];
@@ -110,21 +110,24 @@ class WahaClient
     /**
      * @return array<string, mixed>
      */
-    public function sendText(string $chatId, string $text): array
+    public function sendText(string $chatId, string $text, ?string $replyTo = null): array
     {
-        return $this->decode($this->request()->post('/api/sendText', [
+        return $this->decode($this->request()->post('/api/sendText', array_filter([
             'session' => $this->sessionName(),
             'chatId' => $chatId,
             'text' => $text,
-        ]));
+            'reply_to' => $replyTo,
+        ], fn ($value) => $value !== null)));
     }
 
     /**
      * @param  list<string>  $messageIds  ids das mensagens do cliente; o GOWS só marca como lida com eles
      */
-    public function sendSeen(string $chatId, array $messageIds = []): void
+    public function sendSeen(string $chatId, array $messageIds = [], ?int $timeoutSeconds = null): void
     {
-        $this->ensureOk($this->request()->post('/api/sendSeen', array_filter([
+        $request = $timeoutSeconds === null ? $this->request() : $this->request()->timeout($timeoutSeconds);
+
+        $this->ensureOk($request->post('/api/sendSeen', array_filter([
             'session' => $this->sessionName(),
             'chatId' => $chatId,
             'messageIds' => $messageIds,

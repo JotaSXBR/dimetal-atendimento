@@ -3,6 +3,7 @@
 namespace App\Livewire\Inbox\Concerns;
 
 use App\Jobs\SendTicketMessageJob;
+use App\Models\Message;
 use App\Models\QuickReply;
 use App\Models\Ticket;
 use App\Services\Inbox\AttachmentRules;
@@ -14,6 +15,7 @@ use App\Services\Waha\WahaClient;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\RateLimiter;
 use InvalidArgumentException;
+use Livewire\Attributes\Renderless;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
@@ -177,13 +179,18 @@ trait ComposesMessages
             return;
         }
 
+        // Só a primeira mensagem do envio cita: o texto separado ou, sem ele, o primeiro arquivo.
+        $quoted = $this->quotedMessage($ticket->id);
+
         if ($separateText) {
-            SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $text)->id);
+            SendTicketMessageJob::dispatch(app(SendTicketMessage::class)->create($ticket, $this->user(), $text, quoted: $quoted)->id);
+            $quoted = null;
         }
 
-        $failures = $this->sendAttachments($ticket, $captioned);
+        $failures = $this->sendAttachments($ticket, $captioned, $quoted);
 
         $this->reset('draft', 'attachments');
+        $this->cancelReply();
 
         foreach ($failures as $failure) {
             $this->addError('attachments', $failure);
@@ -198,6 +205,21 @@ trait ComposesMessages
      * enquanto grava, então tem limite próprio (separado do de envio) e nunca devolve erro ao navegador.
      */
     public function recording(bool $on, int $ticketId): void
+    {
+        $this->announcePresence($on, $ticketId, recording: true);
+    }
+
+    /**
+     * O atendente digita no campo: o cliente vê "digitando…". O navegador limita o início (um aviso a cada poucos segundos) e
+     * avisa a pausa; aqui só se protege com o teto de chamadas. Não repinta a tela.
+     */
+    #[Renderless]
+    public function typing(bool $on, int $ticketId): void
+    {
+        $this->announcePresence($on, $ticketId, recording: false);
+    }
+
+    private function announcePresence(bool $on, int $ticketId, bool $recording): void
     {
         // O ticket vem do gravador (o da conversa em que ele nasceu), não da seleção atual: ao trocar de conversa, o aviso de
         // "parou" ainda precisa chegar ao cliente certo.
@@ -221,11 +243,12 @@ trait ComposesMessages
         }
 
         $presence = app(Presence::class);
-        $presence->recording(new WahaClient($channel), $contact->wa_id ?? (string) $contact->lid, $on);
+        $chatId = $contact->wa_id ?? (string) $contact->lid;
+        $client = new WahaClient($channel);
+        $recording ? $presence->recording($client, $chatId, $on) : $presence->typing($client, $channel, $chatId, $on);
 
-        if (! $on) {
-            $presence->scheduleOffline($channel);
-        }
+        // Gravando ou digitando: a conversa fica marcada e o `offline` pendente (de um envio do bot, por exemplo) perde a vez.
+        $on ? $presence->humanActive($channel, $chatId) : $presence->scheduleOffline($channel);
     }
 
     /** Envia a gravação que o navegador acabou de subir (`voice`) como mensagem de voz do WhatsApp. */
@@ -302,13 +325,13 @@ trait ComposesMessages
     /**
      * @return list<string> mensagens de erro dos arquivos que o servidor recusou na hora de enviar
      */
-    private function sendAttachments(Ticket $ticket, bool $captioned): array
+    private function sendAttachments(Ticket $ticket, bool $captioned, ?Message $quoted = null): array
     {
         $failures = [];
 
         foreach ($this->attachments as $position => $file) {
             try {
-                app(SendTicketMedia::class)($ticket, $this->user(), $file, $captioned && $position === 0 ? $this->draft : '');
+                app(SendTicketMedia::class)($ticket, $this->user(), $file, $captioned && $position === 0 ? $this->draft : '', false, $position === 0 ? $quoted : null);
             } catch (InvalidArgumentException $e) {
                 $failures[] = $e->getMessage();
             }

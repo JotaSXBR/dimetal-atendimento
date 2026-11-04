@@ -14,6 +14,7 @@
     class="grid min-h-0 flex-1 grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]"
     x-data="{ details: localStorage.getItem('ticketDetailsOpen') !== '0', sheet: false, toggle() { this.details = ! this.details; localStorage.setItem('ticketDetailsOpen', this.details ? '1' : '0') } }"
     x-bind:style="details ? '' : '--details-w: 0px'"
+    x-init="$store.clientPresence.seed(@js($clientPresence), {{ config('presence.state_ttl_seconds') }})"
 >
     {{-- Lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
@@ -95,7 +96,10 @@
                                         {{ ($item->last_inbound_at ?? $item->opened_at)->timezone($tz)->format('H:i') }}
                                     </span>
                                 </span>
-                                <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->preview }}</span>
+                                <span class="mt-0.5 block truncate text-xs text-ink-2">
+                                    <span x-cloak x-show="$store.clientPresence.label({{ $item->id }})" x-text="$store.clientPresence.label({{ $item->id }})" class="font-medium text-accent"></span>
+                                    <span x-show="! $store.clientPresence.label({{ $item->id }})">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
+                                </span>
                                 @if ($item->tags->isNotEmpty())
                                     <span class="mt-1 flex flex-wrap gap-1">
                                         @foreach ($item->tags as $tag)
@@ -262,10 +266,24 @@
             @endif
 
             <div class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-4 py-4">
+                {{-- Primeiro filho de um `flex-col-reverse` fica no fim da conversa: o "digitando…" do cliente, como uma bolha dele. --}}
+                <div x-cloak x-show="$store.clientPresence.label({{ $ticket->id }})" class="flex justify-start pt-2" role="status" aria-live="polite">
+                    <div class="animate-pulse rounded-xl bg-surface px-3 py-2 text-sm font-medium text-accent" x-text="$store.clientPresence.label({{ $ticket->id }})"></div>
+                </div>
                 <livewire:inbox.transcript :ticket-id="$ticket->id" :key="'transcript-'.$ticket->id" />
             </div>
 
             <footer class="border-t border-line bg-surface p-3">
+                @if ($replyTo)
+                    <div class="mb-2 flex items-start gap-2 rounded-md border-l-4 border-accent bg-canvas px-3 py-2 text-xs" role="status">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-semibold text-accent">Respondendo a {{ $replyTo['author'] }}</p>
+                            <p class="truncate text-ink-2">{{ $replyTo['excerpt'] }}</p>
+                        </div>
+                        <button type="button" wire:click="cancelReply" class="text-ink-3 hover:text-ink" aria-label="Cancelar resposta">✕</button>
+                    </div>
+                @endif
+
                 @if ($canReply && $ticket->channel->status !== \App\Enums\ChannelStatus::WORKING)
                     <p class="mb-2 rounded-md bg-warn/10 px-3 py-2 text-xs text-warn" role="status">
                         O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).
@@ -342,7 +360,7 @@
                             <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-on:click="$dispatch('voice-start')" />
                             <flux:button type="button" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
 
-                            <div class="flex-1">
+                            <div class="flex-1" x-data="typingPresence($wire, {{ $ticket->id }})">
                                 @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())
                                     <ul class="mb-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface text-sm" role="listbox" aria-label="Respostas rápidas">
                                         @foreach ($suggestions as $suggestion)
@@ -355,7 +373,7 @@
                                         @endforeach
                                     </ul>
                                 @endif
-                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:input.debounce.250ms="if ($event.target.value.startsWith('/')) { $wire.$set('draft', $event.target.value) }" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />
+                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:input="input($event.target.value)" x-on:blur="stop()" x-on:input.debounce.250ms="if ($event.target.value.startsWith('/')) { $wire.$set('draft', $event.target.value) }" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />
                                 @error('draft')
                                     <p class="mt-1 text-xs text-danger">{{ $message }}</p>
                                 @enderror

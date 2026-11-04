@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\ChannelStatus;
 use App\Models\Channel;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -12,6 +11,6 @@ final class ConnectionState
     /** @return Collection<int, Channel> canais ativos que não estão conectados */
     public static function down(): Collection
     {
-        return Channel::query()->where('active', true)->where('status', '<>', ChannelStatus::WORKING->value)->orderBy('id')->get();
+        return Channel::query()->confirmedDown()->orderBy('id')->get();
     }
 }

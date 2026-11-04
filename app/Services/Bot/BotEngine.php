@@ -136,7 +136,7 @@ class BotEngine
         return Sector::query()->receivingTickets()->orderBy('menu_order')->orderBy('id')->first();
     }
 
-    /** Grava e despacha uma mensagem do bot (sem visto nem "digitando": é um robô, e o envio humanizado é do bloco Esperar). */
+    /** Grava e despacha uma mensagem do bot; visto e "digitando" saem em `SendTicketMessage::deliver`, como no envio humano. */
     public function say(Ticket $ticket, string $text): void
     {
         if (trim($text) === '') {

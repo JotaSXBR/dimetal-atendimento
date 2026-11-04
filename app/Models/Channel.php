@@ -9,6 +9,7 @@ use Carbon\CarbonImmutable;
 use Database\Factories\ChannelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $backfill_days
  * @property CarbonImmutable|null $backfill_last_run_at
  * @property bool $active
+ * @property CarbonImmutable|null $down_since
+ * @property CarbonImmutable|null $down_alerted_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -38,6 +41,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'last_event_at',
     'backfill_days',
     'backfill_last_run_at',
+    'down_since',
+    'down_alerted_at',
     'active',
     'workflow_id',
 ])]
@@ -57,6 +62,8 @@ class Channel extends Model
             'last_event_at' => 'datetime',
             'phone_changed_at' => 'datetime',
             'backfill_last_run_at' => 'datetime',
+            'down_since' => 'datetime',
+            'down_alerted_at' => 'datetime',
             'backfill_days' => 'integer',
             'active' => 'boolean',
         ];
@@ -72,6 +79,19 @@ class Channel extends Model
     public function phoneLabel(): ?string
     {
         return $this->phone === null ? null : PhoneFormat::display($this->phone);
+    }
+
+    /**
+     * Canais ativos cuja queda já vale para a tela: anunciada, ou que nunca estiveram conectados (sem `down_since`).
+     * Durante a tolerância de uma oscilação o canal fica de fora.
+     *
+     * @param  Builder<Channel>  $query
+     */
+    public function scopeConfirmedDown(Builder $query): void
+    {
+        $query->where('active', true)
+            ->where('status', '<>', ChannelStatus::WORKING->value)
+            ->where(fn (Builder $q) => $q->whereNotNull('down_alerted_at')->orWhereNull('down_since'));
     }
 
     public function isConnected(): bool

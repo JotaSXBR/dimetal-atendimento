@@ -105,6 +105,30 @@ class InboxTranscriptTest extends TestCase
         $screen->dispatch('echo-private:inbox,.ticket.updated', ['ticket_id' => $ticket->id])->assertSee('nova;');
     }
 
+    public function test_bloco_citado_aparece_escapado_e_com_ancora_da_original(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::ADMIN]);
+        $ticket = $this->ticket();
+        $original = Message::factory()->for($ticket)->create(['wa_message_id' => 'ORIG1', 'body' => 'preço?']);
+        Message::factory()->for($ticket)->create([
+            'direction' => MessageDirection::OUT,
+            'origin' => MessageOrigin::PAINEL,
+            'author_user_id' => $user->id,
+            'body' => 'Segue',
+            'quoted_wa_message_id' => 'ORIG1',
+            'quoted_snapshot' => ['author' => 'Maria', 'type' => 'text', 'excerpt' => '<script>x</script> *a'],
+        ]);
+        Message::factory()->for($ticket)->create(['body' => 'outra', 'quoted_wa_message_id' => 'FORA', 'quoted_snapshot' => ['author' => 'Maria', 'type' => 'text', 'excerpt' => 'antiga']]);
+
+        $html = Livewire::actingAs($user)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+
+        $this->assertStringNotContainsString('<script>x</script>', $html);
+        $this->assertStringContainsString('&lt;script&gt;x&lt;/script&gt; *a', $html);
+        $this->assertStringContainsString('data-quote-target="'.$original->id.'"', $html);
+        $this->assertStringContainsString('data-quote-target=""', $html, 'original fora da página: o bloco aparece mas não rola');
+        $this->assertStringContainsString('id="message-'.$original->id.'"', $html);
+    }
+
     public function test_transcript_refresh_atualiza(): void
     {
         $ticket = $this->ticket();

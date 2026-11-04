@@ -12,6 +12,7 @@ use App\Enums\CloseOutcome;
 use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
 use App\Jobs\MarkTicketSeenJob;
+use App\Livewire\Inbox\Concerns\ActsOnMessages;
 use App\Livewire\Inbox\Concerns\ComposesMessages;
 use App\Models\Channel;
 use App\Models\Message;
@@ -19,6 +20,7 @@ use App\Models\Sector;
 use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\ClientPresence;
 use App\Services\Inbox\ResendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,10 +37,12 @@ use Livewire\Component;
 #[Layout('layouts::inbox')]
 class Inbox extends Component
 {
+    use ActsOnMessages;
     use ComposesMessages;
 
     /** Prévia da lista: o texto ou, quando não há, o nome do tipo de conteúdo. */
-    private const PREVIEW_SQL = "case when type = 'location' then 'Localização' when type = 'contact' then 'Contato' "
+    private const PREVIEW_SQL = "case when revoked_at is not null then 'Apagada · ' else '' end || "
+        ."case when type = 'location' then 'Localização' when type = 'contact' then 'Contato' "
         ."when body <> '' then body when type = 'view_once' then 'Visualização única' "
         ."when media_mime = 'image/webp' then 'Figurinha' when media_mime like 'image/%' then 'Foto' "
         ."when media_mime like 'audio/%' then 'Áudio' when media_mime like 'video/%' then 'Vídeo' "
@@ -104,6 +108,7 @@ class Inbox extends Component
 
         $this->ticketId = $ticketId;
         $this->notice = null;
+        $this->replyToId = null;
         $this->discardAttachments();
         $this->closePanel();
     }
@@ -328,7 +333,19 @@ class Inbox extends Component
         }
 
         return Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
+            ->where(fn (Builder $q) => $q->whereNull('closed_reason')->orWhere('closed_reason', '<>', ClosedReason::IMPORTADO->value))
             ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get();
+    }
+
+    /**
+     * @param  EloquentCollection<int, Ticket>  $list
+     * @return array<int, string>
+     */
+    private function clientPresence(EloquentCollection $list, ?Ticket $ticket): array
+    {
+        $ids = [...$list->modelKeys(), ...($ticket === null ? [] : [$ticket->id])];
+
+        return app(ClientPresence::class)->states(array_values(array_unique(array_map(intval(...), $ids))));
     }
 
     public function render(): View
@@ -341,7 +358,7 @@ class Inbox extends Component
             ->visibleTo($user)
             ->with(['contact', 'channel', 'tags'])
             ->addSelect(['preview' => Message::query()
-                ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->latest('id')->limit(1)])
+                ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->orderByDesc('sent_at')->orderByDesc('id')->limit(1)])
             ->when($this->tab === 'pendentes', fn (Builder $q) => $q->where('status', TicketStatus::PENDENTE->value))
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
             ->when($this->tab === 'meus', fn (Builder $q) => $q->where('assigned_user_id', $user->id))
@@ -355,6 +372,8 @@ class Inbox extends Component
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),
             'closed' => $this->recentlyClosed($user),
+            // "Digitando…" do cliente guardado no Redis: quem abre a tela no meio da digitação já o vê (os avisos seguintes vêm pelo Reverb).
+            'clientPresence' => $this->clientPresence($list, $ticket),
             'tabCounts' => [
                 'pendentes' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::PENDENTE->value)->count(),
                 'aguardando' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::AGUARDANDO->value)->count(),
@@ -363,6 +382,7 @@ class Inbox extends Component
             // O selo do número só ajuda quando há mais de um número ativo.
             'showChannel' => Channel::query()->where('active', true)->count() >= 2,
             'ticket' => $ticket,
+            'replyTo' => $this->replyBar($ticket?->id),
             'previous' => $this->previousTicket($user),
             'canClaim' => $ticket !== null && $user->can('claim', $ticket),
             'canClose' => $ticket !== null && $user->can('close', $ticket),

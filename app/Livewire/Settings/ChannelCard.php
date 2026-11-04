@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Enums\ChannelStatus;
 use App\Enums\TicketStatus;
+use App\Livewire\Settings\Concerns\RecoversHistory;
 use App\Livewire\Settings\Concerns\SendsTestMessage;
 use App\Models\Channel;
 use App\Models\Ticket;
@@ -20,6 +21,7 @@ use Throwable;
  */
 class ChannelCard extends Component
 {
+    use RecoversHistory;
     use SendsTestMessage;
 
     public Channel $channel;
@@ -64,9 +66,9 @@ class ChannelCard extends Component
 
         $this->validate([
             'backfillDays' => $this->backfill
-                ? ['required', 'integer', 'min:1', 'max:365']
+                ? ['required', 'integer', 'min:1', 'max:30']
                 : ['nullable'],
-        ]);
+        ], ['backfillDays.max' => 'No máximo 30 dias.']);
 
         $this->channel->backfill_days = $this->backfill ? $this->backfillDays : 0;
         $this->channel->save();

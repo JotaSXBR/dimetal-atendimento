@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -38,6 +39,10 @@ use Illuminate\Support\Str;
  * @property int|null $media_size
  * @property string|null $local_path
  * @property CarbonImmutable|null $media_purged_at
+ * @property CarbonImmutable|null $edited_at
+ * @property CarbonImmutable|null $revoked_at
+ * @property string|null $quoted_wa_message_id
+ * @property array{author: string, type: string, excerpt: string}|null $quoted_snapshot
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -63,6 +68,10 @@ use Illuminate\Support\Str;
     'media_size',
     'local_path',
     'media_purged_at',
+    'edited_at',
+    'revoked_at',
+    'quoted_wa_message_id',
+    'quoted_snapshot',
 ])]
 class Message extends Model
 {
@@ -73,6 +82,32 @@ class Message extends Model
     public static function waKey(string $waId): string
     {
         return Str::afterLast($waId, '_');
+    }
+
+    /** Janela em que o WhatsApp deixa editar uma mensagem enviada. */
+    public const EDIT_WINDOW_MINUTES = 15;
+
+    /**
+     * O id que o WAHA exige para reagir, editar e apagar: `{fromMe}_{chat}_{id}`. O chat é o do contato (`wa_id` ou `lid`).
+     * Sem `wa_message_id` a mensagem ainda não saiu e não há como agir sobre ela.
+     */
+    public function fullWaId(): ?string
+    {
+        $chat = $this->chatId();
+
+        if ($this->wa_message_id === null || $chat === null) {
+            return null;
+        }
+
+        return ($this->direction === MessageDirection::OUT ? 'true' : 'false').'_'.$chat.'_'.$this->wa_message_id;
+    }
+
+    /** O chat da conversa no WAHA: o `wa_id` do contato ou, sem ele, o `lid`. */
+    public function chatId(): ?string
+    {
+        $contact = $this->contact;
+
+        return $contact === null ? null : ($contact->wa_id ?? (string) $contact->lid);
     }
 
     public function hasMedia(): bool
@@ -96,6 +131,9 @@ class Message extends Model
             'delivered_at' => 'datetime',
             'read_at' => 'datetime',
             'media_purged_at' => 'datetime',
+            'edited_at' => 'datetime',
+            'revoked_at' => 'datetime',
+            'quoted_snapshot' => 'array',
         ];
     }
 
@@ -129,5 +167,23 @@ class Message extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_user_id');
+    }
+
+    /**
+     * @return HasMany<MessageReaction, $this>
+     */
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(MessageReaction::class);
+    }
+
+    /**
+     * As versões anteriores, da mais antiga para a mais recente.
+     *
+     * @return HasMany<MessageEdit, $this>
+     */
+    public function edits(): HasMany
+    {
+        return $this->hasMany(MessageEdit::class)->orderBy('id');
     }
 }

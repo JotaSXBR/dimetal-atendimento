@@ -2,6 +2,7 @@
 
 namespace App\Services\Reports;
 
+use App\Enums\ClosedReason;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use Carbon\CarbonImmutable;
@@ -31,7 +32,9 @@ class AttendanceReport
      */
     public function for(CarbonInterface $from, CarbonInterface $to, int $slaMinutes): array
     {
-        $period = fn (): Builder => DB::table('tickets')->whereBetween('tickets.opened_at', [$from, $to]);
+        // Histórico importado não é atendimento deste sistema: fora dos números.
+        $period = fn (): Builder => DB::table('tickets')->whereBetween('tickets.opened_at', [$from, $to])
+            ->where(fn (Builder $q) => $q->whereNull('tickets.closed_reason')->orWhere('tickets.closed_reason', '<>', ClosedReason::IMPORTADO->value));
         $answered = fn (): Builder => $period()->whereNotNull('tickets.first_human_reply_at');
 
         $sla = $answered()->selectRaw('count(*) as total, count(*) filter (where tickets.first_human_reply_at - tickets.opened_at <= make_interval(secs => ?)) as within', [$slaMinutes * 60])->first();

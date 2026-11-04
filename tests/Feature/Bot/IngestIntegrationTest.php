@@ -72,8 +72,10 @@ class IngestIntegrationTest extends TestCase
     }
 
     /** @param  array<string, mixed>  $extra */
-    private function ingest(string $id, string $body = 'oi', array $extra = []): ?Message
+    private function ingest(string $id, string $body = 'oi', array $extra = [], ?CarbonImmutable $receivedAt = null): ?Message
     {
+        $mode = $extra['_mode'] ?? null;
+        unset($extra['_mode']);
         $payload = array_merge(['id' => $id, 'from' => self::PEER, 'fromMe' => false, 'body' => $body, 'timestamp' => now()->timestamp, 'hasMedia' => false, '_data' => ['Info' => ['PushName' => 'Maria']]], $extra);
 
         $event = WahaEvent::create([
@@ -81,8 +83,8 @@ class IngestIntegrationTest extends TestCase
             'channel_id' => $this->channel->id,
             'event' => 'message',
             'session' => 'main',
-            'payload' => ['event' => 'message', 'session' => 'main', 'payload' => $payload],
-            'received_at' => now(),
+            'payload' => ['event' => 'message', 'session' => 'main', 'payload' => $payload] + ($mode === null ? [] : ['mode' => $mode]),
+            'received_at' => $receivedAt ?? now(),
         ]);
 
         return app(IngestMessage::class)($event);
@@ -187,6 +189,53 @@ class IngestIntegrationTest extends TestCase
 
         $this->assertSame(TicketStatus::AGUARDANDO, $this->ticket()->status);
         Queue::assertNotPushed(AdvanceBotSessionJob::class);
+    }
+
+    public function test_fila_inbound_atrasada_nao_derruba_o_bot(): void
+    {
+        $this->activate();
+        $arrived = CarbonImmutable::now();
+
+        // O webhook chegou agora, mas o job só roda 10 min depois (fila `inbound` represada).
+        $this->travel(10)->minutes();
+        $this->ingest('false_LATE', 'oi', ['timestamp' => $arrived->timestamp], $arrived);
+
+        $this->assertSame(TicketStatus::PENDENTE, $this->ticket()->status);
+        Queue::assertPushed(AdvanceBotSessionJob::class, 1);
+    }
+
+    public function test_mensagem_recuperada_antiga_continua_sem_bot(): void
+    {
+        $this->activate();
+
+        $this->ingest('false_REC', 'oi', ['timestamp' => now()->subHour()->timestamp, '_mode' => 'recovered']);
+
+        $this->assertSame(TicketStatus::AGUARDANDO, $this->ticket()->status);
+        Queue::assertNotPushed(AdvanceBotSessionJob::class);
+    }
+
+    public function test_eco_lid_do_bot_chegando_durante_o_digitando_nao_chama_human_took_over(): void
+    {
+        $this->activate();
+        $this->ingest('false_A1');
+        $this->runBotJobs();
+
+        $greeting = Message::query()->where('origin', MessageOrigin::BOT->value)->orderBy('id')->firstOrFail();
+        $greeting->touch(); // o envio começou: o eco pode chegar antes da resposta do WAHA
+
+        // O WhatsApp devolve o eco pelo chat `@lid` do cliente, com o telefone em `RecipientAlt`.
+        $this->ingest('true_ECHOLID', $greeting->body, [
+            'fromMe' => true,
+            'from' => '5516999990001@c.us',
+            'to' => '184226598404250@lid',
+            '_data' => ['Info' => ['RecipientAlt' => '5516997524950@s.whatsapp.net']],
+        ]);
+
+        $this->assertSame(TicketStatus::PENDENTE, $this->ticket()->status);
+        $this->assertSame(BotSession::ACTIVE, BotSession::query()->firstOrFail()->state);
+        $this->assertSame(0, Message::query()->where('origin', MessageOrigin::FORA_DO_PAINEL->value)->count());
+        $this->assertNull(TicketEvent::query()->where('type', 'bot_abandoned')->first());
+        $this->assertSame('ECHOLID', $greeting->fresh()?->wa_message_id, 'o eco foi adotado pela linha do bot');
     }
 
     public function test_mensagem_do_celular_encerra_o_bot_e_o_ticket_segue_em_atendimento(): void
