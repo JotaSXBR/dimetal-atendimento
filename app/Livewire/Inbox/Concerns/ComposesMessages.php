@@ -239,7 +239,7 @@ trait ComposesMessages
         $presence = app(Presence::class);
         $chatId = $contact->wa_id ?? (string) $contact->lid;
         $client = new WahaClient($channel);
-        $recording ? $presence->recording($client, $chatId, $on) : $presence->typing($client, $chatId, $on);
+        $recording ? $presence->recording($client, $chatId, $on) : $presence->typing($client, $channel, $chatId, $on);
 
         // Gravando ou digitando: a conversa fica marcada e o `offline` pendente (de um envio do bot, por exemplo) perde a vez.
         $on ? $presence->humanActive($channel, $chatId) : $presence->scheduleOffline($channel);

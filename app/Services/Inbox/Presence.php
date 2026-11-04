@@ -38,6 +38,9 @@ class Presence
     /** Quanto tempo a marca "atendente ativo" vale sem ser renovada (o navegador renova a cada poucos segundos). */
     private const HUMAN_ACTIVE_SECONDS = 10;
 
+    /** Quanto tempo vale "a sessão já está online": o `offline` fecha a janela antes; isto é só a rede de segurança. */
+    private const ONLINE_WINDOW_SECONDS = 300;
+
     /** Um WAHA lento não pode segurar a fila por causa de um visto. */
     private const BOT_SEEN_TIMEOUT_SECONDS = 3;
 
@@ -48,8 +51,7 @@ class Presence
         $bot = $origin === MessageOrigin::BOT;
         $channel = $ticket->channel()->firstOrFail();
 
-        // O WAHA só marca `online` sozinho se `WAHA_PRESENCE_AUTO_ONLINE` estiver ligado (aqui não está).
-        $this->attempt('online', fn () => $client->setPresence('online'));
+        $this->ensureOnline($client, $channel);
 
         if (! $bot || Cache::add('presence-seen:'.$ticket->id, 1, self::BOT_ROUND_SECONDS)) {
             $this->attempt('visto', fn () => $this->markSeen($client, $ticket, $chatId, $bot ? self::BOT_SEEN_TIMEOUT_SECONDS : null));
@@ -108,14 +110,35 @@ class Presence
     }
 
     /** "Digitando…" para o cliente enquanto o atendente escreve no campo; `online` antes, como na sequência do WAHA. */
-    public function typing(WahaClient $client, string $chatId, bool $on): void
+    public function typing(WahaClient $client, Channel $channel, string $chatId, bool $on): void
     {
-        $this->attempt($on ? 'digitando (campo)' : 'parou de digitar (campo)', function () use ($client, $chatId, $on): void {
-            if ($on) {
-                $client->setPresence('online');
-            }
+        if ($on) {
+            $this->ensureOnline($client, $channel);
+        }
 
-            $client->setPresence($on ? 'typing' : 'paused', $chatId);
+        $this->attempt($on ? 'digitando (campo)' : 'parou de digitar (campo)', fn () => $client->setPresence($on ? 'typing' : 'paused', $chatId));
+    }
+
+    /**
+     * Uma chamada `online` por janela, não por mensagem nem por aviso de digitação. O WAHA só marca `online` sozinho se
+     * `WAHA_PRESENCE_AUTO_ONLINE` estiver ligado (aqui não está); o `offline` (`goOffline`) fecha a janela.
+     */
+    private function ensureOnline(WahaClient $client, Channel $channel): void
+    {
+        $key = $this->onlineKey($channel->id);
+
+        if (! Cache::add($key, 1, self::ONLINE_WINDOW_SECONDS)) {
+            return;
+        }
+
+        $this->attempt('online', function () use ($client, $key): void {
+            try {
+                $client->setPresence('online');
+            } catch (Throwable $e) {
+                Cache::forget($key); // não deu certo: o próximo envio tenta de novo
+
+                throw $e;
+            }
         });
     }
 
@@ -167,15 +190,20 @@ class Presence
             return;
         }
 
+        Cache::forget($this->onlineKey($channel->id));
         $this->attempt('offline', fn () => (new WahaClient($channel))->setPresence('offline'));
     }
 
+    /** Só o que chegou depois do último visto enviado: reenviar os mesmos ids a cada resposta é requisição à toa. */
     private function markSeen(WahaClient $client, Ticket $ticket, string $chatId, ?int $timeoutSeconds = null): void
     {
+        $seenUpTo = (int) Cache::get($this->seenKey($ticket->id), 0);
+
         $received = Message::query()
             ->where('ticket_id', $ticket->id)
             ->where('direction', 'in')
             ->whereNotNull('wa_message_id')
+            ->where('id', '>', $seenUpTo)
             ->latest('sent_at')
             ->limit(self::LAST_SEEN_IDS)
             ->get();
@@ -191,6 +219,7 @@ class Presence
 
         if ($ids !== []) {
             $client->sendSeen($chatId, $ids, $timeoutSeconds);
+            Cache::put($this->seenKey($ticket->id), (int) $received->max('id'), now()->addDay());
         }
     }
 
@@ -201,6 +230,16 @@ class Presence
         } catch (Throwable $e) {
             Log::warning("Presença ({$step}) falhou e foi ignorada", ['erro' => $e->getMessage()]);
         }
+    }
+
+    private function onlineKey(int $channelId): string
+    {
+        return "presence-online:{$channelId}";
+    }
+
+    private function seenKey(int $ticketId): string
+    {
+        return "presence-seen-upto:{$ticketId}";
     }
 
     private function key(int $channelId): string

@@ -60,6 +60,16 @@ class InboxTypingTest extends TestCase
         ]);
     }
 
+    public function test_varios_avisos_seguidos_pedem_online_uma_vez_so(): void
+    {
+        $screen = $this->screen();
+
+        $screen->call('typing', true, $this->ticket->id)->call('typing', true, $this->ticket->id)->call('typing', true, $this->ticket->id);
+
+        $this->assertCount(1, Http::recorded(fn (Request $r) => ($r['presence'] ?? null) === 'online'));
+        $this->assertCount(3, Http::recorded(fn (Request $r) => ($r['presence'] ?? null) === 'typing'));
+    }
+
     public function test_parar_de_digitar_manda_paused_e_agenda_offline(): void
     {
         Queue::fake();

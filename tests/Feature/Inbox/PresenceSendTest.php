@@ -213,6 +213,7 @@ class PresenceSendTest extends TestCase
         });
 
         $this->botSays('Olá!');
+        Message::factory()->for($this->ticket)->create(['wa_message_id' => 'IN2']); // o visto só sai para mensagem nova
         $this->send('Segue');
 
         $this->assertSame([3, 15], $timeouts);
@@ -232,6 +233,40 @@ class PresenceSendTest extends TestCase
 
         $this->botSays('Outra');
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/startTyping'));
+    }
+
+    public function test_online_sai_uma_vez_por_janela_e_de_novo_depois_do_offline(): void
+    {
+        Queue::fake();
+        Http::fake(['*/api/sendText' => Http::sequence()->push(['id' => 'true_x@c.us_1'], 201)->push(['id' => 'true_x@c.us_2'], 201)->push(['id' => 'true_x@c.us_3'], 201), '*' => Http::response([], 201)]);
+        $online = fn () => Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && ($r['presence'] ?? null) === 'online')->count();
+
+        $this->botSays('Olá!');
+        $this->botSays('Escolha uma opção');
+        $this->assertSame(1, $online(), 'a rajada pede online uma vez só');
+
+        app()->call([Queue::pushed(GoOfflineJob::class)->last(), 'handle']);
+        $this->botSays('Outra');
+
+        $this->assertSame(2, $online(), 'depois do offline a janela fecha e o online volta');
+    }
+
+    public function test_visto_nao_repete_ids_ja_vistos(): void
+    {
+        Queue::fake();
+        Message::factory()->for($this->ticket)->create(['wa_message_id' => 'IN1']);
+        Http::fake(['*/api/sendText' => Http::sequence()->push(['id' => 'true_x@c.us_1'], 201)->push(['id' => 'true_x@c.us_2'], 201)->push(['id' => 'true_x@c.us_3'], 201), '*' => Http::response([], 201)]);
+        $seen = fn () => Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/sendSeen'));
+
+        $this->send('um');
+        $this->send('dois');
+        $this->assertCount(1, $seen(), 'a segunda resposta não reenvia o que já foi visto');
+
+        Message::factory()->for($this->ticket)->create(['wa_message_id' => 'IN2']);
+        $this->send('tres');
+
+        $this->assertCount(2, $seen());
+        $this->assertSame(['false_'.self::PEER.'_IN2'], $seen()->last()[0]['messageIds']);
     }
 
     public function test_falha_no_digitando_nao_impede_o_envio(): void
