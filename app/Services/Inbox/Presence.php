@@ -45,10 +45,6 @@ class Presence
         $bot = $origin === MessageOrigin::BOT;
         $channel = $ticket->channel()->firstOrFail();
 
-        if (! $bot) {
-            $this->markHuman($channel, $chatId);
-        }
-
         // O WAHA só marca `online` sozinho se `WAHA_PRESENCE_AUTO_ONLINE` estiver ligado (aqui não está).
         $this->attempt('online', fn () => $client->setPresence('online'));
 
@@ -57,7 +53,16 @@ class Presence
         }
 
         // Atendente digitando ou gravando nesta conversa: o `paused` do bot apagaria o indicador dele.
-        if (! $typing || ($bot && $this->isHumanActive($channel, $chatId))) {
+        $humanActive = $this->isHumanActive($channel, $chatId);
+
+        if (! $typing || ($bot && $humanActive)) {
+            return;
+        }
+
+        // Quem digitou de verdade já mostrou o "digitando…" pelo navegador: sem espera artificial, só encerra o indicador.
+        if ($humanActive) {
+            $this->attempt('parou de digitar', fn () => $client->stopTyping($chatId));
+
             return;
         }
 
@@ -82,6 +87,18 @@ class Presence
     public function recording(WahaClient $client, string $chatId, bool $on): void
     {
         $this->attempt($on ? 'gravando' : 'parou de gravar', fn () => $client->setPresence($on ? 'recording' : 'paused', $chatId));
+    }
+
+    /** "Digitando…" para o cliente enquanto o atendente escreve no campo; `online` antes, como na sequência do WAHA. */
+    public function typing(WahaClient $client, string $chatId, bool $on): void
+    {
+        $this->attempt($on ? 'digitando (campo)' : 'parou de digitar (campo)', function () use ($client, $chatId, $on): void {
+            if ($on) {
+                $client->setPresence('online');
+            }
+
+            $client->setPresence($on ? 'typing' : 'paused', $chatId);
+        });
     }
 
     /**

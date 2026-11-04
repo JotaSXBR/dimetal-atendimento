@@ -183,6 +183,20 @@ class PresenceSendTest extends TestCase
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'offline');
     }
 
+    public function test_envio_depois_de_digitar_de_verdade_nao_repete_a_espera_artificial(): void
+    {
+        Queue::fake();
+        Http::fake(['*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
+        app(Presence::class)->humanActive($this->channel, self::PEER);
+
+        $this->send();
+
+        Http::assertNotSent(fn (Request $r) => str_ends_with($r->url(), '/api/startTyping'));
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/stopTyping'));
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/sendText'));
+        Sleep::assertNeverSlept();
+    }
+
     public function test_falha_no_digitando_nao_impede_o_envio(): void
     {
         Http::fake(['*/api/startTyping' => Http::response('boom', 500), '*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
@@ -216,7 +230,6 @@ class PresenceSendTest extends TestCase
         app()->call([$jobs[0], 'handle']);
         Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/presence') && $r['presence'] === 'offline');
 
-        $this->travel(46)->seconds(); // o job só roda 45 s depois do envio, quando a marca "atendente ativo" já expirou
         app()->call([$jobs[1], 'handle']);
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'offline');
     }
