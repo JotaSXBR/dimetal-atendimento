@@ -162,7 +162,7 @@ final readonly class IncomingMessage
         return new IncomingMedia(
             ref: IncomingMedia::safeRef($filename),
             mime: $mime === null ? null : trim(explode(';', $mime)[0]),
-            size: is_int($size) && $size >= 0 ? $size : null,
+            size: is_int($size) && $size >= 0 ? $size : ProtoMedia::fileLength(data_get($data, '_data.Message')),
             name: $displayName === null || trim($displayName) === '' ? null : Str::limit(trim($displayName), 255, ''),
         );
     }
