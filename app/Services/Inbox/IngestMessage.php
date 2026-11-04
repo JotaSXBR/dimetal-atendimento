@@ -10,6 +10,7 @@ use App\Enums\TicketStatus;
 use App\Events\MessageCreated;
 use App\Events\TicketUpdated;
 use App\Jobs\ResolveMessageMediaJob;
+use App\Jobs\SubscribeClientPresenceJob;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
@@ -208,6 +209,11 @@ class IngestMessage
         }
 
         TicketUpdated::dispatch($ticket);
+
+        // O cliente acabou de escrever: abre a janela curta em que a presença dele (digitando, gravando) é assinada.
+        if ($mode === IngestMode::LIVE && ! $incoming->fromMe) {
+            SubscribeClientPresenceJob::dispatch($ticket->id)->afterCommit();
+        }
 
         // Ao vivo, o bot e a resposta fora do horário valem mesmo que o job tenha atrasado; recuperada só se o cliente ainda espera.
         if (! $incoming->fromMe && ($mode === IngestMode::LIVE || app(BotEntry::class)->isFresh($freshAt, $arrivedAt))) {
