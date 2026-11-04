@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Webhooks;
 
+use App\Jobs\HandleClientPresence;
 use App\Jobs\HandleWahaEvent;
 use App\Models\Channel;
 use App\Models\WahaEvent;
@@ -30,6 +31,14 @@ class WahaWebhookController
         }
 
         $session = is_string($body['session'] ?? null) ? $body['session'] : null;
+
+        // Presença é efêmera e vem em rajada: nunca vira linha em `waha_events`; o job normaliza e transmite.
+        if (($body['event'] ?? null) === 'presence.update') {
+            $channelId = $this->channelIdFor($session);
+            $channelId !== null && HandleClientPresence::dispatch($channelId, is_array($body['payload'] ?? null) ? $body['payload'] : []);
+
+            return response()->json(['ok' => true]);
+        }
 
         $event = WahaEvent::firstOrCreate(
             ['waha_event_id' => $eventId],

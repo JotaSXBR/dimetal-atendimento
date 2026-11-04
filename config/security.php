@@ -22,6 +22,9 @@ return [
 
     'webhook_per_minute' => 300,
 
+    /** Presença do cliente (`presence.update`) tem teto próprio: chega em rajada e não pode gastar o das mensagens. */
+    'presence_per_minute' => 600,
+
     'send_message_per_minute' => 30,
 
 ];

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Webhooks;
 
+use App\Jobs\HandleClientPresence;
 use App\Jobs\HandleWahaEvent;
 use App\Models\Channel;
 use App\Models\WahaEvent;
@@ -103,5 +104,27 @@ class WahaWebhookTest extends TestCase
             'Orçamento da chapa 🚀 ação',
             WahaEvent::first()->payload['payload']['body']
         );
+    }
+
+    public function test_presence_update_nao_grava_waha_event_e_despacha_o_job(): void
+    {
+        $channel = Channel::factory()->create(['waha_session' => 'main']);
+
+        $this->sendEvent([
+            'event' => 'presence.update',
+            'payload' => ['id' => '5516997524950@c.us', 'presences' => [['participant' => '5516997524950@c.us', 'lastKnownPresence' => 'typing']]],
+        ])->assertOk()->assertExactJson(['ok' => true]);
+
+        $this->assertSame(0, WahaEvent::count());
+        Queue::assertPushed(HandleClientPresence::class, fn (HandleClientPresence $job): bool => $job->channelId === $channel->id && $job->payload['id'] === '5516997524950@c.us');
+        Queue::assertNotPushed(HandleWahaEvent::class);
+    }
+
+    public function test_presence_update_de_sessao_desconhecida_e_ignorado(): void
+    {
+        $this->sendEvent(['event' => 'presence.update', 'session' => 'nao-existe', 'payload' => ['id' => '5516997524950@c.us']])->assertOk();
+
+        $this->assertSame(0, WahaEvent::count());
+        Queue::assertNothingPushed();
     }
 }

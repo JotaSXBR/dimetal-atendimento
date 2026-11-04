@@ -36,7 +36,10 @@ class AppServiceProvider extends ServiceProvider
     protected function configureRateLimiting(): void
     {
         // Todo o tráfego do WAHA chega do mesmo IP interno; o teto é um freio contra inundação, não um limite de uso.
-        RateLimiter::for('webhook', fn (Request $request) => Limit::perMinute(config()->integer('security.webhook_per_minute'))->by((string) $request->ip()));
+        // `presence.update` chega em rajada e tem teto próprio: não pode gastar o das mensagens.
+        RateLimiter::for('webhook', fn (Request $request) => $request->input('event') === 'presence.update'
+            ? Limit::perMinute(config()->integer('security.presence_per_minute'))->by($request->ip().':presence')
+            : Limit::perMinute(config()->integer('security.webhook_per_minute'))->by((string) $request->ip()));
     }
 
     protected function configureGates(): void
