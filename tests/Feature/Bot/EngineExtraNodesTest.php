@@ -16,6 +16,7 @@ use App\Models\WorkflowVersion;
 use App\Services\Bot\BotEngine;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -205,6 +206,7 @@ class EngineExtraNodesTest extends TestCase
         Sleep::assertSlept(fn ($duration): bool => $duration->totalSeconds === 30.0);
         $this->assertSame(['Pronto'], $this->botTexts());
         Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/api/startTyping'));
+        $this->assertTrue(Cache::has('presence-typed:'.$this->ticket->id), 'a próxima mensagem do bot não repete o digitando');
     }
 
     public function test_midia_ausente_nao_trava_o_fluxo_e_presente_vira_mensagem_do_bot(): void

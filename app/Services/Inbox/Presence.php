@@ -32,6 +32,9 @@ class Presence
     /** O visto do bot é por rodada (mensagens seguidas do mesmo ticket); este é o tamanho da rodada. */
     private const BOT_ROUND_SECONDS = 30;
 
+    /** Quanto tempo vale "o bloco Esperar já mostrou o digitando" para a próxima mensagem do bot. */
+    private const BOT_TYPED_SECONDS = 15;
+
     /** Quanto tempo a marca "atendente ativo" vale sem ser renovada (o navegador renova a cada poucos segundos). */
     private const HUMAN_ACTIVE_SECONDS = 10;
 
@@ -54,8 +57,9 @@ class Presence
 
         // Atendente digitando ou gravando nesta conversa: o `paused` do bot apagaria o indicador dele.
         $humanActive = $this->isHumanActive($channel, $chatId);
+        $botAlreadyTyped = $bot && Cache::pull('presence-typed:'.$ticket->id) !== null;
 
-        if (! $typing || ($bot && $humanActive)) {
+        if (! $typing || $botAlreadyTyped || ($bot && $humanActive)) {
             return;
         }
 
@@ -87,6 +91,12 @@ class Presence
     public function recording(WahaClient $client, string $chatId, bool $on): void
     {
         $this->attempt($on ? 'gravando' : 'parou de gravar', fn () => $client->setPresence($on ? 'recording' : 'paused', $chatId));
+    }
+
+    /** O bloco Esperar já mostrou o "digitando…": a próxima mensagem do bot não o repete. */
+    public function botTyped(Ticket $ticket): void
+    {
+        Cache::put('presence-typed:'.$ticket->id, 1, now()->addSeconds(self::BOT_TYPED_SECONDS));
     }
 
     /** "Digitando…" para o cliente enquanto o atendente escreve no campo; `online` antes, como na sequência do WAHA. */

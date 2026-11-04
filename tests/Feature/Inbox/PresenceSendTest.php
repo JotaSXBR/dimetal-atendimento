@@ -197,6 +197,41 @@ class PresenceSendTest extends TestCase
         Sleep::assertNeverSlept();
     }
 
+    public function test_visto_do_bot_tem_teto_de_3_segundos_e_o_do_atendente_o_padrao(): void
+    {
+        Message::factory()->for($this->ticket)->create(['wa_message_id' => 'IN1']);
+        $timeouts = [];
+        $sent = 0;
+        Http::fake(function (Request $request, array $options) use (&$timeouts, &$sent) {
+            if (str_ends_with($request->url(), '/api/sendSeen')) {
+                $timeouts[] = $options['timeout'] ?? null;
+            }
+
+            return Http::response(['id' => 'true_x@c.us_OUT'.(str_ends_with($request->url(), '/api/sendText') ? ++$sent : '')], 201);
+        });
+
+        $this->botSays('Olá!');
+        $this->send('Segue');
+
+        $this->assertSame([3, 15], $timeouts);
+    }
+
+    public function test_bot_depois_do_bloco_esperar_nao_repete_o_digitando(): void
+    {
+        Queue::fake();
+        Http::fake(['*/api/sendText' => Http::sequence()->push(['id' => 'true_x@c.us_1'], 201)->push(['id' => 'true_x@c.us_2'], 201), '*' => Http::response([], 201)]);
+        app(Presence::class)->botTyped($this->ticket);
+
+        $this->botSays('Pronto');
+
+        Http::assertNotSent(fn (Request $r) => str_ends_with($r->url(), '/api/startTyping'));
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/sendText'));
+        Sleep::assertNeverSlept();
+
+        $this->botSays('Outra');
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/startTyping'));
+    }
+
     public function test_falha_no_digitando_nao_impede_o_envio(): void
     {
         Http::fake(['*/api/startTyping' => Http::response('boom', 500), '*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
