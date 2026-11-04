@@ -19,6 +19,7 @@ use App\Models\Sector;
 use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\ClientPresence;
 use App\Services\Inbox\ResendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -333,6 +334,17 @@ class Inbox extends Component
             ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get();
     }
 
+    /**
+     * @param  EloquentCollection<int, Ticket>  $list
+     * @return array<int, string>
+     */
+    private function clientPresence(EloquentCollection $list, ?Ticket $ticket): array
+    {
+        $ids = [...$list->modelKeys(), ...($ticket === null ? [] : [$ticket->id])];
+
+        return app(ClientPresence::class)->states(array_values(array_unique(array_map(intval(...), $ids))));
+    }
+
     public function render(): View
     {
         $user = $this->user();
@@ -357,6 +369,8 @@ class Inbox extends Component
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),
             'closed' => $this->recentlyClosed($user),
+            // "Digitando…" do cliente guardado no Redis: quem abre a tela no meio da digitação já o vê (os avisos seguintes vêm pelo Reverb).
+            'clientPresence' => $this->clientPresence($list, $ticket),
             'tabCounts' => [
                 'pendentes' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::PENDENTE->value)->count(),
                 'aguardando' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::AGUARDANDO->value)->count(),
