@@ -95,7 +95,7 @@
                                         {{ ($item->last_inbound_at ?? $item->opened_at)->timezone($tz)->format('H:i') }}
                                     </span>
                                 </span>
-                                <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->preview }}</span>
+                                <span class="mt-0.5 block truncate text-xs text-ink-2">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
                                 @if ($item->tags->isNotEmpty())
                                     <span class="mt-1 flex flex-wrap gap-1">
                                         @foreach ($item->tags as $tag)
