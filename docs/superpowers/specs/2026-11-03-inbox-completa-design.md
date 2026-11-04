@@ -143,6 +143,20 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
 
 ### Fatia 3: menu da mensagem (citação, reação, edição, apagar)
 
+**Decisões do dono em 04/11 (rodada de perguntas e pesquisa; valem sobre qualquer bullet abaixo que diga o contrário):**
+
+- **Uma entrega só, com as quatro ações** (Responder, Reagir, Editar, Apagar para todos); o plano separa uma tarefa por ação no mesmo branch.
+- **Abordagem: síncrona no clique, com o eco do WhatsApp como confirmação.** Cada ação é um método do Livewire que chama o WAHA na hora (timeout de 15 s do `WahaClient`); recusa mostra o motivo e não altera o painel. O painel muda quando chega o evento do WhatsApp que o `ApplyMessageChange` já trata (`message.reaction`, `message.edited`, `message.revoked`, ecos `fromMe`). Motivo: o `DELETE` do WAHA apaga para todos dentro do limite do WhatsApp e só no celular da empresa depois dele, e responde "ok" nos dois casos; só o eco `message.revoked` prova que o cliente deixou de ver. Descartadas: fila `outbound` (o motivo da recusa chega tarde; esperar reconexão não faz sentido para reagir, editar ou apagar) e interface otimista (mostraria "apagada" sem ter apagado para o cliente).
+- **Reagir:** seis emojis fixos, **👍 ❤️ 😂 😮 😢 🙏**, sem seletor completo (fora do pacote); clicar no mesmo emoji remove a reação (WAHA: `POST /api/reaction` com emoji vazio). Vale para mensagem do cliente e do painel.
+- **Editar:** só texto enviado pelo painel, só pelo autor, até **15 min** do envio; passado isso o item some do menu; antes disso, se o WAHA recusar, mostra o motivo. `PUT /api/{sessão}/chats/{chat}/messages/{id}` com `text`; a versão anterior entra em `MessageEdit` pelo eco, como já faz para o cliente.
+- **Apagar para todos:** só mensagem do painel, só pelo autor, **sem janela nossa** (o WhatsApp decide e o motivo da recusa aparece); `DELETE` na mesma rota. O painel marca `revoked_at` **só no eco `message.revoked`** e mantém o texto original visível como "apagada pelo atendente". Evento de auditoria `message_revoked_by_agent` com o autor gravado no clique.
+- **Citação:** duas colunas novas em `messages` (`quoted_wa_message_id` e `quoted_snapshot` com autor, tipo e trecho de até 200 caracteres), preenchidas ao receber (`replyTo` do GOWS, formato medido no beta antes de implementar) e ao enviar (`reply_to` em todos os endpoints de envio: texto, mídia, voz). Barra de citação sobre o campo (autor, trecho, ✕); bloco citado no transcript; clicar rola até a original e a destaca se estiver carregada (o transcript é paginado). Guardar o trecho nós mesmos evita perder a citação quando a original sai da página ou o WAHA não a devolve.
+- **Menu da bolha:** Responder e Reagir em toda mensagem; Editar e Apagar só nas próprias do painel; mensagem do cliente e do bot só aceitam Responder e Reagir. Respeita a permissão `reply` do ticket. Layout mínimo (o dono refaz o frontend depois).
+- **Auditoria:** toda ação nova (`message_reacted`, `message_edited`, `message_revoked_by_agent`) grava `TicketEvent` com o autor.
+- **Id completo da mensagem:** o WAHA exige `{fromMe}_{chat}_{id}` (o `wa_message_id` guarda só o final) e o chat varia entre `@c.us` e `@lid`; montar a partir do contato do ticket, como já se faz no visto (`false_{chat}_{id}`), e medir no beta.
+- **Medição antes de implementar (1ª tarefa do plano, no beta, debug já ligado):** (a) formato real do `replyTo` no payload recebido; (b) se reação, edição e apagamento enviados pela API voltam como evento `fromMe`; se não voltarem, reação e edição passam a gravar localmente (são determinísticas) e **só o apagar** continua dependendo do eco; (c) o id completo aceito com `@lid`. Se (b) mostrar que o apagar também não ecoa, volta ao dono.
+- **Fora do pacote:** seletor completo de emoji, encaminhar, apagar só para mim.
+
 - **Citação recebida:** gravar `quoted_wa_message_id` e um instantâneo do trecho (autor, tipo, até 200 caracteres) na
   mensagem; o transcript mostra o bloco citado; clicar rola até a original e a destaca (se carregada).
 - **Citação enviada:** "Responder" no menu da bolha; barra de citação sobre o campo (autor, trecho, ✕); envio com o
