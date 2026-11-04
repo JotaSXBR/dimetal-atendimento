@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Ticket;
+use App\Services\Inbox\ClientPresence;
 use App\Services\Inbox\Presence;
 use App\Services\Waha\WahaClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -23,7 +24,13 @@ class SubscribeClientPresenceJob implements ShouldQueue
     /** Só a mensagem do cliente abre a janela; o eco de uma mensagem nossa (`fromMe`) não. */
     public static function whenClientWrote(int $ticketId, bool $fromMe): void
     {
-        $fromMe || self::dispatch($ticketId)->afterCommit();
+        if ($fromMe) {
+            return;
+        }
+
+        // A mensagem chegou: o "digitando…" de antes acabou, sem esperar o TTL.
+        app(ClientPresence::class)->clear($ticketId);
+        self::dispatch($ticketId)->afterCommit();
     }
 
     public function handle(Presence $presence): void

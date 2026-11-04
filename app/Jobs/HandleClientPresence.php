@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\Channel;
+use App\Services\Inbox\ClientPresence;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -19,9 +21,12 @@ class HandleClientPresence implements ShouldQueue
         $this->onQueue('realtime');
     }
 
-    public function handle(): void
+    public function handle(ClientPresence $presence): void
     {
-        // Corpo real na tarefa 4; por ora só o registro do payload bruto, que a medição no beta lê.
+        // O payload bruto fica no log de debug: é o que a medição no beta lê e o que o parser tolera.
         Log::debug('presence.update bruto', ['channel_id' => $this->channelId, 'payload' => $this->payload]);
+
+        $channel = Channel::query()->find($this->channelId);
+        $channel !== null && $presence->apply($channel, $this->payload);
     }
 }
