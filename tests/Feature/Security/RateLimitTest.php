@@ -29,6 +29,18 @@ class RateLimitTest extends TestCase
         $this->postJson('/webhooks/waha', [])->assertStatus(429);
     }
 
+    public function test_presence_update_tem_limite_proprio_e_nao_gasta_o_das_mensagens(): void
+    {
+        config(['security.webhook_per_minute' => 2, 'security.presence_per_minute' => 5]);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/webhooks/waha', ['event' => 'presence.update'])->assertUnauthorized();
+        }
+
+        $this->postJson('/webhooks/waha', ['event' => 'presence.update'])->assertStatus(429);
+        $this->postJson('/webhooks/waha', ['event' => 'message'])->assertUnauthorized();
+    }
+
     public function test_o_teto_do_webhook_e_por_ip_e_nao_global(): void
     {
         config(['security.webhook_per_minute' => 1]);

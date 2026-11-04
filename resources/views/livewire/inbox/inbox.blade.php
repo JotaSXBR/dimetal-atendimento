@@ -14,6 +14,7 @@
     class="grid min-h-0 flex-1 grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]"
     x-data="{ details: localStorage.getItem('ticketDetailsOpen') !== '0', sheet: false, toggle() { this.details = ! this.details; localStorage.setItem('ticketDetailsOpen', this.details ? '1' : '0') } }"
     x-bind:style="details ? '' : '--details-w: 0px'"
+    x-init="$store.clientPresence.seed(@js($clientPresence), {{ config('presence.state_ttl_seconds') }})"
 >
     {{-- Lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
@@ -95,7 +96,10 @@
                                         {{ ($item->last_inbound_at ?? $item->opened_at)->timezone($tz)->format('H:i') }}
                                     </span>
                                 </span>
-                                <span class="mt-0.5 block truncate text-xs text-ink-2">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
+                                <span class="mt-0.5 block truncate text-xs text-ink-2">
+                                    <span x-cloak x-show="$store.clientPresence.label({{ $item->id }})" x-text="$store.clientPresence.label({{ $item->id }})" class="font-medium text-accent"></span>
+                                    <span x-show="! $store.clientPresence.label({{ $item->id }})">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
+                                </span>
                                 @if ($item->tags->isNotEmpty())
                                     <span class="mt-1 flex flex-wrap gap-1">
                                         @foreach ($item->tags as $tag)
@@ -140,6 +144,7 @@
                         <span class="truncate">{{ $name }}</span>
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
                     </p>
+                    <p x-cloak x-show="$store.clientPresence.label({{ $ticket->id }})" x-text="$store.clientPresence.label({{ $ticket->id }})" aria-live="polite" class="text-[11px] font-medium text-accent"></p>
                     <p class="truncate font-mono text-[11px] text-ink-3">
                         {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}@if ($showChannel) · {{ $ticket->channel->phoneLabel() ?? 'sem número' }}@endif
                     </p>

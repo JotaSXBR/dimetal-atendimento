@@ -170,12 +170,25 @@ class Presence
         return "presence-human:{$channelId}".($chatId === null ? '' : ":{$chatId}");
     }
 
-    public function scheduleOffline(Channel $channel): void
+    public function scheduleOffline(Channel $channel, ?int $delaySeconds = null): void
     {
         $token = Str::random(16);
 
         Cache::put($this->key($channel->id), $token, now()->addMinutes(5));
-        GoOfflineJob::dispatch($channel->id, $token)->delay(now()->addSeconds(self::OFFLINE_AFTER_SECONDS));
+        GoOfflineJob::dispatch($channel->id, $token)->delay(now()->addSeconds($delaySeconds ?? self::OFFLINE_AFTER_SECONDS));
+    }
+
+    /**
+     * A mensagem do cliente abriu a janela de presença: a sessão fica online (a janela é a mesma do bot e do atendente), o
+     * chat é assinado e o `offline` só sai depois da janela, adiado como sempre pelo "humano ativo".
+     */
+    public function openClientWindow(WahaClient $client, Channel $channel, string $chatId): void
+    {
+        $this->ensureOnline($client, $channel);
+        $this->attempt('assinar presença', fn () => $client->check(
+            $client->http()->post('/api/'.$client->sessionName().'/presence/'.$chatId.'/subscribe'),
+        ));
+        $this->scheduleOffline($channel, max(self::OFFLINE_AFTER_SECONDS, config()->integer('presence.window_seconds')));
     }
 
     public function goOffline(Channel $channel, string $token): void

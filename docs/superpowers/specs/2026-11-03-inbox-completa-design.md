@@ -98,6 +98,17 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
 
 ### Fatia 2: presença do cliente (lista e conversa)
 
+**Decisões do dono em 04/11 (rodada de perguntas; valem sobre qualquer bullet abaixo que diga o contrário, em especial "assinar todo ticket aberto" e "sessão sempre online"):**
+
+- **Sem online contínuo** (foge de simular o WhatsApp). A presença do cliente só aparece dentro de uma janela curta.
+- **Gatilho:** a mensagem de **entrada** do cliente. Ela despacha um job na fila `realtime` que garante o `online`, assina `POST /api/{sessão}/presence/{chat}/subscribe` daquele chat e agenda o `offline`. Atendente abrir a conversa **não** abre janela.
+- **Janela fixa e curta de 60 s** a partir do gatilho (valor provisório, ajustado pela medição no beta).
+- **Quais tickets:** só o que acabou de receber mensagem. Não se assinam os demais abertos nem a fila inteira.
+- **Armazenamento:** estado atual (`digitando|gravando|parou`) em **Redis com TTL**, transmitido pelo Reverb (`ClientPresence`); **nenhuma tabela** e nenhuma linha de `WahaEvent` para `presence.update` (o webhook trata o evento antes da gravação). Fora da janela o cliente simplesmente não aparece.
+- **Automação (bot) ativa no beta:** abordagem **A, janela única compartilhada**. O job reutiliza `Presence::ensureOnline` e `scheduleOffline`, com `offline` em `max(45, 60)` s; bot, atendente e presença do cliente dividem o mesmo ciclo, sem chave nem timer novo. O "humano ativo" continua adiando o `offline`. Descartadas: janela própria da presença (B, duplica lógica e pode derrubar o online no meio da rodada do bot) e assinar só sem bot ativo (C, perde o "digitando" do cliente por cima do bot).
+- **Medição que ainda decide (1ª tarefa do plano):** se o `presence.update` chega com `online` só durante essa janela, o payload real (inclusive `@lid`) e o intervalo entre `typing` e `paused`. Se não chegar sem online contínuo, **voltar ao dono** antes de decidir (custo: push do celular).
+- **Registro do PR #68 (decisões já em produção no beta):** janela `online` de 300 s como rede de segurança (o `offline` agendado fecha antes) e cache do "visto" por ticket (`presence-seen-upto`), para não reenviar ids já vistos.
+
 - Ao abrir ticket e na reconexão do canal, assinar `POST /api/{sessão}/presence/{chatId}/subscribe` para cada ticket
   aberto (job idempotente, fila `realtime`, falha mole, nova tentativa na reconexão).
 - `HandleWahaEvent` trata `presence.update`: normaliza para `{ticket_id, estado: digitando|gravando|parou}` e transmite

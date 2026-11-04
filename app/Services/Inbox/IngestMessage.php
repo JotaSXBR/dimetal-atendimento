@@ -10,6 +10,7 @@ use App\Enums\TicketStatus;
 use App\Events\MessageCreated;
 use App\Events\TicketUpdated;
 use App\Jobs\ResolveMessageMediaJob;
+use App\Jobs\SubscribeClientPresenceJob;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
@@ -205,6 +206,8 @@ class IngestMessage
         // Recuperada não toca o som de "mensagem nova" nem manda "visto" ao cliente por mensagem antiga: só a lista e o ticket se atualizam.
         if ($mode === IngestMode::LIVE) {
             MessageCreated::dispatch($message);
+            // O cliente acabou de escrever: abre a janela curta em que a presença dele (digitando, gravando) é assinada.
+            SubscribeClientPresenceJob::whenClientWrote($ticket->id, $incoming->fromMe);
         }
 
         TicketUpdated::dispatch($ticket);
