@@ -156,6 +156,7 @@ menu por mensagem com Responder, Reagir, Editar e Apagar (original mantido), not
 - **Id completo da mensagem:** o WAHA exige `{fromMe}_{chat}_{id}` (o `wa_message_id` guarda só o final) e o chat varia entre `@c.us` e `@lid`; montar a partir do contato do ticket, como já se faz no visto (`false_{chat}_{id}`), e medir no beta.
 - **Medição antes de implementar (1ª tarefa do plano, no beta, debug já ligado):** (a) formato real do `replyTo` no payload recebido; (b) se reação, edição e apagamento enviados pela API voltam como evento `fromMe`; se não voltarem, reação e edição passam a gravar localmente (são determinísticas) e **só o apagar** continua dependendo do eco; (c) o id completo aceito com `@lid`. Se (b) mostrar que o apagar também não ecoa, volta ao dono.
 - **Fora do pacote:** seletor completo de emoji, encaminhar, apagar só para mim.
+- **Medição do `replyTo` (04/11, beta, contato `@lid`, 4 citações reais):** o log do WAHA traz o evento cru do GOWS: `_data.Message.<tipo>.contextInfo` com `stanzaID` (id da citada, sem prefixo, igual ao `wa_message_id`), `participant` (`@lid`, ou omitido quando o autor é o próprio contato) e `quotedMessage.conversation` (texto da citada, com a assinatura do atendente). O campo normalizado `replyTo` do WAHA não aparece no log: o parser aceita os dois formatos e a Task 7 confirma o ingest real.
 
 - **Citação recebida:** gravar `quoted_wa_message_id` e um instantâneo do trecho (autor, tipo, até 200 caracteres) na
   mensagem; o transcript mostra o bloco citado; clicar rola até a original e a destaca (se carregada).
