@@ -197,7 +197,8 @@ class Presence
     /** Só o que chegou depois do último visto enviado: reenviar os mesmos ids a cada resposta é requisição à toa. */
     private function markSeen(WahaClient $client, Ticket $ticket, string $chatId, ?int $timeoutSeconds = null): void
     {
-        $seenUpTo = (int) Cache::get($this->seenKey($ticket->id), 0);
+        $stored = Cache::get($this->seenKey($ticket->id));
+        $seenUpTo = is_numeric($stored) ? (int) $stored : 0; // o Redis devolve o inteiro como texto
 
         $received = Message::query()
             ->where('ticket_id', $ticket->id)
@@ -209,9 +210,11 @@ class Presence
             ->get();
 
         $ids = [];
+        $newest = $seenUpTo;
 
         foreach ($received as $message) {
             if ($message->wa_message_id !== null) {
+                $newest = max($newest, $message->id);
                 // O WAHA só aceita o id completo `false_{chat}_{id}` (mensagem do cliente); só o final dá 500.
                 $ids[] = 'false_'.$chatId.'_'.$message->wa_message_id;
             }
@@ -219,7 +222,7 @@ class Presence
 
         if ($ids !== []) {
             $client->sendSeen($chatId, $ids, $timeoutSeconds);
-            Cache::put($this->seenKey($ticket->id), (int) $received->max('id'), now()->addDay());
+            Cache::put($this->seenKey($ticket->id), $newest, now()->addDay());
         }
     }
 
