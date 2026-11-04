@@ -8,6 +8,7 @@ import './echo';
 import './audio-player';
 import './attach-tray';
 import './voice-recorder';
+import './typing-presence';
 import './alerts';
 import './channel-qr';
 import './flow-editor';

@@ -5,6 +5,7 @@ namespace App\Services\Bot\Nodes;
 use App\Services\Bot\BotRun;
 use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
+use App\Services\Inbox\Presence;
 use App\Services\Waha\WahaClient;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
@@ -37,6 +38,8 @@ final class EsperarNode extends Node
         } catch (Throwable $e) {
             Log::warning('Bot: parar "digitando" falhou e foi ignorado', ['erro' => $e->getMessage()]);
         }
+
+        app(Presence::class)->botTyped($run->ticket);
 
         return Step::next();
     }

@@ -211,8 +211,8 @@ class AfterHoursReplyTest extends TestCase
 
         app(SendTicketMessage::class)->deliver($reply);
 
-        // Sem "visto" nem "digitando…": quem responde é um robô.
-        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'startTyping') || str_contains($request->url(), 'sendSeen'));
+        // O robô fala no mesmo ritmo do atendente (visto e "digitando…"), mas isso não o torna uma resposta humana.
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'startTyping'));
         Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/api/sendText'));
 
         $ticket = $reply->ticket->fresh();

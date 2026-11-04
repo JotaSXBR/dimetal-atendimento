@@ -14,6 +14,7 @@ use App\Services\Waha\WahaClient;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\RateLimiter;
 use InvalidArgumentException;
+use Livewire\Attributes\Renderless;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
@@ -199,6 +200,21 @@ trait ComposesMessages
      */
     public function recording(bool $on, int $ticketId): void
     {
+        $this->announcePresence($on, $ticketId, recording: true);
+    }
+
+    /**
+     * O atendente digita no campo: o cliente vê "digitando…". O navegador limita o início (um aviso a cada poucos segundos) e
+     * avisa a pausa; aqui só se protege com o teto de chamadas. Não repinta a tela.
+     */
+    #[Renderless]
+    public function typing(bool $on, int $ticketId): void
+    {
+        $this->announcePresence($on, $ticketId, recording: false);
+    }
+
+    private function announcePresence(bool $on, int $ticketId, bool $recording): void
+    {
         // O ticket vem do gravador (o da conversa em que ele nasceu), não da seleção atual: ao trocar de conversa, o aviso de
         // "parou" ainda precisa chegar ao cliente certo.
         $ticket = Ticket::query()->visibleTo($this->user())->findOrFail($ticketId);
@@ -221,11 +237,12 @@ trait ComposesMessages
         }
 
         $presence = app(Presence::class);
-        $presence->recording(new WahaClient($channel), $contact->wa_id ?? (string) $contact->lid, $on);
+        $chatId = $contact->wa_id ?? (string) $contact->lid;
+        $client = new WahaClient($channel);
+        $recording ? $presence->recording($client, $chatId, $on) : $presence->typing($client, $chatId, $on);
 
-        if (! $on) {
-            $presence->scheduleOffline($channel);
-        }
+        // Gravando ou digitando: a conversa fica marcada e o `offline` pendente (de um envio do bot, por exemplo) perde a vez.
+        $on ? $presence->humanActive($channel, $chatId) : $presence->scheduleOffline($channel);
     }
 
     /** Envia a gravação que o navegador acabou de subir (`voice`) como mensagem de voz do WhatsApp. */

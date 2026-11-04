@@ -95,11 +95,9 @@ class SendTicketMessage
 
         $client = new WahaClient($channel);
 
-        // Resposta automática não finge leitura nem digitação: seria o cliente vendo "digitando…" de um robô às 22h.
-        if ($message->origin !== MessageOrigin::BOT) {
-            $isVoice = $file !== null && AttachmentRules::kindOfStored((string) $message->media_mime) === 'audio';
-            $this->presence->before($client, $ticket, $contact, $message->body, ! $isVoice);
-        }
+        // Bot e humano seguem o mesmo ritmo do WhatsApp (visto e "digitando"); o bot com teto menor e visto uma vez por rodada.
+        $isVoice = $file !== null && AttachmentRules::kindOfStored((string) $message->media_mime) === 'audio';
+        $this->presence->before($client, $ticket, $contact, $message->body, ! $isVoice, $message->origin);
 
         try {
             $response = $this->transmit($client, $message, $contact->wa_id ?? (string) $contact->lid, $file);

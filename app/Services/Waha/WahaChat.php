@@ -5,10 +5,10 @@ namespace App\Services\Waha;
 /** Leitura dos ids de chat que o WAHA devolve, nos dois formatos que o app recebe (webhook e listagem). */
 final class WahaChat
 {
-    /** Grupo, status e newsletter nunca viram ticket. Aceita também um id serializado (`false_{chat}_{id}`). */
+    /** Grupo, status, lista de transmissão e newsletter nunca viram ticket. Aceita também um id serializado (`false_{chat}_{id}`). */
     public static function isIgnored(string $chat): bool
     {
-        return str_contains($chat, '@g.us') || str_contains($chat, 'status@broadcast') || str_contains($chat, '@newsletter');
+        return str_contains($chat, '@g.us') || str_contains($chat, '@broadcast') || str_contains($chat, '@newsletter');
     }
 
     /**

@@ -122,9 +122,11 @@ class WahaClient
     /**
      * @param  list<string>  $messageIds  ids das mensagens do cliente; o GOWS só marca como lida com eles
      */
-    public function sendSeen(string $chatId, array $messageIds = []): void
+    public function sendSeen(string $chatId, array $messageIds = [], ?int $timeoutSeconds = null): void
     {
-        $this->ensureOk($this->request()->post('/api/sendSeen', array_filter([
+        $request = $timeoutSeconds === null ? $this->request() : $this->request()->timeout($timeoutSeconds);
+
+        $this->ensureOk($request->post('/api/sendSeen', array_filter([
             'session' => $this->sessionName(),
             'chatId' => $chatId,
             'messageIds' => $messageIds,
