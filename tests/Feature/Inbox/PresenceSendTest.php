@@ -19,6 +19,7 @@ use App\Services\Inbox\SendTicketMessage;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -177,7 +178,8 @@ class PresenceSendTest extends TestCase
         Http::fake(['*' => Http::response([], 201)]);
         app(Presence::class)->humanActive($this->channel, self::PEER);
 
-        $this->travel(11)->seconds();
+        // Expira a marca "atendente ativo" como o TTL faria (o Redis do CI não obedece ao `travel`).
+        Cache::forget('presence-human:'.$this->channel->id);
         app()->call([Queue::pushed(GoOfflineJob::class)->first(), 'handle']);
 
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'offline');
