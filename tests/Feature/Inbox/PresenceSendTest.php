@@ -3,6 +3,7 @@
 namespace Tests\Feature\Inbox;
 
 use App\Enums\DeliveryStatus;
+use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Jobs\GoOfflineJob;
@@ -67,6 +68,7 @@ class PresenceSendTest extends TestCase
         $this->send();
 
         Http::assertSentInOrder([
+            fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'online',
             fn (Request $r) => str_ends_with($r->url(), '/api/sendSeen') && count($r['messageIds']) === 2
                 && collect($r['messageIds'])->every(fn (string $id) => preg_match('/^false_'.preg_quote(self::PEER, '/').'_IN[12]$/', $id) === 1),
             fn (Request $r) => str_ends_with($r->url(), '/api/startTyping'),
@@ -74,6 +76,57 @@ class PresenceSendTest extends TestCase
             fn (Request $r) => str_ends_with($r->url(), '/api/sendText'),
         ]);
         Sleep::assertSleptTimes(1);
+    }
+
+    private function botSays(string $text): Message
+    {
+        $message = app(SendTicketMessage::class)->create($this->ticket, null, $text, MessageOrigin::BOT);
+        app(SendTicketMessage::class)->deliver($message);
+
+        return $message;
+    }
+
+    public function test_bot_manda_online_visto_e_digitando_antes_do_texto(): void
+    {
+        Queue::fake();
+        Message::factory()->for($this->ticket)->create(['wa_message_id' => 'IN1']);
+        Http::fake(['*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
+
+        $this->botSays('Olá!');
+
+        Http::assertSentInOrder([
+            fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'online',
+            fn (Request $r) => str_ends_with($r->url(), '/api/sendSeen'),
+            fn (Request $r) => str_ends_with($r->url(), '/api/startTyping'),
+            fn (Request $r) => str_ends_with($r->url(), '/api/stopTyping'),
+            fn (Request $r) => str_ends_with($r->url(), '/api/sendText'),
+        ]);
+        Sleep::assertSleptTimes(1);
+    }
+
+    public function test_bot_em_lote_manda_visto_so_na_primeira(): void
+    {
+        Queue::fake();
+        Message::factory()->for($this->ticket)->create(['wa_message_id' => 'IN1']);
+        Http::fake(['*/api/sendText' => Http::sequence()->push(['id' => 'true_x@c.us_1'], 201)->push(['id' => 'true_x@c.us_2'], 201), '*' => Http::response([], 201)]);
+
+        $this->botSays('Olá!');
+        $this->botSays('Escolha uma opção');
+
+        $seen = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/sendSeen'));
+        $typing = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/startTyping'));
+        $this->assertCount(1, $seen);
+        $this->assertCount(2, $typing, 'digitando vale para cada mensagem do lote');
+    }
+
+    public function test_falha_no_visto_do_bot_nao_impede_o_envio(): void
+    {
+        Message::factory()->for($this->ticket)->create(['wa_message_id' => 'IN1']);
+        Http::fake(['*/api/sendSeen' => Http::response('boom', 500), '*/api/sendText' => Http::response(['id' => 'true_x@c.us_OUT'], 201), '*' => Http::response([], 201)]);
+
+        $message = $this->botSays('Olá!');
+
+        $this->assertSame(DeliveryStatus::SENT, $message->fresh()?->delivery_status);
     }
 
     public function test_falha_no_digitando_nao_impede_o_envio(): void
@@ -107,7 +160,7 @@ class PresenceSendTest extends TestCase
         $this->assertCount(2, $jobs);
 
         app()->call([$jobs[0], 'handle']);
-        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/presence'));
+        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/presence') && $r['presence'] === 'offline');
 
         app()->call([$jobs[1], 'handle']);
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'offline');
@@ -127,8 +180,8 @@ class PresenceSendTest extends TestCase
             $this->assertSame(DeliveryStatus::FAILED, $message->delivery_status);
             $this->assertStringStartsWith('Limite do WhatsApp', (string) $message->failure_reason);
             Log::shouldHaveReceived('warning')->once();
-            Http::assertSentCount(3);
-            Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/restart') || str_contains($r->url(), '/presence'));
+            Http::assertSentCount(4);
+            Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/restart') || (str_contains($r->url(), '/presence') && $r['presence'] !== 'online'));
         }
     }
 

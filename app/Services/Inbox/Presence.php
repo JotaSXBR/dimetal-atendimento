@@ -2,6 +2,7 @@
 
 namespace App\Services\Inbox;
 
+use App\Enums\MessageOrigin;
 use App\Jobs\GoOfflineJob;
 use App\Models\Channel;
 use App\Models\Contact;
@@ -25,20 +26,35 @@ class Presence
 
     private const LAST_SEEN_IDS = 20;
 
+    /** Teto do "digitando" do bot: a fila `outbound` tem um processo só, e um bot lento atrasaria a resposta humana. */
+    private const BOT_TYPING_CAP_MS = 3000;
+
+    /** O visto do bot é por rodada (mensagens seguidas do mesmo ticket); este é o tamanho da rodada. */
+    private const BOT_ROUND_SECONDS = 30;
+
+    /** Um WAHA lento não pode segurar a fila por causa de um visto. */
+    private const BOT_SEEN_TIMEOUT_SECONDS = 3;
+
     /** `$typing` falso (áudio): o cliente já viu "gravando…", então "digitando…" antes da voz seria incoerente. */
-    public function before(WahaClient $client, Ticket $ticket, Contact $contact, string $text, bool $typing = true): void
+    public function before(WahaClient $client, Ticket $ticket, Contact $contact, string $text, bool $typing = true, MessageOrigin $origin = MessageOrigin::PAINEL): void
     {
         $chatId = $contact->wa_id ?? (string) $contact->lid;
+        $bot = $origin === MessageOrigin::BOT;
 
-        $this->attempt('visto', fn () => $this->markSeen($client, $ticket, $chatId));
+        // O WAHA só marca `online` sozinho se `WAHA_PRESENCE_AUTO_ONLINE` estiver ligado (aqui não está).
+        $this->attempt('online', fn () => $client->setPresence('online'));
+
+        if (! $bot || Cache::add('presence-seen:'.$ticket->id, 1, self::BOT_ROUND_SECONDS)) {
+            $this->attempt('visto', fn () => $this->markSeen($client, $ticket, $chatId, $bot ? self::BOT_SEEN_TIMEOUT_SECONDS : null));
+        }
 
         if (! $typing) {
             return;
         }
 
-        $this->attempt('digitando', function () use ($client, $chatId, $text): void {
+        $this->attempt('digitando', function () use ($client, $chatId, $text, $bot): void {
             $client->startTyping($chatId);
-            Sleep::for(TypingDelay::milliseconds($text))->milliseconds();
+            Sleep::for($bot ? TypingDelay::milliseconds($text, self::BOT_TYPING_CAP_MS) : TypingDelay::milliseconds($text))->milliseconds();
             $client->stopTyping($chatId);
         });
     }
@@ -74,7 +90,7 @@ class Presence
         }
     }
 
-    private function markSeen(WahaClient $client, Ticket $ticket, string $chatId): void
+    private function markSeen(WahaClient $client, Ticket $ticket, string $chatId, ?int $timeoutSeconds = null): void
     {
         $received = Message::query()
             ->where('ticket_id', $ticket->id)
@@ -94,7 +110,7 @@ class Presence
         }
 
         if ($ids !== []) {
-            $client->sendSeen($chatId, $ids);
+            $client->sendSeen($chatId, $ids, $timeoutSeconds);
         }
     }
 
