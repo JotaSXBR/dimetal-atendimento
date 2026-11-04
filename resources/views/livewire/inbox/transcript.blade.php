@@ -91,7 +91,14 @@
                     <div x-data="{ open: false }" class="relative mt-1 flex justify-end">
                         <button type="button" x-on:click="open = ! open" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="text-xs text-ink-3 hover:text-ink">⋯</button>
                         <div x-cloak x-show="open" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="absolute end-0 top-full z-10 mt-1 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md">
-                            <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="block w-full rounded px-2 py-1 text-start hover:bg-canvas">Responder</button>
+                            @can('react', $message)
+                                <div class="flex gap-0.5 border-b border-line pb-1" role="group" aria-label="Reagir">
+                                    @foreach (\App\Services\Inbox\ReactToMessage::EMOJIS as $emoji)
+                                        <button type="button" role="menuitem" wire:click="$parent.react({{ $message->id }}, '{{ $emoji }}')" class="rounded px-1 py-0.5 text-base hover:bg-canvas">{{ $emoji }}</button>
+                                    @endforeach
+                                </div>
+                            @endcan
+                            <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="mt-1 block w-full rounded px-2 py-1 text-start hover:bg-canvas">Responder</button>
                         </div>
                     </div>
                 @endcan

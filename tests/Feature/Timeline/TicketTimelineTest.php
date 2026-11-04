@@ -50,6 +50,15 @@ class TicketTimelineTest extends TestCase
         $this->assertSame('Ana Atendente transferiu de Comercial para Financeiro · cliente pediu boleto', $this->timeline([$event])->sentence($event));
     }
 
+    public function test_reacao_vira_frase_com_o_emoji_ou_com_a_remocao(): void
+    {
+        $added = $this->event('message_reacted', $this->ana, ['message_id' => 1, 'emoji' => '👍']);
+        $removed = $this->event('message_reacted', $this->ana, ['message_id' => 1, 'emoji' => null]);
+
+        $this->assertSame('Ana Atendente reagiu a uma mensagem com 👍', $this->timeline([$added])->sentence($added));
+        $this->assertSame('Ana Atendente reagiu a uma mensagem (reação removida)', $this->timeline([$removed])->sentence($removed));
+    }
+
     public function test_sem_setor_de_origem_vira_fila_geral(): void
     {
         $to = Sector::factory()->create(['name' => 'Financeiro']);

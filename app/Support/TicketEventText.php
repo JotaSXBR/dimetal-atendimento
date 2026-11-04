@@ -23,6 +23,7 @@ final class TicketEventText
         'after_hours_reply' => 'Resposta fora do horário',
         'media_purged' => 'Mídia apagada',
         'sla_breached' => 'SLA estourado',
+        'message_reacted' => 'Reação a mensagem',
     ];
 
     public static function label(string $type): string
