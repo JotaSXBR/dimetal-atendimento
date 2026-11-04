@@ -96,17 +96,6 @@ class WahaClientTest extends TestCase
             && $request->url() === 'http://waha.test:3000/api/main/presence');
     }
 
-    public function test_assinar_presenca_chama_a_rota_do_chat_na_sessao(): void
-    {
-        Http::fake(['*/presence/*/subscribe' => Http::response([], 201)]);
-        $channel = Channel::factory()->create();
-
-        (new WahaClient($channel))->subscribePresence('5516997524950@c.us');
-
-        Http::assertSent(fn ($request) => $request->method() === 'POST'
-            && $request->url() === 'http://waha.test:3000/api/main/presence/5516997524950@c.us/subscribe');
-    }
-
     public function test_iniciar_registra_webhook_com_hmac_derivado_da_app_key(): void
     {
         Http::fake([

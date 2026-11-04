@@ -160,12 +160,6 @@ class WahaClient
         ])));
     }
 
-    /** Pede ao WhatsApp a presença (digitando, gravando) deste chat; ela chega no webhook `presence.update`. */
-    public function subscribePresence(string $chatId): void
-    {
-        $this->ensureOk($this->request()->post($this->sessionPath('/presence/'.$chatId.'/subscribe')));
-    }
-
     /**
      * Requisição já autenticada, para as classes que falam com o WAHA em nome deste canal (ex.: `WahaMedia`).
      */

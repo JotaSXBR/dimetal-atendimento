@@ -20,19 +20,26 @@ class SubscribeClientPresenceJob implements ShouldQueue
         $this->onQueue('realtime');
     }
 
+    /** Só a mensagem do cliente abre a janela; o eco de uma mensagem nossa (`fromMe`) não. */
+    public static function whenClientWrote(int $ticketId, bool $fromMe): void
+    {
+        $fromMe || self::dispatch($ticketId)->afterCommit();
+    }
+
     public function handle(Presence $presence): void
     {
-        $ticket = Ticket::query()->with(['contact', 'channel'])->find($this->ticketId);
+        $ticket = Ticket::query()->find($this->ticketId);
+        $channel = $ticket?->channel()->first();
+        $contact = $ticket?->contact()->first();
 
-        if ($ticket === null || ! $ticket->channel->isConnected()) {
+        if ($channel === null || $contact === null || ! $channel->isConnected()) {
             return;
         }
 
-        $contact = $ticket->contact;
         $chatId = $contact->wa_id ?? (string) $contact->lid;
 
         if ($chatId !== '') {
-            $presence->openClientWindow(new WahaClient($ticket->channel), $ticket->channel, $chatId);
+            $presence->openClientWindow(new WahaClient($channel), $channel, $chatId);
         }
     }
 }

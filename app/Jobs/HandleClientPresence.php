@@ -13,7 +13,7 @@ class HandleClientPresence implements ShouldQueue
 
     public int $tries = 1;
 
-    /** @param  array<string, mixed>  $payload */
+    /** @param  array<mixed>  $payload */
     public function __construct(public readonly int $channelId, public readonly array $payload)
     {
         $this->onQueue('realtime');

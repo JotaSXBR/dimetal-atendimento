@@ -92,7 +92,7 @@ class ClientPresenceWindowTest extends TestCase
 
         Http::assertSentInOrder([
             fn (Request $r) => str_ends_with($r->url(), '/api/main/presence') && $r['presence'] === 'online',
-            fn (Request $r) => str_ends_with($r->url(), '/api/main/presence/'.self::PEER.'/subscribe'),
+            fn (Request $r) => $r->method() === 'POST' && $r->url() === 'http://waha.test:3000/api/main/presence/'.self::PEER.'/subscribe',
         ]);
         Queue::assertPushed(GoOfflineJob::class, fn (GoOfflineJob $job): bool => now()->addSeconds(60)->equalTo($job->delay));
     }

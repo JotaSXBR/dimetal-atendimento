@@ -185,7 +185,9 @@ class Presence
     public function openClientWindow(WahaClient $client, Channel $channel, string $chatId): void
     {
         $this->ensureOnline($client, $channel);
-        $this->attempt('assinar presença', fn () => $client->subscribePresence($chatId));
+        $this->attempt('assinar presença', fn () => $client->check(
+            $client->http()->post('/api/'.$client->sessionName().'/presence/'.$chatId.'/subscribe'),
+        ));
         $this->scheduleOffline($channel, max(self::OFFLINE_AFTER_SECONDS, config()->integer('presence.window_seconds')));
     }
 
