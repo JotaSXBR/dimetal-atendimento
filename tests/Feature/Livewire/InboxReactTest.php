@@ -73,6 +73,17 @@ class InboxReactTest extends TestCase
         $this->assertSame(1, $this->reactions());
     }
 
+    public function test_menu_da_bolha_e_fixo_para_nao_ser_cortado_nem_ficar_atras_do_rodape(): void
+    {
+        $html = $this->inbox()->html();
+
+        // Dentro da área rolável da conversa o menu `absolute` era cortado pelo `overflow` e passava por baixo do campo de resposta.
+        $this->assertStringContainsString('x-ref="menu"', $html);
+        $this->assertStringContainsString('class="fixed z-50', $html);
+        $this->assertStringContainsString('x-bind:style="style"', $html);
+        $this->assertStringNotContainsString('absolute end-0 top-full', $html);
+    }
+
     public function test_acima_do_teto_a_acao_e_recusada_com_aviso(): void
     {
         config(['security.message_action_per_minute' => 2]);
