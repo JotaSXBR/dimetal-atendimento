@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -44,7 +45,7 @@ class InboxTypingTest extends TestCase
             ->create(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $this->author->id]);
     }
 
-    private function screen(): \Livewire\Features\SupportTesting\Testable
+    private function screen(): Testable
     {
         return Livewire::actingAs($this->author)->test(Inbox::class)->call('select', $this->ticket->id);
     }

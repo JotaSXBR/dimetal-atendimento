@@ -11,6 +11,7 @@ use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -18,7 +19,7 @@ class InboxQueuePreviewTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function screenWithLastMessage(string $body): \Livewire\Features\SupportTesting\Testable
+    private function screenWithLastMessage(string $body): Testable
     {
         $ticket = Ticket::factory()
             ->for(Contact::factory()->create(['wa_id' => '5516997524950@c.us']))

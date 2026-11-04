@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\WahaEvent;
 use App\Services\Inbox\IngestMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class IngestMultiChannelTest extends TestCase
@@ -57,7 +58,7 @@ class IngestMultiChannelTest extends TestCase
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('ignoredChats')]
+    #[DataProvider('ignoredChats')]
     public function test_chat_de_tipo_desconhecido_nao_cria_contato_nem_ticket(string $chat): void
     {
         $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
