@@ -2,8 +2,11 @@
 
 namespace App\Livewire\Inbox;
 
+use App\Events\TicketUpdated;
 use App\Jobs\MarkTicketSeenJob;
 use App\Models\Ticket;
+use App\Models\TicketEvent;
+use App\Models\TicketNote;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
@@ -43,6 +46,26 @@ class Transcript extends Component
 
     #[On('transcript-refresh')]
     public function refresh(): void {}
+
+    /** Só o autor apaga a própria nota; fica o rastro na auditoria do ticket. */
+    public function deleteNote(int $noteId): void
+    {
+        $note = TicketNote::query()->where('ticket_id', $this->ticketId)->find($noteId);
+
+        if ($note === null) {
+            return;
+        }
+
+        $this->authorize('delete', $note);
+
+        $note->delete();
+        TicketEvent::create(['ticket_id' => $this->ticketId, 'type' => 'note_deleted', 'actor_user_id' => auth()->id(), 'payload' => ['note_id' => $noteId]]);
+
+        $ticket = Ticket::find($this->ticketId);
+        if ($ticket !== null) {
+            TicketUpdated::dispatch($ticket);
+        }
+    }
 
     public function render(): View
     {
