@@ -63,6 +63,7 @@
         @endif
 
         @unless ($readonly)
+            @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'w-full'])
             <flux:button size="sm" variant="subtle" icon="pencil-square" class="w-full" wire:click="toggleEdit">Editar contato</flux:button>
         @endunless
     </div>
@@ -104,6 +105,9 @@
         @enderror
     </div>
 
+    @unless ($compact)
+        @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'w-full'])
+    @endunless
     <flux:button type="submit" size="sm" variant="primary" class="w-full">Salvar contato</flux:button>
     @if ($compact)
         <flux:button type="button" size="sm" variant="subtle" class="w-full" wire:click="toggleEdit">Cancelar</flux:button>

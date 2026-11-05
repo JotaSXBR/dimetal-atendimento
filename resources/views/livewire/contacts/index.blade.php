@@ -28,8 +28,8 @@
 
         <ul class="mt-4 divide-y divide-line rounded-[14px] border border-line bg-surface">
             @forelse ($contacts as $contact)
-                <li wire:key="contact-{{ $contact->id }}">
-                    <button type="button" wire:click="select({{ $contact->id }})" class="flex w-full items-center gap-3 px-4 py-3 text-start hover:bg-surface-2 {{ $selectedId === $contact->id ? 'bg-surface-2' : '' }}">
+                <li wire:key="contact-{{ $contact->id }}" class="flex items-center pe-3 {{ $selectedId === $contact->id ? 'bg-surface-2' : '' }}">
+                    <button type="button" wire:click="select({{ $contact->id }})" class="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-start hover:bg-surface-2">
                         <flux:avatar :name="$contact->label()" size="sm" />
                         <span class="min-w-0 flex-1">
                             <span class="block truncate text-sm font-semibold text-ink">{{ $contact->label() }}</span>
@@ -38,6 +38,7 @@
                             </span>
                         </span>
                     </button>
+                    @include('livewire.contacts.chat-button', ['contact' => $contact])
                 </li>
             @empty
                 <li class="px-4 py-6 text-center text-sm text-ink-3">Nenhum contato encontrado.</li>
@@ -54,4 +55,6 @@
             <p class="text-sm text-ink-3">Selecione um contato para ver e editar a ficha.</p>
         @endif
     </aside>
+
+    <livewire:inbox.new-conversation />
 </section>
