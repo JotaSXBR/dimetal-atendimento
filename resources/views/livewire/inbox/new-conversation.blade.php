@@ -36,39 +36,29 @@
                     <flux:input wire:model="phone" label="Ou um telefone novo" placeholder="(16) 99999-9999" />
                     <flux:input wire:model="name" label="Nome (opcional)" />
                 </div>
-                @error('phone')
-                    <p class="text-xs text-danger" role="alert">{{ $message }}</p>
-                @enderror
             @endif
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <flux:select wire:model="channelId" label="Canal" placeholder="Escolha o canal">
+                    <flux:select wire:model="channelId" label="Canal">
+                        <flux:select.option value="">Escolha o canal</flux:select.option>
                         @foreach ($channels as $channel)
                             <flux:select.option :value="$channel->id" :disabled="! $channel->isConnected()">{{ $channel->name }}@unless ($channel->isConnected()) (fora do ar)@endunless</flux:select.option>
                         @endforeach
                     </flux:select>
-                    @error('channelId')
-                        <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-                    @enderror
                 </div>
                 <div>
-                    <flux:select wire:model="sectorId" label="Setor" placeholder="Escolha o setor">
+                    <flux:select wire:model="sectorId" label="Setor">
+                        <flux:select.option value="">Escolha o setor</flux:select.option>
                         @foreach ($sectors as $sector)
                             <flux:select.option :value="$sector->id">{{ $sector->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                    @error('sectorId')
-                        <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-                    @enderror
                 </div>
             </div>
 
             <div>
                 <flux:textarea wire:model="text" label="Primeira mensagem" rows="3" placeholder="Escreva a mensagem que abre a conversa" />
-                @error('text')
-                    <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-                @enderror
             </div>
 
             @if ($failure)

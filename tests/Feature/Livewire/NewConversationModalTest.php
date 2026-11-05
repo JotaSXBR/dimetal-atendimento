@@ -90,6 +90,21 @@ class NewConversationModalTest extends TestCase
         $this->assertSame(0, Ticket::query()->count());
     }
 
+    public function test_selects_de_canal_e_setor_tem_opcao_vazia_visivel_e_o_erro_aparece_uma_vez(): void
+    {
+        $second = Sector::factory()->create(['name' => 'Financeiro']);
+        $this->agent->sectors()->attach($second);
+
+        $screen = Livewire::actingAs($this->agent)->test(NewConversation::class)
+            ->dispatch('start-conversation', contactId: $this->contact->id);
+
+        $this->assertMatchesRegularExpression('/value=""[^>]*>Escolha o setor<\/option>/', $screen->html());
+
+        $html = $screen->set('text', 'Olá')->call('submit')->assertHasErrors('sectorId')->html();
+
+        $this->assertSame(1, substr_count($html, 'Escolha o setor.'));
+    }
+
     public function test_busca_por_nome_lista_contatos(): void
     {
         Livewire::actingAs($this->agent)->test(NewConversation::class)
