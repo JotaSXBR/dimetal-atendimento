@@ -104,9 +104,11 @@
                     <div
                         x-data="{
                             open: false,
+                            info: false,
                             style: '',
                             toggle() {
                                 this.open = ! this.open;
+                                this.info = false;
 
                                 if (this.open) {
                                     this.style = 'top:0;left:0;visibility:hidden';
@@ -145,6 +147,23 @@
                                 </div>
                             @endcan
                             <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="mt-1 flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.7 3.3a.75.75 0 0 1 0 1.06L4.86 7.2H11a5 5 0 0 1 5 5v2.05a.75.75 0 0 1-1.5 0V12.2a3.5 3.5 0 0 0-3.5-3.5H4.86L7.7 11.54a.75.75 0 1 1-1.06 1.06l-4.12-4.12a.75.75 0 0 1 0-1.06l4.12-4.12a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/></svg>Responder</button>
+                            @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
+                                <button type="button" role="menuitem" x-on:click="navigator.clipboard.writeText(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h6A1.5 1.5 0 0 1 16 3.5v8a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 7 11.5v-8Z"/><path d="M4 6a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 17h6a1.5 1.5 0 0 0 1.5-1.5V15H8.5A3.5 3.5 0 0 1 5 11.5V6H4Z"/></svg>Copiar</button>
+                            @endif
+                            <button type="button" role="menuitem" x-on:click.stop="info = ! info" x-bind:aria-expanded="info" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.25v3.25a.75.75 0 0 0 1.5 0V9.75A.75.75 0 0 0 10 9H9Z" clip-rule="evenodd"/></svg>Dados da mensagem</button>
+                            <dl x-cloak x-show="info" class="mx-2 mb-1 space-y-0.5 border-l-2 border-line ps-2 font-mono text-[10px] text-ink-3">
+                                @if ($out)
+                                    <div class="flex justify-between gap-3"><dt>Enviada</dt><dd>{{ $message->sent_at->timezone($tz)->format('d/m H:i') }}</dd></div>
+                                    @if ($message->delivered_at)
+                                        <div class="flex justify-between gap-3"><dt>Entregue</dt><dd>{{ $message->delivered_at->timezone($tz)->format('d/m H:i') }}</dd></div>
+                                    @endif
+                                    @if ($message->read_at)
+                                        <div class="flex justify-between gap-3"><dt>Lida</dt><dd>{{ $message->read_at->timezone($tz)->format('d/m H:i') }}</dd></div>
+                                    @endif
+                                @else
+                                    <div class="flex justify-between gap-3"><dt>Recebida</dt><dd>{{ $message->sent_at->timezone($tz)->format('d/m H:i') }}</dd></div>
+                                @endif
+                            </dl>
                             @can('edit', $message)
                                 <button type="button" role="menuitem" x-on:click="editing = true; text = @js($message->body)" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m13.9 3.6 2.5 2.5a1 1 0 0 1 0 1.4l-8.2 8.2-3.6.9a.5.5 0 0 1-.6-.6l.9-3.6 8.2-8.2a1 1 0 0 1 1.4 0Z"/></svg>Editar</button>
                             @endcan
