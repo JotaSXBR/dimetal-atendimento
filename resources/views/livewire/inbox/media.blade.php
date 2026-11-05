@@ -38,7 +38,7 @@
 @elseif (str_starts_with($mime, 'video/'))
     <video controls preload="metadata" src="{{ $url }}" class="max-h-72 max-w-full rounded-lg"></video>
 @else
-    {{-- Documento como o cartão do WhatsApp: ícone do tipo, nome, "TIPO · tamanho" e, sob um filete, Abrir e Salvar como… --}}
+    {{-- Documento como o cartão do WhatsApp: ícone do tipo, nome, "TIPO · tamanho" e, sob um filete, um botão (Abrir no PDF, Baixar no resto) --}}
     @php
         $extension = \App\Support\MediaPresentation::extension($message->media_name, $mime);
         $badge = \App\Support\MediaPresentation::badge($extension);
@@ -61,9 +61,13 @@
                 @endif
             </span>
         </div>
-        <div class="grid grid-cols-2 divide-x divide-line border-t border-line text-center text-sm font-medium text-accent">
-            <a href="{{ $url }}" target="_blank" rel="noopener" class="py-1.5 hover:bg-canvas">Abrir</a>
-            <a href="{{ $url }}" download class="py-1.5 hover:bg-canvas">Salvar como…</a>
+        {{-- Um botão só: o navegador não aciona o app do computador; PDF ele mostra na aba, o resto só baixa (e o sistema abre com o app padrão). --}}
+        <div class="border-t border-line text-center text-sm font-medium text-accent">
+            @if ($mime === 'application/pdf')
+                <a href="{{ $url }}" target="_blank" rel="noopener" class="block py-1.5 hover:bg-canvas">Abrir</a>
+            @else
+                <a href="{{ $url }}" download="{{ $message->media_name ?? 'arquivo' }}" class="block py-1.5 hover:bg-canvas">Baixar</a>
+            @endif
         </div>
     </div>
 @endif

@@ -70,9 +70,9 @@ class InboxMediaTest extends TestCase
 
     public function test_documento_vira_link_de_download(): void
     {
-        $this->screen(['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'orcamento.pdf'])
+        $this->screen(['media_ref' => 'a.zip', 'media_mime' => 'application/zip', 'media_name' => 'orcamento.zip'])
             ->assertSeeHtml('download')
-            ->assertSee('orcamento.pdf');
+            ->assertSee('orcamento.zip');
     }
 
     public function test_documento_vira_cartao_com_icone_nome_tipo_e_tamanho(): void
@@ -84,16 +84,27 @@ class InboxMediaTest extends TestCase
             ->assertSeeHtml('bg-blue-600');
     }
 
-    public function test_cartao_tem_abrir_em_nova_aba_e_salvar_como_com_download(): void
+    public function test_cartao_de_pdf_tem_so_abrir_em_nova_aba(): void
     {
         $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'body' => '', 'media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'orcamento.pdf']);
         $url = route('midia', $message);
 
         Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)
-            ->assertSeeHtml('href="'.$url.'" target="_blank" rel="noopener" class="py-1.5')
-            ->assertSeeHtml('href="'.$url.'" download')
+            ->assertSeeHtml('href="'.$url.'" target="_blank" rel="noopener"')
             ->assertSee('Abrir')
-            ->assertSee('Salvar como…');
+            ->assertDontSee('Salvar como');
+    }
+
+    public function test_cartao_de_documento_que_o_navegador_nao_abre_tem_so_baixar_com_o_nome(): void
+    {
+        $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'body' => '', 'media_ref' => 'c.docx', 'media_mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'media_name' => 'COTACAO.docx']);
+        $url = route('midia', $message);
+
+        Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)
+            ->assertSeeHtml('href="'.$url.'" download="')
+            ->assertSee('Baixar')
+            ->assertDontSee('Abrir')
+            ->assertDontSee('Salvar como');
     }
 
     public function test_documento_sem_nome_sem_tamanho_e_sem_extensao_usa_padroes(): void
