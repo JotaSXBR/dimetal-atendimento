@@ -15,6 +15,7 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\ReactToMessage;
 use App\Services\Inbox\SendFailure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -235,5 +236,130 @@ class InboxTranscriptTest extends TestCase
         Livewire::actingAs($me)->test(Inbox::class)->call('select', $ticket->id)
             ->call('resend', $failed->id, true)
             ->assertDispatched('transcript-refresh');
+    }
+
+    public function test_menu_da_bolha_e_um_chevron_sem_linha_propria(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Bom dia')->update(['wa_message_id' => 'W1']);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+
+        $this->assertStringContainsString('data-testid="message-menu-button"', $html);
+        $this->assertStringNotContainsString('mt-1 flex justify-end', $html, 'o menu não ocupa mais uma linha entre o texto e o horário');
+    }
+
+    public function test_mensagem_apagada_nao_tem_menu(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Oi')->update(['wa_message_id' => 'W1', 'revoked_at' => now()]);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+
+        $this->assertStringNotContainsString('data-testid="message-menu-button"', $html);
+    }
+
+    public function test_modo_leitura_nao_tem_menu(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Oi')->update(['wa_message_id' => 'W1']);
+        $this->actingAs($me);
+
+        $html = view('livewire.inbox.transcript', ['messages' => $ticket->messages()->get(), 'readonly' => true])->render();
+
+        $this->assertStringNotContainsString('data-testid="message-menu-button"', $html);
+    }
+
+    private function menuHtml(User $me, Ticket $ticket): string
+    {
+        return Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+    }
+
+    public function test_copiar_so_aparece_com_texto(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Texto para copiar')->update(['wa_message_id' => 'W1']);
+
+        $this->assertStringContainsString('Copiar', $this->menuHtml($me, $ticket));
+
+        $ticket->messages()->delete();
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'W2', 'type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'f.jpg', 'media_ref' => 'files/f.jpg']);
+
+        $this->assertStringNotContainsString('Copiar', $this->menuHtml($me, $ticket));
+    }
+
+    public function test_dados_da_mensagem_lista_enviada_entregue_e_lida(): void
+    {
+        [$me, $ticket] = $this->mine();
+        Message::factory()->for($ticket)->create([
+            'direction' => MessageDirection::OUT, 'wa_message_id' => 'W1', 'body' => 'oi',
+            'sent_at' => '2026-11-05 10:00:00', 'delivered_at' => '2026-11-05 10:01:00', 'read_at' => '2026-11-05 10:02:00',
+        ]);
+
+        $html = $this->menuHtml($me, $ticket);
+
+        $this->assertStringContainsString('Dados da mensagem', $html);
+        foreach (['Enviada', 'Entregue', 'Lida'] as $label) {
+            $this->assertStringContainsString($label.'</dt>', $html);
+        }
+    }
+
+    public function test_dados_da_mensagem_do_cliente_so_tem_recebida(): void
+    {
+        [$me, $ticket] = $this->mine();
+        Message::factory()->for($ticket)->create(['direction' => MessageDirection::IN, 'wa_message_id' => 'W1', 'body' => 'oi', 'delivered_at' => now(), 'read_at' => now()]);
+
+        $html = $this->menuHtml($me, $ticket);
+
+        $this->assertStringContainsString('Recebida</dt>', $html);
+        $this->assertStringNotContainsString('Entregue</dt>', $html);
+        $this->assertStringNotContainsString('Lida</dt>', $html);
+    }
+
+    public function test_dados_da_mensagem_omite_horario_nulo(): void
+    {
+        [$me, $ticket] = $this->mine();
+        Message::factory()->for($ticket)->create(['direction' => MessageDirection::OUT, 'wa_message_id' => 'W1', 'body' => 'oi', 'delivered_at' => null, 'read_at' => null]);
+
+        $html = $this->menuHtml($me, $ticket);
+
+        $this->assertStringContainsString('Enviada</dt>', $html);
+        $this->assertStringNotContainsString('Entregue</dt>', $html);
+        $this->assertStringNotContainsString('Lida</dt>', $html);
+    }
+
+    public function test_carinha_de_reacao_aparece_com_permissao_e_traz_os_emojis_da_barra(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'oi')->update(['wa_message_id' => 'W1']);
+
+        $html = $this->menuHtml($me, $ticket);
+
+        $this->assertStringContainsString('data-testid="quick-react"', $html);
+        $this->assertSame(count(ReactToMessage::EMOJIS), substr_count($html, 'data-testid="quick-react-emoji"'));
+    }
+
+    public function test_carinha_de_reacao_nao_aparece_sem_id_do_whatsapp_apagada_ou_em_modo_leitura(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'sem id')->update(['wa_message_id' => null]);
+        $this->say($ticket, 'apagada')->update(['wa_message_id' => 'W2', 'revoked_at' => now()]);
+
+        $this->assertStringNotContainsString('data-testid="quick-react"', $this->menuHtml($me, $ticket));
+
+        $this->say($ticket, 'ok')->update(['wa_message_id' => 'W3']);
+        $this->actingAs($me);
+        $html = view('livewire.inbox.transcript', ['messages' => $ticket->messages()->get(), 'readonly' => true])->render();
+
+        $this->assertStringNotContainsString('data-testid="quick-react"', $html);
+    }
+
+    public function test_horario_aparece_uma_so_vez_em_texto_e_em_foto_com_legenda(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'só texto')->update(['wa_message_id' => 'W1']);
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'W2', 'type' => 'media', 'body' => 'legenda', 'media_mime' => 'image/jpeg', 'media_name' => 'f.jpg', 'media_ref' => 'files/f.jpg']);
+
+        $this->assertSame(2, substr_count($this->menuHtml($me, $ticket), 'data-testid="message-time"'), 'uma vez por mensagem');
     }
 }

@@ -483,6 +483,45 @@ class IngestMessageTest extends TestCase
         $this->assertSame('Proposta final.pdf', $message?->media_name);
     }
 
+    /** @param array<string, mixed> $media */
+    private function documentWith(array $media, mixed $fileLength, string $suffix): ?Message
+    {
+        return $this->ingest($this->event($this->inbound('false_5516997524950@c.us_'.$suffix, [
+            'hasMedia' => true,
+            'media' => array_merge(['filename' => null, 'mimetype' => 'application/pdf'], $media),
+            '_data' => ['Info' => ['PushName' => 'Maria Souza'], 'Message' => ['documentMessage' => ['fileName' => 'a.pdf', 'fileLength' => $fileLength]]],
+        ])));
+    }
+
+    public function test_documento_sem_tamanho_no_evento_usa_o_file_length_do_proto_do_gows(): void
+    {
+        $this->assertSame(22528, $this->documentWith(['size' => null], '22528', 'SZ1')?->media_size, 'o proto manda o número como texto');
+        $this->assertSame(22528, $this->documentWith([], 22528, 'SZ2')?->media_size);
+    }
+
+    public function test_tamanho_do_evento_vale_mais_que_o_do_proto(): void
+    {
+        $this->assertSame(1000, $this->documentWith(['size' => 1000], '22528', 'SZ3')?->media_size);
+    }
+
+    public function test_tamanho_invalido_no_proto_fica_nulo(): void
+    {
+        foreach (['abc', '-5', '0', null, [1]] as $i => $invalid) {
+            $this->assertNull($this->documentWith(['size' => null], $invalid, 'SZB'.$i)?->media_size, json_encode($invalid));
+        }
+    }
+
+    public function test_tamanho_da_mensagem_citada_nao_vira_o_da_midia(): void
+    {
+        $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_SZQ', [
+            'hasMedia' => true,
+            'media' => ['filename' => null, 'mimetype' => 'image/jpeg', 'size' => null],
+            '_data' => ['Info' => ['PushName' => 'Maria Souza'], 'Message' => ['imageMessage' => ['contextInfo' => ['quotedMessage' => ['documentMessage' => ['fileLength' => '999']]]]]],
+        ])));
+
+        $this->assertNull($message?->media_size);
+    }
+
     public function test_localizacao_com_coordenada_invalida_e_ignorada(): void
     {
         $message = $this->ingest($this->event($this->inbound('false_5516997524950@c.us_BADLOC', [
