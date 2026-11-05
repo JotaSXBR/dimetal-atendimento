@@ -65,6 +65,16 @@ class InboxComposerModeTest extends TestCase
             ->assertSet('draft', '');
     }
 
+    public function test_barra_do_seletor_nao_depende_de_variavel_do_campo_interno(): void
+    {
+        $me = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $ticket = $this->ticketFor($me);
+
+        // `voiceBusy` vive no escopo do campo; fora dele o Alpine dá ReferenceError e esconde a barra.
+        Livewire::actingAs($me)->test(Inbox::class)->call('select', $ticket->id)
+            ->assertSeeHtml('<div class="mb-2 flex flex-wrap items-center gap-2">');
+    }
+
     public function test_quem_nao_pode_responder_nao_ve_o_seletor(): void
     {
         $me = User::factory()->create(['role' => UserRole::ATENDENTE]);
