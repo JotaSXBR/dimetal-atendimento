@@ -191,7 +191,7 @@ class InboxMediaTest extends TestCase
         $this->screen(['type' => 'location', 'body' => '-21.17,-47.81'])->assertSee('Localização');
     }
 
-    public function test_contato_e_um_cartao_com_iniciais_telefone_e_link_para_conversar(): void
+    public function test_contato_e_um_cartao_com_iniciais_telefone_e_botoes_para_conversar(): void
     {
         $this->screen(['type' => 'contact', 'body' => 'Contato: Maria Souza (+55 16 99999-0001)
 Contato: Beto (+55 11 90000-0002, +55 11 3000-0000)'])
@@ -201,7 +201,9 @@ Contato: Beto (+55 11 90000-0002, +55 11 3000-0000)'])
             ->assertSee('+55 16 99999-0001')
             ->assertSee('Beto')
             ->assertSee('+55 11 3000-0000')
-            ->assertSeeHtml('https://wa.me/5516999990001')
+            ->assertSee('Adicionar aos contatos')
+            ->assertSee('Conversar')
+            ->assertDontSeeHtml('wa.me')
             ->assertDontSee('Contato: Maria');
     }
 
