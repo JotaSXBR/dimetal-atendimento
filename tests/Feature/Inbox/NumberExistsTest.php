@@ -4,6 +4,7 @@ namespace Tests\Feature\Inbox;
 
 use App\Models\Channel;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaContacts;
 use App\Services\Waha\WahaRequestException;
 use App\Support\TicketEventText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,7 +27,7 @@ class NumberExistsTest extends TestCase
         Http::fake(['*/api/contacts/check-exists*' => Http::response(['numberExists' => true, 'chatId' => '5516999999999@c.us'])]);
         $channel = Channel::factory()->create(['waha_session' => 'main']);
 
-        $this->assertTrue((new WahaClient($channel))->numberExists('5516999999999@c.us'));
+        $this->assertTrue((new WahaContacts(new WahaClient($channel)))->numberExists('5516999999999@c.us'));
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/api/contacts/check-exists')
             && $request['phone'] === '5516999999999'
@@ -38,7 +39,7 @@ class NumberExistsTest extends TestCase
     {
         Http::fake(['*/api/contacts/check-exists*' => Http::response(['numberExists' => false])]);
 
-        $this->assertFalse((new WahaClient(Channel::factory()->create()))->numberExists('5516999999999@c.us'));
+        $this->assertFalse((new WahaContacts(new WahaClient(Channel::factory()->create())))->numberExists('5516999999999@c.us'));
     }
 
     public function test_erro_do_waha_vira_excecao(): void
@@ -47,7 +48,7 @@ class NumberExistsTest extends TestCase
 
         $this->expectException(WahaRequestException::class);
 
-        (new WahaClient(Channel::factory()->create()))->numberExists('5516999999999@c.us');
+        (new WahaContacts(new WahaClient(Channel::factory()->create())))->numberExists('5516999999999@c.us');
     }
 
     public function test_evento_de_conversa_iniciada_tem_rotulo(): void

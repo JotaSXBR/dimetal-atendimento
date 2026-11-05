@@ -22,6 +22,7 @@ use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Inbox\ClientPresence;
+use App\Services\Inbox\ConversationHandoff;
 use App\Services\Inbox\ResendTicketMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -91,6 +92,11 @@ class Inbox extends Component
 
         if ($id > 0 && Ticket::query()->readableBy($this->user())->whereKey($id)->exists()) {
             $this->select($id);
+
+            // Vindo da janela "Nova conversa" com um ticket que já existia: o aviso e, se pode responder, o texto digitado.
+            $handoff = ConversationHandoff::pull($this->user(), Ticket::query()->findOrFail($id));
+            $this->notice = $handoff['notice'];
+            $this->draft = $handoff['draft'] ?? $this->draft;
         }
     }
 

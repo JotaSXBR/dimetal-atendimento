@@ -16,6 +16,7 @@ use App\Services\Inbox\ConversationNotStarted;
 use App\Services\Inbox\SendTicketMessage;
 use App\Services\Inbox\Signature;
 use App\Services\Waha\WahaClient;
+use App\Services\Waha\WahaContacts;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -51,7 +52,7 @@ class StartConversation
             return ['ticket' => $open, 'created' => false];
         }
 
-        $this->confirmNumber($contact, $channel);
+        $this->assertHasWhatsApp((string) $contact->wa_id, $channel);
         $this->reservePace($contact, $channel);
 
         $made = DB::transaction(function () use ($user, $contact, $channel, $sector, $text): array {
@@ -113,11 +114,15 @@ class StartConversation
         return Ticket::query()->open()->where('contact_id', $contact->id)->where('channel_id', $channel->id)->first();
     }
 
-    /** @throws ConversationNotStarted */
-    private function confirmNumber(Contact $contact, Channel $channel): void
+    /**
+     * Público para a janela conferir um telefone novo antes de cadastrar o contato (número sem WhatsApp não vira contato).
+     *
+     * @throws ConversationNotStarted
+     */
+    public function assertHasWhatsApp(string $waId, Channel $channel): void
     {
         try {
-            $exists = (new WahaClient($channel))->numberExists((string) $contact->wa_id);
+            $exists = (new WahaContacts(new WahaClient($channel)))->numberExists($waId);
         } catch (WahaRequestException) {
             throw new ConversationNotStarted('Não foi possível confirmar o número agora. Tente de novo em instantes.');
         }
@@ -133,7 +138,7 @@ class StartConversation
         $channelKey = 'start-conversation:channel:'.$channel->id;
         $contactKey = 'start-conversation:contact:'.$contact->id;
 
-        foreach ([[$channelKey, 1, self::CHANNEL_GAP_SECONDS], [$contactKey, self::CONTACT_PER_HOUR, 3600]] as [$key, $max, $seconds]) {
+        foreach ([[$channelKey, 1], [$contactKey, self::CONTACT_PER_HOUR]] as [$key, $max]) {
             if (RateLimiter::tooManyAttempts($key, $max)) {
                 throw new ConversationNotStarted('Aguarde '.RateLimiter::availableIn($key).' s para iniciar outra conversa '.($key === $channelKey ? 'neste canal.' : 'com este contato.'));
             }

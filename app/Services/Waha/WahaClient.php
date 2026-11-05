@@ -107,14 +107,6 @@ class WahaClient
         return $code;
     }
 
-    /** O número tem conta no WhatsApp? `$waId` como `5516999999999@c.us`; só os dígitos vão ao WAHA. */
-    public function numberExists(string $waId): bool
-    {
-        $phone = (string) preg_replace('/\D/', '', explode('@', $waId)[0]);
-
-        return ($this->decode($this->request()->get('/api/contacts/check-exists', ['phone' => $phone, 'session' => $this->sessionName()]))['numberExists'] ?? false) === true;
-    }
-
     /**
      * @return array<string, mixed>
      */
