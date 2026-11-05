@@ -1,5 +1,6 @@
 {{-- Janela "Nova conversa": contato (da lista ou telefone novo), canal, setor e a primeira mensagem. Ver App\Actions\Inbox\StartConversation. --}}
-<div>
+{{-- `absolute`: a raiz fica fora do fluxo, senão vira uma célula a mais na grade do Inbox e empurra os detalhes para baixo da fila. --}}
+<div class="absolute">
     <flux:modal name="new-conversation" class="w-full max-w-lg">
         <form wire:submit="submit" class="space-y-4">
             <div>
