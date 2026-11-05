@@ -108,6 +108,11 @@ class Inbox extends Component
             $this->previousTicketId = $this->ticketId;
         }
 
+        // O campo é um só: o texto de um ticket não pode aparecer (nem ser enviado) em outro. O rascunho fica no navegador.
+        if ($this->ticketId !== $ticketId) {
+            $this->reset('draft');
+        }
+
         $this->ticketId = $ticketId;
         $this->notice = null;
         $this->replyToId = null;
