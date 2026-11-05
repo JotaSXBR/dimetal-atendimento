@@ -51,6 +51,7 @@ class Transcript extends Component
     }
 
     #[On('transcript-refresh')]
+    #[On('realtime-reconnected')]
     public function refresh(): void {}
 
     /** Só o autor apaga a própria nota; fica o rastro na auditoria do ticket. */

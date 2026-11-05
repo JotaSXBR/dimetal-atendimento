@@ -13,5 +13,6 @@ import './composer-mode';
 import './client-presence';
 import './quote-jump';
 import './alerts';
+import './relative-time';
 import './channel-qr';
 import './flow-editor';

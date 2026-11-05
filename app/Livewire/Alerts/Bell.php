@@ -69,7 +69,7 @@ class Bell extends Component
 
     /**
      * @param  Collection<int|string, Ticket>  $tickets
-     * @return array{id: string, icon: string, tone: string, title: string, detail: string, unread: bool, time: string}
+     * @return array{id: string, icon: string, tone: string, title: string, detail: string, unread: bool, time: string, at: string}
      */
     private function present(DatabaseNotification $n, Collection $tickets): array
     {
@@ -100,6 +100,8 @@ class Bell extends Component
             'detail' => $detail,
             'unread' => $n->read_at === null,
             'time' => $n->created_at?->diffForHumans() ?? '',
+            // O instante exato: o navegador recalcula o "há N minutos" (o texto do servidor congela até a próxima releitura).
+            'at' => $n->created_at?->toIso8601String() ?? '',
         ];
     }
 

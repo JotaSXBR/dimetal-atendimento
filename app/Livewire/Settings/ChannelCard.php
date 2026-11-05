@@ -13,6 +13,7 @@ use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaQr;
 use App\Services\Waha\WahaRequestException;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Throwable;
 
@@ -252,6 +253,20 @@ class ChannelCard extends Component
             $this->refreshQr();
         } catch (Throwable $exception) {
             $this->fail($exception);
+        }
+    }
+
+    /**
+     * O estado do canal mudou (evento do Reverb): a tela relê o banco na hora, sem esperar o próximo polling (que pergunta ao
+     * WAHA e falha enquanto ele reinicia). Evento de outro canal não repinta este cartão.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    #[On('echo-private:inbox,.channel.status')]
+    public function onChannelStatus(array $payload = []): void
+    {
+        if (($payload['channel_id'] ?? null) !== $this->channel->id) {
+            $this->skipRender();
         }
     }
 

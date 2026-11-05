@@ -32,7 +32,7 @@
                             @if ($item['detail'] !== '')
                                 <span class="block truncate text-xs text-ink-3">{{ $item['detail'] }}</span>
                             @endif
-                            <span class="block text-[11px] text-ink-3">{{ $item['time'] }}</span>
+                            <time datetime="{{ $item['at'] }}" x-data="relativeTime('{{ $item['at'] }}')" x-text="label" class="block text-[11px] text-ink-3">{{ $item['time'] }}</time>
                         </span>
                         @if ($item['unread'])
                             <span class="mt-1 size-2 shrink-0 rounded-full bg-accent"><span class="sr-only">não lido</span></span>
