@@ -2,13 +2,17 @@
 
 namespace App\Livewire\Inbox;
 
+use App\Actions\Contacts\CreateContact;
 use App\Events\TicketUpdated;
 use App\Jobs\MarkTicketSeenJob;
+use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\TicketNote;
 use App\Models\User;
+use App\Services\Inbox\SpecialContent;
+use App\Support\PhoneFormat;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Locked;
@@ -67,6 +71,36 @@ class Transcript extends Component
         if ($ticket !== null) {
             TicketUpdated::dispatch($ticket);
         }
+    }
+
+    /** "Adicionar aos contatos" no cartão de contato recebido: cria o contato (ou reaproveita o que já existe) sem duplicar. */
+    public function addContact(int $messageId, int $index): void
+    {
+        $this->contactFromCard($messageId, $index);
+    }
+
+    /** "Conversar" no cartão: garante o contato e abre a janela Nova conversa com ele. */
+    public function chatWith(int $messageId, int $index): void
+    {
+        $contact = $this->contactFromCard($messageId, $index);
+
+        if ($contact !== null) {
+            $this->dispatch('start-conversation', contactId: $contact->id);
+        }
+    }
+
+    /** O cartão `$index` de uma mensagem de contato DESTE ticket (o id vem do navegador), já como contato cadastrado. */
+    private function contactFromCard(int $messageId, int $index): ?Contact
+    {
+        $message = Message::query()->where('ticket_id', $this->ticketId)->where('type', 'contact')->find($messageId);
+        $card = $message === null ? null : (SpecialContent::contacts($message->body)[$index] ?? null);
+        $phone = $card['phones'][0] ?? '';
+
+        if ($card === null || PhoneFormat::toWaId($phone) === null) {
+            return null;
+        }
+
+        return app(CreateContact::class)($phone, $card['name'])['contact'];
     }
 
     public function render(): View

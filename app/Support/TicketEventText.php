@@ -27,6 +27,7 @@ final class TicketEventText
         'message_edited' => 'Mensagem editada',
         'message_revoked_by_agent' => 'Mensagem apagada para todos',
         'note_deleted' => 'Nota interna apagada',
+        'opened_by_agent' => 'Conversa iniciada pela equipe',
     ];
 
     public static function label(string $type): string

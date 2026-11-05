@@ -31,6 +31,7 @@ final class TicketTimeline
         'message_edited' => 'editou uma mensagem',
         'message_revoked_by_agent' => 'apagou uma mensagem para todos',
         'note_deleted' => 'apagou uma nota interna',
+        'opened_by_agent' => 'iniciou a conversa',
     ];
 
     /** @var Collection<int, string> */

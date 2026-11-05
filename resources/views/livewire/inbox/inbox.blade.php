@@ -19,7 +19,10 @@
     {{-- Lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
         <header class="border-b border-line p-4">
-            <h1 class="text-base font-semibold text-ink">Fila</h1>
+            <div class="flex items-center justify-between gap-2">
+                <h1 class="text-base font-semibold text-ink">Fila</h1>
+                <flux:button size="sm" variant="primary" icon="plus" x-on:click="$dispatch('start-conversation')">Nova conversa</flux:button>
+            </div>
 
             <div class="mt-3 flex gap-1" role="tablist">
                 @foreach ($tabs as $key => $label)
@@ -415,6 +418,8 @@
             <div class="grid flex-1 place-items-center text-sm text-ink-3">Selecione um ticket.</div>
         @endif
     </section>
+
+    <livewire:inbox.new-conversation />
 
     {{-- Detalhes --}}
     @if ($ticket)
