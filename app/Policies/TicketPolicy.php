@@ -13,6 +13,14 @@ class TicketPolicy
         return Ticket::query()->readableBy($user)->whereKey($ticket->id)->exists();
     }
 
+    /** Anotar: quem vê o ticket, enquanto ele não está encerrado. A nota é da equipe e não depende de poder responder. */
+    public function note(User $user, Ticket $ticket): bool
+    {
+        return $user->active
+            && $ticket->status !== TicketStatus::ENCERRADO
+            && $this->view($user, $ticket);
+    }
+
     public function claim(User $user, Ticket $ticket): bool
     {
         return $user->active

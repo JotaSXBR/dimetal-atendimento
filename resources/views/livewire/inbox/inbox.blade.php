@@ -273,9 +273,19 @@
                 <livewire:inbox.transcript :ticket-id="$ticket->id" :key="'transcript-'.$ticket->id" />
             </div>
 
-            <footer class="border-t border-line bg-surface p-3">
+            {{-- Modo Responder/Nota privada e rascunhos por modo: ver resources/js/composer-mode.js --}}
+            <footer
+                wire:key="footer-{{ $ticket->id }}"
+                @if ($canReply)
+                    x-data="composerMode($wire, {{ $ticket->id }}, {{ auth()->id() }})"
+                    x-on:keydown.alt.p.window.prevent="toggle()"
+                    x-on:note-from-message.window="addToNote($event.detail)"
+                    x-bind:class="mode === 'note' ? 'border-amber-300 bg-amber-50' : 'border-line bg-surface'"
+                @endif
+                class="border-t p-3 {{ $canReply ? '' : 'border-line bg-surface' }}"
+            >
                 @if ($replyTo)
-                    <div class="mb-2 flex items-start gap-2 rounded-md border-l-4 border-accent bg-canvas px-3 py-2 text-xs" role="status">
+                    <div @if ($canReply) x-show="mode === 'reply'" @endif class="mb-2 flex items-start gap-2 rounded-md border-l-4 border-accent bg-canvas px-3 py-2 text-xs" role="status">
                         <div class="min-w-0 flex-1">
                             @include('livewire.inbox.quote-preview', ['quote' => $replyTo, 'heading' => 'Respondendo a '.$replyTo['author']])
                         </div>
@@ -290,6 +300,14 @@
                 @endif
 
                 @if ($canReply)
+                    <div class="mb-2 flex flex-wrap items-center gap-2" x-show="!voiceBusy">
+                        <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
+                            <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
+                            <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-amber-200 text-amber-900 shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
+                        </div>
+                        <p x-show="mode === 'note'" x-cloak class="text-xs text-amber-800" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
+                    </div>
+
                     <div
                         wire:key="composer-{{ $ticket->id }}"
                         x-data="attachTray($wire, {{ $ticket->id }})"
@@ -345,7 +363,7 @@
                             <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
                         @enderror
 
-                        <form wire:submit="send" class="flex items-end gap-2" x-show="!voiceBusy">
+                        <form x-on:submit.prevent="uploading === 0 && submit()" x-on:input="remember($event)" class="flex items-end gap-2" x-show="!voiceBusy">
                             <input
                                 type="file"
                                 multiple
@@ -355,11 +373,11 @@
                                 accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.mp3,.ogg,.m4a,.mp4"
                                 x-on:change="addFiles($event.target.files); $event.target.value = ''"
                             >
-                            <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-on:click="$refs.picker.click()" />
-                            <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-on:click="$dispatch('voice-start')" />
-                            <flux:button type="button" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
+                            <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
+                            <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-show="mode === 'reply'" x-on:click="$dispatch('voice-start')" />
+                            <flux:button type="button" x-show="mode === 'reply'" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
 
-                            <div class="flex-1" x-data="typingPresence($wire, {{ $ticket->id }})">
+                            <div class="flex-1" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
                                 @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())
                                     <ul class="mb-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface text-sm" role="listbox" aria-label="Respostas rápidas">
                                         @foreach ($suggestions as $suggestion)
@@ -372,12 +390,13 @@
                                         @endforeach
                                     </ul>
                                 @endif
-                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" aria-label="Mensagem" x-on:input="input($event.target.value)" x-on:blur="stop()" x-on:input.debounce.250ms="if ($event.target.value.startsWith('/')) { $wire.$set('draft', $event.target.value) }" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { $wire.send() } }" />
+                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" x-bind:placeholder="mode === 'note' ? 'Nota privada: só a equipe vê' : 'Escreva uma resposta'" aria-label="Mensagem" x-on:input="$event.isTrusted && mode === 'reply' && input($event.target.value)" x-on:blur="stop()" x-on:input.debounce.250ms="if ($event.target.value.startsWith('/')) { $wire.$set('draft', $event.target.value) }" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { submit() } }" />
                                 @error('draft')
                                     <p class="mt-1 text-xs text-danger">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-bind:disabled="uploading > 0" />
+                            <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-show="mode === 'reply'" x-bind:disabled="uploading > 0" />
+                            <button type="submit" x-show="mode === 'note'" x-cloak class="rounded-md bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50" x-bind:disabled="uploading > 0">Salvar nota</button>
                         </form>
                     </div>
                 @elseif ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)

@@ -7,7 +7,19 @@
     $localIds = $messages->pluck('id', 'wa_message_id');
 @endphp
 
-@foreach ($messages as $message)
+@php
+    // Notas internas (só no Inbox; o Histórico não passa `$notes`) entram na conversa pelo horário.
+    $timeline = $messages->concat($notes ?? collect())
+        ->sortBy(fn ($item) => $item instanceof \App\Models\TicketNote ? $item->created_at : $item->sent_at)
+        ->values();
+@endphp
+
+@foreach ($timeline as $message)
+    @if ($message instanceof \App\Models\TicketNote)
+        @include('livewire.inbox.note', ['note' => $message])
+        @continue
+    @endif
+
     @php
         $out = $message->direction === \App\Enums\MessageDirection::OUT;
         $outside = $message->origin === \App\Enums\MessageOrigin::FORA_DO_PAINEL;
@@ -26,7 +38,7 @@
             : 'none';
     @endphp
 
-    <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }}">
+    <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }} {{ $message->reactions->isNotEmpty() ? 'mb-3' : '' }}">
         <div x-data="{ editing: false, text: '' }" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
@@ -76,9 +88,10 @@
             @endif
 
             @if ($message->reactions->isNotEmpty())
-                <div class="mt-1 flex flex-wrap gap-1 text-xs">
+                {{-- Pastilha presa à borda de baixo da bolha, por fora, como no WhatsApp; a linha ganha uma folga (`mb-3`) para ela não encostar na próxima. --}}
+                <div data-testid="reactions" class="absolute -bottom-3 start-2 flex gap-0.5 text-xs">
                     @foreach ($message->reactions as $reaction)
-                        <span class="rounded-full border border-line bg-canvas px-1.5 py-0.5" title="{{ $reaction->by === 'me' ? 'Reação do número da empresa' : 'Reação do cliente' }}">{{ $reaction->emoji }}</span>
+                        <span class="rounded-full border border-line bg-surface px-1.5 py-0.5 shadow-sm" title="{{ $reaction->by === 'me' ? 'Reação do número da empresa' : 'Reação do cliente' }}">{{ $reaction->emoji }}</span>
                     @endforeach
                 </div>
             @endif
@@ -149,6 +162,11 @@
                             <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="mt-1 flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.7 3.3a.75.75 0 0 1 0 1.06L4.86 7.2H11a5 5 0 0 1 5 5v2.05a.75.75 0 0 1-1.5 0V12.2a3.5 3.5 0 0 0-3.5-3.5H4.86L7.7 11.54a.75.75 0 1 1-1.06 1.06l-4.12-4.12a.75.75 0 0 1 0-1.06l4.12-4.12a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/></svg>Responder</button>
                             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
                                 <button type="button" role="menuitem" x-on:click="navigator.clipboard.writeText(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h6A1.5 1.5 0 0 1 16 3.5v8a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 7 11.5v-8Z"/><path d="M4 6a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 17h6a1.5 1.5 0 0 0 1.5-1.5V15H8.5A3.5 3.5 0 0 1 5 11.5V6H4Z"/></svg>Copiar</button>
+                            @endif
+                            @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
+                                @can('reply', $message->ticket)
+                                    <button type="button" role="menuitem" x-on:click="$dispatch('note-from-message', @js($message->body)); open = false" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 0-2 2v9.5a.5.5 0 0 0 .8.4L5.67 11H16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm2 3.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 5.25Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd"/></svg>Adicionar texto às notas</button>
+                                @endcan
                             @endif
                             <button type="button" role="menuitem" x-on:click.stop="info = ! info" x-bind:aria-expanded="info" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.25v3.25a.75.75 0 0 0 1.5 0V9.75A.75.75 0 0 0 10 9H9Z" clip-rule="evenodd"/></svg>Dados da mensagem</button>
                             <dl x-cloak x-show="info" class="mx-2 mb-1 space-y-0.5 border-l-2 border-line ps-2 font-mono text-[10px] text-ink-3">

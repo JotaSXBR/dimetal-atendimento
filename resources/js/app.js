@@ -9,6 +9,7 @@ import './audio-player';
 import './attach-tray';
 import './voice-recorder';
 import './typing-presence';
+import './composer-mode';
 import './client-presence';
 import './quote-jump';
 import './alerts';

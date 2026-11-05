@@ -14,6 +14,7 @@ use App\Enums\TicketStatus;
 use App\Jobs\MarkTicketSeenJob;
 use App\Livewire\Inbox\Concerns\ActsOnMessages;
 use App\Livewire\Inbox\Concerns\ComposesMessages;
+use App\Livewire\Inbox\Concerns\TakesNotes;
 use App\Models\Channel;
 use App\Models\Message;
 use App\Models\Sector;
@@ -39,6 +40,7 @@ class Inbox extends Component
 {
     use ActsOnMessages;
     use ComposesMessages;
+    use TakesNotes;
 
     /** Prévia da lista: o texto ou, quando não há, o nome do tipo de conteúdo. */
     private const PREVIEW_SQL = "case when revoked_at is not null then 'Apagada · ' else '' end || "
@@ -101,9 +103,11 @@ class Inbox extends Component
             MarkTicketSeenJob::dispatch($ticket->id);
         }
 
-        // Abrir outro ticket (um encerrado, por exemplo) não pode fazer o atual sumir sem volta.
-        if ($this->ticketId !== null && $this->ticketId !== $ticketId) {
-            $this->previousTicketId = $this->ticketId;
+        if ($this->ticketId !== $ticketId) {
+            // Abrir outro ticket (um encerrado, por exemplo) não pode fazer o atual sumir sem volta.
+            $this->previousTicketId = $this->ticketId ?? $this->previousTicketId;
+            // O campo é um só: o texto de um ticket não pode aparecer (nem ser enviado) em outro. O rascunho fica no navegador.
+            $this->reset('draft');
         }
 
         $this->ticketId = $ticketId;
