@@ -236,4 +236,36 @@ class InboxTranscriptTest extends TestCase
             ->call('resend', $failed->id, true)
             ->assertDispatched('transcript-refresh');
     }
+
+    public function test_menu_da_bolha_e_um_chevron_sem_linha_propria(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Bom dia')->update(['wa_message_id' => 'W1']);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+
+        $this->assertStringContainsString('data-testid="message-menu-button"', $html);
+        $this->assertStringNotContainsString('mt-1 flex justify-end', $html, 'o menu não ocupa mais uma linha entre o texto e o horário');
+    }
+
+    public function test_mensagem_apagada_nao_tem_menu(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Oi')->update(['wa_message_id' => 'W1', 'revoked_at' => now()]);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+
+        $this->assertStringNotContainsString('data-testid="message-menu-button"', $html);
+    }
+
+    public function test_modo_leitura_nao_tem_menu(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Oi')->update(['wa_message_id' => 'W1']);
+        $this->actingAs($me);
+
+        $html = view('livewire.inbox.transcript', ['messages' => $ticket->messages()->get(), 'readonly' => true])->render();
+
+        $this->assertStringNotContainsString('data-testid="message-menu-button"', $html);
+    }
 }
