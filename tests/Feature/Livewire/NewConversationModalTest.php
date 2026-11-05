@@ -105,6 +105,15 @@ class NewConversationModalTest extends TestCase
         $this->assertSame(1, substr_count($html, 'Escolha o setor.'));
     }
 
+    public function test_raiz_da_janela_nao_ocupa_celula_da_grade_do_inbox(): void
+    {
+        // A janela vive dentro da grade do Inbox (e da de Contatos): a raiz precisa sair do fluxo, senão vira uma célula
+        // a mais e empurra o painel de detalhes para baixo da fila.
+        $html = Livewire::actingAs($this->agent)->test(NewConversation::class)->html();
+
+        $this->assertMatchesRegularExpression('/^<div[^>]*class="absolute"/', trim($html));
+    }
+
     public function test_busca_por_nome_lista_contatos(): void
     {
         Livewire::actingAs($this->agent)->test(NewConversation::class)
