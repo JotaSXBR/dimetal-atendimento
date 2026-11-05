@@ -12,6 +12,7 @@ use App\Livewire\Inbox\Transcript;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
+use App\Models\MessageReaction;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
@@ -361,5 +362,16 @@ class InboxTranscriptTest extends TestCase
         Message::factory()->for($ticket)->create(['wa_message_id' => 'W2', 'type' => 'media', 'body' => 'legenda', 'media_mime' => 'image/jpeg', 'media_name' => 'f.jpg', 'media_ref' => 'files/f.jpg']);
 
         $this->assertSame(2, substr_count($this->menuHtml($me, $ticket), 'data-testid="message-time"'), 'uma vez por mensagem');
+    }
+
+    public function test_reacao_fica_presa_na_borda_da_bolha_sem_ocupar_linha(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $message = $this->say($ticket, 'Bom dia');
+        MessageReaction::create(['message_id' => $message->id, 'by' => 'client', 'emoji' => '❤️', 'reacted_at' => now()]);
+
+        $this->assertSame(1, preg_match('/<div[^>]*data-testid="reactions"[^>]*>/', $this->menuHtml($me, $ticket), $m));
+        $this->assertStringContainsString('absolute', $m[0], 'a pastilha sai do fluxo e não abre uma linha dentro da bolha');
+        $this->assertStringContainsString('-bottom-', $m[0]);
     }
 }

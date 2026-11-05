@@ -26,7 +26,7 @@
             : 'none';
     @endphp
 
-    <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }}">
+    <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }} {{ $message->reactions->isNotEmpty() ? 'mb-3' : '' }}">
         <div x-data="{ editing: false, text: '' }" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
@@ -76,9 +76,10 @@
             @endif
 
             @if ($message->reactions->isNotEmpty())
-                <div class="mt-1 flex flex-wrap gap-1 text-xs">
+                {{-- Pastilha presa à borda de baixo da bolha, por fora, como no WhatsApp; a linha ganha uma folga (`mb-3`) para ela não encostar na próxima. --}}
+                <div data-testid="reactions" class="absolute -bottom-3 start-2 flex gap-0.5 text-xs">
                     @foreach ($message->reactions as $reaction)
-                        <span class="rounded-full border border-line bg-canvas px-1.5 py-0.5" title="{{ $reaction->by === 'me' ? 'Reação do número da empresa' : 'Reação do cliente' }}">{{ $reaction->emoji }}</span>
+                        <span class="rounded-full border border-line bg-surface px-1.5 py-0.5 shadow-sm" title="{{ $reaction->by === 'me' ? 'Reação do número da empresa' : 'Reação do cliente' }}">{{ $reaction->emoji }}</span>
                     @endforeach
                 </div>
             @endif
