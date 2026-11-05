@@ -81,7 +81,7 @@ class Transcript extends Component
 
         // Só as notas desde a mensagem mais antiga da página, para a conversa não ganhar notas soltas do passado.
         $oldest = $messages->first()?->sent_at;
-        $notes = $ticket === null ? collect() : $ticket->notes()->with('author')
+        $notes = $ticket === null ? collect() : TicketNote::query()->where('ticket_id', $ticket->id)->with('author')
             ->when($oldest !== null, fn ($query) => $query->where('created_at', '>=', $oldest))
             ->orderBy('created_at')->limit(self::LIMIT)->get();
 

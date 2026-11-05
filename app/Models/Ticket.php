@@ -303,14 +303,6 @@ class Ticket extends Model
     }
 
     /**
-     * @return HasMany<TicketNote, $this>
-     */
-    public function notes(): HasMany
-    {
-        return $this->hasMany(TicketNote::class);
-    }
-
-    /**
      * @return HasMany<TicketEvent, $this>
      */
     public function events(): HasMany
