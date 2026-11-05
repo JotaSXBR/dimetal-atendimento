@@ -51,7 +51,7 @@
             @endif
 
             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                <p x-show="! editing" class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}@include('livewire.inbox.message-time', ['inline' => true])</p>
+                <p x-show="! editing" class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}@if ($inlineTime)@include('livewire.inbox.message-time', ['inline' => true])@endif</p>
                 @if (! $readonly)
                     @can('edit', $message)
                         <div x-cloak x-show="editing" class="space-y-1">

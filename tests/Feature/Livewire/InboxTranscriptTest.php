@@ -352,4 +352,13 @@ class InboxTranscriptTest extends TestCase
 
         $this->assertStringNotContainsString('data-testid="quick-react"', $html);
     }
+
+    public function test_horario_aparece_uma_so_vez_em_texto_e_em_foto_com_legenda(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'só texto')->update(['wa_message_id' => 'W1']);
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'W2', 'type' => 'media', 'body' => 'legenda', 'media_mime' => 'image/jpeg', 'media_name' => 'f.jpg', 'media_ref' => 'files/f.jpg']);
+
+        $this->assertSame(2, substr_count($this->menuHtml($me, $ticket), 'data-testid="message-time"'), 'uma vez por mensagem');
+    }
 }

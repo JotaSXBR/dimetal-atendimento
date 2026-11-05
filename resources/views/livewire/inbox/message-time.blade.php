@@ -1,5 +1,5 @@
 {{-- Horário (e tiques) da bolha. `inline`: flutua à direita no fim do texto e cai para a linha de baixo quando não cabe. --}}
-<span class="{{ $inline ? 'float-right ms-3 mt-2' : 'mt-1 flex justify-end' }} inline-flex items-center gap-1 font-mono text-[10px] text-ink-3">
+<span data-testid="message-time" class="{{ $inline ? 'float-right ms-3 mt-2' : 'mt-1 flex justify-end' }} inline-flex items-center gap-1 font-mono text-[10px] text-ink-3">
     @if ($message->edited_at)
         <span>editada</span>
     @endif
