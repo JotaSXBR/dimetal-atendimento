@@ -7,7 +7,19 @@
     $localIds = $messages->pluck('id', 'wa_message_id');
 @endphp
 
-@foreach ($messages as $message)
+@php
+    // Notas internas (só no Inbox; o Histórico não passa `$notes`) entram na conversa pelo horário.
+    $timeline = $messages->concat($notes ?? collect())
+        ->sortBy(fn ($item) => $item instanceof \App\Models\TicketNote ? $item->created_at : $item->sent_at)
+        ->values();
+@endphp
+
+@foreach ($timeline as $message)
+    @if ($message instanceof \App\Models\TicketNote)
+        @include('livewire.inbox.note', ['note' => $message])
+        @continue
+    @endif
+
     @php
         $out = $message->direction === \App\Enums\MessageDirection::OUT;
         $outside = $message->origin === \App\Enums\MessageOrigin::FORA_DO_PAINEL;

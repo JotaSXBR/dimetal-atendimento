@@ -1,0 +1,11 @@
+{{-- Nota interna: só a equipe vê, nunca vai ao WhatsApp. Cartão âmbar no fluxo da conversa, sem tiques. --}}
+<div wire:key="note-{{ $note->id }}" id="note-{{ $note->id }}" data-testid="note-card" class="group/note rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-ink">
+    <p class="mb-0.5 flex items-center gap-1 font-mono text-[10px] tracking-wide text-amber-800 uppercase">
+        <flux:icon.lock-closed class="size-3" />
+        Nota interna · {{ $note->author?->name ?? 'Usuário removido' }} · {{ $note->created_at->timezone(config('app.display_timezone'))->format('d/m H:i') }}
+    </p>
+    <p class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($note->body) }}</p>
+    @if ($note->user_id === auth()->id())
+        <button type="button" wire:click="deleteNote({{ $note->id }})" wire:confirm="Apagar esta nota?" class="mt-1 text-xs text-amber-800 hover:text-danger">Apagar</button>
+    @endif
+</div>
