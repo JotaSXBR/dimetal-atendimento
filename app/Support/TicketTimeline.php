@@ -30,6 +30,7 @@ final class TicketTimeline
         'message_reacted' => 'reagiu a uma mensagem',
         'message_edited' => 'editou uma mensagem',
         'message_revoked_by_agent' => 'apagou uma mensagem para todos',
+        'note_deleted' => 'apagou uma nota interna',
     ];
 
     /** @var Collection<int, string> */
