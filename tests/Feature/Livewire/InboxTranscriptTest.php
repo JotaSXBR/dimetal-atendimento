@@ -15,6 +15,7 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Inbox\ReactToMessage;
 use App\Services\Inbox\SendFailure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -335,7 +336,7 @@ class InboxTranscriptTest extends TestCase
         $html = $this->menuHtml($me, $ticket);
 
         $this->assertStringContainsString('data-testid="quick-react"', $html);
-        $this->assertSame(count(\App\Services\Inbox\ReactToMessage::EMOJIS), substr_count($html, 'data-testid="quick-react-emoji"'));
+        $this->assertSame(count(ReactToMessage::EMOJIS), substr_count($html, 'data-testid="quick-react-emoji"'));
     }
 
     public function test_carinha_de_reacao_nao_aparece_sem_id_do_whatsapp_apagada_ou_em_modo_leitura(): void
