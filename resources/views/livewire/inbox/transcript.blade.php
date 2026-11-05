@@ -26,7 +26,7 @@
             : 'none';
     @endphp
 
-    <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="flex {{ $out ? 'justify-end' : 'justify-start' }}">
+    <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }}">
         <div x-data="{ editing: false, text: '' }" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
@@ -179,5 +179,21 @@
                 @include('livewire.inbox.message-time', ['inline' => false])
             @endunless
         </div>
+
+        @if (! $readonly)
+            @can('react', $message)
+                {{-- Reação rápida ao lado da bolha, do lado de dentro da conversa. A barra abre na mesma linha (sem sobrepor nada, então nada a corta). --}}
+                <div x-data="{ open: false }" data-testid="quick-react" class="flex items-center gap-0.5 {{ $out ? 'order-first' : 'order-last' }}">
+                    <div x-cloak x-show="open" x-on:click.outside="open = false" class="flex gap-0.5 rounded-full border border-line bg-surface px-1 py-0.5 shadow-sm" role="group" aria-label="Reagir">
+                        @foreach (\App\Services\Inbox\ReactToMessage::EMOJIS as $emoji)
+                            <button type="button" data-testid="quick-react-emoji" wire:click="$parent.react({{ $message->id }}, '{{ $emoji }}')" x-on:click="open = false" class="rounded px-1 text-base hover:bg-canvas">{{ $emoji }}</button>
+                        @endforeach
+                    </div>
+                    <button type="button" x-show="! open" x-on:click="open = true" aria-label="Reagir à mensagem" class="rounded-full p-1 text-ink-3 opacity-0 group-hover/row:opacity-100 hover:text-ink focus-visible:opacity-100 [@media(hover:none)]:opacity-100">
+                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.7-5.3a.75.75 0 0 0-1.2-.9 3.5 3.5 0 0 1-5 0 .75.75 0 1 0-1.2.9 5 5 0 0 0 7.4 0ZM8 8.5A1 1 0 1 1 8 6.5a1 1 0 0 1 0 2Zm5 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" clip-rule="evenodd"/></svg>
+                    </button>
+                </div>
+            @endcan
+        @endif
     </div>
 @endforeach

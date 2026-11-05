@@ -326,4 +326,30 @@ class InboxTranscriptTest extends TestCase
         $this->assertStringNotContainsString('Entregue</dt>', $html);
         $this->assertStringNotContainsString('Lida</dt>', $html);
     }
+
+    public function test_carinha_de_reacao_aparece_com_permissao_e_traz_os_emojis_da_barra(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'oi')->update(['wa_message_id' => 'W1']);
+
+        $html = $this->menuHtml($me, $ticket);
+
+        $this->assertStringContainsString('data-testid="quick-react"', $html);
+        $this->assertSame(count(\App\Services\Inbox\ReactToMessage::EMOJIS), substr_count($html, 'data-testid="quick-react-emoji"'));
+    }
+
+    public function test_carinha_de_reacao_nao_aparece_sem_id_do_whatsapp_apagada_ou_em_modo_leitura(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'sem id')->update(['wa_message_id' => null]);
+        $this->say($ticket, 'apagada')->update(['wa_message_id' => 'W2', 'revoked_at' => now()]);
+
+        $this->assertStringNotContainsString('data-testid="quick-react"', $this->menuHtml($me, $ticket));
+
+        $this->say($ticket, 'ok')->update(['wa_message_id' => 'W3']);
+        $this->actingAs($me);
+        $html = view('livewire.inbox.transcript', ['messages' => $ticket->messages()->get(), 'readonly' => true])->render();
+
+        $this->assertStringNotContainsString('data-testid="quick-react"', $html);
+    }
 }
