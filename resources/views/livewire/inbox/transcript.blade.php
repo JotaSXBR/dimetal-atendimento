@@ -163,6 +163,11 @@
                             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
                                 <button type="button" role="menuitem" x-on:click="navigator.clipboard.writeText(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h6A1.5 1.5 0 0 1 16 3.5v8a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 7 11.5v-8Z"/><path d="M4 6a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 17h6a1.5 1.5 0 0 0 1.5-1.5V15H8.5A3.5 3.5 0 0 1 5 11.5V6H4Z"/></svg>Copiar</button>
                             @endif
+                            @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
+                                @can('reply', $message->ticket)
+                                    <button type="button" role="menuitem" x-on:click="$dispatch('note-from-message', @js($message->body)); open = false" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 0-2 2v9.5a.5.5 0 0 0 .8.4L5.67 11H16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm2 3.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 5.25Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd"/></svg>Adicionar texto às notas</button>
+                                @endcan
+                            @endif
                             <button type="button" role="menuitem" x-on:click.stop="info = ! info" x-bind:aria-expanded="info" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.25v3.25a.75.75 0 0 0 1.5 0V9.75A.75.75 0 0 0 10 9H9Z" clip-rule="evenodd"/></svg>Dados da mensagem</button>
                             <dl x-cloak x-show="info" class="mx-2 mb-1 space-y-0.5 border-l-2 border-line ps-2 font-mono text-[10px] text-ink-3">
                                 @if ($out)

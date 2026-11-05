@@ -289,6 +289,24 @@ class InboxTranscriptTest extends TestCase
         $this->assertStringNotContainsString('Copiar', $this->menuHtml($me, $ticket));
     }
 
+    public function test_menu_tem_adicionar_texto_as_notas_so_com_texto_e_com_permissao(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Dado do cliente: CNPJ 123')->update(['wa_message_id' => 'W1']);
+
+        $html = $this->menuHtml($me, $ticket);
+        $this->assertStringContainsString('Adicionar texto às notas', $html);
+        $this->assertStringContainsString('note-from-message', $html);
+
+        // Quem não pode responder o ticket não tem o campo de nota, então o item não aparece.
+        $outro = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $this->assertStringNotContainsString('Adicionar texto às notas', $this->menuHtml($outro, $ticket));
+
+        $ticket->messages()->delete();
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'W2', 'type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'f.jpg', 'media_ref' => 'files/f.jpg']);
+        $this->assertStringNotContainsString('Adicionar texto às notas', $this->menuHtml($me, $ticket));
+    }
+
     public function test_dados_da_mensagem_lista_enviada_entregue_e_lida(): void
     {
         [$me, $ticket] = $this->mine();
