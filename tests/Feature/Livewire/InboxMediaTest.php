@@ -51,6 +51,14 @@ class InboxMediaTest extends TestCase
             ->assertSeeHtml(route('midia', $message));
     }
 
+    public function test_foto_abre_em_previa_na_frente_do_app_sem_nova_aba(): void
+    {
+        $this->screen(['media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg'])
+            ->assertSeeHtml('data-photo-preview')
+            ->assertDontSeeHtml('data-photo-box href="')
+            ->assertSeeHtml('x-teleport="body"');
+    }
+
     public function test_audio_aparece_no_player_proprio_com_velocidade(): void
     {
         $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'body' => '', 'media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg']);
@@ -156,14 +164,6 @@ class InboxMediaTest extends TestCase
             ->assertSeeHtml('w-72 max-w-full')
             ->assertSeeHtml('max-h-80 w-full object-cover')
             ->assertDontSeeHtml('max-h-72');
-    }
-
-    public function test_foto_continua_abrindo_em_nova_aba(): void
-    {
-        $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'body' => '', 'media_ref' => 'f.jpg', 'media_mime' => 'image/png']);
-
-        Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id)
-            ->assertSeeHtml('href="'.route('midia', $message).'" target="_blank" rel="noopener"');
     }
 
     public function test_figurinha_nao_ganha_a_caixa_da_foto(): void

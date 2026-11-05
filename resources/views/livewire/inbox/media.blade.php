@@ -31,7 +31,16 @@
         <a href="{{ $url }}" target="_blank" rel="noopener"><img src="{{ $url }}" alt="Figurinha recebida" loading="lazy" class="max-h-40 rounded-lg"></a>
     @else
         {{-- Foto como no WhatsApp: largura fixa e altura máxima; a mais alta que o limite é cortada. --}}
-        <a data-photo-box href="{{ $url }}" target="_blank" rel="noopener" class="block w-72 max-w-full overflow-hidden rounded-lg"><img src="{{ $url }}" alt="Imagem recebida" loading="lazy" class="max-h-80 w-full object-cover"></a>
+        {{-- Clique abre a prévia por cima do app (sem nova aba); Esc, clique fora ou no X fecham. --}}
+        <div x-data="{ open: false }" x-on:keydown.escape.window="open = false">
+            <button type="button" data-photo-box x-on:click="open = true" class="block w-72 max-w-full cursor-zoom-in overflow-hidden rounded-lg"><img src="{{ $url }}" alt="Imagem recebida" loading="lazy" class="max-h-80 w-full object-cover"></button>
+            <template x-teleport="body">
+                <div data-photo-preview x-show="open" x-cloak x-on:click="open = false" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
+                    <button type="button" aria-label="Fechar" class="absolute end-4 top-4 rounded-full bg-black/50 px-3 py-1 text-xl text-white">&times;</button>
+                    <img src="{{ $url }}" alt="Imagem recebida" class="max-h-full max-w-full object-contain">
+                </div>
+            </template>
+        </div>
     @endif
 @elseif (str_starts_with($mime, 'audio/'))
     @include('livewire.inbox.audio-player', ['url' => $url])
