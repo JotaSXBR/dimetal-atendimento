@@ -103,13 +103,10 @@ class Inbox extends Component
             MarkTicketSeenJob::dispatch($ticket->id);
         }
 
-        // Abrir outro ticket (um encerrado, por exemplo) não pode fazer o atual sumir sem volta.
-        if ($this->ticketId !== null && $this->ticketId !== $ticketId) {
-            $this->previousTicketId = $this->ticketId;
-        }
-
-        // O campo é um só: o texto de um ticket não pode aparecer (nem ser enviado) em outro. O rascunho fica no navegador.
         if ($this->ticketId !== $ticketId) {
+            // Abrir outro ticket (um encerrado, por exemplo) não pode fazer o atual sumir sem volta.
+            $this->previousTicketId = $this->ticketId ?? $this->previousTicketId;
+            // O campo é um só: o texto de um ticket não pode aparecer (nem ser enviado) em outro. O rascunho fica no navegador.
             $this->reset('draft');
         }
 
