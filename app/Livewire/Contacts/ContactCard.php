@@ -103,6 +103,7 @@ class ContactCard extends Component
 
     /** Um ticket do contato mudou: a lista de atendimentos anteriores se atualiza, menos com o formulário aberto. */
     #[On('echo-private:inbox,.ticket.updated')]
+    #[On('realtime-reconnected')]
     public function refresh(): void
     {
         if ($this->editing || ! $this->compact) {

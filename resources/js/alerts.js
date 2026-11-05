@@ -235,7 +235,18 @@ function start(id) {
 
             if (!down && window.Livewire) {
                 Livewire.dispatch('alerts-refresh');
+                // O que aconteceu durante a queda não vem de novo: fila, conversa e ficha do inbox também releem o banco.
+                Livewire.dispatch('realtime-reconnected');
             }
+        }
+    });
+
+    // Aba que volta ao primeiro plano: o navegador atrasa timers e polling em segundo plano e outra aba pode ter marcado alertas
+    // como lidos; relê o que importa (sino, faixas, fila, conversa, ficha).
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && window.Livewire) {
+            Livewire.dispatch('alerts-refresh');
+            Livewire.dispatch('realtime-reconnected');
         }
     });
 

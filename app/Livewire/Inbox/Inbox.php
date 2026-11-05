@@ -272,6 +272,8 @@ class Inbox extends Component
      */
     #[On('echo-private:inbox,.ticket.updated')]
     #[On('echo-private:inbox,.message.created')]
+    #[On('echo-private:inbox,.channel.status')]
+    #[On('realtime-reconnected')]
     public function refresh(): void {}
 
     /** Só o protocolo, e só se o usuário ainda pode ver o ticket (ele pode ter sido transferido enquanto isso). */
