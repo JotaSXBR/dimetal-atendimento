@@ -115,8 +115,8 @@ class HistoryAccessTest extends TestCase
 
         $inScope = $this->closed();
         $foreign = $this->closed(['sector_id' => $this->other->id]);
-        $mine = Message::factory()->for($inScope)->create(['type' => 'media', 'media_mime' => 'image/jpeg', 'local_path' => 'outbound/x.jpg']);
-        $theirs = Message::factory()->for($foreign)->create(['type' => 'media', 'media_mime' => 'image/jpeg', 'local_path' => 'outbound/x.jpg']);
+        $mine = Message::factory()->for($inScope)->create(['type' => 'media', 'media_mime' => 'image/jpeg', 'media_path' => 'outbound/x.jpg']);
+        $theirs = Message::factory()->for($foreign)->create(['type' => 'media', 'media_mime' => 'image/jpeg', 'media_path' => 'outbound/x.jpg']);
 
         $this->actingAs($this->agent)->get(route('midia', $mine))->assertOk();
         $this->actingAs($this->agent)->get(route('midia', $theirs))->assertForbidden();

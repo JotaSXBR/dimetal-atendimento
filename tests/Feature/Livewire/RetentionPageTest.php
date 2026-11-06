@@ -24,7 +24,7 @@ class RetentionPageTest extends TestCase
     {
         Storage::disk('local')->put($path, 'x');
 
-        $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'local_path' => $path, 'media_size' => $size]);
+        $message = Message::factory()->for($this->ticket)->create(['type' => 'media', 'media_path' => $path, 'media_size' => $size]);
         $message->forceFill(['created_at' => now()->subDays($ageDays)])->saveQuietly();
 
         return $message;
@@ -53,7 +53,7 @@ class RetentionPageTest extends TestCase
     {
         $this->attachment('outbound/novo.jpg', 2_000_000, 5);
         $this->attachment('outbound/velho.pdf', 3_000_000, 120);
-        Message::factory()->for($this->ticket)->create(['type' => 'media', 'local_path' => null, 'media_size' => 9_000_000]);
+        Message::factory()->for($this->ticket)->create(['type' => 'media', 'media_path' => null, 'media_size' => 9_000_000]);
 
         Livewire::actingAs($this->admin())->test(Retention::class)
             ->assertSee('90 dias')
@@ -72,9 +72,9 @@ class RetentionPageTest extends TestCase
 
         Livewire::actingAs($this->admin())->test(Retention::class)->call('purgeNow')->assertSee('Expurgo iniciado');
 
-        $this->assertNull($old->fresh()?->local_path);
+        $this->assertNull($old->fresh()?->media_path);
         Storage::disk('local')->assertMissing('outbound/velho.pdf');
-        $this->assertSame('outbound/novo.jpg', $new->fresh()?->local_path);
+        $this->assertSame('outbound/novo.jpg', $new->fresh()?->media_path);
         Storage::disk('local')->assertExists('outbound/novo.jpg');
     }
 
@@ -86,7 +86,7 @@ class RetentionPageTest extends TestCase
         Livewire::actingAs($this->admin())->test(Retention::class)->call('purgeNow');
 
         Queue::assertPushed(QueuedCommand::class);
-        $this->assertSame('outbound/velho.pdf', $old->fresh()?->local_path);
+        $this->assertSame('outbound/velho.pdf', $old->fresh()?->media_path);
     }
 
     public function test_quem_nao_e_admin_nao_executa(): void

@@ -9,7 +9,6 @@ use App\Services\Waha\WahaMedia;
 use Illuminate\Http\Client\Response as UpstreamResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
@@ -32,7 +31,7 @@ class MessageMediaController extends Controller
         Gate::authorize('view', $message->ticket()->firstOrFail());
 
         // Anexo enviado pelo painel: a cópia local vale mais que a do WAHA (e é a única enquanto o eco não volta).
-        if ($message->local_path !== null && Storage::disk('local')->exists($message->local_path)) {
+        if ($message->media_path !== null && Message::mediaDisk()->exists($message->media_path)) {
             return $this->serveLocal($message);
         }
 
@@ -57,7 +56,7 @@ class MessageMediaController extends Controller
     private function serveLocal(Message $message): BinaryFileResponse
     {
         $inline = in_array($message->media_mime, self::INLINE_TYPES, true);
-        $response = response()->file(Storage::disk('local')->path((string) $message->local_path), [
+        $response = response()->file(Message::mediaDisk()->path((string) $message->media_path), [
             'Content-Type' => $inline ? (string) $message->media_mime : 'application/octet-stream',
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=3600',

@@ -138,7 +138,7 @@ class HistoryPageTest extends TestCase
         Storage::fake('local');
         Storage::disk('local')->put('outbound/x.jpg', 'x');
         $foreign = $this->closed('Outro Setor', ['sector_id' => Sector::factory()->create()->id]);
-        $media = Message::factory()->for($foreign)->create(['type' => 'media', 'media_mime' => 'image/jpeg', 'local_path' => 'outbound/x.jpg']);
+        $media = Message::factory()->for($foreign)->create(['type' => 'media', 'media_mime' => 'image/jpeg', 'media_path' => 'outbound/x.jpg']);
 
         $this->page()->call('select', $foreign->id)->assertForbidden();
         $this->actingAs($this->agent)->get(route('midia', $media))->assertForbidden();
@@ -162,7 +162,7 @@ class HistoryPageTest extends TestCase
     public function test_anexo_expirado_aparece_como_expirado(): void
     {
         $ticket = $this->closed('Com Anexo');
-        Message::factory()->for($ticket)->create(['type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_ref' => null, 'local_path' => null, 'media_purged_at' => now()]);
+        Message::factory()->for($ticket)->create(['type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_ref' => null, 'media_path' => null, 'media_purged_at' => now()]);
 
         $this->page()->call('select', $ticket->id)->assertSee('Arquivo expirado');
     }

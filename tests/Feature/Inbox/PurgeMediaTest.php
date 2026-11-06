@@ -29,13 +29,14 @@ class PurgeMediaTest extends TestCase
     {
         parent::setUp();
 
-        Storage::fake('local');
+        Storage::fake('media');
+        config(['media.disk' => 'media']);
         $this->ticket = Ticket::factory()->for(Channel::factory()->connected()->create())->for(Contact::factory()->create())->create(['status' => TicketStatus::EM_ATENDIMENTO]);
     }
 
     private function attachment(string $path, int $ageDays): Message
     {
-        Storage::disk('local')->put($path, 'conteudo');
+        Storage::disk('media')->put($path, 'conteudo');
 
         $message = Message::factory()->create([
             'ticket_id' => $this->ticket->id,
@@ -45,7 +46,7 @@ class PurgeMediaTest extends TestCase
             'body' => '',
             'media_mime' => 'application/pdf',
             'media_name' => 'orcamento.pdf',
-            'local_path' => $path,
+            'media_path' => $path,
         ]);
         Message::query()->whereKey($message->id)->update(['created_at' => now()->subDays($ageDays)]);
 
@@ -59,14 +60,29 @@ class PurgeMediaTest extends TestCase
 
         $this->artisan('app:purge-media')->assertSuccessful();
 
-        Storage::disk('local')->assertMissing('outbound/2026/07/velho.pdf');
-        Storage::disk('local')->assertExists('outbound/2026/10/novo.pdf');
-        $this->assertNull($old->fresh()?->local_path);
+        Storage::disk('media')->assertMissing('outbound/2026/07/velho.pdf');
+        Storage::disk('media')->assertExists('outbound/2026/10/novo.pdf');
+        $this->assertNull($old->fresh()?->media_path);
         $this->assertNotNull($old->fresh()?->media_purged_at);
-        $this->assertNotNull($recent->fresh()?->local_path);
+        $this->assertNotNull($recent->fresh()?->media_path);
         $this->assertNull($recent->fresh()?->media_purged_at);
         $this->assertSame(1, TicketEvent::query()->where('type', 'media_purged')->count());
         $this->assertSame($old->id, TicketEvent::query()->where('type', 'media_purged')->sole()->payload['message_id'] ?? null);
+    }
+
+    public function test_apaga_do_disco_de_midia_a_recebida_e_a_enviada(): void
+    {
+        $sent = $this->attachment('outbound/2026/07/enviado.pdf', 91);
+        $received = $this->attachment('inbound/1/2026/07/recebido.pdf', 91);
+        $received->update(['direction' => MessageDirection::IN, 'origin' => MessageOrigin::CONTATO]);
+
+        $this->artisan('app:purge-media')->assertSuccessful();
+
+        Storage::disk('media')->assertMissing('outbound/2026/07/enviado.pdf');
+        Storage::disk('media')->assertMissing('inbound/1/2026/07/recebido.pdf');
+        $this->assertNull($received->fresh()?->media_path);
+        $this->assertNotNull($received->fresh()?->media_purged_at);
+        $this->assertSame(2, TicketEvent::query()->where('type', 'media_purged')->whereIn('payload->message_id', [$sent->id, $received->id])->count());
     }
 
     public function test_e_idempotente(): void
@@ -82,7 +98,7 @@ class PurgeMediaTest extends TestCase
     public function test_copia_que_ja_sumiu_do_disco_tambem_expira_sem_erro(): void
     {
         $message = $this->attachment('outbound/2026/07/sumiu.pdf', 100);
-        Storage::disk('local')->delete('outbound/2026/07/sumiu.pdf');
+        Storage::disk('media')->delete('outbound/2026/07/sumiu.pdf');
 
         $this->artisan('app:purge-media')->assertSuccessful();
 

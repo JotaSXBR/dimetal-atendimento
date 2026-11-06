@@ -146,7 +146,7 @@ class InboxVoiceTest extends TestCase
         $this->assertSame('media', $message->type);
         $this->assertSame('audio.webm', $message->media_name);
         $this->assertStringStartsWith('audio/', (string) $message->media_mime);
-        Storage::disk('local')->assertExists((string) $message->local_path);
+        Storage::disk('local')->assertExists((string) $message->media_path);
         Queue::assertPushed(SendTicketMessageJob::class, 1);
 
         app(SendTicketMessage::class)->deliver($message);

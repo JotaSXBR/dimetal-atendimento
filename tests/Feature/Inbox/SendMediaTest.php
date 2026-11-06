@@ -184,8 +184,8 @@ class SendMediaTest extends TestCase
         $this->assertSame('orcamento.pdf', $message->media_name);
         $this->assertSame(strlen(self::PDF), $message->media_size);
         $this->assertNull($message->media_ref);
-        Storage::disk('local')->assertExists((string) $message->local_path);
-        $this->assertStringStartsWith('outbound/', (string) $message->local_path);
+        Storage::disk('local')->assertExists((string) $message->media_path);
+        $this->assertStringStartsWith('outbound/', (string) $message->media_path);
     }
 
     public function test_arquivo_recusado_nao_cria_mensagem_nem_deixa_arquivo_no_disco(): void
@@ -211,7 +211,7 @@ class SendMediaTest extends TestCase
         app(SendTicketMessage::class)->deliver($message);
 
         $this->assertSame(DeliveryStatus::QUEUED, $message->fresh()?->delivery_status);
-        Storage::disk('local')->assertExists((string) $message->local_path);
+        Storage::disk('local')->assertExists((string) $message->media_path);
         $this->assertNull($this->sentTo('/api/sendFile'));
 
         $this->channel->update(['status' => ChannelStatus::WORKING]);
@@ -225,7 +225,7 @@ class SendMediaTest extends TestCase
     {
         $this->fakeWaha();
         $message = $this->send('orcamento.pdf', self::PDF);
-        Storage::disk('local')->delete((string) $message->local_path);
+        Storage::disk('local')->delete((string) $message->media_path);
 
         app(SendTicketMessage::class)->deliver($message);
 
@@ -276,7 +276,7 @@ class SendMediaTest extends TestCase
 
         $this->assertSame(ResendTicketMessage::CONFIRM, $resend->kind($message->fresh() ?? $message, $this->author->forceFill(['role' => UserRole::SUPERVISOR])));
 
-        $message->update(['local_path' => null]);
+        $message->update(['media_path' => null]);
 
         $this->assertSame(ResendTicketMessage::NONE, $resend->kind($message->fresh() ?? $message, $this->author));
     }

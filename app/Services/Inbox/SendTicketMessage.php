@@ -16,7 +16,6 @@ use App\Models\User;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaMedia;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -195,13 +194,13 @@ class SendTicketMessage
     /** Os bytes do anexo na cópia local, ou `null` quando a cópia sumiu (apagada pela retenção ou pelo disco). */
     private function readAttachment(Message $message): ?string
     {
-        if ($message->local_path === null) {
+        if ($message->media_path === null) {
             return null;
         }
 
-        $disk = Storage::disk('local');
+        $disk = Message::mediaDisk();
 
-        return $disk->exists($message->local_path) ? $disk->get($message->local_path) : null;
+        return $disk->exists($message->media_path) ? $disk->get($message->media_path) : null;
     }
 
     /** Sem a cópia local não há o que enviar: falha com motivo (sem laço de reenvio) em vez de ficar esperando. */

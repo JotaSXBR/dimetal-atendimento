@@ -8,7 +8,6 @@ use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
@@ -37,7 +36,7 @@ class SendTicketMedia
             throw new InvalidArgumentException($info);
         }
 
-        $disk = Storage::disk('local');
+        $disk = Message::mediaDisk();
         $path = $disk->putFileAs('outbound/'.now()->format('Y/m'), $file, Str::uuid()->toString().'.'.$info['ext']);
 
         if ($path === false) {
@@ -49,7 +48,7 @@ class SendTicketMedia
                 'media_mime' => $info['mime'],
                 'media_name' => $voice ? 'audio.'.$info['ext'] : $info['name'],
                 'media_size' => $file->getSize(),
-                'local_path' => $path,
+                'media_path' => $path,
                 ...SendTicketMessage::quoteColumns($quoted),
             ]);
         } catch (Throwable $e) {
