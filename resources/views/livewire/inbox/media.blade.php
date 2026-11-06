@@ -71,7 +71,7 @@
             </span>
         </div>
         {{-- Um botão só: o navegador não aciona o app do computador; PDF ele mostra na aba, o resto só baixa (e o sistema abre com o app padrão). --}}
-        <div class="border-t border-line text-center text-sm font-medium text-accent">
+        <div class="border-t border-line text-center text-sm font-medium text-accent-content">
             @if ($mime === 'application/pdf')
                 <a href="{{ $url }}" target="_blank" rel="noopener" class="block py-1.5 hover:bg-canvas">Abrir</a>
             @else

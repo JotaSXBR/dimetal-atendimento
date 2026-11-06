@@ -10,7 +10,7 @@
 
 <span class="flex items-start gap-2">
     <span class="min-w-0 flex-1">
-        <span class="block truncate font-semibold text-accent">{{ $heading ?? ($quote['author'] ?? '') }}</span>
+        <span class="block truncate font-semibold text-accent-content">{{ $heading ?? ($quote['author'] ?? '') }}</span>
         <span class="flex items-center gap-1 text-ink-2">
             @if ($kind === 'image' || $kind === 'sticker')
                 <flux:icon.photo class="size-3.5 shrink-0" />

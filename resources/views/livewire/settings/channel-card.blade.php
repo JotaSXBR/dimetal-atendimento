@@ -2,19 +2,19 @@
     $status = $channel->status;
     $inactive = ! $channel->active;
     $tone = $inactive ? 'ink-3' : match ($status) {
-        \App\Enums\ChannelStatus::WORKING => 'accent',
+        \App\Enums\ChannelStatus::WORKING => 'ok',
         \App\Enums\ChannelStatus::FAILED => 'danger',
         \App\Enums\ChannelStatus::SCAN_QR_CODE, \App\Enums\ChannelStatus::PASSKEY_REQUIRED, \App\Enums\ChannelStatus::PASSKEY_CONFIRMATION_REQUIRED => 'warn',
         default => 'ink-3',
     };
     $dot = match ($tone) {
-        'accent' => 'bg-accent',
+        'ok' => 'bg-ok',
         'danger' => 'bg-danger',
         'warn' => 'bg-warn',
         default => 'bg-ink-3',
     };
     $badge = match ($tone) {
-        'accent' => 'bg-accent-soft text-accent-deep',
+        'ok' => 'bg-ok/10 text-ok',
         'danger' => 'bg-danger/10 text-danger',
         'warn' => 'bg-warn/10 text-warn',
         default => 'bg-canvas text-ink-2',
@@ -257,7 +257,7 @@
                         </div>
 
                         @if ($sentMessage)
-                            <p class="mt-3 font-mono text-xs text-accent-deep">{{ $sentMessage }}</p>
+                            <p class="mt-3 font-mono text-xs text-ok">{{ $sentMessage }}</p>
                         @endif
             @endif
             </div>

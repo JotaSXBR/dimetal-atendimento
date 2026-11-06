@@ -20,7 +20,7 @@
 
     <div role="status" aria-live="polite">
         @if ($recovered !== '')
-            <div class="{{ $edge }} flex items-center gap-3 bg-accent/10 px-5 py-2.5 text-sm text-accent-deep" data-alert="connection-up"
+            <div class="{{ $edge }} flex items-center gap-3 bg-ok/10 px-5 py-2.5 text-sm text-ok" data-alert="connection-up"
                 x-data x-init="setTimeout(() => $wire.dismissRecovered(), 10000)">
                 <flux:icon.check-circle variant="mini" class="size-4 shrink-0" />
                 <p class="min-w-0 flex-1"><strong>WhatsApp voltou</strong> · {{ $recovered }} está conectado de novo. As mensagens em espera já estão saindo.</p>

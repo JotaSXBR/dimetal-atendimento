@@ -70,7 +70,7 @@
                             <textarea x-model="text" rows="3" maxlength="4096" class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm" aria-label="Novo texto da mensagem"></textarea>
                             <div class="flex justify-end gap-2 text-xs">
                                 <button type="button" x-on:click="editing = false" class="text-ink-3 hover:text-ink">Cancelar</button>
-                                <button type="button" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false" class="font-semibold text-accent">Salvar</button>
+                                <button type="button" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false" class="font-semibold text-accent-content">Salvar</button>
                             </div>
                         </div>
                     @endcan
@@ -105,9 +105,9 @@
             @endif
 
             @if ($resend === 'safe')
-                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" class="mt-1 text-xs text-accent underline">Reenviar</button>
+                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" class="mt-1 text-xs text-accent-content underline">Reenviar</button>
             @elseif ($resend === 'confirm')
-                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent underline">Reenviar</button>
+                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent-content underline">Reenviar</button>
             @endif
 
             @if (! $readonly && ! $message->revoked_at)

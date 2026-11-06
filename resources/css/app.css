@@ -26,6 +26,7 @@
     --color-accent-soft: #fef9c3; /* yellow-100 */
     --color-accent-deep: #713f12; /* yellow-900 */
     --color-warn: #9a3412; /* orange-800: afastado do amarelo da marca e legível sobre warn/10 */
+    --color-warn-foreground: #ffffff;
     --color-danger: #b42318;
     --color-danger-foreground: #ffffff;
     --color-ink-foreground: #ffffff; /* texto sobre fundo `bg-ink` */
@@ -34,6 +35,10 @@
 
     --duration-base: 200ms;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* O botão `danger` do Flux usa red-500 (claro) e red-600 (escuro) com texto branco: sobem um degrau (red-600 e red-700 do Tailwind) para passar AA. */
+    --color-red-500: #dc2626;
+    --color-red-600: #b91c1c;
 
     --color-zinc-50: var(--color-stone-50);
     --color-zinc-100: var(--color-stone-100);
@@ -92,6 +97,7 @@ select:focus[data-flux-control] {
         --color-accent-soft: #422006;
         --color-accent-deep: #fde047; /* yellow-300 */
         --color-warn: #fb923c; /* orange-400 */
+        --color-warn-foreground: #1c1917;
         --color-danger: #f87171; /* red-400 */
         --color-danger-foreground: #1c1917;
         --color-ink-foreground: #1c1917;
@@ -108,5 +114,13 @@ select:focus[data-flux-control] {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+    }
+}
+
+/* Anel de foco do teclado: a cor de texto da marca (legível nos dois temas). Em `base` para os utilitários do Flux (`outline-hidden`) ainda vencerem. */
+@layer base {
+    :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+        outline: 2px solid var(--color-accent-content);
+        outline-offset: 2px;
     }
 }

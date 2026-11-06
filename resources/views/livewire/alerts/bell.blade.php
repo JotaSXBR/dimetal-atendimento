@@ -1,5 +1,5 @@
 @php
-    $tones = ['danger' => 'bg-danger/10 text-danger', 'warn' => 'bg-warn/10 text-warn', 'accent' => 'bg-accent/10 text-accent'];
+    $tones = ['danger' => 'bg-danger/10 text-danger', 'warn' => 'bg-warn/10 text-warn', 'accent' => 'bg-accent/10 text-accent-content'];
 @endphp
 
 <div class="relative" x-data="{ open: false, x: 0, y: 0 }" @keydown.escape.window="open = false" @click.outside="open = false">
@@ -16,7 +16,7 @@
         <div class="flex items-center justify-between border-b border-line px-3.5 py-3">
             <p class="text-sm font-bold">Alertas <span class="ms-1 text-xs font-normal text-ink-3">{{ $unread }} {{ $unread === 1 ? 'novo' : 'novos' }}</span></p>
             @if ($unread > 0)
-                <button type="button" wire:click="markAllRead" class="text-xs font-semibold text-accent hover:underline">Marcar todas como lidas</button>
+                <button type="button" wire:click="markAllRead" class="text-xs font-semibold text-accent-content hover:underline">Marcar todas como lidas</button>
             @endif
         </div>
 
