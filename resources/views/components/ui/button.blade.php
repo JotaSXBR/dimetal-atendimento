@@ -5,7 +5,7 @@
 
 @php
     $variants = [
-        'primary' => 'bg-accent text-white hover:bg-accent-deep',
+        'primary' => 'bg-accent text-accent-foreground hover:brightness-95',
         'secondary' => 'border border-line bg-surface text-ink hover:bg-canvas',
         'ghost' => 'text-ink-2 hover:bg-canvas',
     ];

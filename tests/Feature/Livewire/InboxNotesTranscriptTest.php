@@ -51,7 +51,7 @@ class InboxNotesTranscriptTest extends TestCase
             ->assertDontSeeHtml('data-testid="message-time"')
             ->html();
 
-        $this->assertStringContainsString('amber', $html);
+        $this->assertStringContainsString('border-warn/30', $html);
     }
 
     public function test_apagar_so_aparece_para_o_autor(): void

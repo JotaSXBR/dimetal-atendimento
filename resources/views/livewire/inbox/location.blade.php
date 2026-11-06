@@ -25,7 +25,7 @@
     </svg>
     <span class="block px-3 py-2">
         <span class="block truncate text-sm font-medium text-ink">{{ $message->media_name ?? 'Localização' }}</span>
-        <span class="mt-0.5 flex items-center gap-1 text-xs text-accent">
+        <span class="mt-0.5 flex items-center gap-1 text-xs text-accent-content">
             Abrir no Google Maps
             <flux:icon.arrow-top-right-on-square class="size-3.5" />
         </span>

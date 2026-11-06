@@ -34,7 +34,7 @@
                 <div class="mt-4 flex items-center gap-3">
                     <flux:button type="submit" variant="primary" size="sm">Salvar horário</flux:button>
                     @if (session('saved'))
-                        <p class="text-xs text-accent" role="status">{{ session('saved') }}</p>
+                        <p class="text-xs text-ok" role="status">{{ session('saved') }}</p>
                     @endif
                 </div>
             </form>
@@ -85,7 +85,7 @@
                 <div class="mt-4 flex items-center gap-3">
                     <flux:button type="submit" variant="primary" size="sm">Salvar prazo</flux:button>
                     @if (session('saved-sla'))
-                        <p class="text-xs text-accent" role="status">{{ session('saved-sla') }}</p>
+                        <p class="text-xs text-ok" role="status">{{ session('saved-sla') }}</p>
                     @endif
                 </div>
             </form>
@@ -111,7 +111,7 @@
                 <div class="mt-4 flex items-center gap-3">
                     <flux:button type="submit" variant="primary" size="sm">Salvar resposta</flux:button>
                     @if (session('saved-message'))
-                        <p class="text-xs text-accent" role="status">{{ session('saved-message') }}</p>
+                        <p class="text-xs text-ok" role="status">{{ session('saved-message') }}</p>
                     @endif
                 </div>
             </form>

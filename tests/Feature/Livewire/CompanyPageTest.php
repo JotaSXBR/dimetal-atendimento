@@ -100,10 +100,10 @@ class CompanyPageTest extends TestCase
         $this->page()->set($field, $value)->call('save')->assertHasErrors([$field]);
     }
 
-    public function test_o_menu_se_chama_atendimento(): void
+    public function test_o_menu_do_atendente_lista_a_fila(): void
     {
         $this->actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))->get('/inbox')
-            ->assertSee('Atendimento')
+            ->assertSee('Fila')
             ->assertDontSee('Fila do setor');
     }
 }

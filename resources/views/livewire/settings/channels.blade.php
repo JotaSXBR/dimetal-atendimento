@@ -40,7 +40,7 @@
             <div class="rounded-[14px] border border-line bg-surface p-5">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-sm font-semibold text-ink">Webhook de entrada</p>
-                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $receiving ? 'bg-accent-soft text-accent-deep' : 'bg-canvas text-ink-2' }}">
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $receiving ? 'bg-ok/10 text-ok' : 'bg-canvas text-ink-2' }}">
                         <span class="size-1.5 rounded-full {{ $receiving ? 'bg-accent' : 'bg-ink-3' }}"></span>
                         {{ $receiving ? 'recebendo' : 'sem eventos recentes' }}
                     </span>

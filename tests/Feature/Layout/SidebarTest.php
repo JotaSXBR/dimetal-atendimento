@@ -15,9 +15,29 @@ class SidebarTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function page(UserRole $role): string
+    private function page(UserRole $role, string $url = '/inbox'): string
     {
-        return (string) $this->actingAs(User::factory()->create(['role' => $role]))->get(route('inbox'))->assertOk()->getContent();
+        return (string) $this->actingAs(User::factory()->create(['role' => $role]))->get($url)->assertOk()->getContent();
+    }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    private function entry(string $html): ?\DOMElement
+    {
+        $node = $this->xpath($html)->query('//a[@data-test="settings-entry"]')?->item(0);
+
+        return $node instanceof \DOMElement ? $node : null;
+    }
+
+    private function linksTo(string $html, string $route): int
+    {
+        return $this->xpath($html)->query('//a[@href="'.route($route).'"]')->length;
     }
 
     public function test_a_raiz_leva_ao_atendimento(): void
@@ -34,34 +54,41 @@ class SidebarTest extends TestCase
         $this->assertStringNotContainsString('Platform', $html);
     }
 
-    public function test_atendente_so_ve_o_grupo_de_atendimento(): void
+    public function test_atendente_so_ve_o_trabalho_e_nenhuma_entrada_de_configuracao(): void
     {
         $html = $this->page(UserRole::ATENDENTE);
 
-        foreach (['Fila', 'Contatos', 'Histórico'] as $text) {
-            $this->assertStringContainsString($text, $html);
+        foreach (['inbox', 'contatos', 'historico'] as $route) {
+            $this->assertGreaterThan(0, $this->linksTo($html, $route), $route); // o logo também leva à Fila
         }
-        $this->assertStringNotContainsString('Acompanhamento', $html);
-        $this->assertStringNotContainsString('Configuração', $html);
+        $this->assertNull($this->entry($html));
+        $this->assertSame(0, $this->linksTo($html, 'relatorios'));
     }
 
-    public function test_supervisor_ve_acompanhamento_e_admin_ve_os_grupos_de_configuracao(): void
+    public function test_supervisor_ve_relatorios_e_uma_entrada_que_abre_respostas_rapidas(): void
     {
-        $supervisor = $this->page(UserRole::SUPERVISOR);
-        foreach (['Acompanhamento', 'Relatórios', 'Respostas rápidas', 'Usuários'] as $text) {
-            $this->assertStringContainsString($text, $supervisor);
-        }
-        foreach (['Auditoria', 'Anexos e retenção', 'Conexões'] as $text) {
-            $this->assertStringNotContainsString($text, $supervisor);
-        }
+        $html = $this->page(UserRole::SUPERVISOR);
 
-        $admin = $this->page(UserRole::ADMIN);
-        foreach (['Auditoria', 'Horário e SLA', 'Empresa e assinatura', 'Anexos e retenção', 'Conexões', 'Equipe'] as $text) {
-            $this->assertStringContainsString($text, $admin);
-        }
-        foreach (['Gestão', 'Pessoas e empresa', 'Dados e integrações'] as $text) {
-            $this->assertStringNotContainsString($text, $admin);
-        }
+        $this->assertSame(1, $this->linksTo($html, 'relatorios'));
+        $this->assertSame(0, $this->linksTo($html, 'auditoria'));
+        $this->assertSame(route('configuracoes.respostas'), $this->entry($html)?->getAttribute('href'));
+        $this->assertSame(0, $this->linksTo($html, 'configuracoes.etiquetas'));
+    }
+
+    public function test_admin_ve_auditoria_e_uma_entrada_que_abre_setores_sem_os_itens_de_configuracao(): void
+    {
+        $html = $this->page(UserRole::ADMIN);
+
+        $this->assertSame(1, $this->linksTo($html, 'auditoria'));
+        $this->assertSame(route('configuracoes.setores'), $this->entry($html)?->getAttribute('href'));
+        $this->assertSame(0, $this->linksTo($html, 'configuracoes.horario'));
+        $this->assertStringNotContainsString('Acompanhamento', $html);
+    }
+
+    public function test_configuracao_fica_ativa_so_nas_paginas_de_configuracao(): void
+    {
+        $this->assertFalse($this->entry($this->page(UserRole::ADMIN))?->hasAttribute('data-current'));
+        $this->assertTrue($this->entry($this->page(UserRole::ADMIN, '/configuracoes/setores'))?->hasAttribute('data-current'));
     }
 
     public function test_contadores_de_aguardando_e_sla_estourado(): void
@@ -72,18 +99,31 @@ class SidebarTest extends TestCase
             'status' => TicketStatus::AGUARDANDO, 'waiting_since' => now()->subHour(), 'sla_due_at' => now()->subMinutes(5),
         ]);
 
-        $html = $this->page(UserRole::ADMIN);
+        $xpath = $this->xpath($this->page(UserRole::ADMIN));
 
-        $this->assertStringContainsString('3 aguardando', $html);
-        $this->assertStringContainsString('1 com SLA estourado', $html);
+        $this->assertSame('3', trim($xpath->query('//*[@data-test="queue-badge"]')->item(0)?->textContent ?? ''));
+        $this->assertSame('1 com SLA estourado', $xpath->query('//*[@data-test="sla-badge"]')->item(0)?->getAttribute('aria-label'));
     }
 
-    public function test_sem_pendencia_nao_ha_contador(): void
+    public function test_sla_estourado_sem_ninguem_aguardando_ainda_mostra_o_selo_vermelho(): void
     {
-        $html = $this->page(UserRole::ADMIN);
+        $channel = Channel::factory()->connected()->create();
+        Ticket::factory()->for($channel)->create([
+            'status' => TicketStatus::EM_ATENDIMENTO, 'waiting_since' => now()->subHour(), 'sla_due_at' => now()->subMinutes(5),
+        ]);
 
-        $this->assertDoesNotMatchRegularExpression('/\d+ aguardando/', $html);
-        $this->assertStringNotContainsString('com SLA estourado', $html);
+        $xpath = $this->xpath($this->page(UserRole::ADMIN));
+
+        $this->assertSame(1, $xpath->query('//*[@data-test="sla-badge"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-test="queue-badge"]')->length);
+    }
+
+    public function test_sem_pendencia_nao_ha_selo(): void
+    {
+        $xpath = $this->xpath($this->page(UserRole::ADMIN));
+
+        $this->assertSame(0, $xpath->query('//*[@data-test="queue-badge"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-test="sla-badge"]')->length);
     }
 
     public function test_aviso_quando_nenhum_canal_esta_conectado(): void

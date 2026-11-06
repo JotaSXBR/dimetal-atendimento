@@ -6,7 +6,7 @@
     <body class="min-h-screen bg-canvas text-ink antialiased">
         <div class="flex min-h-svh flex-col items-center justify-center gap-8 p-6 md:p-10">
             <a href="{{ route('home') }}" class="flex items-center gap-2.5" wire:navigate>
-                <span class="flex size-8 items-center justify-center rounded-[10px] bg-accent text-sm font-semibold text-white">
+                <span class="flex size-8 items-center justify-center rounded-[10px] bg-accent text-sm font-semibold text-accent-foreground">
                     D
                 </span>
                 <span class="text-sm font-semibold tracking-tight">Dimetal Distribuidora</span>

@@ -6,7 +6,6 @@
         \App\Enums\TicketStatus::EM_ATENDIMENTO => 'green',
         default => 'zinc',
     };
-    $tabs = ['todos' => 'Todos', 'pendentes' => 'Pendentes', 'aguardando' => 'Aguardando', 'meus' => 'Meus', 'encerrados' => 'Encerrados'];
 @endphp
 
 <div
@@ -24,18 +23,29 @@
                 <flux:button size="sm" variant="primary" icon="plus" x-on:click="$dispatch('start-conversation')">Nova conversa</flux:button>
             </div>
 
-            <div class="mt-3 flex gap-1" role="tablist">
-                @foreach ($tabs as $key => $label)
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
-                        wire:click="$set('tab', '{{ $key }}')"
-                        class="rounded-full px-3 py-1 text-xs font-medium {{ $tab === $key ? 'bg-ink text-white' : 'text-ink-2 hover:bg-canvas' }}"
-                    >
-                        {{ $label }}@if (! empty($tabCounts[$key])) <span class="font-mono opacity-70">{{ $tabCounts[$key] }}</span>@endif
-                    </button>
-                @endforeach
+            {{-- Três visões do dia a dia sempre à mão; as duas raras (triagem do bot e histórico recente) ficam no menu "Mais". --}}
+            @php
+                $more = ['pendentes' => 'Pendentes', 'encerrados' => 'Encerrados'];
+                $moreActive = array_key_exists($tab, $more);
+            @endphp
+            <div class="mt-3 flex items-center gap-2">
+                <flux:radio.group wire:model.live="tab" variant="segmented" size="sm" class="min-w-0 flex-1" aria-label="Visão da fila">
+                    <flux:radio value="todos" data-testid="tab-todos" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Todos</flux:radio>
+                    <flux:radio value="aguardando" data-testid="tab-aguardando" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Aguardando @if (! empty($tabCounts['aguardando']))<span class="font-mono opacity-70">{{ $tabCounts['aguardando'] }}</span>@endif</flux:radio>
+                    <flux:radio value="meus" data-testid="tab-meus" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Meus @if (! empty($tabCounts['meus']))<span class="font-mono opacity-70">{{ $tabCounts['meus'] }}</span>@endif</flux:radio>
+                </flux:radio.group>
+
+                <flux:dropdown position="bottom" align="end">
+                    <flux:button size="sm" :variant="$moreActive ? 'filled' : 'subtle'" icon-trailing="chevron-down" class="shrink-0 px-2! text-xs!" data-testid="tab-more" aria-label="Mais visões da fila">
+                        {{ $moreActive ? $more[$tab] : 'Mais' }}
+                    </flux:button>
+
+                    <flux:menu>
+                        @foreach ($more as $key => $label)
+                            <flux:menu.item wire:click="$set('tab', '{{ $key }}')" :icon="$tab === $key ? 'check' : null" :suffix="empty($tabCounts[$key]) ? null : (string) $tabCounts[$key]" data-testid="tab-{{ $key }}">{{ $label }}</flux:menu.item>
+                        @endforeach
+                    </flux:menu>
+                </flux:dropdown>
             </div>
 
             @if ($tags->isNotEmpty())
@@ -75,9 +85,9 @@
                     <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket encerrado nos últimos 7 dias.</p>
                 @endif
 
-                <p class="p-4 text-center text-xs"><a href="{{ route('historico') }}" wire:navigate class="text-accent underline">Busca completa</a></p>
+                <p class="p-4 text-center text-xs"><a href="{{ route('historico') }}" wire:navigate class="text-accent-content underline">Busca completa</a></p>
             @else
-            @foreach ([['Pendente', $pending, 'text-ink-3'], ['Aguardando', $waiting, 'text-warn'], ['Em atendimento', $active, 'text-accent']] as [$heading, $group, $tone])
+            @foreach ([['Pendente', $pending, 'text-ink-3'], ['Aguardando', $waiting, 'text-warn'], ['Em atendimento', $active, 'text-accent-content']] as [$heading, $group, $tone])
                 @if ($group->isNotEmpty())
                     <p class="px-4 pt-4 pb-1 font-mono text-[10px] font-semibold tracking-wider uppercase {{ $tone }}">
                         {{ $heading }} · {{ $group->count() }}
@@ -100,7 +110,7 @@
                                     </span>
                                 </span>
                                 <span class="mt-0.5 block truncate text-xs text-ink-2">
-                                    <span x-cloak x-show="$store.clientPresence.label({{ $item->id }})" x-text="$store.clientPresence.label({{ $item->id }})" class="font-medium text-accent"></span>
+                                    <span x-cloak x-show="$store.clientPresence.label({{ $item->id }})" x-text="$store.clientPresence.label({{ $item->id }})" class="font-medium text-accent-content"></span>
                                     <span x-show="! $store.clientPresence.label({{ $item->id }})">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
                                 </span>
                                 @if ($item->tags->isNotEmpty())
@@ -260,7 +270,7 @@
 
             @if ($previous)
                 <div class="border-b border-line px-4 py-1.5 text-xs">
-                    <button type="button" wire:click="goBack" class="font-semibold text-accent hover:underline">← Voltar ao ticket anterior ({{ $previous->protocol ?? '#'.$previous->id }})</button>
+                    <button type="button" wire:click="goBack" class="font-semibold text-accent-content hover:underline">← Voltar ao ticket anterior ({{ $previous->protocol ?? '#'.$previous->id }})</button>
                 </div>
             @endif
 
@@ -271,7 +281,7 @@
             <div class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-4 py-4">
                 {{-- Primeiro filho de um `flex-col-reverse` fica no fim da conversa: o "digitando…" do cliente, como uma bolha dele. --}}
                 <div x-cloak x-show="$store.clientPresence.label({{ $ticket->id }})" class="flex justify-start pt-2" role="status" aria-live="polite">
-                    <div class="animate-pulse rounded-xl bg-surface px-3 py-2 text-sm font-medium text-accent" x-text="$store.clientPresence.label({{ $ticket->id }})"></div>
+                    <div class="animate-pulse rounded-xl bg-surface px-3 py-2 text-sm font-medium text-accent-content" x-text="$store.clientPresence.label({{ $ticket->id }})"></div>
                 </div>
                 <livewire:inbox.transcript :ticket-id="$ticket->id" :key="'transcript-'.$ticket->id" />
             </div>
@@ -283,7 +293,7 @@
                     x-data="composerMode($wire, {{ $ticket->id }}, {{ auth()->id() }})"
                     x-on:keydown.alt.p.window.prevent="toggle()"
                     x-on:note-from-message.window="addToNote($event.detail)"
-                    x-bind:class="mode === 'note' ? 'border-amber-300 bg-amber-50' : 'border-line bg-surface'"
+                    x-bind:class="mode === 'note' ? 'border-warn/30 bg-warn/10' : 'border-line bg-surface'"
                 @endif
                 class="border-t p-3 {{ $canReply ? '' : 'border-line bg-surface' }}"
             >
@@ -306,9 +316,9 @@
                     <div class="mb-2 flex flex-wrap items-center gap-2">
                         <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
                             <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
-                            <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-amber-200 text-amber-900 shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
+                            <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
                         </div>
-                        <p x-show="mode === 'note'" x-cloak class="text-xs text-amber-800" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
+                        <p x-show="mode === 'note'" x-cloak class="text-xs text-warn" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
                     </div>
 
                     <div
@@ -351,14 +361,14 @@
                                 <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
                                 <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
                                 <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()">Descartar</button>
-                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-white" x-on:click="stop()">Parar</button>
+                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground" x-on:click="stop()">Parar</button>
                             </div>
 
                             <div x-show="phase === 'preview'" x-cloak class="flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
                                 <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
                                 <button type="button" class="text-sm text-ink-2 hover:text-ink" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</button>
                                 <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()" x-bind:disabled="sending">Descartar</button>
-                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-white disabled:opacity-50" x-on:click="send()" x-bind:disabled="sending">Enviar</button>
+                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground disabled:opacity-50" x-on:click="send()" x-bind:disabled="sending">Enviar</button>
                             </div>
                         </div>
 
@@ -399,7 +409,7 @@
                                 @enderror
                             </div>
                             <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-show="mode === 'reply'" x-bind:disabled="uploading > 0" />
-                            <button type="submit" x-show="mode === 'note'" x-cloak class="rounded-md bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50" x-bind:disabled="uploading > 0">Salvar nota</button>
+                            <button type="submit" x-show="mode === 'note'" x-cloak class="rounded-md bg-warn px-3 py-2 text-sm font-medium text-warn-foreground hover:brightness-95 disabled:opacity-50" x-bind:disabled="uploading > 0">Salvar nota</button>
                         </form>
                     </div>
                 @elseif ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)

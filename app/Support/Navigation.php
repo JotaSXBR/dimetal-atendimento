@@ -5,7 +5,7 @@ namespace App\Support;
 use App\Models\User;
 
 /**
- * A lista única do que o menu mostra. A sidebar e a linha de irmãos das páginas de configuração leem daqui; o portão
+ * A lista única do que o menu mostra. A sidebar e a navegação das páginas de configuração leem daqui; o portão
  * de cada rota (`can:*` em `routes/web.php`) continua sendo a barreira real, e esta lista só decide o que aparece.
  */
 class Navigation
@@ -54,39 +54,59 @@ class Navigation
         return null;
     }
 
-    /**
-     * Seção → grupo (`''` quando a seção não tem grupos) → itens que o usuário pode abrir. Seção sem item visível não aparece.
-     *
-     * @return array<string, array<string, list<NavItem>>>
-     */
-    public function tree(User $user): array
+    /** @return list<NavItem> */
+    private function visible(User $user): array
     {
-        $tree = [];
+        return array_values(array_filter(self::items(), fn (NavItem $item): bool => $item->gate === null || $user->can($item->gate)));
+    }
 
-        foreach (self::items() as $item) {
-            if ($item->gate === null || $user->can($item->gate)) {
-                $tree[$item->section][$item->group][] = $item;
-            }
-        }
-
-        return $tree;
+    /** @return list<NavItem> */
+    private function settingsItems(User $user): array
+    {
+        return array_values(array_filter($this->visible($user), fn (NavItem $item): bool => $item->section === self::SECTION_CONFIGURACAO));
     }
 
     /**
-     * Os outros itens do grupo que o usuário pode abrir, incluindo o atual; vazio quando sobra menos de dois.
+     * Os destinos fora de Configuração, que a sidebar lista direto.
      *
      * @return list<NavItem>
      */
-    public function siblings(User $user, string $routeName): array
+    public function primary(User $user): array
     {
-        $current = $this->find($routeName);
+        return array_values(array_filter($this->visible($user), fn (NavItem $item): bool => $item->section !== self::SECTION_CONFIGURACAO));
+    }
 
-        if ($current === null || $current->group === '') {
-            return [];
+    /**
+     * Grupo → itens de Configuração que o usuário pode abrir (a navegação do hub).
+     *
+     * @return array<string, list<NavItem>>
+     */
+    public function settingsGroups(User $user): array
+    {
+        $groups = [];
+
+        foreach ($this->settingsItems($user) as $item) {
+            $groups[$item->group][] = $item;
         }
 
-        $items = $this->tree($user)[$current->section][$current->group] ?? [];
+        return $groups;
+    }
 
-        return count($items) < 2 ? [] : $items;
+    /** Destino do item "Configuração" do menu: o primeiro que o usuário pode abrir; `null` se nenhum. */
+    public function settingsEntry(User $user): ?NavItem
+    {
+        return $this->settingsItems($user)[0] ?? null;
+    }
+
+    /** A rota atual é de Configuração (inclui `automacao.editar` e o retorno do Google, que não têm item próprio). */
+    public function settingsActive(User $user): bool
+    {
+        foreach ($this->settingsItems($user) as $item) {
+            if (request()->routeIs($item->match)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

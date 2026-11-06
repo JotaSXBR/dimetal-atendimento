@@ -36,9 +36,9 @@
                             <a href="{{ route('historico', ['ticketId' => $past->id]) }}" wire:navigate class="font-mono text-ink underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @elseif ($mine && ! $readonly)
                             {{-- Só a Fila tem `select`; no Histórico (somente leitura) o pai é outro componente. --}}
-                            <button type="button" wire:click="$parent.select({{ $past->id }})" class="font-mono text-accent underline-offset-2 hover:underline">{{ $past->protocol }}</button>
+                            <button type="button" wire:click="$parent.select({{ $past->id }})" class="font-mono text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</button>
                         @elseif ($mine)
-                            <a href="{{ route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="font-mono text-accent underline-offset-2 hover:underline">{{ $past->protocol }}</a>
+                            <a href="{{ route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="font-mono text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @else
                             <span class="font-mono text-ink">{{ $past->protocol }}</span>
                         @endif
@@ -121,7 +121,7 @@
                 <li class="text-xs" wire:key="history-{{ $past->id }}">
                     <p class="font-mono text-ink">
                         @if (in_array($past->id, $openable, true))
-                            <a href="{{ $past->status === \App\Enums\TicketStatus::ENCERRADO ? route('historico', ['ticketId' => $past->id]) : route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="text-accent underline-offset-2 hover:underline">{{ $past->protocol }}</a>
+                            <a href="{{ $past->status === \App\Enums\TicketStatus::ENCERRADO ? route('historico', ['ticketId' => $past->id]) : route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @else
                             {{ $past->protocol }}
                         @endif
