@@ -26,4 +26,15 @@ class AppearanceTest extends TestCase
         $this->assertNotFalse($assets);
         $this->assertLessThan($assets, $apply);
     }
+
+    public function test_o_seletor_de_tema_esta_nos_dois_menus_do_usuario(): void
+    {
+        $html = $this->page();
+
+        $this->assertSame(2, substr_count($html, 'data-test="appearance-switcher"'));
+        foreach (['light' => 'Claro', 'dark' => 'Escuro', 'system' => 'Sistema'] as $value => $label) {
+            $this->assertStringContainsString('value="'.$value.'"', $html);
+            $this->assertStringContainsString($label, $html);
+        }
+    }
 }

@@ -22,6 +22,11 @@
             <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
                 Minha conta
             </flux:menu.item>
+        </flux:menu.radio.group>
+        <flux:menu.separator />
+        <x-appearance-switcher />
+        <flux:menu.separator />
+        <flux:menu.radio.group>
             <form method="POST" action="{{ route('logout') }}" class="w-full">
                 @csrf
                 <flux:menu.item

@@ -89,6 +89,10 @@
 
                     <flux:menu.separator />
 
+                    <x-appearance-switcher />
+
+                    <flux:menu.separator />
+
                     <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf
                         <flux:menu.item
