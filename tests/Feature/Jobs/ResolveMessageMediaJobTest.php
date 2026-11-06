@@ -14,6 +14,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ResolveMessageMediaJobTest extends TestCase
@@ -30,7 +31,8 @@ class ResolveMessageMediaJobTest extends TestCase
     {
         parent::setUp();
 
-        config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
+        config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key', 'media.disk' => 'media']);
+        Storage::fake('media');
 
         $ticket = Ticket::factory()
             ->for(Contact::factory()->create(['wa_id' => self::PEER]))
@@ -60,7 +62,12 @@ class ResolveMessageMediaJobTest extends TestCase
                 return Http::response(['id' => 'x', 'media' => $media]);
             }
 
-            return Http::response('', in_array($path, $stored, true) ? 206 : 404);
+            if (! in_array($path, $stored, true)) {
+                return Http::response('', 404);
+            }
+
+            // A busca do arquivo pede só o primeiro byte (206); a cópia lê o arquivo inteiro (200).
+            return $request->hasHeader('Range') ? Http::response('C', 206) : Http::response('CONTEUDO', 200);
         });
     }
 
@@ -169,5 +176,62 @@ class ResolveMessageMediaJobTest extends TestCase
         $this->expectException(\RuntimeException::class);
 
         (new ResolveMessageMediaJob($this->message->id))->handle();
+    }
+
+    public function test_copia_o_arquivo_do_waha_para_o_disco_antes_de_avisar_a_tela(): void
+    {
+        $pathAtTheEvent = null;
+        Event::listen(MessageStatusChanged::class, function (MessageStatusChanged $event) use (&$pathAtTheEvent): void {
+            $pathAtTheEvent = Message::query()->find($this->message->id)?->media_path;
+        });
+        $this->fakeWaha(['filename' => 'IMG1.jpeg', 'mimetype' => 'image/jpeg'], ['/api/files/main/IMG1.jpeg']);
+
+        (new ResolveMessageMediaJob($this->message->id))->handle();
+
+        $fresh = $this->message->fresh();
+        $this->assertMatchesRegularExpression('#^inbound/'.$this->message->channel_id.'/\d{4}/\d{2}/[0-9a-f-]{36}\.jpeg$#', (string) $fresh?->media_path);
+        $this->assertSame('CONTEUDO', Storage::disk('media')->get((string) $fresh?->media_path));
+        $this->assertSame(8, $fresh?->media_size);
+        $this->assertSame($fresh?->media_path, $pathAtTheEvent, 'a tela só é avisada depois de a cópia existir');
+    }
+
+    public function test_rodar_de_novo_nao_copia_nem_chama_o_waha_outra_vez(): void
+    {
+        $this->fakeWaha(['filename' => 'IMG1.jpeg', 'mimetype' => 'image/jpeg'], ['/api/files/main/IMG1.jpeg']);
+        (new ResolveMessageMediaJob($this->message->id))->handle();
+        $path = $this->message->fresh()?->media_path;
+        $requests = count(Http::recorded());
+
+        (new ResolveMessageMediaJob($this->message->id))->handle();
+
+        $this->assertSame($path, $this->message->fresh()?->media_path);
+        $this->assertCount(1, Storage::disk('media')->allFiles());
+        $this->assertCount($requests, Http::recorded());
+    }
+
+    public function test_falha_ao_ler_o_arquivo_relanca_e_deixa_a_mensagem_abrindo_pelo_waha(): void
+    {
+        Http::fake(function (Request $request) {
+            $path = rawurldecode((string) parse_url($request->url(), PHP_URL_PATH));
+
+            if (str_contains($path, '/chats/')) {
+                return Http::response(['id' => 'x', 'media' => ['filename' => 'IMG1.jpeg', 'mimetype' => 'image/jpeg']]);
+            }
+
+            return $request->hasHeader('Range') ? Http::response('C', 206) : Http::response('erro', 500);
+        });
+        $retried = false;
+
+        try {
+            (new ResolveMessageMediaJob($this->message->id))->handle();
+        } catch (\RuntimeException) {
+            $retried = true;
+        }
+
+        $this->assertTrue($retried, 'a falha de cópia precisa relançar para o job tentar de novo');
+        $fresh = $this->message->fresh();
+        $this->assertSame('IMG1.jpeg', $fresh?->media_ref);
+        $this->assertNull($fresh?->media_path);
+        $this->assertSame([], Storage::disk('media')->allFiles());
     }
 }
