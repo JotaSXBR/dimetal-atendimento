@@ -2,7 +2,6 @@
 
 namespace App\Services\Inbox;
 
-use App\Enums\ClosedReason;
 use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
@@ -55,6 +54,7 @@ class IngestMessage
         }
 
         $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
+        app(FillContactName::class)->queueFor($contact, $channel);
         $mode = IngestMode::of($event);
 
         // Já há ticket aberto do contato que começou antes desta mensagem: ela pertence a ele, não ao histórico.
@@ -227,7 +227,7 @@ class IngestMessage
     private function ticketFor(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode, CarbonInterface $freshAt, CarbonInterface $arrivedAt): Ticket
     {
         $ticket = $mode === IngestMode::IMPORTED
-            ? $this->importedTicketFor($channel, $contact, $incoming)
+            ? app(ImportedTicket::class)($channel, $contact, $incoming)
             : $this->openTicketFor($channel, $contact, $incoming, $mode, $freshAt, $arrivedAt);
 
         if ($incoming->fromMe && $ticket->status === TicketStatus::PENDENTE) {
@@ -245,35 +245,6 @@ class IngestMessage
             ->where('channel_id', $channel->id)
             ->where('opened_at', '<=', $incoming->sentAt)
             ->exists();
-    }
-
-    /** O ticket encerrado de importação do contato neste canal (um só), com a abertura e o fechamento acompanhando as mensagens. */
-    private function importedTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming): Ticket
-    {
-        DB::select('select pg_advisory_xact_lock(hashtext(?))', ['ticket:'.$contact->id.':'.$channel->id]);
-
-        $ticket = Ticket::query()
-            ->where('contact_id', $contact->id)
-            ->where('channel_id', $channel->id)
-            ->where('closed_reason', ClosedReason::IMPORTADO->value)
-            ->first();
-
-        if ($ticket === null) {
-            return Ticket::create([
-                'contact_id' => $contact->id,
-                'channel_id' => $channel->id,
-                'status' => TicketStatus::ENCERRADO,
-                'opened_at' => $incoming->sentAt,
-                'closed_at' => $incoming->sentAt,
-                'closed_reason' => ClosedReason::IMPORTADO,
-            ]);
-        }
-
-        $ticket->opened_at = $ticket->opened_at->min($incoming->sentAt);
-        $ticket->closed_at = $ticket->closed_at === null ? $incoming->sentAt : $ticket->closed_at->max($incoming->sentAt);
-        $ticket->save();
-
-        return $ticket;
     }
 
     private function openTicketFor(Channel $channel, Contact $contact, IncomingMessage $incoming, IngestMode $mode, CarbonInterface $freshAt, CarbonInterface $arrivedAt): Ticket

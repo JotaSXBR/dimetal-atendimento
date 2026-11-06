@@ -13,6 +13,7 @@ use App\Models\TicketEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
@@ -37,6 +38,9 @@ class InboxReactTest extends TestCase
 
         config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
         Http::fake(fn () => Http::response([], $this->wahaStatus));
+        // Os jobs de apoio (visto, presença offline) não são o objeto deste teste e, com a fila `sync` do phpunit.xml, rodariam na hora e
+        // chegariam ao WAHA falso; no CI (fila Redis) eles só ficam na fila. Faz o teste valer igual nos dois.
+        Queue::fake();
 
         $this->me = User::factory()->create(['role' => UserRole::ATENDENTE]);
         RateLimiter::clear('message-action:'.$this->me->id);
