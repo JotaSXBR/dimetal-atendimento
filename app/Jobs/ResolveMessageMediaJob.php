@@ -107,10 +107,18 @@ class ResolveMessageMediaJob implements ShouldQueue
         $disk = Message::mediaDisk();
 
         // O disco S3 tem `throw=false` e devolveria só `false`; o driver por baixo lança o motivo, que vai para o log.
+        // O SDK do S3 rebobina o corpo para assinar o envio, e o stream do WAHA não volta atrás: passa por um temporário
+        // (em memória até 5 MB, depois em disco).
+        $temp = fopen('php://temp/maxmemory:5242880', 'w+b') ?: throw new RuntimeException('Não foi possível abrir o arquivo temporário da cópia.');
+        stream_copy_to_stream(StreamWrapper::getResource($response->toPsrResponse()->getBody()), $temp);
+        rewind($temp);
+
         try {
-            $disk->getDriver()->writeStream($key, StreamWrapper::getResource($response->toPsrResponse()->getBody()));
+            $disk->getDriver()->writeStream($key, $temp);
         } catch (FilesystemException $e) {
             throw new RuntimeException('Não foi possível guardar a mídia da mensagem '.$message->id.' no disco: '.$e->getMessage(), 0, $e);
+        } finally {
+            fclose($temp);
         }
 
         $message->update(['media_path' => $key, 'media_size' => $disk->size($key)]);

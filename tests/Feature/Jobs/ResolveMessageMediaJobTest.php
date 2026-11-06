@@ -9,12 +9,17 @@ use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Ticket;
+use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Psr7\NoSeekStream;
+use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\Utils;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\FileAttributes;
 use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
@@ -257,5 +262,38 @@ class ResolveMessageMediaJobTest extends TestCase
         $this->assertNotNull($caught);
         $this->assertInstanceOf(FilesystemException::class, $caught->getPrevious(), 'o motivo do driver precisa ir junto, senão o log não diz por que falhou');
         $this->assertNull($this->message->fresh()?->media_path);
+    }
+
+    public function test_grava_com_stream_rebobinavel_mesmo_quando_o_corpo_do_waha_nao_e(): void
+    {
+        Http::fake(function (Request $request) {
+            $path = rawurldecode((string) parse_url($request->url(), PHP_URL_PATH));
+
+            if (str_contains($path, '/chats/')) {
+                return Http::response(['id' => 'x', 'media' => ['filename' => 'IMG1.jpeg', 'mimetype' => 'image/jpeg']]);
+            }
+
+            if ($request->hasHeader('Range')) {
+                return Http::response('C', 206);
+            }
+
+            // O corpo em stream do WAHA não volta atrás; o SDK do S3 precisa rebobinar para assinar o envio.
+            return Create::promiseFor(new Response(200, [], new NoSeekStream(Utils::streamFor('CONTEUDO'))));
+        });
+        $received = null;
+        $adapter = \Mockery::mock(FilesystemAdapter::class);
+        $adapter->shouldReceive('writeStream')->once()->andReturnUsing(function (string $path, $contents) use (&$received): void {
+            if (@fseek($contents, 0) !== 0) {
+                throw UnableToWriteFile::atLocation($path, 'Stream is not seekable');
+            }
+            $received = stream_get_contents($contents);
+        });
+        $adapter->shouldReceive('fileSize')->andReturn(new FileAttributes('x', 8));
+        Storage::set('media', new \Illuminate\Filesystem\FilesystemAdapter(new Filesystem($adapter), $adapter, ['throw' => false]));
+
+        (new ResolveMessageMediaJob($this->message->id))->handle();
+
+        $this->assertSame('CONTEUDO', $received);
+        $this->assertNotNull($this->message->fresh()?->media_path);
     }
 }
