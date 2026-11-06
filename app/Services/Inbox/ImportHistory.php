@@ -4,6 +4,7 @@ namespace App\Services\Inbox;
 
 use App\Models\Channel;
 use App\Models\WahaEvent;
+use App\Services\Waha\WahaChat;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaMessages;
 use Carbon\CarbonImmutable;
@@ -35,6 +36,9 @@ class ImportHistory
     /** `true` quando a leitura parou no teto de mensagens (legível depois da chamada). */
     public bool $truncated = false;
 
+    /** @var array<string, int> Mensagens lidas e ignoradas na rodada, por motivo. */
+    private array $ignored = [];
+
     public function __construct(private readonly RecoverMessages $recover, private readonly ResolveLidPhone $resolveLid) {}
 
     public function __invoke(Channel $channel, ?CarbonImmutable $deadline = null): RecoveryResult
@@ -48,6 +52,7 @@ class ImportHistory
         $this->open = 0;
         $this->complete = false;
         $this->truncated = false;
+        $this->ignored = [];
 
         foreach ($this->chats($channel, $from, $to) as $peer => $items) {
             if ($deadline !== null && CarbonImmutable::now()->gte($deadline)) {
@@ -84,7 +89,7 @@ class ImportHistory
     {
         $this->open = count($openTickets);
 
-        return new RecoveryResult($messages, count($tickets));
+        return new RecoveryResult($messages, count($tickets), $this->ignored);
     }
 
     /**
@@ -109,6 +114,8 @@ class ImportHistory
 
             if ($incoming !== null) {
                 $chats[$incoming->peer][] = [$data, $incoming];
+            } else {
+                $this->countIgnored($data);
             }
         }
 
@@ -117,5 +124,13 @@ class ImportHistory
         }
 
         return $chats;
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function countIgnored(array $data): void
+    {
+        $chat = ($data['fromMe'] ?? false) ? WahaChat::sentTo($data) : ($data['from'] ?? null);
+        $reason = (is_string($chat) ? WahaChat::ignoredKind($chat) : null) ?? 'sem conteúdo';
+        $this->ignored[$reason] = ($this->ignored[$reason] ?? 0) + 1;
     }
 }

@@ -20,6 +20,6 @@ abstract class AlertNotification extends Notification
         return ['database', 'broadcast'];
     }
 
-    /** @return array<string, int|string> */
+    /** @return array<string, int|string|array<string, int>> */
     abstract public function toArray(object $notifiable): array;
 }

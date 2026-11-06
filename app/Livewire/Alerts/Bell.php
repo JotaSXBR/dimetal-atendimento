@@ -119,7 +119,24 @@ class Bell extends Component
         $detail = $open > 0 ? sprintf('%s · %d aguardando resposta', $detail, $open) : $detail;
 
         $limit = $data['limit'] ?? null;
+        $detail = is_int($limit) ? sprintf('%s · limitada a %s mensagens', $detail, number_format($limit, 0, ',', '.')) : $detail;
 
-        return is_int($limit) ? sprintf('%s · limitada a %s mensagens', $detail, number_format($limit, 0, ',', '.')) : $detail;
+        return $this->withIgnored($detail, $data['ignored'] ?? null);
+    }
+
+    /** "ignoradas: 3 de grupo, 1 sem conteúdo": o que a importação leu e não virou conversa. */
+    private function withIgnored(string $detail, mixed $ignored): string
+    {
+        if (! is_array($ignored) || $ignored === []) {
+            return $detail;
+        }
+
+        $parts = [];
+
+        foreach ($ignored as $reason => $count) {
+            $parts[] = sprintf('%d %s', is_int($count) ? $count : 0, $reason === 'grupo' || $reason === 'transmissão' ? 'de '.$reason : $reason);
+        }
+
+        return $detail.' · ignoradas: '.implode(', ', $parts);
     }
 }
