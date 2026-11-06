@@ -25,58 +25,6 @@ class NavigationTest extends TestCase
         return User::factory()->create(['role' => $role]);
     }
 
-    /** @return array<string, array<string, list<string>>> */
-    private function labels(UserRole $role): array
-    {
-        $out = [];
-        foreach ($this->nav()->tree($this->user($role)) as $section => $groups) {
-            foreach ($groups as $group => $items) {
-                $out[$section][$group] = array_map(fn (NavItem $item): string => $item->label, $items);
-            }
-        }
-
-        return $out;
-    }
-
-    public function test_atendente_ve_so_a_secao_atendimento(): void
-    {
-        $this->assertSame(['Atendimento' => ['' => ['Fila', 'Contatos', 'Histórico']]], $this->labels(UserRole::ATENDENTE));
-    }
-
-    public function test_supervisor_ve_relatorios_e_dois_itens_de_configuracao(): void
-    {
-        $this->assertSame([
-            'Atendimento' => ['' => ['Fila', 'Contatos', 'Histórico']],
-            'Acompanhamento' => ['' => ['Relatórios']],
-            'Configuração' => ['Atendimento' => ['Respostas rápidas', 'Etiquetas', 'Automação'], 'Equipe' => ['Usuários']],
-        ], $this->labels(UserRole::SUPERVISOR));
-    }
-
-    public function test_admin_ve_tudo_na_ordem_do_design(): void
-    {
-        $this->assertSame([
-            'Atendimento' => ['' => ['Fila', 'Contatos', 'Histórico']],
-            'Acompanhamento' => ['' => ['Relatórios', 'Auditoria']],
-            'Configuração' => [
-                'Atendimento' => ['Setores', 'Horário e SLA', 'Respostas rápidas', 'Etiquetas', 'Automação'],
-                'Equipe' => ['Usuários'],
-                'Conexões' => ['Canais', 'Google Contatos'],
-                'Empresa' => ['Empresa e assinatura', 'Anexos e retenção'],
-            ],
-        ], $this->labels(UserRole::ADMIN));
-    }
-
-    public function test_irmaos_so_dentro_do_grupo_e_ocultos_com_menos_de_dois(): void
-    {
-        $names = fn (array $items): array => array_map(fn (NavItem $item): string => $item->label, $items);
-
-        $this->assertSame(['Setores', 'Horário e SLA', 'Respostas rápidas', 'Etiquetas', 'Automação'], $names($this->nav()->siblings($this->user(UserRole::ADMIN), 'configuracoes.setores')));
-        $this->assertSame(['Respostas rápidas', 'Etiquetas', 'Automação'], $names($this->nav()->siblings($this->user(UserRole::SUPERVISOR), 'configuracoes.respostas')));
-        $this->assertSame([], $this->nav()->siblings($this->user(UserRole::SUPERVISOR), 'configuracoes.usuarios'));
-        $this->assertSame([], $this->nav()->siblings($this->user(UserRole::ADMIN), 'configuracoes.usuarios'));
-        $this->assertSame([], $this->nav()->siblings($this->user(UserRole::ADMIN), 'rota.que.nao.existe'));
-    }
-
     public function test_toda_rota_da_lista_existe_e_o_portao_confere_com_o_middleware(): void
     {
         foreach (Navigation::items() as $item) {

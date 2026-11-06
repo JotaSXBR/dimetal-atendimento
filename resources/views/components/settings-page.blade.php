@@ -2,9 +2,7 @@
 
 {{-- A rota vem do chamador: numa ação do Livewire a requisição é `livewire/update`, e o nome da rota atual não serve. --}}
 @php
-    $navigation = app(\App\Support\Navigation::class);
-    $current = $navigation->find($route);
-    $siblings = $current === null ? [] : $navigation->siblings(auth()->user(), $route);
+    $groups = app(\App\Support\Navigation::class)->settingsGroups(auth()->user());
     $max = match ($width) {
         '6xl' => 'max-w-6xl',
         '5xl' => 'max-w-5xl',
@@ -12,27 +10,37 @@
     };
 @endphp
 
-<section class="mx-auto w-full {{ $max }} p-6">
-    @if ($current !== null)
-        <p class="text-xs text-ink-3">Configuração › {{ $current->group }}</p>
-    @endif
-
-    @if ($siblings !== [])
-        <nav aria-label="Páginas de {{ $current->group }}" class="mt-2 mb-4 flex flex-wrap gap-1">
-            @foreach ($siblings as $sibling)
-                <a
-                    href="{{ route($sibling->route) }}"
-                    wire:navigate
-                    @if ($sibling->route === $route) aria-current="page" @endif
-                    class="rounded-full px-3 py-1 text-xs font-medium {{ $sibling->route === $route ? 'bg-ink text-white' : 'text-ink-2 hover:bg-canvas' }}"
-                >
-                    {{ $sibling->label }}
-                </a>
-            @endforeach
+<div class="mx-auto flex w-full max-w-7xl flex-col gap-4 p-6 lg:flex-row lg:gap-8">
+    @if ($groups !== [])
+        <nav aria-label="Configuração" class="shrink-0 lg:w-56">
+            <div class="flex gap-6 overflow-x-auto lg:flex-col lg:gap-5 lg:overflow-visible">
+                @foreach ($groups as $group => $items)
+                    <div class="shrink-0">
+                        <p data-test="settings-group-title" class="px-3 pb-1 font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">{{ $group }}</p>
+                        <ul class="flex gap-1 lg:flex-col">
+                            @foreach ($items as $item)
+                                <li>
+                                    <a
+                                        href="{{ route($item->route) }}"
+                                        wire:navigate
+                                        @if ($item->route === $route) aria-current="page" @endif
+                                        class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors duration-(--duration-base) ease-(--ease-out) {{ $item->route === $route ? 'bg-accent-soft text-accent-content' : 'text-ink-2 hover:bg-canvas hover:text-ink' }}"
+                                    >
+                                        <flux:icon :icon="$item->icon" class="size-4 shrink-0" />
+                                        {{ $item->label }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endforeach
+            </div>
         </nav>
     @endif
 
-    <x-page-header :title="$title" :subtitle="$subtitle">@isset($actions){{ $actions }}@endisset</x-page-header>
+    <section class="w-full min-w-0 flex-1 {{ $max }}">
+        <x-page-header :title="$title" :subtitle="$subtitle">@isset($actions){{ $actions }}@endisset</x-page-header>
 
-    {{ $slot }}
-</section>
+        {{ $slot }}
+    </section>
+</div>

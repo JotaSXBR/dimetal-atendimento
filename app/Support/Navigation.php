@@ -5,7 +5,7 @@ namespace App\Support;
 use App\Models\User;
 
 /**
- * A lista única do que o menu mostra. A sidebar e a linha de irmãos das páginas de configuração leem daqui; o portão
+ * A lista única do que o menu mostra. A sidebar e a navegação das páginas de configuração leem daqui; o portão
  * de cada rota (`can:*` em `routes/web.php`) continua sendo a barreira real, e esta lista só decide o que aparece.
  */
 class Navigation
@@ -52,22 +52,6 @@ class Navigation
         }
 
         return null;
-    }
-
-    /**
-     * Seção → grupo (`''` quando a seção não tem grupos) → itens que o usuário pode abrir. Seção sem item visível não aparece.
-     *
-     * @return array<string, array<string, list<NavItem>>>
-     */
-    public function tree(User $user): array
-    {
-        $tree = [];
-
-        foreach ($this->visible($user) as $item) {
-            $tree[$item->section][$item->group][] = $item;
-        }
-
-        return $tree;
     }
 
     /** @return list<NavItem> */
@@ -124,23 +108,5 @@ class Navigation
         }
 
         return false;
-    }
-
-    /**
-     * Os outros itens do grupo que o usuário pode abrir, incluindo o atual; vazio quando sobra menos de dois.
-     *
-     * @return list<NavItem>
-     */
-    public function siblings(User $user, string $routeName): array
-    {
-        $current = $this->find($routeName);
-
-        if ($current === null || $current->group === '') {
-            return [];
-        }
-
-        $items = $this->tree($user)[$current->section][$current->group] ?? [];
-
-        return count($items) < 2 ? [] : $items;
     }
 }
