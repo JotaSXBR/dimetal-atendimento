@@ -39,10 +39,10 @@ compartilhar sessão: o WhatsApp derruba o cliente anterior quando o mesmo núme
 | `WHATSAPP_FILES_LIFETIME` | `0` | `0` |
 | `WAHA_EVENTS_DOWNLOAD_MEDIA` | `true` | `true` |
 | `GODEBUG` | `netdns=go` | `netdns=go` |
-| `WAHA_GOWS_DEVICE_REQUIRE_FULL_SYNC` | `false` | `false` |
-| `WAHA_GOWS_DEVICE_HISTORY_SYNC_FULL_SYNC_DAYS_LIMIT` | `10` | `10` |
-| `WAHA_GOWS_DEVICE_HISTORY_SYNC_RECENT_SYNC_DAYS_LIMIT` | `7` | `7` |
-| `WAHA_GOWS_DEVICE_HISTORY_SYNC_INITIAL_SYNC_MAX_MESSAGES_PER_CHAT` | `200` | `200` |
+| `WAHA_GOWS_DEVICE_REQUIRE_FULL_SYNC` | `false` | `true` (desde 06/11) |
+| `WAHA_GOWS_DEVICE_HISTORY_SYNC_FULL_SYNC_DAYS_LIMIT` | `10` | `30` |
+| `WAHA_GOWS_DEVICE_HISTORY_SYNC_RECENT_SYNC_DAYS_LIMIT` | `7` | `30` |
+| `WAHA_GOWS_DEVICE_HISTORY_SYNC_INITIAL_SYNC_MAX_MESSAGES_PER_CHAT` | `200` | `1000` |
 | `WAHA_GOWS_DEVICE_HISTORY_SYNC_FULL_SYNC_SIZE_MB_LIMIT` | `256` | `256` |
 | `WAHA_GOWS_DEVICE_HISTORY_SYNC_STORAGE_QUOTA_MB` | `512` | `512` |
 
@@ -73,6 +73,11 @@ sempre é encerrada com `offline` (ver §5).
 
 Sem limite, o GOWS sincroniza anos de histórico no primeiro pareamento — banda, banco e mídia
 explodem. Os limites acima cobrem o backfill padrão de 5 dias com folga.
+
+**Profundidade (a testar no futuro).** O app importa no máximo 30 dias (`ImportHistory::MAX_DAYS`). A documentação do GOWS não
+traz teto de dias (o padrão é o histórico completo que o WhatsApp mandar, só no pareamento) e há relato de que o WhatsApp ignora
+esses limites. Em data futura: medir no beta quanto o WhatsApp entrega sem limite e, se valer, subir o teto (a importação teria de
+ler chat a chat em vez de carregar a janela na memória).
 
 ⚠️ Essas variáveis são enviadas ao WhatsApp no pareamento. Mudá-las **depois** exige
 `logout` + novo QR (`DELETE /api/sessions/{session}` e reconectar).

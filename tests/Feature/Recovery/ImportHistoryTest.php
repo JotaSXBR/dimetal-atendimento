@@ -19,6 +19,7 @@ use App\Services\Inbox\ImportHistory;
 use App\Services\Inbox\IngestMode;
 use App\Services\Inbox\RecoverMessages;
 use App\Services\Inbox\RecoveryResult;
+use App\Services\Inbox\ResolveLidPhone;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
@@ -217,7 +218,7 @@ class ImportHistoryTest extends TestCase
     public function test_passa_do_teto_de_mensagens_para_de_ler_e_avisa_no_log(): void
     {
         Log::spy();
-        $service = new class(app(RecoverMessages::class)) extends ImportHistory
+        $service = new class(app(RecoverMessages::class), app(ResolveLidPhone::class)) extends ImportHistory
         {
             public const MAX_MESSAGES = 3;
         };
@@ -236,7 +237,7 @@ class ImportHistoryTest extends TestCase
 
     public function test_o_teto_mantem_as_mensagens_mais_recentes(): void
     {
-        $service = new class(app(RecoverMessages::class)) extends ImportHistory
+        $service = new class(app(RecoverMessages::class), app(ResolveLidPhone::class)) extends ImportHistory
         {
             public const MAX_MESSAGES = 2;
         };

@@ -29,4 +29,14 @@ final class WahaChat
 
         return is_string($chat) ? str_replace('@s.whatsapp.net', '@c.us', $chat) : null;
     }
+
+    /** Por que o chat não vira ticket (`grupo` ou `transmissão`); `null` quando vira. */
+    public static function ignoredKind(string $chat): ?string
+    {
+        return match (true) {
+            str_contains($chat, '@g.us') => 'grupo',
+            self::isIgnored($chat) => 'transmissão',
+            default => null,
+        };
+    }
 }

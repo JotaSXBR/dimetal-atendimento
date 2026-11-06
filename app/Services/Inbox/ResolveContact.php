@@ -36,7 +36,7 @@ class ResolveContact
             }
 
             // O push name é o que o cliente escolheu no WhatsApp: serve de nome até alguém editar o contato; depois, nunca.
-            if ($name !== null && $name !== '' && $contact->edited_at === null) {
+            if ($name !== null && $name !== '' && $contact->edited_at === null && $contact->name_source !== 'agenda') {
                 $contact->name = $name;
             }
 

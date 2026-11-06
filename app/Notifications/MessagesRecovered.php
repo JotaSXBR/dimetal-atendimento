@@ -14,6 +14,8 @@ final class MessagesRecovered extends AlertNotification
         private readonly string $state = 'recovered',
         private readonly int $open = 0,
         private readonly ?int $limit = null,
+        /** @var array<string, int> */
+        private readonly array $ignored = [],
     ) {}
 
     public function toArray(object $notifiable): array
@@ -28,6 +30,7 @@ final class MessagesRecovered extends AlertNotification
             'conversations' => $this->conversations,
             'open' => $this->state === 'imported' ? $this->open : null,
             'limit' => $this->state === 'imported' ? $this->limit : null,
+            'ignored' => $this->state === 'imported' && $this->ignored !== [] ? $this->ignored : null,
         ], fn (mixed $value): bool => $value !== null);
     }
 }
