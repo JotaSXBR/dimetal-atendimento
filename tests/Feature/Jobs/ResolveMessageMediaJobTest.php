@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\Filesystem;
+use League\Flysystem\FilesystemAdapter;
+use League\Flysystem\FilesystemException;
+use League\Flysystem\UnableToWriteFile;
 use Tests\TestCase;
 
 class ResolveMessageMediaJobTest extends TestCase
@@ -233,5 +237,25 @@ class ResolveMessageMediaJobTest extends TestCase
         $this->assertSame('IMG1.jpeg', $fresh?->media_ref);
         $this->assertNull($fresh?->media_path);
         $this->assertSame([], Storage::disk('media')->allFiles());
+    }
+
+    public function test_falha_de_gravacao_no_disco_leva_o_motivo_do_driver_na_excecao(): void
+    {
+        $this->fakeWaha(['filename' => 'IMG1.jpeg', 'mimetype' => 'image/jpeg'], ['/api/files/main/IMG1.jpeg']);
+        // O disco real (S3, throw=false) devolveria só `false`; o driver por baixo é quem sabe o motivo.
+        $adapter = \Mockery::mock(FilesystemAdapter::class);
+        $adapter->shouldReceive('writeStream')->andThrow(UnableToWriteFile::atLocation('x', 'disco cheio'));
+        Storage::set('media', new \Illuminate\Filesystem\FilesystemAdapter(new Filesystem($adapter), $adapter, ['throw' => false]));
+        $caught = null;
+
+        try {
+            (new ResolveMessageMediaJob($this->message->id))->handle();
+        } catch (\RuntimeException $e) {
+            $caught = $e;
+        }
+
+        $this->assertNotNull($caught);
+        $this->assertInstanceOf(FilesystemException::class, $caught->getPrevious(), 'o motivo do driver precisa ir junto, senão o log não diz por que falhou');
+        $this->assertNull($this->message->fresh()?->media_path);
     }
 }

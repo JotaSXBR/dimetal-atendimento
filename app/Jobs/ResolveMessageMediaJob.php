@@ -14,6 +14,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use League\Flysystem\FilesystemException;
 use RuntimeException;
 
 /**
@@ -105,8 +106,11 @@ class ResolveMessageMediaJob implements ShouldQueue
         $key = 'inbound/'.$message->channel_id.'/'.now()->format('Y/m').'/'.Str::uuid()->toString().($extension === '' ? '' : '.'.$extension);
         $disk = Message::mediaDisk();
 
-        if ($disk->writeStream($key, StreamWrapper::getResource($response->toPsrResponse()->getBody())) === false) {
-            throw new RuntimeException('Não foi possível guardar a mídia da mensagem '.$message->id.' no disco.');
+        // O disco S3 tem `throw=false` e devolveria só `false`; o driver por baixo lança o motivo, que vai para o log.
+        try {
+            $disk->getDriver()->writeStream($key, StreamWrapper::getResource($response->toPsrResponse()->getBody()));
+        } catch (FilesystemException $e) {
+            throw new RuntimeException('Não foi possível guardar a mídia da mensagem '.$message->id.' no disco: '.$e->getMessage(), 0, $e);
         }
 
         $message->update(['media_path' => $key, 'media_size' => $disk->size($key)]);
