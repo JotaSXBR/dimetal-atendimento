@@ -25,8 +25,10 @@
     --color-accent-foreground: #422006; /* yellow-950: texto sobre a marca */
     --color-accent-soft: #fef9c3; /* yellow-100 */
     --color-accent-deep: #713f12; /* yellow-900 */
-    --color-warn: #c2410c; /* orange-700: afastado do amarelo da marca */
+    --color-warn: #9a3412; /* orange-800: afastado do amarelo da marca e legível sobre warn/10 */
     --color-danger: #b42318;
+    --color-danger-foreground: #ffffff;
+    --color-ink-foreground: #ffffff; /* texto sobre fundo `bg-ink` */
     --color-ok: #166534; /* green-800 */
     --color-bot: #4a5a66;
 
@@ -91,6 +93,8 @@ select:focus[data-flux-control] {
         --color-accent-deep: #fde047; /* yellow-300 */
         --color-warn: #fb923c; /* orange-400 */
         --color-danger: #f87171; /* red-400 */
+        --color-danger-foreground: #1c1917;
+        --color-ink-foreground: #1c1917;
         --color-ok: #4ade80; /* green-400 */
         --color-bot: #94a3b8; /* slate-400 */
     }

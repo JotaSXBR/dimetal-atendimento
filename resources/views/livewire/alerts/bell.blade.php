@@ -8,7 +8,7 @@
         class="relative flex size-8 items-center justify-center rounded-lg bg-white/10 text-sb-ink-1 hover:bg-white/20">
         <flux:icon.bell variant="micro" class="size-4" />
         @if ($unread > 0)
-            <span class="absolute -end-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-4 font-bold text-white" aria-hidden="true">{{ $unread > 9 ? '9+' : $unread }}</span>
+            <span class="absolute -end-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-4 font-bold text-danger-foreground" aria-hidden="true">{{ $unread > 9 ? '9+' : $unread }}</span>
         @endif
     </button>
 

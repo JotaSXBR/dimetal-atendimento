@@ -196,14 +196,14 @@
                             <button
                                 type="button"
                                 wire:click="$set('authMethod', 'qr')"
-                                class="rounded-[10px] px-3 py-1.5 text-[13px] font-semibold {{ $authMethod === 'qr' ? 'bg-accent text-white' : 'border border-line text-ink-2' }}"
+                                class="rounded-[10px] px-3 py-1.5 text-[13px] font-semibold {{ $authMethod === 'qr' ? 'bg-accent text-accent-foreground' : 'border border-line text-ink-2' }}"
                             >
                                 QR
                             </button>
                             <button
                                 type="button"
                                 wire:click="$set('authMethod', 'code')"
-                                class="rounded-[10px] px-3 py-1.5 text-[13px] font-semibold {{ $authMethod === 'code' ? 'bg-accent text-white' : 'border border-line text-ink-2' }}"
+                                class="rounded-[10px] px-3 py-1.5 text-[13px] font-semibold {{ $authMethod === 'code' ? 'bg-accent text-accent-foreground' : 'border border-line text-ink-2' }}"
                             >
                                 Código de pareamento
                             </button>

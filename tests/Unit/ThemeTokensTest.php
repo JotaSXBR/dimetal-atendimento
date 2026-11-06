@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 class ThemeTokensTest extends TestCase
 {
-    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'accent-deep', 'warn', 'danger', 'ok', 'bot'];
+    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'accent-deep', 'warn', 'danger', 'ok', 'bot', 'ink-foreground', 'danger-foreground'];
 
     private function css(): string
     {
@@ -83,5 +83,52 @@ class ThemeTokensTest extends TestCase
     {
         $this->assertStringContainsString('@media (prefers-reduced-motion: reduce)', $this->css());
         $this->assertStringContainsString('--duration-base: 200ms', $this->css());
+    }
+
+    public function test_cada_fundo_de_token_tem_texto_proprio_com_contraste(): void
+    {
+        foreach ($this->themes() as $theme => $t) {
+            foreach (['accent', 'ink', 'danger'] as $ground) {
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($t[$ground.'-foreground'], $t[$ground]), "{$theme}: {$ground}-foreground sobre {$ground}");
+            }
+        }
+    }
+
+    public function test_aviso_e_erro_legiveis_sobre_o_proprio_tom_de_fundo(): void
+    {
+        foreach ($this->themes() as $theme => $t) {
+            foreach (['canvas', 'surface'] as $ground) {
+                foreach (['warn', 'danger', 'ok', 'bot'] as $tone) {
+                    $tint = $this->mix($t[$tone], $t[$ground], 0.10);
+                    $this->assertGreaterThanOrEqual(4.5, $this->ratio($t[$tone], $tint), "{$theme}: {$tone} sobre {$tone}/10 em {$ground}");
+                }
+            }
+        }
+    }
+
+    public function test_nenhuma_view_usa_texto_branco_fixo_sobre_fundo_de_token(): void
+    {
+        $offenders = [];
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(dirname(__DIR__, 2).'/resources/views')) as $file) {
+            if (! str_ends_with((string) $file, '.blade.php')) {
+                continue;
+            }
+            foreach (file((string) $file) ?: [] as $n => $line) {
+                if (preg_match('/bg-(?:accent|ink|danger|warn|ok|bot)(?![\w\/-])/', $line) && str_contains($line, 'text-white')) {
+                    $offenders[] = basename((string) $file).':'.($n + 1);
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders, 'use text-<token>-foreground no lugar de text-white');
+    }
+
+    /** Mistura `$top` sobre `$bottom` com a opacidade dada (a classe `bg-x/10` do Tailwind). */
+    private function mix(string $top, string $bottom, float $alpha): string
+    {
+        $a = array_map('hexdec', str_split(ltrim($top, '#'), 2));
+        $b = array_map('hexdec', str_split(ltrim($bottom, '#'), 2));
+
+        return '#'.implode('', array_map(fn (int $i): string => sprintf('%02x', (int) round($a[$i] * $alpha + $b[$i] * (1 - $alpha))), [0, 1, 2]));
     }
 }

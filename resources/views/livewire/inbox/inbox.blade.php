@@ -31,7 +31,7 @@
                         role="tab"
                         aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
                         wire:click="$set('tab', '{{ $key }}')"
-                        class="rounded-full px-3 py-1 text-xs font-medium {{ $tab === $key ? 'bg-ink text-white' : 'text-ink-2 hover:bg-canvas' }}"
+                        class="rounded-full px-3 py-1 text-xs font-medium {{ $tab === $key ? 'bg-ink text-ink-foreground' : 'text-ink-2 hover:bg-canvas' }}"
                     >
                         {{ $label }}@if (! empty($tabCounts[$key])) <span class="font-mono opacity-70">{{ $tabCounts[$key] }}</span>@endif
                     </button>
@@ -351,14 +351,14 @@
                                 <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
                                 <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
                                 <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()">Descartar</button>
-                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-white" x-on:click="stop()">Parar</button>
+                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground" x-on:click="stop()">Parar</button>
                             </div>
 
                             <div x-show="phase === 'preview'" x-cloak class="flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
                                 <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
                                 <button type="button" class="text-sm text-ink-2 hover:text-ink" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</button>
                                 <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()" x-bind:disabled="sending">Descartar</button>
-                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-white disabled:opacity-50" x-on:click="send()" x-bind:disabled="sending">Enviar</button>
+                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground disabled:opacity-50" x-on:click="send()" x-bind:disabled="sending">Enviar</button>
                             </div>
                         </div>
 

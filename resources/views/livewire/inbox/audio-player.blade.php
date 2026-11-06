@@ -8,7 +8,7 @@
         x-on:click="toggle()"
         x-bind:aria-label="playing ? 'Pausar áudio' : 'Reproduzir áudio'"
         aria-label="Reproduzir áudio"
-        class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-white"
+        class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground"
     >
         <flux:icon.play x-show="! playing" class="size-4" />
         <flux:icon.pause x-show="playing" style="display: none" class="size-4" />
