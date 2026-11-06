@@ -7,11 +7,13 @@ use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use Carbon\CarbonImmutable;
 use Database\Factories\MessageFactory;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -37,7 +39,7 @@ use Illuminate\Support\Str;
  * @property string|null $media_mime
  * @property string|null $media_name
  * @property int|null $media_size
- * @property string|null $local_path
+ * @property string|null $media_path
  * @property CarbonImmutable|null $media_purged_at
  * @property CarbonImmutable|null $edited_at
  * @property CarbonImmutable|null $revoked_at
@@ -66,7 +68,7 @@ use Illuminate\Support\Str;
     'media_mime',
     'media_name',
     'media_size',
-    'local_path',
+    'media_path',
     'media_purged_at',
     'edited_at',
     'revoked_at',
@@ -108,6 +110,12 @@ class Message extends Model
         $contact = $this->contact;
 
         return $contact === null ? null : ($contact->wa_id ?? (string) $contact->lid);
+    }
+
+    /** O disco onde ficam os anexos (`config/media.php`). */
+    public static function mediaDisk(): Filesystem
+    {
+        return Storage::disk(config()->string('media.disk'));
     }
 
     public function hasMedia(): bool

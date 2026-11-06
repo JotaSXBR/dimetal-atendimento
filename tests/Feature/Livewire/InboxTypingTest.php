@@ -36,6 +36,9 @@ class InboxTypingTest extends TestCase
 
         config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
         Http::fake(['*' => Http::response([], 201)]);
+        // Os jobs de apoio (visto, presença offline) não são o objeto deste teste e, com a fila `sync` do phpunit.xml, rodariam na hora e
+        // chegariam ao WAHA falso; no CI (fila Redis) eles só ficam na fila. Faz o teste valer igual nos dois.
+        Queue::fake();
 
         $this->channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
         $this->author = User::factory()->create(['role' => UserRole::ATENDENTE]);

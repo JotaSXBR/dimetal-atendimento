@@ -9,10 +9,12 @@ use App\Models\Message;
 use App\Services\Inbox\IncomingMedia;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaMedia;
+use GuzzleHttp\Psr7\StreamWrapper;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use League\Flysystem\FilesystemException;
 use RuntimeException;
 
 /**
@@ -57,6 +59,11 @@ class ResolveMessageMediaJob implements ShouldQueue
             return;
         }
 
+        // Já copiada (rodada anterior ou reentrega): nada a fazer.
+        if ($message->media_path !== null && Message::mediaDisk()->exists($message->media_path)) {
+            return;
+        }
+
         $contact = Contact::findOrFail($message->contact_id);
         $chatId = $contact->wa_id ?? (string) $contact->lid;
         $serialized = ($message->direction === MessageDirection::OUT ? 'true' : 'false').'_'.$chatId.'_'.$message->wa_message_id;
@@ -80,7 +87,41 @@ class ResolveMessageMediaJob implements ShouldQueue
 
         $message->update(['media_ref' => $ref, 'media_name' => $message->media_name ?? $ref, 'media_mime' => $mime]);
 
+        // Falha de cópia relança: o job tenta de novo, e esgotadas as tentativas a mensagem segue abrindo pelo WAHA (`media_ref`).
+        $this->copyToDisk($message, $client, $ref);
+
         MessageStatusChanged::dispatch($message);
+    }
+
+    /** Guarda no disco de mídia o arquivo que o WAHA tem, lido em stream (o WAHA só o mantém por alguns dias). */
+    private function copyToDisk(Message $message, WahaMedia $client, string $ref): void
+    {
+        $response = $client->streamFile($ref, null);
+
+        if ($response === null) {
+            throw new RuntimeException('O WAHA não entregou o arquivo da mensagem '.$message->id);
+        }
+
+        $extension = strtolower((string) preg_replace('/[^A-Za-z0-9]/', '', pathinfo($ref, PATHINFO_EXTENSION)));
+        $key = 'inbound/'.$message->channel_id.'/'.now()->format('Y/m').'/'.Str::uuid()->toString().($extension === '' ? '' : '.'.$extension);
+        $disk = Message::mediaDisk();
+
+        // O disco S3 tem `throw=false` e devolveria só `false`; o driver por baixo lança o motivo, que vai para o log.
+        // O SDK do S3 rebobina o corpo para assinar o envio, e o stream do WAHA não volta atrás: passa por um temporário
+        // (em memória até 5 MB, depois em disco).
+        $temp = fopen('php://temp/maxmemory:5242880', 'w+b') ?: throw new RuntimeException('Não foi possível abrir o arquivo temporário da cópia.');
+        stream_copy_to_stream(StreamWrapper::getResource($response->toPsrResponse()->getBody()), $temp);
+        rewind($temp);
+
+        try {
+            $disk->getDriver()->writeStream($key, $temp);
+        } catch (FilesystemException $e) {
+            throw new RuntimeException('Não foi possível guardar a mídia da mensagem '.$message->id.' no disco: '.$e->getMessage(), 0, $e);
+        } finally {
+            fclose($temp);
+        }
+
+        $message->update(['media_path' => $key, 'media_size' => $disk->size($key)]);
     }
 
     /**

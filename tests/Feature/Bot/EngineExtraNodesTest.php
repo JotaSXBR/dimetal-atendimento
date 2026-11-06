@@ -212,6 +212,8 @@ class EngineExtraNodesTest extends TestCase
     public function test_midia_ausente_nao_trava_o_fluxo_e_presente_vira_mensagem_do_bot(): void
     {
         Storage::fake('local');
+        Storage::fake('media');
+        config(['media.disk' => 'media']);
         Storage::disk('local')->put('bot/catalogo.pdf', '%PDF-1.4 teste');
         $version = $this->line([
             ['m', 'midia', ['path' => 'bot/catalogo.pdf', 'legenda' => 'Nosso catálogo']],
@@ -225,7 +227,10 @@ class EngineExtraNodesTest extends TestCase
         $this->assertCount(1, $media);
         $this->assertSame(MessageOrigin::BOT, $media[0]->origin);
         $this->assertSame('Nosso catálogo', $media[0]->body);
-        $this->assertSame('bot/catalogo.pdf', $media[0]->local_path);
+        // A cópia vai para o disco de mídia e a purga nunca toca o arquivo-fonte do bot.
+        $this->assertStringStartsWith('outbound/', (string) $media[0]->media_path);
+        Storage::disk('media')->assertExists((string) $media[0]->media_path);
+        Storage::disk('local')->assertExists('bot/catalogo.pdf');
         $this->assertSame('catalogo.pdf', $media[0]->media_name);
         $this->assertSame(TicketStatus::AGUARDANDO, $this->ticket->fresh()?->status);
     }

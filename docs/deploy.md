@@ -42,7 +42,7 @@ DB_PASSWORD=<senha do pg>
 REDIS_HOST=<host da URL interna do redis>
 REDIS_PASSWORD=<senha do redis>
 AUTORUN_ENABLED=true        # só no app; worker e scheduler usam false
-WAHA_URL=http://waha-beta:3000   # app e worker (o worker envia mensagens)
+WAHA_URL=http://<uuid do waha-beta>:3000   # app e worker (o worker envia mensagens)
 WAHA_API_KEY=<mesma chave do container waha>
 ```
 
@@ -144,13 +144,25 @@ Recursos do beta hoje:
 
 | Recurso | UUID |
 |---|---|
-| `app-beta` | `ipbknnticmaubtzdonxjqgy6` |
-| `worker-beta` | `jme7xgh4ugrrf3qbrxaclwlj` |
-| `scheduler-beta` | `3thwz32zdtnmr2sme70jrpdf` |
-| `reverb-beta` | `oncydt57liptigusmj64ac3o` |
-| `waha-beta` | `gxpbtauw9ylqyd8nni3keznx` |
-| `pg-beta` | `m3kcov2jn01utd97jjho2lox` |
-| `redis-beta` | `vp3u0qyz2tsmyveqrb6ml2zi` |
+| `app-beta` | `ovjv8pdwn4xwgeqdoosm74eu` |
+| `worker-beta` | `od6r6whgbew10eef86wslm8h` |
+| `scheduler-beta` | `b8kblgpyk9xeujbpwjjsollk` |
+| `reverb-beta` | `94ros1mnr2avnwjzk36rcpgc` |
+| `waha-beta` | `msejoznzpyh9oixj6q5nmtei` |
+| `pg-beta` | `e9innv6fcldtcmtsvhxncf4v` |
+| `redis-beta` | `zuwtns1l3p0gjps6vuuvbjfv` |
+| `rustfs-beta` | `xz8pmcy7ojw7umn9y1yszf0q` |
+
+O beta vive na rede Docker `dimetal-beta` (recriado em 05/11; o anterior foi apagado em 06/11). Os hosts de `WAHA_URL`,
+`DB_HOST` e `REDIS_HOST` são o UUID do container; só o `rustfs-beta` tem apelido de rede (`AWS_ENDPOINT=http://rustfs-beta:9000`).
+**Ao recriar um recurso, apague o antigo:** um app velho no mesmo domínio recebe metade das requisições (Traefik) com as variáveis velhas.
+
+### Mídia no RustFS (beta)
+
+`MEDIA_DISK=s3` mais `AWS_ENDPOINT`, `AWS_BUCKET=dimetal-beta-media`, `AWS_USE_PATH_STYLE_ENDPOINT=true` e as chaves do bucket, só nas
+variáveis do app, do worker e do scheduler. O pós-deploy do app roda `php artisan app:prepare-media`, que cria o bucket se faltar.
+O job `ResolveMessageMediaJob` copia a mídia recebida do WAHA para o bucket por um stream temporário rebobinável (o SDK do S3 rebobina
+o corpo para assinar o envio); a falha de gravação leva o motivo do driver para o log.
 
 ### Filas (dentro do `worker-beta`)
 

@@ -30,7 +30,7 @@ class Retention extends Component
 
     public function render(): View
     {
-        $kept = Message::query()->whereNotNull('local_path');
+        $kept = Message::query()->whereNotNull('media_path');
         $expired = (clone $kept)->where('created_at', '<', now()->subDays(PurgeMediaCommand::RETENTION_DAYS));
 
         return view('livewire.settings.retention', [
