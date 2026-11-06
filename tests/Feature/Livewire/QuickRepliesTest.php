@@ -14,6 +14,7 @@ use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -22,6 +23,15 @@ use Tests\TestCase;
 class QuickRepliesTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // O envio ao WAHA (job) não é o objeto destes testes: com a fila `sync` do phpunit.xml ele rodaria na hora, sem WAHA falso;
+        // no CI (fila Redis) ele só fica na fila. Faz o teste valer igual nos dois.
+        Queue::fake();
+    }
 
     private function page(UserRole $role = UserRole::SUPERVISOR): Testable
     {
