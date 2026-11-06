@@ -12,33 +12,28 @@
             </flux:sidebar.header>
 
             @php($counts = app(\App\Support\SidebarState::class)->counts(auth()->user()))
-            @php($tree = app(\App\Support\Navigation::class)->tree(auth()->user()))
+            @php($nav = app(\App\Support\Navigation::class))
+            @php($entry = $nav->settingsEntry(auth()->user()))
 
             <flux:sidebar.nav>
-                @foreach ($tree as $section => $groups)
-                    @if ($section === \App\Support\Navigation::SECTION_CONFIGURACAO)
-                        <p class="px-3 pt-2 font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">{{ $section }}</p>
-                    @endif
-
-                    @foreach ($groups as $group => $items)
-                        <flux:sidebar.group :heading="$group !== '' ? $group : $section" class="grid">
-                            @foreach ($items as $item)
-                                <flux:sidebar.item :icon="$item->icon" :href="route($item->route)" :current="request()->routeIs($item->match)" :badge="$item->route === 'inbox' ? ($counts['waiting'] ?: null) : null" wire:navigate>
-                                    {{ $item->label }}
-                                </flux:sidebar.item>
-
-                                @if ($item->route === 'inbox' && ($counts['waiting'] > 0 || $counts['breached'] > 0))
-                                    <p class="-mt-1 mb-1 ps-9 text-xs text-ink-3">
-                                        {{ $counts['waiting'] }} aguardando
-                                        @if ($counts['breached'] > 0)
-                                            <span class="block font-medium text-danger">{{ $counts['breached'] }} com SLA estourado</span>
-                                        @endif
-                                    </p>
-                                @endif
-                            @endforeach
-                        </flux:sidebar.group>
-                    @endforeach
+                @foreach ($nav->primary(auth()->user()) as $item)
+                    <flux:sidebar.item :icon="$item->icon" :href="route($item->route)" :current="request()->routeIs($item->match)" wire:navigate
+                        :badge="$item->route === 'inbox' ? ($counts['waiting'] ?: null) : null" badge-color="yellow"
+                        badge:data-test="queue-badge" badge:aria-label="{{ $counts['waiting'] }} aguardando">
+                        @if ($item->route === 'inbox' && $counts['breached'] > 0)
+                            <x-slot:icon-trailing>
+                                <span data-test="sla-badge" aria-label="{{ $counts['breached'] }} com SLA estourado" class="rounded-full bg-danger px-1.5 text-xs font-semibold text-surface">{{ $counts['breached'] }}</span>
+                            </x-slot:icon-trailing>
+                        @endif
+                        {{ $item->label }}
+                    </flux:sidebar.item>
                 @endforeach
+
+                @if ($entry !== null)
+                    <flux:sidebar.item icon="cog-6-tooth" :href="route($entry->route)" :current="$nav->settingsActive(auth()->user())" class="mt-3" data-test="settings-entry" wire:navigate>
+                        Configuração
+                    </flux:sidebar.item>
+                @endif
             </flux:sidebar.nav>
 
             <flux:spacer />
