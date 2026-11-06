@@ -35,7 +35,7 @@ class ImportHistory
     /** `true` quando a leitura parou no teto de mensagens (legível depois da chamada). */
     public bool $truncated = false;
 
-    public function __construct(private readonly RecoverMessages $recover) {}
+    public function __construct(private readonly RecoverMessages $recover, private readonly ResolveLidPhone $resolveLid) {}
 
     public function __invoke(Channel $channel, ?CarbonImmutable $deadline = null): RecoveryResult
     {
@@ -49,7 +49,7 @@ class ImportHistory
         $this->complete = false;
         $this->truncated = false;
 
-        foreach ($this->chats($channel, $from, $to) as $items) {
+        foreach ($this->chats($channel, $from, $to) as $peer => $items) {
             if ($deadline !== null && CarbonImmutable::now()->gte($deadline)) {
                 return $this->result($messages, $tickets, $openTickets);
             }
@@ -67,6 +67,8 @@ class ImportHistory
                     $open && $openTickets[$message->ticket_id] = true;
                 }
             }
+
+            str_ends_with($peer, '@lid') && ($this->resolveLid)($channel, $peer);
         }
 
         $this->complete = true;

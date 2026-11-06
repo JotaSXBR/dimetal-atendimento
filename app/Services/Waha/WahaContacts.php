@@ -17,4 +17,19 @@ class WahaContacts
 
         return $response->json('numberExists') === true;
     }
+
+    /** O telefone (`5516999999999@c.us`) por trás de um `@lid`; `null` quando o WAHA não o conhece. */
+    public function phoneForLid(string $lid): ?string
+    {
+        $response = $this->client->http()->get('/api/'.$this->client->sessionName().'/lids/'.rawurlencode($lid));
+
+        if ($response->status() === 404) {
+            return null;
+        }
+
+        $this->client->check($response);
+        $phone = $response->json('pn');
+
+        return is_string($phone) && $phone !== '' ? $phone : null;
+    }
 }
