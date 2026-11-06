@@ -56,6 +56,11 @@ FROM base AS runtime
 
 USER root
 
+# CVE HIGH no apt da base (CVE-2026-109518, corrigida na 2.6.2): a base só é republicada às segundas. Remover quando ela vier atualizada.
+RUN apt-get update -qq \
+    && apt-get install -y -qq --only-upgrade apt \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=assets --chown=www-data:www-data /build/public/build ./public/build
 
 RUN chown -R www-data:www-data storage bootstrap/cache
