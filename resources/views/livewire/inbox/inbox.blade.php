@@ -6,7 +6,6 @@
         \App\Enums\TicketStatus::EM_ATENDIMENTO => 'green',
         default => 'zinc',
     };
-    $tabs = ['todos' => 'Todos', 'pendentes' => 'Pendentes', 'aguardando' => 'Aguardando', 'meus' => 'Meus', 'encerrados' => 'Encerrados'];
 @endphp
 
 <div
@@ -24,18 +23,29 @@
                 <flux:button size="sm" variant="primary" icon="plus" x-on:click="$dispatch('start-conversation')">Nova conversa</flux:button>
             </div>
 
-            <div class="mt-3 flex gap-1" role="tablist">
-                @foreach ($tabs as $key => $label)
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
-                        wire:click="$set('tab', '{{ $key }}')"
-                        class="rounded-full px-3 py-1 text-xs font-medium {{ $tab === $key ? 'bg-ink text-ink-foreground' : 'text-ink-2 hover:bg-canvas' }}"
-                    >
-                        {{ $label }}@if (! empty($tabCounts[$key])) <span class="font-mono opacity-70">{{ $tabCounts[$key] }}</span>@endif
-                    </button>
-                @endforeach
+            {{-- Três visões do dia a dia sempre à mão; as duas raras (triagem do bot e histórico recente) ficam no menu "Mais". --}}
+            @php
+                $more = ['pendentes' => 'Pendentes', 'encerrados' => 'Encerrados'];
+                $moreActive = array_key_exists($tab, $more);
+            @endphp
+            <div class="mt-3 flex items-center gap-2">
+                <flux:radio.group wire:model.live="tab" variant="segmented" size="sm" class="min-w-0 flex-1" aria-label="Visão da fila">
+                    <flux:radio value="todos" data-testid="tab-todos" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Todos</flux:radio>
+                    <flux:radio value="aguardando" data-testid="tab-aguardando" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Aguardando @if (! empty($tabCounts['aguardando']))<span class="font-mono opacity-70">{{ $tabCounts['aguardando'] }}</span>@endif</flux:radio>
+                    <flux:radio value="meus" data-testid="tab-meus" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Meus @if (! empty($tabCounts['meus']))<span class="font-mono opacity-70">{{ $tabCounts['meus'] }}</span>@endif</flux:radio>
+                </flux:radio.group>
+
+                <flux:dropdown position="bottom" align="end">
+                    <flux:button size="sm" :variant="$moreActive ? 'filled' : 'subtle'" icon-trailing="chevron-down" class="shrink-0 px-2! text-xs!" data-testid="tab-more" aria-label="Mais visões da fila">
+                        {{ $moreActive ? $more[$tab] : 'Mais' }}
+                    </flux:button>
+
+                    <flux:menu>
+                        @foreach ($more as $key => $label)
+                            <flux:menu.item wire:click="$set('tab', '{{ $key }}')" :icon="$tab === $key ? 'check' : null" :suffix="empty($tabCounts[$key]) ? null : (string) $tabCounts[$key]" data-testid="tab-{{ $key }}">{{ $label }}</flux:menu.item>
+                        @endforeach
+                    </flux:menu>
+                </flux:dropdown>
             </div>
 
             @if ($tags->isNotEmpty())
