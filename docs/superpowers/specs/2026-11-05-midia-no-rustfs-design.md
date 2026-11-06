@@ -24,6 +24,9 @@ mídia recebida para o bucket dentro desse prazo, na hora.
 - Foto do contato, emoji, mídia do bot e logo no bucket. A pasta `internal/` só é reservada.
 - Domínio público do RustFS, URL assinada para o navegador, cota por canal.
 - Cópia retroativa (comando para recopiar mídia cujo job falhou).
+- **Mídia do histórico importado** (acréscimo de 06/11): a importação traz o texto, mas o WAHA não guarda os arquivos antigos (o beta
+  mostra "O WAHA ainda não tem o arquivo" nessas mensagens). O RustFS só copia o que o WAHA ainda tem, então elas seguem como
+  "Mídia indisponível". A retentativa do job (4 tentativas) não muda: o custo é ruído de log, sem perda.
 
 ## Antiobjetivo
 
@@ -57,13 +60,19 @@ no disco com `writeStream`, grava `media_path` e `media_size`, e só então disp
 o objeto existe, não copia de novo (idempotente). Falha de cópia relança a exceção e o job tenta de novo (`tries=4`, backoff
 existente). Esgotadas as tentativas, a mensagem fica só com `media_ref` e continua abrindo pelo WAHA enquanto ele guardar (7 dias).
 
+**Mídia do bot (decisão de 06/11).** O `MidiaNode` lê o arquivo do bloco no disco `local` (`bot/…`) e hoje grava o caminho dele em
+`local_path`, o que faria a purga de 90 dias apagar o arquivo-fonte do bot. Passa a **copiar** o arquivo para `outbound/AAAA/MM/{uuid}.{ext}`
+no disco `media` e gravar `media_path` da cópia.
+
 **Enviada.** `SendTicketMedia` grava no disco `media` (hoje `local`); `SendTicketMessage::transmit` lê do mesmo disco. A limpeza em
 falha de `record()` continua.
 
 **Leitura.** `MessageMediaController`: Gate primeiro; depois (1) `media_purged_at` preenchido: 404 com a tela mostrando "arquivo
-expirado"; (2) `media_path` e objeto existente: stream do disco com `Range` (206/416, `Content-Length`, `Accept-Ranges`), mesmos
-cabeçalhos e tipos inline de hoje, `X-Content-Type-Options: nosniff`; (3) sem cópia: stream do WAHA como hoje. Para o S3, o `Range`
-é repassado ao `getObject` do cliente do disco; para o disco local, `response()->file`.
+expirado"; (2) `media_path` e objeto existente: servido do disco com `Range` (206/416, `Content-Length`, `Accept-Ranges`), mesmos
+cabeçalhos e tipos inline de hoje, `X-Content-Type-Options: nosniff`; (3) sem cópia: stream do WAHA como hoje. Disco local:
+`response()->file` (o Symfony trata o `Range`). **Disco S3 (decisão de 06/11):** o app pede ao disco uma URL temporária
+(`temporaryUrl`, 5 min), busca-a por HTTP no endpoint interno repassando o `Range` e repassa o corpo, o mesmo caminho de
+`upstream` que já existe para o WAHA (`headersFor`); o RustFS não é exposto ao navegador e o `Range` não precisa de `getObject` à mão.
 
 **Purga.** `PurgeMediaCommand` passa a olhar `media_path` não nulo e `created_at` com mais de 90 dias, para as duas direções; apaga do
 disco `media`, zera `media_path`, preenche `media_purged_at`, cria `TicketEvent media_purged`. Idempotente como hoje. A descrição do
@@ -71,20 +80,14 @@ comando e o texto da tela Retenção (`Settings\Retention`) passam a dizer "anex
 
 ## Infraestrutura (Coolify, só o beta)
 
-Estado medido em 05/11: um servidor (o host do Coolify) e uma só rede Docker, `coolify`, compartilhada por todos os projetos,
-inclusive `pg-beta`, `redis-beta`, `marichat-db` e a produção. Isso é falha de isolamento e será corrigida junto, a pedido do dono
-(dados do beta são descartáveis; o WhatsApp do beta é reconectado pelo dono).
+**Atualizado em 06/11.** O isolamento de rede já foi feito em 05/11: o beta foi recriado no destino Docker `dimetal-beta` (apps, worker,
+scheduler, reverb, waha-beta, `pg-beta` e `redis-beta` novos), com dados descartáveis; UUIDs em `.env.coolify.local`. Falta só o RustFS.
 
-Decisão do dono (05/11): `pg-beta` e `redis-beta` têm dados do sistema e **não são recriados**.
-
-Pela API do Coolify (feito por mim): criar o destino `dimetal-beta` (rede própria); criar `rustfs-beta` (imagem
-`rustfs/rustfs:1.0.3`, volume persistente, sem domínio público) nesse destino; criar o bucket privado e a chave de IAM só dele;
-atualizar as variáveis do app-beta, worker-beta e scheduler-beta (`MEDIA_DISK`, `AWS_*`); adicionar app, worker, scheduler, reverb
-e waha-beta ao destino `dimetal-beta`. Depois de criar a rede, aviso o dono. Pelo dono, na UI: trocar a rede de `pg-beta`,
-`redis-beta` e da principal de cada aplicação do beta para `dimetal-beta` (a API só adiciona rede às aplicações e não troca a de
-banco), e tirá-las da `coolify`. Só depois disso o isolamento vale. Como o host de banco e Redis é o nome do container, conferir
-que os apps ainda os alcançam e, se o nome mudar, atualizar `DB_HOST`/`REDIS_HOST`. Depois: redeploy e conferência.
-O RustFS fica sem domínio; o domínio público só entra quando o backup por pull for feito.
+Pela API do Coolify (por mim): criar `rustfs-beta` (imagem `rustfs/rustfs:1.0.3`, volume persistente, **sem domínio público**) no
+destino `dimetal-beta`; criar o bucket privado `dimetal-beta-media` e a chave de acesso só dele; gravar `MEDIA_DISK=s3` e as
+variáveis `AWS_*` (endpoint interno pelo UUID do container, `AWS_USE_PATH_STYLE_ENDPOINT=true`) em app-beta, worker-beta e
+scheduler-beta; redeploy e conferência. Como a API do Coolify não dá apelido de rede, o endpoint usa o UUID do container (como já
+fazem `DB_HOST` e `WAHA_URL`). O domínio público do RustFS só entra quando o backup por pull for feito.
 
 ## Restrições
 
@@ -105,4 +108,5 @@ forçado a 91 dias; conferir no Chrome a página inteira.
   futura é um comando de recópia.
 - `Range` no S3 via cliente do disco em vez de URL assinada: mais código no controller, sem expor o RustFS.
 - Mensagens antigas (sem `media_path`) seguem pelo WAHA e passam a dar 404 depois dos 7 dias; sem tela nova para isso.
-- Recriar pg/redis do beta em vez de manter nos dois: custo é a perda dos dados do beta, já aceita.
+- Bot: copiar o arquivo do bloco para o disco `media` (em vez de apontar para o original) muda o `MidiaNode`; custo é uma cópia por
+  envio do bot.
