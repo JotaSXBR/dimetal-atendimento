@@ -63,13 +63,67 @@ class Navigation
     {
         $tree = [];
 
-        foreach (self::items() as $item) {
-            if ($item->gate === null || $user->can($item->gate)) {
-                $tree[$item->section][$item->group][] = $item;
-            }
+        foreach ($this->visible($user) as $item) {
+            $tree[$item->section][$item->group][] = $item;
         }
 
         return $tree;
+    }
+
+    /** @return list<NavItem> */
+    private function visible(User $user): array
+    {
+        return array_values(array_filter(self::items(), fn (NavItem $item): bool => $item->gate === null || $user->can($item->gate)));
+    }
+
+    /** @return list<NavItem> */
+    private function settingsItems(User $user): array
+    {
+        return array_values(array_filter($this->visible($user), fn (NavItem $item): bool => $item->section === self::SECTION_CONFIGURACAO));
+    }
+
+    /**
+     * Os destinos fora de Configuração, que a sidebar lista direto.
+     *
+     * @return list<NavItem>
+     */
+    public function primary(User $user): array
+    {
+        return array_values(array_filter($this->visible($user), fn (NavItem $item): bool => $item->section !== self::SECTION_CONFIGURACAO));
+    }
+
+    /**
+     * Grupo → itens de Configuração que o usuário pode abrir (a navegação do hub).
+     *
+     * @return array<string, list<NavItem>>
+     */
+    public function settingsGroups(User $user): array
+    {
+        $groups = [];
+
+        foreach ($this->settingsItems($user) as $item) {
+            $groups[$item->group][] = $item;
+        }
+
+        return $groups;
+    }
+
+    /** Destino do item "Configuração" do menu: o primeiro que o usuário pode abrir; `null` se nenhum. */
+    public function settingsEntry(User $user): ?NavItem
+    {
+        return $this->settingsItems($user)[0] ?? null;
+    }
+
+    /** A rota atual é de Configuração (inclui `automacao.editar` e o retorno do Google, que não têm item próprio). */
+    public function settingsActive(User $user): bool
+    {
+        foreach ($this->settingsItems($user) as $item) {
+            if (request()->routeIs($item->match)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
