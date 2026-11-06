@@ -54,6 +54,7 @@ class IngestMessage
         }
 
         $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
+        app(FillContactName::class)->queueFor($contact, $channel);
         $mode = IngestMode::of($event);
 
         // Já há ticket aberto do contato que começou antes desta mensagem: ela pertence a ele, não ao histórico.

@@ -6,6 +6,7 @@ use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
+use App\Jobs\FillContactNameJob;
 use App\Jobs\ResolveMessageMediaJob;
 use App\Models\Channel;
 use App\Models\Contact;
@@ -14,6 +15,7 @@ use App\Models\Ticket;
 use App\Models\WahaEvent;
 use App\Services\Inbox\IngestMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -481,6 +483,15 @@ class IngestMessageTest extends TestCase
         ])));
 
         $this->assertSame('Proposta final.pdf', $message?->media_name);
+    }
+
+    public function test_mensagem_de_contato_sem_nome_da_agenda_enfileira_a_busca_do_nome(): void
+    {
+        Cache::flush();
+
+        $message = $this->ingest($this->event($this->inbound()));
+
+        Queue::assertPushed(FillContactNameJob::class, fn (FillContactNameJob $job): bool => $job->contactId === $message?->contact_id && $job->channelId === $this->channel->id);
     }
 
     /** @param array<string, mixed> $media */

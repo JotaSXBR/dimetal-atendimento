@@ -28,7 +28,8 @@ class ResolveLidPhone
             $digits = $phone === null ? '' : (string) preg_replace('/\D/', '', explode('@', $phone)[0]);
 
             if ($digits !== '') {
-                ($this->resolveContact)($lid, $digits.'@s.whatsapp.net');
+                $contact = ($this->resolveContact)($lid, $digits.'@s.whatsapp.net');
+                app(FillContactName::class)->queueFor($contact, $channel);
             }
         } catch (Throwable $e) {
             Log::warning('Importação: telefone do lid não resolvido', ['canal' => $channel->id, 'lid' => $lid, 'erro' => $e->getMessage()]);

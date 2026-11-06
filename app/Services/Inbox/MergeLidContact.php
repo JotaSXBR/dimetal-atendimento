@@ -20,7 +20,7 @@ use Illuminate\Support\Collection;
  */
 class MergeLidContact
 {
-    private const PROFILE_FIELDS = ['name', 'nickname', 'phone2', 'email', 'company', 'job_title', 'address', 'notes', 'birthday', 'urls', 'edited_at'];
+    private const PROFILE_FIELDS = ['name', 'name_source', 'nickname', 'phone2', 'email', 'company', 'job_title', 'address', 'notes', 'birthday', 'urls', 'edited_at'];
 
     /** O espelho do Google do registro do lid não fica órfão: o telefone passa a apontar para o mesmo contato lá. */
     private const MIRROR_FIELDS = ['google_resource_name', 'google_etag', 'google_payload_hash', 'google_synced_at'];
