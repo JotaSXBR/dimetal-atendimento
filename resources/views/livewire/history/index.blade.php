@@ -12,6 +12,13 @@
         <header class="space-y-3 border-b border-line p-4">
             <h1 class="text-base font-semibold text-ink">Histórico</h1>
 
+            @if ($filteredContact)
+                <flux:badge size="sm" data-testid="history-contact-filter">
+                    Contato: {{ $filteredContact }}
+                    <flux:badge.close wire:click="$set('contactId', null)" aria-label="Remover filtro de contato" />
+                </flux:badge>
+            @endif
+
             <flux:input icon="magnifying-glass" placeholder="Contato, protocolo ou texto da conversa" wire:model.live.debounce.400ms="q" clearable />
 
             <div class="grid grid-cols-2 gap-2">
