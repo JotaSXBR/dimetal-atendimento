@@ -368,7 +368,7 @@ class Inbox extends Component
         $list = Ticket::query()
             ->open()
             ->visibleTo($user)
-            ->with(['contact', 'channel', 'tags'])
+            ->with(['contact', 'channel', 'tags', 'assignee', 'sector'])
             ->addSelect(['preview' => Message::query()
                 ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->orderByDesc('sent_at')->orderByDesc('id')->limit(1)])
             ->when($this->tab === 'pendentes', fn (Builder $q) => $q->where('status', TicketStatus::PENDENTE->value))
@@ -392,6 +392,8 @@ class Inbox extends Component
                 'meus' => Ticket::query()->open()->where('assigned_user_id', $user->id)->count(),
             ],
             // O selo do número só ajuda quando há mais de um número ativo.
+            // O setor no card só ajuda quando há mais de um setor recebendo tickets.
+            'showSector' => Sector::query()->receivingTickets()->count() >= 2,
             'showChannel' => Channel::query()->where('active', true)->count() >= 2,
             'ticket' => $ticket,
             'replyTo' => $this->replyBar($ticket?->id),

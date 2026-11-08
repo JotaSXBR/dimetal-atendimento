@@ -100,7 +100,18 @@
                             wire:key="ticket-{{ $item->id }}"
                             class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
                         >
-                            <flux:avatar :name="$item->contact->label()" size="sm" />
+                            @php
+                                $sla = $item->slaState();
+                                $tagsShown = $item->tags->take(2);
+                                $tagsRest = $item->tags->slice(2);
+                                $hasMeta = $item->assignee !== null || ($showSector && $item->sector !== null) || $showChannel || $item->tags->isNotEmpty() || $item->waiting_since !== null;
+                            @endphp
+                            <span class="relative shrink-0">
+                                <flux:avatar :name="$item->contact->label()" size="sm" />
+                                @if ($sla)
+                                    <span data-testid="card-sla" title="{{ $sla === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}" class="absolute -end-0.5 -bottom-0.5 block size-2.5 rounded-full ring-2 ring-surface {{ $sla === 'estourou' ? 'bg-danger' : 'bg-warn' }}"><span class="sr-only">{{ $sla === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span></span>
+                                @endif
+                            </span>
 
                             <span class="min-w-0 flex-1">
                                 <span class="flex items-baseline justify-between gap-2">
@@ -113,20 +124,30 @@
                                     <span x-cloak x-show="$store.clientPresence.label({{ $item->id }})" x-text="$store.clientPresence.label({{ $item->id }})" class="font-medium text-accent-content"></span>
                                     <span x-show="! $store.clientPresence.label({{ $item->id }})">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
                                 </span>
-                                @if ($item->tags->isNotEmpty())
-                                    <span class="mt-1 flex flex-wrap gap-1">
-                                        @foreach ($item->tags as $tag)
-                                            <span class="rounded-full px-2 py-0.5 text-[10px] font-medium text-white" style="background-color: {{ $tag->color }}">{{ $tag->name }}</span>
+                                @if ($hasMeta)
+                                    <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 text-[11px] text-ink-3">
+                                        @if ($item->assignee)
+                                            <span class="inline-flex shrink-0 items-center gap-1 text-ink-2">
+                                                <flux:avatar :name="$item->assignee->name" size="xs" />
+                                                <span data-testid="card-assignee-name">{{ \Illuminate\Support\Str::before($item->assignee->name, ' ') }}</span>
+                                            </span>
+                                        @endif
+                                        @if ($showSector && $item->sector)
+                                            <span data-testid="card-sector" class="truncate">{{ $item->sector->name }}</span>
+                                        @endif
+                                        @if ($showChannel)
+                                            <span class="truncate font-mono text-[10px]">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
+                                        @endif
+                                        @foreach ($tagsShown as $tag)
+                                            <span data-testid="card-tag" class="inline-flex min-w-0 items-center gap-1 text-ink-2"><span class="size-2 shrink-0 rounded-full" style="background-color: {{ $tag->color }}"></span><span class="truncate">{{ $tag->name }}</span></span>
                                         @endforeach
+                                        @if ($tagsRest->isNotEmpty())
+                                            <span data-testid="card-tags-more" title="{{ $tagsRest->pluck('name')->join(', ') }}">+{{ $tagsRest->count() }}</span>
+                                        @endif
+                                        @if ($item->waiting_since)
+                                            <span data-testid="card-wait" class="ms-auto shrink-0 font-mono text-[10px]">{{ \App\Support\WaitLabel::since($item->waiting_since, now()) }}</span>
+                                        @endif
                                     </span>
-                                @endif
-                                @if ($showChannel)
-                                    <span class="mt-0.5 block truncate font-mono text-[10px] text-ink-3">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
-                                @endif
-                                @if ($state = $item->slaState())
-                                    <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium {{ $state === 'estourou' ? 'bg-danger/10 text-danger' : 'bg-warn/10 text-warn' }}">{{ $state === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span>
-                                @elseif ($item->waiting_since !== null && $item->sla_due_at !== null)
-                                    <span class="mt-1 block text-[10px] text-ink-3">Responder até {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($item->sla_due_at, now()) }}</span>
                                 @endif
                             </span>
                         </button>
