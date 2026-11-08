@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\MessageDirection;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\Inbox\Inbox;
@@ -77,9 +78,14 @@ class InboxMediaTest extends TestCase
         $this->assertSame(['below', 'below'], $this->timeModes(['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf']));
     }
 
+    public function test_visualizacao_unica_com_mime_de_imagem_ainda_mostra_a_hora(): void
+    {
+        $this->assertSame(['below'], $this->timeModes(['type' => 'view_once', 'media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg']));
+    }
+
     public function test_recebida_nao_tem_ticks(): void
     {
-        $html = $this->screen(['type' => 'text', 'body' => 'Oi', 'direction' => \App\Enums\MessageDirection::IN])->html();
+        $html = $this->screen(['type' => 'text', 'body' => 'Oi', 'direction' => MessageDirection::IN])->html();
 
         $this->assertDoesNotMatchRegularExpression('/aria-label="(Lida|Entregue|Enviada|Enviando)"/', $html);
     }
