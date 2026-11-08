@@ -1,10 +1,11 @@
 <div>
 @php($tz = config()->string('app.display_timezone'))
 @if ($compact && ! $editing)
-    <div class="space-y-4 text-sm">
+    <div class="space-y-2 text-sm">
+        <x-disclosure title="Contato" testid="details-contact">
+        <div class="space-y-4">
         <div>
-            <h2 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Cliente</h2>
-            <p class="mt-1 font-semibold text-ink">{{ $contact->label() }}</p>
+            <p class="font-semibold text-ink">{{ $contact->label() }}</p>
             @if ($contact->company || $contact->job_title)
                 <p class="text-ink-2">{{ implode(' · ', array_filter([$contact->company, $contact->job_title])) }}</p>
             @endif
@@ -22,10 +23,11 @@
                 <p class="mt-1 text-xs text-ink-3">Nenhuma observação.</p>
             @endif
         </div>
+        </div>
+        </x-disclosure>
 
-        <div>
-            <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Atendimentos anteriores</h3>
-            <ul class="mt-2 space-y-2">
+        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history">
+            <ul class="space-y-2">
                 @forelse ($history as $past)
                     @php($mine = in_array($past->id, $openable, true))
                     @php($closed = $past->status === \App\Enums\TicketStatus::ENCERRADO)
@@ -53,7 +55,10 @@
                     <li class="text-xs text-ink-3">Nenhum atendimento ainda.</li>
                 @endforelse
             </ul>
-        </div>
+            @if ($hasMore)
+                <a href="{{ route('historico', ['contactId' => $contact->id]) }}" wire:navigate class="mt-2 inline-block text-xs text-accent-content underline-offset-2 hover:underline">Ver todos no Histórico</a>
+            @endif
+        </x-disclosure>
 
         @if ($google['error'])
             <div class="flex items-start justify-between gap-2 text-xs text-danger" role="alert">
@@ -135,6 +140,9 @@
                 <li class="text-xs text-ink-3">Nenhum atendimento ainda.</li>
             @endforelse
         </ul>
+        @if ($hasMore)
+            <a href="{{ route('historico', ['contactId' => $contact->id]) }}" wire:navigate class="mt-2 inline-block text-xs text-accent-content underline-offset-2 hover:underline">Ver todos no Histórico</a>
+        @endif
     </div>
     @endunless
 

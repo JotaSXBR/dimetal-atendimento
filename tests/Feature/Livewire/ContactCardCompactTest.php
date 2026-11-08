@@ -37,6 +37,67 @@ class ContactCardCompactTest extends TestCase
         return Livewire::actingAs($this->user)->test(ContactCard::class, ['contactId' => $this->contact->id, ...$props]);
     }
 
+    /** @return list<Ticket> Do mais antigo ao mais novo, encerrados. */
+    private function past(int $count): array
+    {
+        $channel = Channel::query()->first() ?? Channel::factory()->create();
+
+        return array_map(fn (int $i) => Ticket::factory()->create([
+            'channel_id' => $channel->id,
+            'contact_id' => $this->contact->id,
+            'status' => TicketStatus::ENCERRADO,
+            'opened_at' => now()->subDays(30 - $i),
+            'closed_at' => now()->subDays(30 - $i),
+        ]), range(1, $count));
+    }
+
+    private function detailsTag(string $html, string $testid): string
+    {
+        $this->assertSame(1, preg_match('/<details[^>]*data-testid="'.$testid.'"[^>]*>/', $html, $m), "bloco {$testid} ausente");
+
+        return $m[0];
+    }
+
+    public function test_mostra_so_os_5_ultimos_e_o_link_ao_historico(): void
+    {
+        $tickets = $this->past(7);
+
+        $card = $this->card(['compact' => true])
+            ->assertSee('Anteriores (7)')
+            ->assertSee('Ver todos no Histórico')
+            ->assertSeeHtml('contactId='.$this->contact->id);
+
+        foreach (array_slice($tickets, 2) as $shown) {
+            $card->assertSee($shown->protocol);
+        }
+        $card->assertDontSee($tickets[0]->protocol)->assertDontSee($tickets[1]->protocol);
+    }
+
+    public function test_sem_link_com_5_ou_menos(): void
+    {
+        $this->past(5);
+
+        $this->card(['compact' => true])->assertSee('Anteriores (5)')->assertDontSee('Ver todos no Histórico');
+    }
+
+    public function test_sem_anteriores_o_bloco_vem_fechado(): void
+    {
+        $tag = $this->detailsTag($this->card(['compact' => true])->html(), 'details-history');
+
+        $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $tag);
+    }
+
+    public function test_ficha_completa_tambem_limita_a_5_sem_blocos(): void
+    {
+        $tickets = $this->past(7);
+
+        $this->card()
+            ->assertSee($tickets[6]->protocol)
+            ->assertDontSee($tickets[0]->protocol)
+            ->assertSee('Ver todos no Histórico')
+            ->assertDontSeeHtml('data-testid="details-contact"');
+    }
+
     public function test_inbox_mostra_o_resumo_e_esconde_o_formulario(): void
     {
         $this->card(['compact' => true])
