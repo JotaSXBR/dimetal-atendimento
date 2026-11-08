@@ -104,7 +104,7 @@
                                 $sla = $item->slaState();
                                 $tagsShown = $item->tags->take(2);
                                 $tagsRest = $item->tags->slice(2);
-                                $hasMeta = $item->assignee !== null || ($showSector && $item->sector !== null) || $showChannel || $item->tags->isNotEmpty() || $item->waiting_since !== null;
+                                $hasMeta = $item->assignee !== null || ($showSector && $item->sector !== null) || $showChannel || $item->tags->isNotEmpty();
                             @endphp
                             <span class="relative shrink-0">
                                 <flux:avatar :name="$item->contact->label()" size="sm" />
@@ -120,12 +120,17 @@
                                         {{ ($item->last_inbound_at ?? $item->opened_at)->timezone($tz)->format('H:i') }}
                                     </span>
                                 </span>
-                                <span class="mt-0.5 block truncate text-xs text-ink-2">
+                                <span class="mt-0.5 flex items-baseline gap-2 text-xs text-ink-2">
+                                    <span class="min-w-0 flex-1 truncate">
                                     <span x-cloak x-show="$store.clientPresence.label({{ $item->id }})" x-text="$store.clientPresence.label({{ $item->id }})" class="font-medium text-accent-content"></span>
                                     <span x-show="! $store.clientPresence.label({{ $item->id }})">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
+                                    </span>
+                                    @if ($item->waiting_since)
+                                        <span data-testid="card-wait" class="shrink-0 font-mono text-[10px] text-ink-3">{{ \App\Support\WaitLabel::since($item->waiting_since, now()) }}</span>
+                                    @endif
                                 </span>
                                 @if ($hasMeta)
-                                    <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 text-[11px] text-ink-3">
+                                    <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-ink-3">
                                         @if ($item->assignee)
                                             <span class="inline-flex shrink-0 items-center gap-1 text-ink-2">
                                                 <flux:avatar :name="$item->assignee->name" size="xs" />
@@ -133,19 +138,16 @@
                                             </span>
                                         @endif
                                         @if ($showSector && $item->sector)
-                                            <span data-testid="card-sector" class="truncate">{{ $item->sector->name }}</span>
+                                            <span data-testid="card-sector" class="min-w-10 truncate">{{ $item->sector->name }}</span>
                                         @endif
                                         @if ($showChannel)
                                             <span class="truncate font-mono text-[10px]">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
                                         @endif
                                         @foreach ($tagsShown as $tag)
-                                            <span data-testid="card-tag" class="inline-flex min-w-0 items-center gap-1 text-ink-2"><span class="size-2 shrink-0 rounded-full" style="background-color: {{ $tag->color }}"></span><span class="truncate">{{ $tag->name }}</span></span>
+                                            <span data-testid="card-tag" class="inline-flex shrink-0 items-center gap-1 text-ink-2"><span class="size-2 shrink-0 rounded-full" style="background-color: {{ $tag->color }}"></span><span class="max-w-20 truncate">{{ $tag->name }}</span></span>
                                         @endforeach
                                         @if ($tagsRest->isNotEmpty())
                                             <span data-testid="card-tags-more" title="{{ $tagsRest->pluck('name')->join(', ') }}">+{{ $tagsRest->count() }}</span>
-                                        @endif
-                                        @if ($item->waiting_since)
-                                            <span data-testid="card-wait" class="ms-auto shrink-0 font-mono text-[10px]">{{ \App\Support\WaitLabel::since($item->waiting_since, now()) }}</span>
                                         @endif
                                     </span>
                                 @endif

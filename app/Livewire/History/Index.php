@@ -60,7 +60,8 @@ class Index extends Component
 
     public function mount(): void
     {
-        if ($this->from === '') {
+        // Vindo do "Ver todos" de um contato, o que interessa são os antigos: sem a janela padrão.
+        if ($this->from === '' && $this->contactId === null) {
             $this->from = CarbonImmutable::now(config()->string('app.display_timezone'))->subDays(self::DEFAULT_DAYS)->toDateString();
         }
     }

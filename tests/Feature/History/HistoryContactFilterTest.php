@@ -73,4 +73,16 @@ class HistoryContactFilterTest extends TestCase
             ->assertSee($b->protocol)
             ->assertDontSee('Contato: Ana Lima');
     }
+
+    /** "Ver todos" do cartão do contato serve justamente para os antigos: sem a janela padrão de 30 dias. */
+    public function test_com_contato_nao_aplica_a_janela_padrao_de_30_dias(): void
+    {
+        $old = $this->closed('Ana Lima', ['closed_at' => now()->subDays(90)]);
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::SUPERVISOR]))
+            ->withQueryParams(['contactId' => $old->contact_id])
+            ->test(Index::class)
+            ->assertSet('from', '')
+            ->assertSee($old->protocol);
+    }
 }

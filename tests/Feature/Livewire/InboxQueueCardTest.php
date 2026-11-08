@@ -102,6 +102,16 @@ class InboxQueueCardTest extends TestCase
         $this->assertSame('há 12 min', trim($this->part($this->html(), 'card-wait')));
     }
 
+    public function test_so_a_espera_fica_na_linha_da_previa_sem_criar_linha_3(): void
+    {
+        $this->ticket(['waiting_since' => now()->subMinutes(5)]);
+
+        $html = $this->html();
+
+        $this->assertStringContainsString('data-testid="card-wait"', $html);
+        $this->assertStringNotContainsString('data-testid="card-meta"', $html);
+    }
+
     public function test_sla_estourado_vira_ponto_com_texto_para_leitor_de_tela(): void
     {
         $this->ticket(['waiting_since' => now()->subHour(), 'sla_warn_at' => now()->subMinutes(30), 'sla_due_at' => now()->subMinute()]);
