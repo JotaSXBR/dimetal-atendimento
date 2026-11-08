@@ -32,7 +32,14 @@
             default => ['Enviando', '…', ''],
         };
         // `kind` só devolve algo diferente de `none` para mensagem que falhou: poupa o cálculo nas demais (até 200 por render).
-        $inlineTime = $message->body !== '' && ! $message->hasMedia() && ! in_array($message->type, ['location', 'contact', 'view_once'], true);
+        // Hora e tiques sempre no canto inferior direito: no fim do texto (inline), sobre foto/vídeo sem legenda (overlay) ou na base (below).
+        $visual = $message->hasMedia() && ($message->media_ref !== null || $message->media_path !== null)
+            && ((str_starts_with((string) $message->media_mime, 'image/') && $message->media_mime !== 'image/webp') || str_starts_with((string) $message->media_mime, 'video/'));
+        $timeMode = match (true) {
+            $message->body !== '' && ! in_array($message->type, ['location', 'contact', 'view_once'], true) => 'inline',
+            $visual && $message->body === '' => 'overlay',
+            default => 'below',
+        };
         $resend = $out && ! $readonly && $message->delivery_status === \App\Enums\DeliveryStatus::FAILED
             ? app(\App\Services\Inbox\ResendTicketMessage::class)->kind($message, auth()->user())
             : 'none';
@@ -63,7 +70,7 @@
             @endif
 
             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                <p x-show="! editing" class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}@if ($inlineTime)@include('livewire.inbox.message-time', ['inline' => true])@endif</p>
+                <p x-show="! editing" class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}@if ($timeMode === 'inline')@include('livewire.inbox.message-time', ['mode' => 'inline'])@endif</p>
                 @if (! $readonly)
                     @can('edit', $message)
                         <div x-cloak x-show="editing" class="space-y-1">
@@ -193,9 +200,9 @@
                 @endcan
             @endif
 
-            @unless ($inlineTime)
-                @include('livewire.inbox.message-time', ['inline' => false])
-            @endunless
+            @if ($timeMode === 'below')
+                @include('livewire.inbox.message-time', ['mode' => 'below'])
+            @endif
         </div>
 
         @if (! $readonly)

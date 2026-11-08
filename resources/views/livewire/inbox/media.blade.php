@@ -32,7 +32,7 @@
     @else
         {{-- Foto como no WhatsApp: largura fixa e altura máxima; a mais alta que o limite é cortada. --}}
         {{-- Clique abre a prévia por cima do app (sem nova aba); Esc, clique fora ou no X fecham. --}}
-        <div x-data="{ open: false }" x-on:keydown.escape.window="open = false">
+        <div x-data="{ open: false }" x-on:keydown.escape.window="open = false" class="relative w-fit">
             <button type="button" data-photo-box x-on:click="open = true" class="block w-72 max-w-full cursor-zoom-in overflow-hidden rounded-lg"><img src="{{ $url }}" alt="Imagem recebida" loading="lazy" class="max-h-80 w-full object-cover"></button>
             <template x-teleport="body">
                 <div data-photo-preview x-show="open" x-cloak x-on:click="open = false" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
@@ -40,12 +40,21 @@
                     <img src="{{ $url }}" alt="Imagem recebida" class="max-h-full max-w-full object-contain">
                 </div>
             </template>
+            @if (($timeMode ?? null) === 'overlay')
+                @include('livewire.inbox.message-time', ['mode' => 'overlay'])
+            @endif
         </div>
     @endif
 @elseif (str_starts_with($mime, 'audio/'))
     @include('livewire.inbox.audio-player', ['url' => $url])
 @elseif (str_starts_with($mime, 'video/'))
-    <video controls preload="metadata" src="{{ $url }}" class="max-h-72 max-w-full rounded-lg"></video>
+    <div class="relative w-fit">
+        <video controls preload="metadata" src="{{ $url }}" class="max-h-72 max-w-full rounded-lg"></video>
+        {{-- No vídeo a hora sobe acima da barra de controles nativa. --}}
+        @if (($timeMode ?? null) === 'overlay')
+            <div class="pointer-events-none absolute inset-x-0 top-0 h-7">@include('livewire.inbox.message-time', ['mode' => 'overlay'])</div>
+        @endif
+    </div>
 @else
     {{-- Documento como o cartão do WhatsApp: ícone do tipo, nome, "TIPO · tamanho" e, sob um filete, um botão (Abrir no PDF, Baixar no resto) --}}
     @php
