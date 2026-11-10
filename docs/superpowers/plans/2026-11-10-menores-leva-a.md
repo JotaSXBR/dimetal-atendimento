@@ -25,7 +25,8 @@
 - `If-None-Match` com lista mista (`"outro", W/"x"`): 304. Teste na Tarefa 1.
 - Setor apagado entre a leitura e a gravação em `TransferTicket`: `false`, ticket intocado, nenhum evento. Teste na Tarefa 3.
 - Setor desativado (não apagado) na mesma janela: mesmo resultado, pelo mesmo helper. Testes nas Tarefas 3 e 4.
-- Limite assumido: o `FOR SHARE` em si não tem teste de concorrência (precisaria de processo filho, como `ClaimConcurrencyTest`); os testes cobrem a releitura, e a trava fica pela revisão do portão 6.
+- `FOR SHARE` de fato pedido ao banco: teste na Tarefa 3 captura o SQL de `Sector::lockForReceiving` e exige `for share`. Limite assumido: o efeito da trava entre dois processos fica sem teste (precisaria de processo filho, como `ClaimConcurrencyTest`); é garantia do Postgres, e o portão 6 confere o código.
+- Recusa dentro da transação não pode gastar o ritmo do contato e do canal: teste na Tarefa 4.
 
 ---
 
@@ -76,7 +77,8 @@
 - [ ] **Step 1: Write the failing tests** em `RoutingActionsTest` (modelo `Sector` já carregado, banco alterado depois, ação chamada com o modelo velho; mesmas três asserções do `test_transferir_para_setor_desativado_e_recusado`: retorno `false`, `sector_id` do ticket inalterado, zero eventos):
   - `test_transferir_para_setor_apagado_depois_de_carregado_e_recusado`: `Sector::query()->whereKey($stale->id)->delete()` (soft delete).
   - `test_transferir_para_setor_desativado_depois_de_carregado_e_recusado`: `Sector::query()->whereKey($stale->id)->update(['status' => SectorStatus::DESATIVADO])`.
-- [ ] **Step 2: Run** `php artisan test --filter=depois_de_carregado_e_recusado`. Expected: os dois FAIL (ação devolve `true`).
+  - `test_setor_para_receber_e_relido_com_for_share`: dentro de `DB::transaction`, com `DB::enableQueryLog()`, chamar `Sector::lockForReceiving($sector->id)` e afirmar que alguma consulta do log contém `for share`; fora desse caso, o retorno é o `Sector` para ativo e para fora do menu, e `null` para desativado, apagado e id inexistente.
+- [ ] **Step 2: Run** `php artisan test --filter=RoutingActionsTest`. Expected: os três novos FAIL (os dois primeiros devolvem `true`; o terceiro não acha o método).
 - [ ] **Step 3: Implement** `Sector::lockForReceiving` e, em `TransferTicket::__invoke`, substituir a checagem `! $to->status->receivesTickets()` de antes da transação por `if (Sector::lockForReceiving($to->id) === null) { return false; }` como primeira linha da closure do `DB::transaction` (a trava do setor vem antes da do ticket, na mesma ordem do `DeleteSector`). Atualizar o docblock da classe se citar o setor "que não recebe tickets".
 - [ ] **Step 4: Run** `php artisan test --filter=RoutingActionsTest` e, pelos afetados, `git status --porcelain | cut -c4- | codegraph affected --stdin -d 2 --quiet | xargs -r php artisan test`. Expected: PASS.
 - [ ] **Step 5: Commit** `fix: transferir relê o setor com trava dentro da transação e recusa o apagado ou desativado`.
@@ -92,8 +94,9 @@
 - Produces: `StartConversation` lança `ConversationNotStarted('Escolha um setor que receba tickets e que você atenda.')` quando o setor some ou deixa de receber entre o `guard` e a gravação, sem criar nada.
 
 - [ ] **Step 1: Write the failing tests** em `StartConversationTest`, usando o helper `refuses(callable, 'Escolha um setor')` (que já confere que nada foi criado): cria `$stale = Sector::factory()->create()`, `$this->agent->sectors()->attach($stale)`, altera o banco (soft delete e, em outro teste, `status => DESATIVADO`) e chama `$this->start(sector: $stale)`. Nomes: `test_setor_apagado_depois_do_guard_nao_cria_nada` e `test_setor_desativado_depois_do_guard_nao_cria_nada`.
+  - Nos dois testes acima, afirmar também que o ritmo não foi gasto: `RateLimiter::tooManyAttempts('start-conversation:channel:'.$channel->id, 1)` falso e `RateLimiter::attempts('start-conversation:contact:'.$contact->id)` igual a 0 (limpar as chaves no início do teste).
 - [ ] **Step 2: Run** `php artisan test --filter=depois_do_guard_nao_cria_nada`. Expected: os dois FAIL (o ticket é criado).
-- [ ] **Step 3: Implement** na closure de `DB::transaction`, logo após o `pg_advisory_xact_lock` e antes do `openTicket`: `if (Sector::lockForReceiving($sector->id) === null) { throw new ConversationNotStarted('Escolha um setor que receba tickets e que você atenda.'); }`. A mensagem repete a do `guard`; extrair para uma constante privada da classe usada nos dois pontos. Anotar em comentário de uma linha que a exceção desfaz a transação (o ritmo por contato/canal já reservado não é devolvido: aceitável, a janela é rara).
+- [ ] **Step 3: Implement** na closure de `DB::transaction`, logo após o `pg_advisory_xact_lock` e antes do `openTicket`: `if (Sector::lockForReceiving($sector->id) === null) { throw new ConversationNotStarted('Escolha um setor que receba tickets e que você atenda.'); }`. A mensagem repete a do `guard`; extrair para uma constante privada da classe usada nos dois pontos. Antes de lançar, devolver o ritmo já reservado por `reservePace`: método privado `releasePace(Contact, Channel)` com `RateLimiter::clear($channelKey)` e `RateLimiter::decrement($contactKey, 3600)` (as chaves viram constantes/helper compartilhados com `reservePace`).
 - [ ] **Step 4: Run** `php artisan test --filter=StartConversationTest` e `--filter=NewConversation`. Expected: PASS.
 - [ ] **Step 5: Commit** `fix: nova conversa relê o setor com trava dentro da transação`.
 
