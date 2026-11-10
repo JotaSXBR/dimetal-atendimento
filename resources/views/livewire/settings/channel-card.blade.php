@@ -35,7 +35,7 @@
         <div class="mt-4 flex gap-4">
             @if (! $inactive && $status === \App\Enums\ChannelStatus::SCAN_QR_CODE && $qrValue)
                 {{-- Desenhado no navegador com a logo; o `wire:ignore` impede o poll de apagar o canvas. A chave nova a cada QR redesenha. --}}
-                <div wire:key="qr-{{ md5($qrValue) }}" x-data="channelQr($wire, @js($qrValue), '{{ asset('images/qr-logo.svg') }}')" class="shrink-0">
+                <div wire:key="qr-{{ md5($qrValue) }}" x-data="channelQr($wire, @js($qrValue), @js(\App\Settings\CompanySettings::logoUrl()))" class="shrink-0">
                     <div wire:ignore x-ref="canvas" class="size-56 rounded-[10px] border border-line bg-white p-2 [&>canvas]:size-full" role="img" aria-label="QR do WhatsApp"></div>
                 </div>
             @elseif (! $inactive && $status === \App\Enums\ChannelStatus::SCAN_QR_CODE && $qr)

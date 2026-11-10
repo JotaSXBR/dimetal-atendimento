@@ -1,4 +1,17 @@
-<x-settings-page route="configuracoes.empresa" title="Empresa e assinatura" subtitle="Nome e assinatura que aparecem nas mensagens." width="3xl">
+<x-settings-page route="configuracoes.empresa" title="Empresa e assinatura" subtitle="Nome, logotipo e assinatura que aparecem no sistema e nas mensagens." width="3xl">
+    <section class="mt-6 space-y-3 rounded-[14px] border border-line bg-surface p-5" aria-labelledby="logo-title">
+        <div>
+            <p id="logo-title" class="text-sm font-semibold text-ink">Logotipo</p>
+            <p class="text-xs text-ink-3">Aparece no menu, na tela de login e no centro do QR do WhatsApp. Imagem quadrada com cantos arredondados; sem logotipo, usamos a inicial do nome.</p>
+        </div>
+
+        <x-avatar-uploader model="photo" action="saveLogo" :current="\App\Settings\CompanySettings::logoUrl()" :name="$name" shape="rounded" single>
+            @if (\App\Settings\CompanySettings::logoUrl())
+                <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeLogo" wire:confirm="Remover o logotipo da empresa?">Remover</flux:button>
+            @endif
+        </x-avatar-uploader>
+    </section>
+
     <form wire:submit="save" class="mt-6 space-y-6 rounded-[14px] border border-line bg-surface p-5">
         <flux:input label="Nome fantasia" wire:model="name" />
 
