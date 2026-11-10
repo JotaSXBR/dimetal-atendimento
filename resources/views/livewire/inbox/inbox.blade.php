@@ -165,37 +165,40 @@
     </section>
 
     {{-- Conversa --}}
-    <section class="flex min-h-0 flex-col bg-canvas {{ $ticket ? '' : 'hidden lg:flex' }}">
+    {{-- `@container`: o cabeçalho e o compositor mudam pela largura desta coluna (muda com a sidebar aberta ou fechada e com o painel de detalhes), não pela da janela. --}}
+    <section data-testid="conversation-column" class="@container flex min-h-0 flex-col bg-canvas {{ $ticket ? '' : 'hidden lg:flex' }}">
         @if ($ticket)
             @php
                 $name = $ticket->contact->label();
             @endphp
 
-            <header class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface px-4 py-3">
+            <header class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-surface px-4 py-2">
                 <flux:button variant="subtle" size="sm" icon="arrow-left" class="lg:hidden" wire:click="$set('ticketId', null)" aria-label="Voltar para a lista" />
                 <flux:avatar :name="$name" size="sm" />
 
                 <div class="min-w-0 flex-1 basis-56">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-ink">
-                        <span class="truncate">{{ $name }}</span>
+                    <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink">
+                        <span class="max-w-full truncate">{{ $name }}</span>
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
-                    </p>
+                        @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
+                            @php
+                                $slaState = $ticket->slaState();
+                            @endphp
+                            <span data-testid="header-sla" class="text-xs font-medium {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
+                                @if ($slaState === 'estourou')
+                                    SLA estourado: venceu {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
+                                @else
+                                    Responder até {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
+                                @endif
+                            </span>
+                        @endif
+                    </div>
                     <p class="truncate font-mono text-[11px] text-ink-3">
                         {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}@if ($showChannel) · {{ $ticket->channel->phoneLabel() ?? 'sem número' }}@endif
                     </p>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
                             {{ $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label() }}@if ($ticket->close_summary) · {{ $ticket->close_summary }}@endif
-                        </p>
-                    @endif
-                    @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
-                        @php($slaState = $ticket->slaState())
-                        <p class="text-xs font-medium {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
-                            @if ($slaState === 'estourou')
-                                SLA estourado: venceu {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
-                            @else
-                                Responder até {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
-                            @endif
                         </p>
                     @endif
                 </div>
@@ -214,11 +217,11 @@
                     @endif
 
                     @if ($canTransfer)
-                        <flux:button size="sm" icon="arrows-right-left" wire:click="openPanel('transfer')">Transferir</flux:button>
+                        <flux:button size="sm" icon="arrows-right-left" wire:click="openPanel('transfer')" aria-label="Transferir" tooltip="Transferir"><span class="hidden @2xl:inline">Transferir</span></flux:button>
                     @endif
 
                     @if ($canReassign)
-                        <flux:button size="sm" icon="user-plus" wire:click="openPanel('reassign')">Reatribuir</flux:button>
+                        <flux:button size="sm" icon="user-plus" wire:click="openPanel('reassign')" aria-label="Reatribuir" tooltip="Reatribuir"><span class="hidden @2xl:inline">Reatribuir</span></flux:button>
                     @endif
 
                     @if ($canClose)
