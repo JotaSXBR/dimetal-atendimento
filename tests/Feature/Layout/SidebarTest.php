@@ -91,6 +91,59 @@ class SidebarTest extends TestCase
         $this->assertTrue($this->entry($this->page(UserRole::ADMIN, '/configuracoes/setores'))?->hasAttribute('data-current'));
     }
 
+    public function test_sidebar_e_recolhivel_no_desktop_para_todos_os_papeis(): void
+    {
+        foreach ([UserRole::ATENDENTE, UserRole::SUPERVISOR, UserRole::ADMIN] as $role) {
+            $html = $this->page($role);
+
+            $this->assertStringContainsString('collapsible="true"', $html, $role->value);
+            $this->assertStringNotContainsString('collapsible="mobile"', $html, $role->value);
+        }
+    }
+
+    public function test_botao_de_colapso_aparece_no_desktop(): void
+    {
+        $this->assertSame(0, $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-flux-sidebar-collapse and contains(@class, "lg:hidden")]')->length);
+    }
+
+    public function test_ponto_da_fila_fechada_e_vermelho_com_sla_estourado_mesmo_sem_aguardando(): void
+    {
+        $channel = Channel::factory()->connected()->create();
+        Ticket::factory()->for($channel)->create([
+            'status' => TicketStatus::EM_ATENDIMENTO, 'waiting_since' => now()->subHour(), 'sla_due_at' => now()->subMinutes(5),
+        ]);
+
+        $dot = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->item(0);
+
+        $this->assertStringContainsString('bg-danger', (string) $dot?->getAttribute('class'));
+        $this->assertStringContainsString('1 com SLA estourado', (string) $dot?->textContent);
+    }
+
+    public function test_ponto_da_fila_fechada_e_amarelo_com_aguardando(): void
+    {
+        Ticket::factory()->count(3)->for(Channel::factory()->connected()->create())->create(['status' => TicketStatus::AGUARDANDO]);
+
+        $dot = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->item(0);
+
+        $this->assertStringContainsString('bg-accent', (string) $dot?->getAttribute('class'));
+        $this->assertStringContainsString('3 aguardando', (string) $dot?->textContent);
+    }
+
+    public function test_sem_pendencia_nao_ha_ponto_da_fila(): void
+    {
+        $this->assertSame(0, $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->length);
+    }
+
+    public function test_ponto_da_fila_so_aparece_com_a_sidebar_fechada(): void
+    {
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create(['status' => TicketStatus::AGUARDANDO]);
+
+        $class = (string) $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->item(0)?->getAttribute('class');
+
+        $this->assertStringContainsString('hidden', $class);
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:block', $class);
+    }
+
     public function test_contadores_de_aguardando_e_sla_estourado(): void
     {
         $channel = Channel::factory()->connected()->create();
@@ -118,6 +171,17 @@ class SidebarTest extends TestCase
         $this->assertSame(0, $xpath->query('//*[@data-test="queue-badge"]')->length);
     }
 
+    public function test_selos_de_texto_somem_com_a_sidebar_fechada_porque_o_ponto_os_substitui(): void
+    {
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create([
+            'status' => TicketStatus::AGUARDANDO, 'waiting_since' => now()->subHour(), 'sla_due_at' => now()->subMinutes(5),
+        ]);
+
+        $sla = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="sla-badge"]')->item(0);
+
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:hidden', (string) $sla?->getAttribute('class'));
+    }
+
     public function test_sem_pendencia_nao_ha_selo(): void
     {
         $xpath = $this->xpath($this->page(UserRole::ADMIN));
@@ -131,6 +195,22 @@ class SidebarTest extends TestCase
         Channel::factory()->create(['status' => ChannelStatus::STOPPED]);
 
         $this->assertStringContainsString('WhatsApp desconectado', $this->page(UserRole::ATENDENTE));
+    }
+
+    public function test_aviso_de_whatsapp_tem_texto_e_icone_com_rotulo_para_a_sidebar_fechada(): void
+    {
+        Channel::factory()->create(['status' => ChannelStatus::STOPPED]);
+
+        $xpath = $this->xpath($this->page(UserRole::ATENDENTE));
+        $notice = $xpath->query('//*[@data-test="whatsapp-down"]')->item(0);
+
+        $this->assertNotNull($notice);
+        $this->assertSame('WhatsApp desconectado', $xpath->query('.//*[@aria-label="WhatsApp desconectado"]', $notice)->item(0)?->getAttribute('aria-label'));
+        // `aria-label` num elemento sem papel costuma ser ignorado por leitores de tela: o ícone precisa de `role="img"`.
+        $this->assertSame('img', $xpath->query('.//*[@aria-label="WhatsApp desconectado"]', $notice)->item(0)?->getAttribute('role'));
+        $text = $xpath->query('.//p', $notice)->item(0);
+        $this->assertStringContainsString('As mensagens ficam aguardando', (string) $text?->textContent);
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:hidden', (string) $text?->getAttribute('class'));
     }
 
     public function test_sem_aviso_com_canal_conectado(): void
