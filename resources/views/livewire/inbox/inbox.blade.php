@@ -193,9 +193,9 @@
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
                             @if ($ticket->close_outcome)
-                                <x-status-badge :status="$ticket->close_outcome" />
+                                <x-status-badge :status="$ticket->close_outcome" class="me-1" />
                             @elseif ($ticket->closed_reason)
-                                <x-status-badge tone="neutral">{{ $ticket->closed_reason->label() }}</x-status-badge>
+                                <x-status-badge tone="neutral" class="me-1">{{ $ticket->closed_reason->label() }}</x-status-badge>
                             @endif
                             @if ($ticket->close_summary){{ $ticket->close_summary }}@endif
                         </p>

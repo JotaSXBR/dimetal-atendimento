@@ -51,7 +51,9 @@
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
-            <x-skeleton-rows wire:loading.delay wire:target="q,from,to,sectorId,outcome,userId" />
+            <x-skeleton-rows wire:loading.delay.block wire:target="q,from,to,sectorId,outcome,userId" />
+
+            <div wire:loading.remove.delay wire:target="q,from,to,sectorId,outcome,userId">
 
             @forelse ($tickets as $item)
                 <button
@@ -70,9 +72,9 @@
                         <span class="mt-0.5 block truncate text-xs text-ink-2">
                             {{ $item->protocol }} · {{ $item->sector?->name ?? 'Sem setor' }}
                             @if ($item->close_outcome)
-                                <x-status-badge :status="$item->close_outcome" class="ms-1" />
+                                <x-status-badge :status="$item->close_outcome" />
                             @elseif ($item->closed_reason)
-                                <x-status-badge tone="neutral" class="ms-1">{{ $item->closed_reason->label() }}</x-status-badge>
+                                <x-status-badge tone="neutral">{{ $item->closed_reason->label() }}</x-status-badge>
                             @endif
                         </span>
                         @if ($item->assignee)
@@ -83,6 +85,7 @@
             @empty
                 <x-empty-state icon="archive-box" title="Nenhum ticket encerrado com esses filtros." description="Ajuste o período ou os filtros." />
             @endforelse
+            </div>
 
             @if ($tickets->hasPages())
                 <div class="border-t border-line p-3">{{ $tickets->links() }}</div>
@@ -110,9 +113,9 @@
                 Encerrado em {{ $ticket->closed_at?->timezone($tz)->format('d/m/Y \à\s H:i') }}@if ($closer) por {{ $closer }}@endif
                 · duração {{ (int) $ticket->opened_at->diffInMinutes($ticket->closed_at, true) }} min
                 @if ($ticket->close_outcome)
-                    <x-status-badge :status="$ticket->close_outcome" class="ms-1" />
+                    <x-status-badge :status="$ticket->close_outcome" />
                 @elseif ($ticket->closed_reason)
-                    <x-status-badge tone="neutral" class="ms-1">{{ $ticket->closed_reason->label() }}</x-status-badge>
+                    <x-status-badge tone="neutral">{{ $ticket->closed_reason->label() }}</x-status-badge>
                 @endif
             </div>
 

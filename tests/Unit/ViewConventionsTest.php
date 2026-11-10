@@ -30,7 +30,7 @@ class ViewConventionsTest extends TestCase
 
         foreach ($this->views() as $path => $html) {
             $this->assertStringNotContainsString('$statusColor', $html, "{$path}: o tom vem do enum (tone()), não de closure local");
-            $this->assertDoesNotMatchRegularExpression('/<flux:badge[^>]*\scolor=/', $html, "{$path}: flux:badge com cor da paleta; use <x-status-badge>");
+            $this->assertDoesNotMatchRegularExpression('/<flux:badge[^>]*\s:?color=/', $html, "{$path}: flux:badge com cor da paleta; use <x-status-badge>");
 
             if ($path === 'components/status-badge.blade.php' || in_array($path, $contadores, true)) {
                 continue;

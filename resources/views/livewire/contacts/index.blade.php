@@ -26,7 +26,7 @@
             <flux:input icon="magnifying-glass" placeholder="Buscar por nome, telefone, e-mail ou empresa" wire:model.live.debounce.300ms="search" clearable />
         </div>
 
-        <x-skeleton-rows :rows="4" wire:loading.delay wire:target="search" class="mt-4 rounded-[14px] border border-line bg-surface" />
+        <x-skeleton-rows :rows="4" wire:loading.delay.block wire:target="search" class="mt-4 rounded-[14px] border border-line bg-surface" />
 
         <ul wire:loading.remove.delay wire:target="search" class="mt-4 divide-y divide-line rounded-[14px] border border-line bg-surface">
             @forelse ($contacts as $contact)
