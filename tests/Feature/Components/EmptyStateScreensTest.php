@@ -16,7 +16,9 @@ class EmptyStateScreensTest extends TestCase
             ->assertSeeHtml('data-empty-state')
             ->assertSee('Nenhum contato encontrado.')
             ->assertSeeHtml('data-skeleton')
-            ->assertSeeHtml('wire:loading.delay.block')
+            ->assertSeeHtml('wire:loading.delay')
+            ->assertDontSeeHtml('wire:loading.delay.block')
+            ->assertSeeHtml('grid-cols-[minmax(0,1fr)]')
             ->assertSeeHtml('wire:target="search"');
     }
 
@@ -28,7 +30,8 @@ class EmptyStateScreensTest extends TestCase
             ->assertSeeHtml('data-empty-state')
             ->assertSee('Nenhum ticket encerrado com esses filtros.')
             ->assertSeeHtml('data-skeleton')
-            ->assertSeeHtml('wire:loading.delay.block')
+            ->assertSeeHtml('wire:loading.delay')
+            ->assertDontSeeHtml('wire:loading.delay.block')
             ->assertSeeHtml('wire:loading.remove.delay')
             ->assertSeeHtml('wire:target="q,from,to,sectorId,outcome,userId"');
     }

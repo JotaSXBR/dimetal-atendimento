@@ -51,7 +51,7 @@
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
-            <x-skeleton-rows wire:loading.delay.block wire:target="q,from,to,sectorId,outcome,userId" />
+            <x-skeleton-rows wire:loading.delay wire:target="q,from,to,sectorId,outcome,userId" />
 
             <div wire:loading.remove.delay wire:target="q,from,to,sectorId,outcome,userId">
 
