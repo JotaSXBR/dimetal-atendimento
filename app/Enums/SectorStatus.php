@@ -17,6 +17,16 @@ enum SectorStatus: string
         };
     }
 
+    /** Tom do selo (`x-status-badge`): neutral, bot, ok, warn, danger ou accent. Sem `default`: caso novo precisa de tom. */
+    public function tone(): string
+    {
+        return match ($this) {
+            self::ATIVO => 'ok',
+            self::FORA_DO_MENU => 'bot',
+            self::DESATIVADO => 'neutral',
+        };
+    }
+
     public function appearsInMenu(): bool
     {
         return $this === self::ATIVO;
