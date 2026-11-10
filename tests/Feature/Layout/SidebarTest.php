@@ -165,6 +165,34 @@ class SidebarTest extends TestCase
         $this->assertStringContainsString('Recolher ou expandir menu', $this->page(UserRole::ADMIN));
     }
 
+    /** Fechada, o Flux esconde o texto do item (só sobra a descrição do tooltip): o nome tem de vir do `aria-label`. */
+    public function test_links_do_menu_e_o_logo_tem_nome_acessivel_com_a_sidebar_fechada(): void
+    {
+        $xpath = $this->xpath($this->page(UserRole::ADMIN));
+
+        $names = [];
+        foreach ($xpath->query('//a[@data-flux-sidebar-item]') as $link) {
+            $names[] = $link->getAttribute('aria-label');
+        }
+
+        $this->assertSame(['Fila', 'Contatos', 'Histórico', 'Relatórios', 'Auditoria', 'Configuração'], $names);
+        $this->assertSame(config('app.name'), $xpath->query('//a[@data-flux-sidebar-brand]')->item(0)?->getAttribute('aria-label'));
+    }
+
+    /** O `aria-label` do link substitui o conteúdo dele: as contagens do selo precisam entrar no nome. */
+    public function test_nome_da_fila_leva_as_contagens_de_aguardando_e_sla(): void
+    {
+        $channel = Channel::factory()->connected()->create();
+        Ticket::factory()->count(2)->for($channel)->create(['status' => TicketStatus::AGUARDANDO]);
+        Ticket::factory()->for($channel)->create([
+            'status' => TicketStatus::AGUARDANDO, 'waiting_since' => now()->subHour(), 'sla_due_at' => now()->subMinutes(5),
+        ]);
+
+        $link = $this->xpath($this->page(UserRole::ADMIN))->query('//a[@data-flux-sidebar-item][1]')->item(0);
+
+        $this->assertSame('Fila, 3 aguardando, 1 com SLA estourado', $link?->getAttribute('aria-label'));
+    }
+
     public function test_sem_pendencia_nao_ha_ponto_da_fila(): void
     {
         $this->assertSame(0, $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->length);

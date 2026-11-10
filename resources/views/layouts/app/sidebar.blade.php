@@ -10,20 +10,28 @@
                 {{-- Fechada, o Flux tira a marca do fluxo no hover e só então mostra o botão de colapso: sem mouse (toque, teclado) não haveria como
                      reabrir, e o sino pulava de lugar. Aqui a marca fica fixa e o botão fica sempre à vista, logo abaixo dela (o `order-*` só
                      troca a ordem fechada: marca, botão, sino; aberta segue marca, sino, botão). --}}
-                <x-app-logo :sidebar="true" href="{{ route('inbox') }}" wire:navigate class="order-1 in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:static! in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:opacity-100!" />
+                <x-app-logo :sidebar="true" href="{{ route('inbox') }}" aria-label="{{ config('app.name') }}" wire:navigate class="order-1 in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:static! in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:opacity-100!" />
                 <div class="order-2 in-data-flux-sidebar-collapsed-desktop:order-3">
                     <livewire:alerts.bell />
                 </div>
                 <flux:sidebar.collapse tooltip="Recolher ou expandir menu" class="order-3 in-data-flux-sidebar-collapsed-desktop:order-2 in-data-flux-sidebar-collapsed-desktop:static! in-data-flux-sidebar-collapsed-desktop:opacity-100!" />
             </flux:sidebar.header>
 
-            @php($counts = app(\App\Support\SidebarState::class)->counts(auth()->user()))
-            @php($nav = app(\App\Support\Navigation::class))
-            @php($entry = $nav->settingsEntry(auth()->user()))
+            @php
+                $counts = app(\App\Support\SidebarState::class)->counts(auth()->user());
+                $nav = app(\App\Support\Navigation::class);
+                $entry = $nav->settingsEntry(auth()->user());
+            @endphp
 
             <flux:sidebar.nav>
                 @foreach ($nav->primary(auth()->user()) as $item)
-                    <flux:sidebar.item :href="route($item->route)" :current="request()->routeIs($item->match)" wire:navigate
+                    @php
+                        // Fechada, o texto do item some e o `aria-label` vira o nome do link; ele substitui o conteúdo, então leva as contagens do selo.
+                        $name = $item->route === 'inbox'
+                            ? $item->label.($counts['waiting'] > 0 ? ', '.$counts['waiting'].' aguardando' : '').($counts['breached'] > 0 ? ', '.$counts['breached'].' com SLA estourado' : '')
+                            : $item->label;
+                    @endphp
+                    <flux:sidebar.item :href="route($item->route)" :current="request()->routeIs($item->match)" aria-label="{{ $name }}" wire:navigate
                         :badge="$item->route === 'inbox' ? ($counts['waiting'] ?: null) : null" badge-color="yellow"
                         badge:data-test="queue-badge" badge:aria-label="{{ $counts['waiting'] }} aguardando">
                         {{-- Fechada, o Flux esconde badge e selo: o estado da Fila vai num ponto sobre o ícone (vermelho só com SLA estourado). --}}
@@ -45,7 +53,7 @@
                 @endforeach
 
                 @if ($entry !== null)
-                    <flux:sidebar.item icon="cog-6-tooth" :href="route($entry->route)" :current="$nav->settingsActive(auth()->user())" class="mt-3" data-test="settings-entry" wire:navigate>
+                    <flux:sidebar.item icon="cog-6-tooth" :href="route($entry->route)" :current="$nav->settingsActive(auth()->user())" class="mt-3" data-test="settings-entry" aria-label="Configuração" wire:navigate>
                         Configuração
                     </flux:sidebar.item>
                 @endif
