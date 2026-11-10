@@ -2,24 +2,84 @@
 
 namespace App\Livewire\Settings;
 
+use App\Actions\Sectors\DeleteSector;
+use App\Actions\Sectors\SectorInUse;
 use App\Enums\SectorStatus;
-use App\Enums\TicketStatus;
 use App\Models\Sector;
-use App\Models\Ticket;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
- * Estado e ordem no menu dos setores. Os cinco setores são fixos na v1: criar, renomear e apagar ficam para depois.
+ * Os setores: criar, renomear, apagar (sem uso), estado e ordem no menu. O padrão (Vendas, Financeiro...) é instalado uma vez
+ * por `DefaultSectors` e daí em diante é do admin.
  */
 #[Title('Setores')]
 class Sectors extends Component
 {
+    public const NAME_LIMIT = 60;
+
+    public string $newName = '';
+
     public function mount(): void
     {
         $this->authorize('admin');
+    }
+
+    public function create(string $name): void
+    {
+        $this->authorize('admin');
+        $this->resetErrorBag();
+
+        $name = trim($name);
+
+        if (($error = $this->nameError($name, null)) !== null) {
+            $this->addError('newName', $error);
+
+            return;
+        }
+
+        $last = Sector::query()->max('menu_order');
+
+        Sector::query()->create([
+            'name' => $name,
+            'menu_order' => (is_numeric($last) ? (int) $last : 0) + 1,
+            'status' => SectorStatus::ATIVO,
+        ]);
+
+        $this->newName = '';
+    }
+
+    public function rename(int $id, string $name): void
+    {
+        $this->authorize('admin');
+        $this->resetErrorBag();
+
+        $sector = Sector::query()->findOrFail($id);
+        $name = trim($name);
+
+        if (($error = $this->nameError($name, $sector->id)) !== null) {
+            $this->addError('rename.'.$id, $error);
+
+            return;
+        }
+
+        $sector->update(['name' => $name]);
+    }
+
+    public function remove(int $id, DeleteSector $delete): void
+    {
+        $this->authorize('admin');
+        $this->resetErrorBag();
+
+        try {
+            $delete(Sector::query()->findOrFail($id));
+        } catch (SectorInUse $e) {
+            $this->addError('remove.'.$id, $e->getMessage());
+        }
     }
 
     public function setStatus(int $id, string $status): void
@@ -36,7 +96,7 @@ class Sectors extends Component
             return;
         }
 
-        if ($new === SectorStatus::DESATIVADO && $this->hasOpenTickets($sector)) {
+        if ($new === SectorStatus::DESATIVADO && $sector->hasOpenTickets()) {
             $this->addError('status.'.$id, 'Há tickets abertos neste setor. Transfira ou encerre antes de desativá-lo.');
 
             return;
@@ -73,12 +133,16 @@ class Sectors extends Component
         });
     }
 
-    private function hasOpenTickets(Sector $sector): bool
+    /** Mensagem de erro do nome (vazio, longo ou repetido entre os setores não apagados) ou `null`. */
+    private function nameError(string $name, ?int $ignoreId): ?string
     {
-        return Ticket::query()
-            ->where('sector_id', $sector->id)
-            ->where('status', '<>', TicketStatus::ENCERRADO->value)
-            ->exists();
+        return Validator::make(['name' => $name], [
+            'name' => ['required', 'string', 'max:'.self::NAME_LIMIT, Rule::unique('sectors', 'name')->whereNull('deleted_at')->ignore($ignoreId)],
+        ], [
+            'name.required' => 'Informe o nome do setor.',
+            'name.max' => 'O nome pode ter até '.self::NAME_LIMIT.' caracteres.',
+            'name.unique' => 'Já existe um setor com esse nome.',
+        ])->errors()->first('name') ?: null;
     }
 
     public function render(): View

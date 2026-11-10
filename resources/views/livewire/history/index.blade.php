@@ -28,7 +28,7 @@
                 <flux:select size="sm" wire:model.live="sectorId" label="Setor">
                     <flux:select.option value="">Todos</flux:select.option>
                     @foreach ($sectors as $sector)
-                        <flux:select.option :value="$sector->id">{{ $sector->name }}</flux:select.option>
+                        <flux:select.option :value="$sector->id">{{ $sector->name }}{{ $sector->trashed() ? ' (apagado)' : '' }}</flux:select.option>
                     @endforeach
                 </flux:select>
 
