@@ -7,15 +7,14 @@
         {{-- --sidebar-bg: fundo da sidebar, também usado no anel do ponto da Fila (uma só fonte para as duas cores). --}}
         <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-(--sidebar-bg) [--sidebar-bg:var(--color-zinc-50)] dark:border-zinc-700 dark:[--sidebar-bg:var(--color-zinc-900)]">
             <flux:sidebar.header class="in-data-flux-sidebar-collapsed-desktop:flex-col in-data-flux-sidebar-collapsed-desktop:items-center in-data-flux-sidebar-collapsed-desktop:gap-3">
-                {{-- Fechada, ao passar o mouse o Flux tira a marca do fluxo e mostra o botão de colapso no lugar dela. Os dois dividem este
-                     espaço fixo, para o sino e os ícones não pularem. Aberta, `contents` deixa o cabeçalho como antes (a ordem vem do `order-*`). --}}
-                <div data-test="sidebar-brand-slot" class="contents in-data-flux-sidebar-collapsed-desktop:relative in-data-flux-sidebar-collapsed-desktop:block in-data-flux-sidebar-collapsed-desktop:size-10">
-                    <x-app-logo :sidebar="true" href="{{ route('inbox') }}" wire:navigate class="order-1" />
-                    <flux:sidebar.collapse class="order-3 in-data-flux-sidebar-collapsed-desktop:inset-0 in-data-flux-sidebar-collapsed-desktop:h-10" />
-                </div>
-                <div class="order-2">
+                {{-- Fechada, o Flux tira a marca do fluxo no hover e só então mostra o botão de colapso: sem mouse (toque, teclado) não haveria como
+                     reabrir, e o sino pulava de lugar. Aqui a marca fica fixa e o botão fica sempre à vista, logo abaixo dela (o `order-*` só
+                     troca a ordem fechada: marca, botão, sino; aberta segue marca, sino, botão). --}}
+                <x-app-logo :sidebar="true" href="{{ route('inbox') }}" wire:navigate class="order-1 in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:static! in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:opacity-100!" />
+                <div class="order-2 in-data-flux-sidebar-collapsed-desktop:order-3">
                     <livewire:alerts.bell />
                 </div>
+                <flux:sidebar.collapse tooltip="Recolher ou expandir menu" class="order-3 in-data-flux-sidebar-collapsed-desktop:order-2 in-data-flux-sidebar-collapsed-desktop:static! in-data-flux-sidebar-collapsed-desktop:opacity-100!" />
             </flux:sidebar.header>
 
             @php($counts = app(\App\Support\SidebarState::class)->counts(auth()->user()))

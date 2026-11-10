@@ -140,16 +140,29 @@ class SidebarTest extends TestCase
         $this->assertStringContainsString('ring-(--sidebar-bg)', (string) $xpath->query('//*[@data-test="queue-dot"]')->item(0)?->getAttribute('class'));
     }
 
-    /** Fechada, o hover tira a marca do fluxo e mostra o botão no lugar: os dois dividem um espaço fixo, fora do sino. */
-    public function test_marca_e_botao_de_colapso_dividem_um_espaco_fixo_e_o_sino_fica_fora(): void
+    /** Fechada, o botão de expandir fica sempre à vista (o padrão do Flux só o mostra no hover, e sem mouse não haveria como reabrir). */
+    public function test_botao_de_expandir_fica_sempre_visivel_com_a_sidebar_fechada(): void
     {
         $xpath = $this->xpath($this->page(UserRole::ADMIN));
-        $slot = '//*[@data-test="sidebar-brand-slot"]';
+        $class = (string) $xpath->query('//*[@data-flux-sidebar-collapse]')->item(0)?->getAttribute('class');
 
-        $this->assertSame(1, $xpath->query($slot.'//*[@data-flux-sidebar-brand]')->length);
-        $this->assertSame(1, $xpath->query($slot.'//*[@data-flux-sidebar-collapse]')->length);
-        $this->assertSame(0, $xpath->query($slot.'//*[contains(@aria-label, "Alertas")]')->length);
-        $this->assertGreaterThan(0, $xpath->query('//*[contains(@aria-label, "Alertas")]')->length);
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:opacity-100!', $class);
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:static!', $class);
+    }
+
+    /** O hover não pode tirar a marca do lugar nem do cabeçalho (o Flux a esconde para mostrar o botão). */
+    public function test_marca_continua_no_lugar_com_o_mouse_na_sidebar_fechada(): void
+    {
+        $xpath = $this->xpath($this->page(UserRole::ADMIN));
+        $class = (string) $xpath->query('//*[@data-flux-sidebar-brand]')->item(0)?->getAttribute('class');
+
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:opacity-100!', $class);
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:static!', $class);
+    }
+
+    public function test_botao_de_colapso_tem_dica_em_portugues(): void
+    {
+        $this->assertStringContainsString('Recolher ou expandir menu', $this->page(UserRole::ADMIN));
     }
 
     public function test_sem_pendencia_nao_ha_ponto_da_fila(): void
