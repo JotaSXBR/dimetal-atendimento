@@ -15,6 +15,7 @@ use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class RoutingActionsTest extends TestCase
@@ -83,6 +84,48 @@ class RoutingActionsTest extends TestCase
         $this->assertFalse((new TransferTicket)($ticket, User::factory()->create(), $closed));
         $this->assertSame($this->vendas->id, $ticket->fresh()?->sector_id);
         $this->assertSame(0, $ticket->events()->count());
+    }
+
+    public function test_transferir_para_setor_apagado_depois_de_carregado_e_recusado(): void
+    {
+        $stale = Sector::factory()->create(['name' => 'Antigo']);
+        $ticket = $this->ticket(TicketStatus::AGUARDANDO, $this->vendas);
+        Sector::query()->whereKey($stale->id)->delete();
+
+        $this->assertFalse((new TransferTicket)($ticket, User::factory()->create(), $stale));
+        $this->assertSame($this->vendas->id, $ticket->fresh()?->sector_id);
+        $this->assertSame(0, $ticket->events()->count());
+    }
+
+    public function test_transferir_para_setor_desativado_depois_de_carregado_e_recusado(): void
+    {
+        $stale = Sector::factory()->create(['name' => 'Antigo']);
+        $ticket = $this->ticket(TicketStatus::AGUARDANDO, $this->vendas);
+        Sector::query()->whereKey($stale->id)->update(['status' => SectorStatus::DESATIVADO]);
+
+        $this->assertFalse((new TransferTicket)($ticket, User::factory()->create(), $stale));
+        $this->assertSame($this->vendas->id, $ticket->fresh()?->sector_id);
+        $this->assertSame(0, $ticket->events()->count());
+    }
+
+    public function test_setor_para_receber_e_relido_com_for_share(): void
+    {
+        $active = Sector::factory()->create();
+        $hidden = Sector::factory()->create(['status' => SectorStatus::FORA_DO_MENU]);
+        $off = Sector::factory()->create(['status' => SectorStatus::DESATIVADO]);
+        $gone = Sector::factory()->create();
+        $gone->delete();
+
+        DB::transaction(function () use ($active, $hidden, $off, $gone): void {
+            DB::enableQueryLog();
+
+            $this->assertSame($active->id, Sector::lockForReceiving($active->id)?->id);
+            $this->assertTrue(collect(DB::getQueryLog())->contains(fn (array $q): bool => str_contains(strtolower($q['query']), 'for share')));
+            $this->assertSame($hidden->id, Sector::lockForReceiving($hidden->id)?->id);
+            $this->assertNull(Sector::lockForReceiving($off->id));
+            $this->assertNull(Sector::lockForReceiving($gone->id));
+            $this->assertNull(Sector::lockForReceiving(0));
+        });
     }
 
     public function test_transferir_para_setor_fora_do_menu_e_aceito(): void

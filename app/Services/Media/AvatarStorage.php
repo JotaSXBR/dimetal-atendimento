@@ -32,11 +32,12 @@ class AvatarStorage
 
     /**
      * Repassa o objeto em stream. O `ETag` é o nome do objeto (único por upload) e quem já o tem recebe 304 sem o disco ser tocado.
-     * `$versioned` diz que a URL pedida leva a versão atual da imagem: só então o cache pode ser imutável; sem ela (ou com versão
-     * velha) o navegador revalida pelo ETag.
+     * `$version` é a versão atual gravada da imagem: o cache só é imutável se ela existe e a URL pedida a traz (`v`); sem uma das
+     * duas (ou com versão velha) o navegador revalida pelo ETag.
      */
-    public function response(string $path, bool $public, bool $versioned = true): Response
+    public function response(string $path, bool $public, ?string $version = null): Response
     {
+        $versioned = $version !== null && request()->query('v') === $version;
         $etag = '"'.basename($path, '.webp').'"';
         $headers = [
             'Content-Type' => 'image/webp',
@@ -45,7 +46,10 @@ class AvatarStorage
             'ETag' => $etag,
         ];
 
-        if (in_array($etag, request()->getETags(), true)) {
+        // Em If-None-Match vale a comparação fraca: `W/"x"` casa com `"x"`. O `*` fica sem 304 de propósito (serviria objeto sumido).
+        $sent = array_map(fn (mixed $tag): mixed => is_string($tag) ? preg_replace('#^W/#', '', $tag) : $tag, request()->getETags());
+
+        if (in_array($etag, $sent, true)) {
             return response('', 304, $headers);
         }
 

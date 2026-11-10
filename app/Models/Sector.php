@@ -55,6 +55,17 @@ class Sector extends Model
     }
 
     /**
+     * Relê o setor com trava de leitura (`FOR SHARE`) para gravar um ticket nele: o `DeleteSector` o trava para escrita, então
+     * ou ele espera esta transação ou esta vê o setor já apagado. Nulo se sumiu ou deixou de receber tickets. Só dentro de transação.
+     */
+    public static function lockForReceiving(int $id): ?self
+    {
+        $sector = static::query()->whereKey($id)->sharedLock()->first();
+
+        return $sector !== null && $sector->status->receivesTickets() ? $sector : null;
+    }
+
+    /**
      * @param  Builder<Sector>  $query
      */
     public function scopeVisibleInMenu(Builder $query): void
