@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -28,7 +29,7 @@ class CompanyLogoTest extends TestCase
         Storage::fake(config()->string('media.disk'));
     }
 
-    private function page(UserRole $role = UserRole::ADMIN): \Livewire\Features\SupportTesting\Testable
+    private function page(UserRole $role = UserRole::ADMIN): Testable
     {
         return Livewire::actingAs(User::factory()->create(['role' => $role]))->test(Company::class);
     }

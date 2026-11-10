@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Services\Media\AvatarImage;
 use App\Services\Media\InvalidImage;
 use Illuminate\Http\UploadedFile;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class AvatarImageTest extends TestCase
@@ -49,7 +50,7 @@ class AvatarImageTest extends TestCase
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('invalidContents')]
+    #[DataProvider('invalidContents')]
     public function test_gif_svg_texto_e_vazio_sao_recusados(string $content): void
     {
         $this->expectException(InvalidImage::class);
