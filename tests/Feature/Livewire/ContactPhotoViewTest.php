@@ -42,6 +42,8 @@ class ContactPhotoViewTest extends TestCase
 
         $this->assertGreaterThanOrEqual(2, substr_count($html, $route));
         $this->assertStringNotContainsString('pps.whatsapp.net', $html);
+        // Card da Fila e cabeçalho do ticket: a foto do contato é grande (48 px), não o 32 px de antes.
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'data-size="lg"'));
     }
 
     public function test_contato_sem_foto_fica_com_monograma(): void
@@ -62,7 +64,7 @@ class ContactPhotoViewTest extends TestCase
         $this->ticketFor($contact, $admin, TicketStatus::ENCERRADO)->forceFill(['closed_at' => now()])->save();
         $route = '/avatares/contacts/'.$contact->id;
 
-        Livewire::actingAs($admin)->test(ContactsIndex::class)->assertSee($route, false);
-        Livewire::actingAs($admin)->test(HistoryIndex::class)->assertSee($route, false);
+        Livewire::actingAs($admin)->test(ContactsIndex::class)->assertSee($route, false)->assertSee('data-size="lg"', false);
+        Livewire::actingAs($admin)->test(HistoryIndex::class)->assertSee($route, false)->assertSee('data-size="lg"', false);
     }
 }
