@@ -23,7 +23,7 @@ final class HistorySearch
      *
      * @return Builder<Ticket>
      */
-    public function query(User $user, string $q = '', ?string $from = null, ?string $to = null, ?int $sectorId = null, ?int $userId = null, ?string $outcome = null): Builder
+    public function query(User $user, string $q = '', ?string $from = null, ?string $to = null, ?int $sectorId = null, ?int $userId = null, ?string $outcome = null, ?int $contactId = null): Builder
     {
         $query = Ticket::query()->inHistoryOf($user);
         $q = trim($q);
@@ -51,6 +51,7 @@ final class HistorySearch
             ->when($to !== null && $to !== '', fn (Builder $b) => $b->where('closed_at', '<=', CarbonImmutable::parse((string) $to, $tz)->endOfDay()->setTimezone($appTz)))
             ->when($sectorId !== null, fn (Builder $b) => $b->where('sector_id', $sectorId))
             ->when($userId !== null && $user->canSeeAllSectors(), fn (Builder $b) => $b->where('assigned_user_id', $userId))
+            ->when($contactId !== null, fn (Builder $b) => $b->where('contact_id', $contactId))
             ->when($outcome !== null && CloseOutcome::tryFrom($outcome) !== null, fn (Builder $b) => $b->where('close_outcome', $outcome));
 
         return $query->orderByDesc('closed_at')->orderByDesc('tickets.id');

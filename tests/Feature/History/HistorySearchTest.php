@@ -59,6 +59,7 @@ class HistorySearchTest extends TestCase
             $filters['sectorId'] ?? null,
             $filters['userId'] ?? null,
             $filters['outcome'] ?? null,
+            $filters['contactId'] ?? null,
         )->pluck('tickets.id')->all();
     }
 
@@ -147,6 +148,14 @@ class HistorySearchTest extends TestCase
         Ticket::factory()->create(['channel_id' => $this->channel->id, 'status' => TicketStatus::AGUARDANDO]);
 
         $this->assertSame([$newer->id, $older->id], $this->ids());
+    }
+
+    public function test_filtra_pelo_contato(): void
+    {
+        $a = $this->closed(contactName: 'Ana');
+        $this->closed(contactName: 'Bruno');
+
+        $this->assertSame([$a->id], $this->ids(filters: ['contactId' => $a->contact_id]));
     }
 
     public function test_a_migracao_cria_o_indice_trigrama(): void

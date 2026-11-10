@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\MessageDirection;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\Inbox\Inbox;
@@ -40,6 +41,53 @@ class InboxMediaTest extends TestCase
         Message::factory()->for($this->ticket)->create(array_merge(['type' => 'media', 'body' => ''], $attributes));
 
         return Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id);
+    }
+
+    /** @return list<string> Os modos de posição da hora, um por bolha. */
+    private function timeModes(array $attributes): array
+    {
+        preg_match_all('/data-testid="message-time"[^>]*data-time-mode="([a-z]+)"/', $this->screen($attributes)->html(), $m);
+
+        return $m[1];
+    }
+
+    public function test_texto_tem_hora_inline(): void
+    {
+        $this->assertSame(['inline'], $this->timeModes(['type' => 'text', 'body' => 'Olá']));
+    }
+
+    public function test_foto_com_legenda_tem_hora_inline_no_fim_da_legenda(): void
+    {
+        $this->assertSame(['inline'], $this->timeModes(['body' => 'Segue a foto', 'media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg']));
+    }
+
+    public function test_foto_sem_legenda_tem_hora_sobre_a_imagem(): void
+    {
+        $this->assertSame(['overlay'], $this->timeModes(['media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg']));
+    }
+
+    public function test_video_sem_legenda_tem_hora_sobre_o_video(): void
+    {
+        $this->assertSame(['overlay'], $this->timeModes(['media_ref' => 'a.mp4', 'media_mime' => 'video/mp4']));
+    }
+
+    public function test_audio_e_documento_tem_hora_abaixo(): void
+    {
+        $this->assertSame(['below'], $this->timeModes(['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg']));
+        // A segunda chamada soma uma bolha à mesma conversa: áudio e documento.
+        $this->assertSame(['below', 'below'], $this->timeModes(['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf']));
+    }
+
+    public function test_visualizacao_unica_com_mime_de_imagem_ainda_mostra_a_hora(): void
+    {
+        $this->assertSame(['below'], $this->timeModes(['type' => 'view_once', 'media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg']));
+    }
+
+    public function test_recebida_nao_tem_ticks(): void
+    {
+        $html = $this->screen(['type' => 'text', 'body' => 'Oi', 'direction' => MessageDirection::IN])->html();
+
+        $this->assertDoesNotMatchRegularExpression('/aria-label="(Lida|Entregue|Enviada|Enviando)"/', $html);
     }
 
     public function test_imagem_aparece_como_img_com_a_rota_da_midia(): void

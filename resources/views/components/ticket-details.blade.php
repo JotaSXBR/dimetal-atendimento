@@ -9,18 +9,19 @@
 >
     <flux:button size="sm" variant="subtle" icon="arrow-left" class="mb-3 lg:hidden" x-on:click="sheet = false">Voltar à conversa</flux:button>
 
-    <h2 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Ticket</h2>
     @php
         $state = $readonly || $ticket->waiting_since === null || $ticket->sla_due_at === null ? null : $ticket->slaState();
         $sla = $readonly || $ticket->waiting_since === null || $ticket->sla_due_at === null
             ? null
             : ($state === 'estourou' ? 'Estourado: venceu ' : 'Responder até ').app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now());
     @endphp
-    <dl class="mt-2 space-y-2 text-sm">
+    <x-disclosure title="Ticket" testid="details-ticket">
+    <dl class="space-y-2 text-sm">
         @foreach (array_filter([
             'Canal' => $ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : ''),
             'Setor' => $ticket->sector?->name ?? 'Fila geral',
             'Responsável' => $ticket->assignee?->name ?? 'Não atribuído',
+            'Etiquetas' => $ticket->tags->isEmpty() ? null : $ticket->tags->pluck('name')->sort()->join(', '),
             'SLA' => $sla,
             'Aberto em' => $ticket->opened_at->timezone($tz)->format('d/m/Y H:i'),
             'Encerrado em' => $ticket->closed_at?->timezone($tz)->format('d/m/Y H:i'),
@@ -37,16 +38,13 @@
         <h2 class="mt-4 font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Resumo do atendimento</h2>
         <p class="mt-1 text-sm break-words whitespace-pre-wrap text-ink">{{ $ticket->close_summary }}</p>
     @endif
-
-    <hr class="my-4 border-line">
+    </x-disclosure>
 
     <livewire:contacts.contact-card :contact-id="$ticket->contact_id" :compact="true" :readonly="$readonly" :current-ticket-id="$ticket->id" :key="'contact-'.$ticket->contact_id" />
 
     @if ($events !== null && $timeline !== null)
-        <hr class="my-4 border-line">
-
-        <h2 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Linha do tempo</h2>
-        <ol class="mt-2 space-y-2 text-xs">
+        <x-disclosure title="Linha do tempo" :open="false" testid="details-timeline">
+        <ol class="space-y-2 text-xs">
             @forelse ($events as $event)
                 <li wire:key="event-{{ $event->id }}">
                     <span class="font-mono text-[10px] text-ink-3">{{ $event->created_at->timezone($tz)->format('d/m H:i') }}</span>
@@ -56,5 +54,6 @@
                 <li class="text-ink-3">Nada registrado.</li>
             @endforelse
         </ol>
+        </x-disclosure>
     @endif
 </aside>
