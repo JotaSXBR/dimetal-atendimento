@@ -20,9 +20,9 @@
                             @if ($known)
                                 <span class="text-ink-3">Já está nos contatos</span>
                             @else
-                                <button type="button" wire:click="addContact({{ $message->id }}, {{ $loop->index }})" class="text-accent-content underline">Adicionar aos contatos</button>
+                                <flux:button type="button" size="xs" variant="subtle" wire:click="addContact({{ $message->id }}, {{ $loop->index }})">Adicionar aos contatos</flux:button>
                             @endif
-                            <button type="button" wire:click="chatWith({{ $message->id }}, {{ $loop->index }})" class="text-accent-content underline">Conversar</button>
+                            <flux:button type="button" size="xs" variant="subtle" wire:click="chatWith({{ $message->id }}, {{ $loop->index }})">Conversar</flux:button>
                         </div>
                     @endif
                 @endif

@@ -51,4 +51,47 @@ class ViewConventionsTest extends TestCase
 
         $this->assertFileDoesNotExist(dirname(__DIR__, 2).'/resources/views/components/ui/button.blade.php');
     }
+
+    /**
+     * Os `<button>` crus que sobram são gatilhos internos, não ações. Mudar esta lista é uma decisão (docs/ui-botoes.md), não um acaso.
+     *
+     * @return array<string, int> arquivo => quantidade de `<button` aprovada
+     */
+    private function botoesCrusAprovados(): array
+    {
+        return [
+            'flux/navlist/group.blade.php' => 1, // sobrescrita do Flux
+            'livewire/alerts/bell.blade.php' => 2, // gatilho do sino e item de alerta (lista selecionável)
+            'livewire/automation/editor.blade.php' => 2, // foco no erro e paleta de blocos (lista)
+            'livewire/contacts/contact-card.blade.php' => 1, // protocolo que abre o ticket (texto-link)
+            'livewire/contacts/index.blade.php' => 1, // linha da lista de contatos
+            'livewire/history/index.blade.php' => 1, // linha da lista do Histórico
+            'livewire/inbox/audio-player.blade.php' => 2, // controles do player
+            'livewire/inbox/inbox.blade.php' => 6, // cartões da fila (2), abas Responder/Nota (2), item de resposta rápida, Salvar nota (colorido do modo nota)
+            'livewire/inbox/media.blade.php' => 2, // abrir a foto e fechar a prévia (sobre fundo escuro)
+            'livewire/inbox/new-conversation.blade.php' => 1, // item da lista de contatos
+            'livewire/inbox/transcript.blade.php' => 11, // citação clicável, menu da mensagem e seus itens, reações
+            'livewire/settings/channel-card.blade.php' => 2, // seletor QR / código de pareamento
+            'pages/settings/⚡two-factor-setup-modal.blade.php' => 1, // copiar dentro do campo
+        ];
+    }
+
+    public function test_botoes_crus_restantes_sao_os_aprovados(): void
+    {
+        $atual = [];
+
+        foreach ($this->views() as $path => $html) {
+            $n = substr_count($html, '<button');
+
+            if ($n > 0) {
+                $atual[$path] = $n;
+            }
+        }
+
+        ksort($atual);
+        $aprovado = $this->botoesCrusAprovados();
+        ksort($aprovado);
+
+        $this->assertSame($aprovado, $atual, 'botão de ação é <flux:button>; <button> cru só para gatilho interno aprovado (docs/ui-botoes.md)');
+    }
 }

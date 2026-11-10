@@ -76,8 +76,8 @@
                         <div x-cloak x-show="editing" class="space-y-1">
                             <textarea x-model="text" rows="3" maxlength="4096" class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm" aria-label="Novo texto da mensagem"></textarea>
                             <div class="flex justify-end gap-2 text-xs">
-                                <button type="button" x-on:click="editing = false" class="text-ink-3 hover:text-ink">Cancelar</button>
-                                <button type="button" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false" class="font-semibold text-accent-content">Salvar</button>
+                                <flux:button type="button" size="xs" variant="subtle" x-on:click="editing = false">Cancelar</flux:button>
+                                <flux:button type="button" size="xs" variant="primary" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false">Salvar</flux:button>
                             </div>
                         </div>
                     @endcan
@@ -112,9 +112,9 @@
             @endif
 
             @if ($resend === 'safe')
-                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" class="mt-1 text-xs text-accent-content underline">Reenviar</button>
+                <flux:button type="button" size="xs" variant="subtle" class="mt-1" wire:click="$parent.resend({{ $message->id }}, true)">Reenviar</flux:button>
             @elseif ($resend === 'confirm')
-                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent-content underline">Reenviar</button>
+                <flux:button type="button" size="xs" variant="subtle" class="mt-1" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?">Reenviar</flux:button>
             @endif
 
             @if (! $readonly && ! $message->revoked_at)

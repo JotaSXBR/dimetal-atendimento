@@ -298,7 +298,7 @@
 
             @if ($previous)
                 <div class="border-b border-line px-4 py-1.5 text-xs">
-                    <button type="button" wire:click="goBack" class="font-semibold text-accent-content hover:underline">← Voltar ao ticket anterior ({{ $previous->protocol ?? '#'.$previous->id }})</button>
+                    <flux:button type="button" size="xs" variant="subtle" icon="arrow-left" wire:click="goBack">Voltar ao ticket anterior ({{ $previous->protocol ?? '#'.$previous->id }})</flux:button>
                 </div>
             @endif
 
@@ -330,7 +330,7 @@
                         <div class="min-w-0 flex-1">
                             @include('livewire.inbox.quote-preview', ['quote' => $replyTo, 'heading' => 'Respondendo a '.$replyTo['author']])
                         </div>
-                        <button type="button" wire:click="cancelReply" class="text-ink-3 hover:text-ink" aria-label="Cancelar resposta">✕</button>
+                        <flux:button type="button" size="xs" variant="ghost" icon="x-mark" wire:click="cancelReply" aria-label="Cancelar resposta" />
                     </div>
                 @endif
 
@@ -357,9 +357,7 @@
                                         <flux:icon.paper-clip class="size-3.5 text-ink-3" />
                                         <span class="max-w-40 truncate text-ink">{{ $file->getClientOriginalName() }}</span>
                                         <span class="font-mono text-ink-3">{{ \Illuminate\Support\Number::fileSize($file->getSize(), 1) }}</span>
-                                        <button type="button" wire:click="removeAttachment({{ $index }})" class="text-ink-3 hover:text-danger" aria-label="Remover {{ $file->getClientOriginalName() }}">
-                                            <flux:icon.x-mark class="size-3.5" />
-                                        </button>
+                                        <flux:button type="button" size="xs" variant="ghost" icon="x-mark" wire:click="removeAttachment({{ $index }})" aria-label="Remover {{ $file->getClientOriginalName() }}" />
                                     </li>
                                 @endforeach
                             </ul>
@@ -379,15 +377,15 @@
                                 <span class="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true"></span>
                                 <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
                                 <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
-                                <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()">Descartar</button>
-                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground" x-on:click="stop()">Parar</button>
+                                <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()">Descartar</flux:button>
+                                <flux:button type="button" size="xs" variant="primary" x-on:click="stop()">Parar</flux:button>
                             </div>
 
                             <div x-show="phase === 'preview'" x-cloak class="flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
                                 <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
-                                <button type="button" class="text-sm text-ink-2 hover:text-ink" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</button>
-                                <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()" x-bind:disabled="sending">Descartar</button>
-                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground disabled:opacity-50" x-on:click="send()" x-bind:disabled="sending">Enviar</button>
+                                <flux:button type="button" size="xs" variant="subtle" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</flux:button>
+                                <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()" x-bind:disabled="sending">Descartar</flux:button>
+                                <flux:button type="button" size="xs" variant="primary" x-on:click="send()" x-bind:disabled="sending">Enviar</flux:button>
                             </div>
                         </div>
 
