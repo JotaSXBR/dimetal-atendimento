@@ -90,8 +90,16 @@ class InboxQueueCardTest extends TestCase
 
         $html = $this->html();
 
-        $this->assertSame('+2', trim($this->part($html, 'card-tags-more')));
+        $this->assertStringContainsString('+2', $this->part($html, 'card-tags-more'));
         $this->assertSame(2, substr_count($html, 'data-testid="card-tag"'));
+    }
+
+    public function test_mais_n_diz_os_nomes_das_etiquetas_escondidas_a_quem_nao_ve_o_title(): void
+    {
+        $ticket = $this->ticket();
+        $ticket->tags()->attach(Tag::factory()->count(4)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Gama'], ['name' => 'Delta'])->create());
+
+        $this->assertMatchesRegularExpression('/class="sr-only">[^<]*Gama, Delta/', $this->html());
     }
 
     public function test_espera_aparece_com_waiting_since(): void

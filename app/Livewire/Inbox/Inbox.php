@@ -304,7 +304,7 @@ class Inbox extends Component
     {
         return $this->ticketId === null
             ? null
-            : Ticket::query()->readableBy($this->user())->with(['contact', 'channel', 'assignee', 'sector'])->find($this->ticketId);
+            : Ticket::query()->readableBy($this->user())->with(['contact', 'channel', 'assignee', 'sector', 'tags'])->find($this->ticketId);
     }
 
     /**

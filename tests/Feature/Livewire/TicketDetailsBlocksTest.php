@@ -8,6 +8,7 @@ use App\Livewire\History\Index as History;
 use App\Livewire\Inbox\Inbox;
 use App\Models\Channel;
 use App\Models\Contact;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -62,5 +63,15 @@ class TicketDetailsBlocksTest extends TestCase
     {
         $this->assertStringContainsString('wire:ignore.self', $this->tag($this->inboxHtml(), 'details-ticket'));
         $this->assertStringContainsString('wire:ignore.self', $this->tag($this->historyHtml(), 'details-timeline'));
+    }
+
+    public function test_painel_lista_todas_as_etiquetas_do_ticket(): void
+    {
+        $ticket = $this->ticket(TicketStatus::AGUARDANDO);
+        $ticket->tags()->attach(Tag::factory()->count(3)->sequence(['name' => 'Gama'], ['name' => 'Alfa'], ['name' => 'Beta'])->create());
+
+        Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)
+            ->assertSee('Etiquetas')
+            ->assertSee('Alfa, Beta, Gama');
     }
 }

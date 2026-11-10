@@ -21,6 +21,7 @@
             'Canal' => $ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : ''),
             'Setor' => $ticket->sector?->name ?? 'Fila geral',
             'Responsável' => $ticket->assignee?->name ?? 'Não atribuído',
+            'Etiquetas' => $ticket->tags->isEmpty() ? null : $ticket->tags->pluck('name')->sort()->join(', '),
             'SLA' => $sla,
             'Aberto em' => $ticket->opened_at->timezone($tz)->format('d/m/Y H:i'),
             'Encerrado em' => $ticket->closed_at?->timezone($tz)->format('d/m/Y H:i'),

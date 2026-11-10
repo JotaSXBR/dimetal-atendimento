@@ -26,7 +26,8 @@
         </div>
         </x-disclosure>
 
-        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history">
+        {{-- A chave muda quando o contato passa a ter (ou deixa de ter) anteriores: o `wire:ignore.self` congela o `open`, e a chave nova recria o bloco. --}}
+        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history" wire:key="history-{{ $historyTotal > 0 ? 'has' : 'none' }}">
             <ul class="space-y-2">
                 @forelse ($history as $past)
                     @php($mine = in_array($past->id, $openable, true))
@@ -56,7 +57,7 @@
                 @endforelse
             </ul>
             @if ($hasMore)
-                <a href="{{ route('historico', ['contactId' => $contact->id]) }}" wire:navigate class="mt-2 inline-block text-xs text-accent-content underline-offset-2 hover:underline">Ver todos no Histórico</a>
+                <x-history-link :contact="$contact" />
             @endif
         </x-disclosure>
 
@@ -141,7 +142,7 @@
             @endforelse
         </ul>
         @if ($hasMore)
-            <a href="{{ route('historico', ['contactId' => $contact->id]) }}" wire:navigate class="mt-2 inline-block text-xs text-accent-content underline-offset-2 hover:underline">Ver todos no Histórico</a>
+            <x-history-link :contact="$contact" />
         @endif
     </div>
     @endunless
