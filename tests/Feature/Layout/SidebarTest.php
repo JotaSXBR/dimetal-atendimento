@@ -140,6 +140,18 @@ class SidebarTest extends TestCase
         $this->assertStringContainsString('ring-(--sidebar-bg)', (string) $xpath->query('//*[@data-test="queue-dot"]')->item(0)?->getAttribute('class'));
     }
 
+    /** Fechada, o hover tira a marca do fluxo e mostra o botão no lugar: os dois dividem um espaço fixo, fora do sino. */
+    public function test_marca_e_botao_de_colapso_dividem_um_espaco_fixo_e_o_sino_fica_fora(): void
+    {
+        $xpath = $this->xpath($this->page(UserRole::ADMIN));
+        $slot = '//*[@data-test="sidebar-brand-slot"]';
+
+        $this->assertSame(1, $xpath->query($slot.'//*[@data-flux-sidebar-brand]')->length);
+        $this->assertSame(1, $xpath->query($slot.'//*[@data-flux-sidebar-collapse]')->length);
+        $this->assertSame(0, $xpath->query($slot.'//*[contains(@aria-label, "Alertas")]')->length);
+        $this->assertGreaterThan(0, $xpath->query('//*[contains(@aria-label, "Alertas")]')->length);
+    }
+
     public function test_sem_pendencia_nao_ha_ponto_da_fila(): void
     {
         $this->assertSame(0, $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->length);
