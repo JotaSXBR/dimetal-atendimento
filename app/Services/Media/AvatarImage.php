@@ -23,7 +23,7 @@ class AvatarImage
 
     public function fromUpload(UploadedFile $file, int $size): string
     {
-        return $this->fromBinary((string) file_get_contents($file->getRealPath()), $size);
+        return $this->fromBinary((string) $file->get(), $size);
     }
 
     /** @throws InvalidImage */

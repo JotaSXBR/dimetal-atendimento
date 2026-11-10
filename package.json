@@ -11,6 +11,7 @@
         "@retejs/lit-plugin": "^2.0.8",
         "@tailwindcss/vite": "^4.1.11",
         "concurrently": "^10.0.3",
+        "cropperjs": "^2.3.1",
         "laravel-vite-plugin": "^3.1",
         "lit": "^3.3.3",
         "qr-code-styling": "^1.9.2",
