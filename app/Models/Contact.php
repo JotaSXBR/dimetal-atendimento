@@ -79,6 +79,7 @@ class Contact extends Model
             'edited_at' => 'datetime',
             'google_synced_at' => 'datetime',
             'google_attempted_at' => 'datetime',
+            'avatar_checked_at' => 'datetime',
         ];
     }
 

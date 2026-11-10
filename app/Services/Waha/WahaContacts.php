@@ -34,6 +34,24 @@ class WahaContacts
     }
 
     /**
+     * A URL da foto de perfil (CDN do WhatsApp, pública e que vence). `null` quando o contato não tem foto ou a escondeu: o
+     * WAHA responde 404 ou devolve o campo vazio. Sem `refresh`: o WAHA guarda a URL por 24 h e avisa de `rate-overlimit`.
+     */
+    public function profilePictureUrl(string $id): ?string
+    {
+        $response = $this->client->http()->get('/api/contacts/profile-picture', ['contactId' => $id, 'session' => $this->client->sessionName()]);
+
+        if ($response->status() === 404) {
+            return null;
+        }
+
+        $this->client->check($response);
+        $url = $response->json('profilePictureURL');
+
+        return is_string($url) && trim($url) !== '' ? trim($url) : null;
+    }
+
+    /**
      * Os nomes que o WhatsApp tem para o contato: `agenda` (salvo no celular da empresa) e `push` (o que o cliente escolheu).
      * `$id` é `…@c.us` ou `…@lid`. Contato desconhecido (404) ou campo vazio vira `null`.
      *

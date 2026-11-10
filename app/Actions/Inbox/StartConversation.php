@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Inbox\ConversationNotStarted;
 use App\Services\Inbox\SendTicketMessage;
 use App\Services\Inbox\Signature;
+use App\Services\Inbox\SyncContactPhoto;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaContacts;
 use App\Services\Waha\WahaRequestException;
@@ -84,6 +85,7 @@ class StartConversation
         });
 
         if ($made['message'] instanceof Message) {
+            app(SyncContactPhoto::class)->queueFor($contact, $channel);
             SendTicketMessageJob::dispatch($made['message']->id);
             TicketUpdated::dispatch($made['ticket']);
         }
