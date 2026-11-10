@@ -342,13 +342,6 @@
                 @endif
 
                 @if ($canReply)
-                    <div class="mb-2 flex flex-wrap items-center gap-2">
-                        <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
-                            <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
-                            <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
-                        </div>
-                        <p x-show="mode === 'note'" x-cloak class="text-xs text-warn" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
-                    </div>
 
                     <div
                         wire:key="composer-{{ $ticket->id }}"
@@ -405,7 +398,7 @@
                             <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
                         @enderror
 
-                        <form x-on:submit.prevent="uploading === 0 && submit()" x-on:input="remember($event)" class="flex items-end gap-2" x-show="!voiceBusy">
+                        <form data-testid="composer-form" x-on:submit.prevent="uploading === 0 && submit()" x-on:input="remember($event)" class="flex flex-wrap items-end gap-2" x-show="!voiceBusy">
                             <input
                                 type="file"
                                 multiple
@@ -415,11 +408,18 @@
                                 accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.mp3,.ogg,.m4a,.mp4"
                                 x-on:change="addFiles($event.target.files); $event.target.value = ''"
                             >
+                            {{-- Abas Responder/Nota: na mesma linha do resto em coluna larga (@xl), em linha própria abaixo disso. --}}
+                            <div data-testid="composer-modes" class="@max-xl:basis-full">
+                            <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
+                                <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
+                                <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
+                            </div>
+                            </div>
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
                             <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-show="mode === 'reply'" x-on:click="$dispatch('voice-start')" />
                             <flux:button type="button" x-show="mode === 'reply'" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
 
-                            <div class="flex-1" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
+                            <div class="min-w-48 flex-1" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
                                 @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())
                                     <ul class="mb-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface text-sm" role="listbox" aria-label="Respostas rápidas">
                                         @foreach ($suggestions as $suggestion)
@@ -439,6 +439,7 @@
                             </div>
                             <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-show="mode === 'reply'" x-bind:disabled="uploading > 0" />
                             <button type="submit" x-show="mode === 'note'" x-cloak class="rounded-md bg-warn px-3 py-2 text-sm font-medium text-warn-foreground hover:brightness-95 disabled:opacity-50" x-bind:disabled="uploading > 0">Salvar nota</button>
+                                <p x-show="mode === 'note'" x-cloak class="basis-full text-xs text-warn" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
                         </form>
                     </div>
                 @elseif ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)

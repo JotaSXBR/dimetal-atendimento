@@ -70,9 +70,13 @@ class InboxComposerModeTest extends TestCase
         $me = User::factory()->create(['role' => UserRole::ATENDENTE]);
         $ticket = $this->ticketFor($me);
 
-        // `voiceBusy` vive no escopo do campo; fora dele o Alpine dá ReferenceError e esconde a barra.
-        Livewire::actingAs($me)->test(Inbox::class)->call('select', $ticket->id)
-            ->assertSeeHtml('<div class="mb-2 flex flex-wrap items-center gap-2">');
+        // A barra vive dentro do formulário do compositor (spec 4a, uma linha em coluna larga). `voiceBusy` é do escopo do campo e o
+        // formulário some junto enquanto grava; por isso a barra em si não pode referenciá-lo (nem depender dele para aparecer).
+        $html = Livewire::actingAs($me)->test(Inbox::class)->call('select', $ticket->id)->html();
+
+        $this->assertSame(1, preg_match('/<div data-testid="composer-modes".*?<\/div>\s*<\/div>/s', $html, $m));
+        $this->assertStringNotContainsString('voiceBusy', $m[0]);
+        $this->assertStringContainsString('data-testid="mode-note"', $m[0]);
     }
 
     public function test_quem_nao_pode_responder_nao_ve_o_seletor(): void
