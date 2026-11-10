@@ -214,7 +214,7 @@ class StartConversationTest extends TestCase
     private function assertPaceNotSpent(): void
     {
         $this->assertFalse(RateLimiter::tooManyAttempts('start-conversation:channel:'.$this->channel->id, 1));
-        $this->assertSame(0, RateLimiter::attempts('start-conversation:contact:'.$this->contact->id));
+        $this->assertEquals(0, RateLimiter::attempts('start-conversation:contact:'.$this->contact->id));
     }
 
     public function test_supervisor_inicia_em_qualquer_setor_que_receba(): void
