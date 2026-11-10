@@ -1,17 +1,17 @@
 <flux:dropdown position="bottom" align="start">
     <flux:sidebar.profile
         :name="auth()->user()->name"
-        :initials="auth()->user()->initials()"
         icon:trailing="chevrons-up-down"
         data-test="sidebar-menu-button"
-    />
+    >
+        <x-slot:avatar>
+            <x-avatar :src="auth()->user()->avatarUrl()" :name="auth()->user()->name" shape="round" size="sm" decorative />
+        </x-slot:avatar>
+    </flux:sidebar.profile>
 
     <flux:menu>
         <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-            <flux:avatar
-                :name="auth()->user()->name"
-                :initials="auth()->user()->initials()"
-            />
+            <x-avatar :src="auth()->user()->avatarUrl()" :name="auth()->user()->name" shape="round" decorative />
             <div class="grid flex-1 text-start text-sm leading-tight">
                 <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
                 <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
