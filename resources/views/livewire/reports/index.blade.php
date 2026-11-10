@@ -61,7 +61,7 @@
                                 <td class="px-4 py-2 font-mono text-ink-2">{{ $row['since']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</td>
                                 <td class="px-4 py-2 font-mono text-ink-2">{{ $row['due']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</td>
                                 <td class="px-4 py-2">
-                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $row['state'] === 'estourou' ? 'bg-danger/10 text-danger' : 'bg-warn/10 text-warn' }}">{{ $row['state'] === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span>
+                                    <x-status-badge :tone="$row['state'] === 'estourou' ? 'danger' : 'warn'">{{ $row['state'] === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</x-status-badge>
                                 </td>
                             </tr>
                         @endforeach

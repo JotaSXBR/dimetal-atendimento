@@ -66,7 +66,12 @@
                             <span class="font-mono text-[10px] text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m/Y') }}</span>
                         </span>
                         <span class="mt-0.5 block truncate text-xs text-ink-2">
-                            {{ $item->protocol }} · {{ $item->sector?->name ?? 'Sem setor' }} · {{ $item->close_outcome?->label() ?? $item->closed_reason?->label() }}
+                            {{ $item->protocol }} · {{ $item->sector?->name ?? 'Sem setor' }}
+                            @if ($item->close_outcome)
+                                <x-status-badge :status="$item->close_outcome" class="ms-1" />
+                            @elseif ($item->closed_reason)
+                                <x-status-badge tone="neutral" class="ms-1">{{ $item->closed_reason->label() }}</x-status-badge>
+                            @endif
                         </span>
                         @if ($item->assignee)
                             <span class="block truncate text-xs text-ink-3">{{ $item->assignee->name }}</span>
@@ -102,7 +107,11 @@
             <div class="border-b border-line bg-surface-2 px-4 py-2 text-xs text-ink-2" role="status">
                 Encerrado em {{ $ticket->closed_at?->timezone($tz)->format('d/m/Y \à\s H:i') }}@if ($closer) por {{ $closer }}@endif
                 · duração {{ (int) $ticket->opened_at->diffInMinutes($ticket->closed_at, true) }} min
-                · {{ $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label() }}
+                @if ($ticket->close_outcome)
+                    <x-status-badge :status="$ticket->close_outcome" class="ms-1" />
+                @elseif ($ticket->closed_reason)
+                    <x-status-badge tone="neutral" class="ms-1">{{ $ticket->closed_reason->label() }}</x-status-badge>
+                @endif
             </div>
 
             @if ($hasMore)

@@ -1,11 +1,5 @@
 @php
     $tz = config('app.display_timezone');
-    $statusColor = fn (\App\Enums\TicketStatus $s) => match ($s) {
-        \App\Enums\TicketStatus::PENDENTE => 'sky',
-        \App\Enums\TicketStatus::AGUARDANDO => 'amber',
-        \App\Enums\TicketStatus::EM_ATENDIMENTO => 'green',
-        default => 'zinc',
-    };
 @endphp
 
 <div
@@ -179,7 +173,7 @@
                 <div class="min-w-0 flex-1 basis-56">
                     <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink">
                         <span class="max-w-full truncate">{{ $name }}</span>
-                        <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
+                        <x-status-badge :status="$ticket->status" />
                         @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
                             @php
                                 $slaState = $ticket->slaState();
@@ -198,7 +192,12 @@
                     </p>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
-                            {{ $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label() }}@if ($ticket->close_summary) · {{ $ticket->close_summary }}@endif
+                            @if ($ticket->close_outcome)
+                                <x-status-badge :status="$ticket->close_outcome" />
+                            @elseif ($ticket->closed_reason)
+                                <x-status-badge tone="neutral">{{ $ticket->closed_reason->label() }}</x-status-badge>
+                            @endif
+                            @if ($ticket->close_summary){{ $ticket->close_summary }}@endif
                         </p>
                     @endif
                 </div>
