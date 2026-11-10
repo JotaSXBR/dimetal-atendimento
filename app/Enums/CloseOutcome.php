@@ -17,4 +17,13 @@ enum CloseOutcome: string
             self::CLIENTE_PEDIU => 'Cliente pediu',
         };
     }
+
+    /** Tom do selo (`x-status-badge`): neutral, bot, ok, warn, danger ou accent. Sem `default`: caso novo precisa de tom. */
+    public function tone(): string
+    {
+        return match ($this) {
+            self::RESOLVIDO => 'ok',
+            self::SEM_RESPOSTA, self::CLIENTE_PEDIU => 'neutral',
+        };
+    }
 }

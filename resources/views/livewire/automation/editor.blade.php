@@ -109,7 +109,7 @@
                         <li class="text-xs">
                             <p class="font-semibold text-ink" x-text="'Versão ' + version.number"></p>
                             <p class="text-ink-3" x-text="version.at + ' · ' + version.by"></p>
-                            <button type="button" class="mt-1 text-accent-content hover:underline" x-on:click="if (confirm('Copiar esta versão para o rascunho? O rascunho atual será substituído.')) restore(version.id)">Restaurar no rascunho</button>
+                            <flux:button type="button" size="xs" variant="subtle" class="mt-1" x-on:click="if (confirm('Copiar esta versão para o rascunho? O rascunho atual será substituído.')) restore(version.id)">Restaurar no rascunho</flux:button>
                         </li>
                     </template>
                 </ul>

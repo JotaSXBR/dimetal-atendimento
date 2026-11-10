@@ -25,6 +25,17 @@ enum ChannelStatus: string
         };
     }
 
+    /** Tom do selo (`x-status-badge`): neutral, bot, ok, warn, danger ou accent. Sem `default`: caso novo precisa de tom. */
+    public function tone(): string
+    {
+        return match ($this) {
+            self::WORKING => 'ok',
+            self::FAILED => 'danger',
+            self::SCAN_QR_CODE, self::PASSKEY_REQUIRED, self::PASSKEY_CONFIRMATION_REQUIRED => 'warn',
+            self::STOPPED, self::STARTING => 'neutral',
+        };
+    }
+
     public function needsQr(): bool
     {
         return $this === self::SCAN_QR_CODE;

@@ -61,7 +61,7 @@
                                 <td class="px-4 py-2 font-mono text-ink-2">{{ $row['since']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</td>
                                 <td class="px-4 py-2 font-mono text-ink-2">{{ $row['due']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</td>
                                 <td class="px-4 py-2">
-                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-medium {{ $row['state'] === 'estourou' ? 'bg-danger/10 text-danger' : 'bg-warn/10 text-warn' }}">{{ $row['state'] === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span>
+                                    <x-status-badge :tone="$row['state'] === 'estourou' ? 'danger' : 'warn'">{{ $row['state'] === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</x-status-badge>
                                 </td>
                             </tr>
                         @endforeach
@@ -82,7 +82,7 @@
                     <span class="text-end font-mono text-ink">{{ $row['count'] }}</span>
                 </li>
             @empty
-                <li class="text-sm text-ink-3">Nenhum ticket no período.</li>
+                <li><x-empty-state compact icon="chart-bar" title="Nenhum ticket no período." /></li>
             @endforelse
         </ul>
     </div>
@@ -107,7 +107,7 @@
                         <td class="px-4 py-2 text-end font-mono">{{ $row['closed'] }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-4 py-4 text-center text-ink-3">Nenhum atendimento no período.</td></tr>
+                    <tr><td colspan="4"><x-empty-state compact icon="chart-bar" title="Nenhum atendimento no período." /></td></tr>
                 @endforelse
             </tbody>
         </table>

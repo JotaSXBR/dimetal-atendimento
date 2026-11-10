@@ -34,9 +34,9 @@
                 class="text-[13px]"
             />
 
-            <x-ui.button variant="primary" type="submit" class="w-full" data-test="login-button">
+            <flux:button variant="primary" type="submit" class="w-full" data-test="login-button">
                 Entrar
-            </x-ui.button>
+            </flux:button>
         </form>
 
         <p class="text-xs leading-relaxed text-ink-3">

@@ -1,11 +1,5 @@
 @php
     $tz = config('app.display_timezone');
-    $statusColor = fn (\App\Enums\TicketStatus $s) => match ($s) {
-        \App\Enums\TicketStatus::PENDENTE => 'sky',
-        \App\Enums\TicketStatus::AGUARDANDO => 'amber',
-        \App\Enums\TicketStatus::EM_ATENDIMENTO => 'green',
-        default => 'zinc',
-    };
 @endphp
 
 <div
@@ -82,7 +76,7 @@
                 @endforeach
 
                 @if ($closed->isEmpty())
-                    <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket encerrado nos últimos 7 dias.</p>
+                    <x-empty-state compact icon="archive-box" title="Nenhum ticket encerrado nos últimos 7 dias." />
                 @endif
 
                 <p class="p-4 text-center text-xs"><a href="{{ route('historico') }}" wire:navigate class="text-accent-content underline">Busca completa</a></p>
@@ -158,7 +152,7 @@
             @endforeach
 
             @if ($pending->isEmpty() && $waiting->isEmpty() && $active->isEmpty())
-                <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket por aqui.</p>
+                <x-empty-state compact icon="inbox" title="Nenhum ticket por aqui." />
             @endif
             @endif
         </div>
@@ -179,7 +173,7 @@
                 <div class="min-w-0 flex-1 basis-56">
                     <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink">
                         <span class="max-w-full truncate">{{ $name }}</span>
-                        <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
+                        <x-status-badge :status="$ticket->status" />
                         @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
                             @php
                                 $slaState = $ticket->slaState();
@@ -198,7 +192,12 @@
                     </p>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
-                            {{ $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label() }}@if ($ticket->close_summary) · {{ $ticket->close_summary }}@endif
+                            @if ($ticket->close_outcome)
+                                <x-status-badge :status="$ticket->close_outcome" class="me-1" />
+                            @elseif ($ticket->closed_reason)
+                                <x-status-badge tone="neutral" class="me-1">{{ $ticket->closed_reason->label() }}</x-status-badge>
+                            @endif
+                            @if ($ticket->close_summary){{ $ticket->close_summary }}@endif
                         </p>
                     @endif
                 </div>
@@ -299,7 +298,7 @@
 
             @if ($previous)
                 <div class="border-b border-line px-4 py-1.5 text-xs">
-                    <button type="button" wire:click="goBack" class="font-semibold text-accent-content hover:underline">← Voltar ao ticket anterior ({{ $previous->protocol ?? '#'.$previous->id }})</button>
+                    <flux:button type="button" size="xs" variant="subtle" icon="arrow-left" wire:click="goBack">Voltar ao ticket anterior ({{ $previous->protocol ?? '#'.$previous->id }})</flux:button>
                 </div>
             @endif
 
@@ -331,7 +330,7 @@
                         <div class="min-w-0 flex-1">
                             @include('livewire.inbox.quote-preview', ['quote' => $replyTo, 'heading' => 'Respondendo a '.$replyTo['author']])
                         </div>
-                        <button type="button" wire:click="cancelReply" class="text-ink-3 hover:text-ink" aria-label="Cancelar resposta">✕</button>
+                        <flux:button type="button" size="xs" variant="ghost" icon="x-mark" wire:click="cancelReply" aria-label="Cancelar resposta" />
                     </div>
                 @endif
 
@@ -358,9 +357,7 @@
                                         <flux:icon.paper-clip class="size-3.5 text-ink-3" />
                                         <span class="max-w-40 truncate text-ink">{{ $file->getClientOriginalName() }}</span>
                                         <span class="font-mono text-ink-3">{{ \Illuminate\Support\Number::fileSize($file->getSize(), 1) }}</span>
-                                        <button type="button" wire:click="removeAttachment({{ $index }})" class="text-ink-3 hover:text-danger" aria-label="Remover {{ $file->getClientOriginalName() }}">
-                                            <flux:icon.x-mark class="size-3.5" />
-                                        </button>
+                                        <flux:button type="button" size="xs" variant="ghost" icon="x-mark" wire:click="removeAttachment({{ $index }})" aria-label="Remover {{ $file->getClientOriginalName() }}" />
                                     </li>
                                 @endforeach
                             </ul>
@@ -380,15 +377,15 @@
                                 <span class="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true"></span>
                                 <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
                                 <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
-                                <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()">Descartar</button>
-                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground" x-on:click="stop()">Parar</button>
+                                <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()">Descartar</flux:button>
+                                <flux:button type="button" size="xs" variant="primary" x-on:click="stop()">Parar</flux:button>
                             </div>
 
                             <div x-show="phase === 'preview'" x-cloak class="flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
                                 <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
-                                <button type="button" class="text-sm text-ink-2 hover:text-ink" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</button>
-                                <button type="button" class="text-sm text-ink-2 hover:text-danger" x-on:click="discard()" x-bind:disabled="sending">Descartar</button>
-                                <button type="button" class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground disabled:opacity-50" x-on:click="send()" x-bind:disabled="sending">Enviar</button>
+                                <flux:button type="button" size="xs" variant="subtle" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</flux:button>
+                                <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()" x-bind:disabled="sending">Descartar</flux:button>
+                                <flux:button type="button" size="xs" variant="primary" x-on:click="send()" x-bind:disabled="sending">Enviar</flux:button>
                             </div>
                         </div>
 

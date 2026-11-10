@@ -50,7 +50,7 @@
                         @if (! $closed && $otherNumber)
                             <p class="font-semibold text-warn">também tem ticket aberto no número {{ $number }} ({{ $past->status->label() }})</p>
                         @else
-                            <p class="text-ink-2">{{ $past->status->label() }}@if ($past->close_outcome) · {{ $past->close_outcome->label() }}@endif @if ($otherNumber)· número {{ $number }}@endif</p>
+                            <p class="flex flex-wrap items-center gap-1 text-ink-2"><x-status-badge :status="$past->status" />@if ($past->close_outcome)<x-status-badge :status="$past->close_outcome" />@endif @if ($otherNumber)<span>· número {{ $number }}</span>@endif</p>
                         @endif
                     </li>
                 @empty
@@ -140,7 +140,7 @@
                             {{ $past->protocol }}
                         @endif
                         <span class="font-sans text-ink-3">· {{ $past->opened_at->timezone(config()->string('app.display_timezone'))->format('d/m/Y') }} · {{ $past->sector?->name ?? 'Fila geral' }}</span></p>
-                    <p class="text-ink-2">{{ $past->status->label() }}@if ($past->close_outcome) · {{ $past->close_outcome->label() }}@endif</p>
+                    <p class="flex flex-wrap items-center gap-1 text-ink-2"><x-status-badge :status="$past->status" />@if ($past->close_outcome)<x-status-badge :status="$past->close_outcome" />@endif</p>
                     @if ($past->close_summary)
                         <p class="text-ink-3">{{ $past->close_summary }}</p>
                     @endif

@@ -28,7 +28,7 @@
                 <flux:button size="xs" variant="subtle" icon="trash" wire:click="delete({{ $tag->id }})" wire:confirm="Apagar a etiqueta {{ $tag->name }}?" aria-label="Apagar {{ $tag->name }}" />
             </li>
         @empty
-            <li class="px-4 py-6 text-center text-sm text-ink-3">Nenhuma etiqueta cadastrada.</li>
+            <li><x-empty-state icon="tag" title="Nenhuma etiqueta cadastrada." description="Crie etiquetas para organizar contatos e tickets." /></li>
         @endforelse
     </ul>
 </x-settings-page>

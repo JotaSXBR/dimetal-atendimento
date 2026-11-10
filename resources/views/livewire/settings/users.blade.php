@@ -56,9 +56,9 @@
                 <div class="min-w-0 flex-1">
                     <p class="flex items-center gap-2 text-sm font-semibold text-ink">
                         <span class="truncate">{{ $user->name }}</span>
-                        <flux:badge size="sm">{{ $user->role->label() }}</flux:badge>
+                        <x-status-badge tone="neutral">{{ $user->role->label() }}</x-status-badge>
                         @unless ($user->active)
-                            <flux:badge size="sm" color="zinc">Inativo</flux:badge>
+                            <x-status-badge tone="neutral">Inativo</x-status-badge>
                         @endunless
                     </p>
                     <p class="truncate text-xs text-ink-3">

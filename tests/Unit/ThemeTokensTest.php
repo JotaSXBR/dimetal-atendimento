@@ -126,6 +126,18 @@ class ThemeTokensTest extends TestCase
     }
 
     /** Mistura `$top` sobre `$bottom` com a opacidade dada (a classe `bg-x/10` do Tailwind). */
+    /** Os dois tons do selo que não são `/10` de um token: `accent` (`accent-content` sobre `accent-soft`) e `neutral` (`ink-2` sobre canvas/surface). */
+    public function test_selo_accent_e_neutral_tem_contraste_aa_nos_dois_temas(): void
+    {
+        foreach ($this->themes() as $theme => $t) {
+            $this->assertGreaterThanOrEqual(4.5, $this->ratio($t['accent-content'], $t['accent-soft']), "{$theme}: accent-content sobre accent-soft");
+
+            foreach (['canvas', 'surface'] as $ground) {
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($t['ink-2'], $t[$ground]), "{$theme}: ink-2 sobre {$ground}");
+            }
+        }
+    }
+
     private function mix(string $top, string $bottom, float $alpha): string
     {
         $a = array_map('hexdec', str_split(ltrim($top, '#'), 2));
