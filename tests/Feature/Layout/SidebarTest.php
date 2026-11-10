@@ -91,6 +91,59 @@ class SidebarTest extends TestCase
         $this->assertTrue($this->entry($this->page(UserRole::ADMIN, '/configuracoes/setores'))?->hasAttribute('data-current'));
     }
 
+    public function test_sidebar_e_recolhivel_no_desktop_para_todos_os_papeis(): void
+    {
+        foreach ([UserRole::ATENDENTE, UserRole::SUPERVISOR, UserRole::ADMIN] as $role) {
+            $html = $this->page($role);
+
+            $this->assertStringContainsString('collapsible="true"', $html, $role->value);
+            $this->assertStringNotContainsString('collapsible="mobile"', $html, $role->value);
+        }
+    }
+
+    public function test_botao_de_colapso_aparece_no_desktop(): void
+    {
+        $this->assertSame(0, $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-flux-sidebar-collapse and contains(@class, "lg:hidden")]')->length);
+    }
+
+    public function test_ponto_da_fila_fechada_e_vermelho_com_sla_estourado_mesmo_sem_aguardando(): void
+    {
+        $channel = Channel::factory()->connected()->create();
+        Ticket::factory()->for($channel)->create([
+            'status' => TicketStatus::EM_ATENDIMENTO, 'waiting_since' => now()->subHour(), 'sla_due_at' => now()->subMinutes(5),
+        ]);
+
+        $dot = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->item(0);
+
+        $this->assertStringContainsString('bg-danger', (string) $dot?->getAttribute('class'));
+        $this->assertStringContainsString('1 com SLA estourado', (string) $dot?->textContent);
+    }
+
+    public function test_ponto_da_fila_fechada_e_amarelo_com_aguardando(): void
+    {
+        Ticket::factory()->count(3)->for(Channel::factory()->connected()->create())->create(['status' => TicketStatus::AGUARDANDO]);
+
+        $dot = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->item(0);
+
+        $this->assertStringContainsString('bg-accent', (string) $dot?->getAttribute('class'));
+        $this->assertStringContainsString('3 aguardando', (string) $dot?->textContent);
+    }
+
+    public function test_sem_pendencia_nao_ha_ponto_da_fila(): void
+    {
+        $this->assertSame(0, $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->length);
+    }
+
+    public function test_ponto_da_fila_so_aparece_com_a_sidebar_fechada(): void
+    {
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create(['status' => TicketStatus::AGUARDANDO]);
+
+        $class = (string) $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->item(0)?->getAttribute('class');
+
+        $this->assertStringContainsString('hidden', $class);
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:block', $class);
+    }
+
     public function test_contadores_de_aguardando_e_sla_estourado(): void
     {
         $channel = Channel::factory()->connected()->create();

@@ -4,11 +4,11 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('inbox') }}" wire:navigate />
                 <livewire:alerts.bell />
-                <flux:sidebar.collapse class="lg:hidden" />
+                <flux:sidebar.collapse />
             </flux:sidebar.header>
 
             @php($counts = app(\App\Support\SidebarState::class)->counts(auth()->user()))
@@ -17,9 +17,18 @@
 
             <flux:sidebar.nav>
                 @foreach ($nav->primary(auth()->user()) as $item)
-                    <flux:sidebar.item :icon="$item->icon" :href="route($item->route)" :current="request()->routeIs($item->match)" wire:navigate
+                    <flux:sidebar.item :href="route($item->route)" :current="request()->routeIs($item->match)" wire:navigate
                         :badge="$item->route === 'inbox' ? ($counts['waiting'] ?: null) : null" badge-color="yellow"
                         badge:data-test="queue-badge" badge:aria-label="{{ $counts['waiting'] }} aguardando">
+                        {{-- Fechada, o Flux esconde badge e selo: o estado da Fila vai num ponto sobre o ícone (vermelho só com SLA estourado). --}}
+                        <x-slot:icon>
+                            <flux:icon :icon="$item->icon" class="size-4" />
+                            @if ($item->route === 'inbox' && ($counts['breached'] > 0 || $counts['waiting'] > 0))
+                                <span data-test="queue-dot" class="absolute -end-0.5 -top-0.5 hidden size-2.5 rounded-full ring-2 ring-zinc-50 in-data-flux-sidebar-collapsed-desktop:block dark:ring-zinc-900 {{ $counts['breached'] > 0 ? 'bg-danger' : 'bg-accent' }}">
+                                    <span class="sr-only">{{ $counts['breached'] > 0 ? $counts['breached'].' com SLA estourado' : $counts['waiting'].' aguardando' }}</span>
+                                </span>
+                            @endif
+                        </x-slot:icon>
                         @if ($item->route === 'inbox' && $counts['breached'] > 0)
                             <x-slot:icon-trailing>
                                 <span data-test="sla-badge" aria-label="{{ $counts['breached'] }} com SLA estourado" class="rounded-full bg-danger px-1.5 text-xs font-semibold text-surface">{{ $counts['breached'] }}</span>
