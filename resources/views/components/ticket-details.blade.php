@@ -1,13 +1,14 @@
 @props(['ticket', 'tz', 'readonly' => false, 'events' => null, 'timeline' => null, 'closer' => null, 'showChannel' => false])
 
-{{-- Painel de detalhes: o estado (`details`, `sheet`) vive no x-data da tela que o contém. Em tela pequena abre por cima da conversa. --}}
+{{-- Painel de detalhes: o estado (`details`, `sheet`) vive no x-data da tela que o contém. Em tela pequena abre por cima da conversa.
+     Coluna flex de rolagem com `p-4`: o rodapé de ações do cartão do contato (`sticky -bottom-4 -mx-4 -mb-4`) depende desse `p-4`; se mudar o padding, mude os negativos. --}}
 <aside
     id="ticket-details"
     aria-label="Detalhes do ticket"
     class="overflow-y-auto border-s border-line bg-surface p-4"
-    x-bind:class="sheet ? 'block fixed inset-0 z-40' : (details ? 'hidden lg:block' : 'hidden')"
+    x-bind:class="sheet ? 'flex flex-col fixed inset-0 z-40' : (details ? 'hidden lg:flex lg:flex-col' : 'hidden')"
 >
-    <flux:button size="sm" variant="subtle" icon="arrow-left" class="mb-3 lg:hidden" x-on:click="sheet = false">Voltar à conversa</flux:button>
+    <flux:button size="sm" variant="subtle" icon="arrow-left" class="mb-3 self-start lg:hidden" x-on:click="sheet = false">Voltar à conversa</flux:button>
 
     @php
         $state = $readonly || $ticket->waiting_since === null || $ticket->sla_due_at === null ? null : $ticket->slaState();
@@ -21,7 +22,7 @@
             'Canal' => $ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : ''),
             'Setor' => $ticket->sector?->name ?? 'Fila geral',
             'Responsável' => $ticket->assignee?->name ?? 'Não atribuído',
-            'Etiquetas' => $ticket->tags->isEmpty() ? null : $ticket->tags->pluck('name')->sort()->join(', '),
+            'Etiquetas' => $ticket->tags->isEmpty() ? null : $ticket->tags->pluck('name')->sortBy(fn (string $name) => \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii($name)))->join(', '),
             'SLA' => $sla,
             'Aberto em' => $ticket->opened_at->timezone($tz)->format('d/m/Y H:i'),
             'Encerrado em' => $ticket->closed_at?->timezone($tz)->format('d/m/Y H:i'),

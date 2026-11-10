@@ -147,7 +147,7 @@
                                             <span data-testid="card-tag" class="inline-flex shrink-0 items-center gap-1 text-ink-2"><span class="size-2 shrink-0 rounded-full" style="background-color: {{ $tag->color }}"></span><span class="max-w-20 truncate">{{ $tag->name }}</span></span>
                                         @endforeach
                                         @if ($tagsRest->isNotEmpty())
-                                            <span data-testid="card-tags-more" title="{{ $tagsRest->pluck('name')->join(', ') }}"><span aria-hidden="true">+{{ $tagsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $tagsRest->pluck('name')->join(', ') }}</span></span>
+                                            <span data-testid="card-tags-more"><span aria-hidden="true" title="{{ $tagsRest->pluck('name')->join(', ') }}">+{{ $tagsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $tagsRest->pluck('name')->join(', ') }}</span></span>
                                         @endif
                                     </span>
                                 @endif
@@ -165,37 +165,40 @@
     </section>
 
     {{-- Conversa --}}
-    <section class="flex min-h-0 flex-col bg-canvas {{ $ticket ? '' : 'hidden lg:flex' }}">
+    {{-- `@container`: o cabeçalho e o compositor mudam pela largura desta coluna (muda com a sidebar aberta ou fechada e com o painel de detalhes), não pela da janela. --}}
+    <section data-testid="conversation-column" class="@container flex min-h-0 flex-col bg-canvas {{ $ticket ? '' : 'hidden lg:flex' }}">
         @if ($ticket)
             @php
                 $name = $ticket->contact->label();
             @endphp
 
-            <header class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface px-4 py-3">
+            <header class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-surface px-4 py-2">
                 <flux:button variant="subtle" size="sm" icon="arrow-left" class="lg:hidden" wire:click="$set('ticketId', null)" aria-label="Voltar para a lista" />
                 <flux:avatar :name="$name" size="sm" />
 
                 <div class="min-w-0 flex-1 basis-56">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-ink">
-                        <span class="truncate">{{ $name }}</span>
+                    <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink">
+                        <span class="max-w-full truncate">{{ $name }}</span>
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
-                    </p>
+                        @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
+                            @php
+                                $slaState = $ticket->slaState();
+                            @endphp
+                            <span data-testid="header-sla" class="text-xs font-medium {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
+                                @if ($slaState === 'estourou')
+                                    SLA estourado: venceu {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
+                                @else
+                                    Responder até {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
+                                @endif
+                            </span>
+                        @endif
+                    </div>
                     <p class="truncate font-mono text-[11px] text-ink-3">
                         {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}@if ($showChannel) · {{ $ticket->channel->phoneLabel() ?? 'sem número' }}@endif
                     </p>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
                             {{ $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label() }}@if ($ticket->close_summary) · {{ $ticket->close_summary }}@endif
-                        </p>
-                    @endif
-                    @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
-                        @php($slaState = $ticket->slaState())
-                        <p class="text-xs font-medium {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
-                            @if ($slaState === 'estourou')
-                                SLA estourado: venceu {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
-                            @else
-                                Responder até {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
-                            @endif
                         </p>
                     @endif
                 </div>
@@ -214,11 +217,11 @@
                     @endif
 
                     @if ($canTransfer)
-                        <flux:button size="sm" icon="arrows-right-left" wire:click="openPanel('transfer')">Transferir</flux:button>
+                        <flux:button size="sm" icon="arrows-right-left" class="@max-2xl:w-8 @max-2xl:px-0" wire:click="openPanel('transfer')" aria-label="Transferir" tooltip="Transferir"><span class="hidden @2xl:inline">Transferir</span></flux:button>
                     @endif
 
                     @if ($canReassign)
-                        <flux:button size="sm" icon="user-plus" wire:click="openPanel('reassign')">Reatribuir</flux:button>
+                        <flux:button size="sm" icon="user-plus" class="@max-2xl:w-8 @max-2xl:px-0" wire:click="openPanel('reassign')" aria-label="Reatribuir" tooltip="Reatribuir"><span class="hidden @2xl:inline">Reatribuir</span></flux:button>
                     @endif
 
                     @if ($canClose)
@@ -333,19 +336,10 @@
                 @endif
 
                 @if ($canReply && $ticket->channel->status !== \App\Enums\ChannelStatus::WORKING)
-                    <p class="mb-2 rounded-md bg-warn/10 px-3 py-2 text-xs text-warn" role="status">
-                        O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).
-                    </p>
+                    <p class="mb-1.5 truncate rounded-md bg-warn/10 px-3 py-1.5 text-xs text-warn" role="status" title="O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).">O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).</p>
                 @endif
 
                 @if ($canReply)
-                    <div class="mb-2 flex flex-wrap items-center gap-2">
-                        <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
-                            <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
-                            <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
-                        </div>
-                        <p x-show="mode === 'note'" x-cloak class="text-xs text-warn" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
-                    </div>
 
                     <div
                         wire:key="composer-{{ $ticket->id }}"
@@ -402,7 +396,7 @@
                             <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
                         @enderror
 
-                        <form x-on:submit.prevent="uploading === 0 && submit()" x-on:input="remember($event)" class="flex items-end gap-2" x-show="!voiceBusy">
+                        <form data-testid="composer-form" x-on:submit.prevent="uploading === 0 && submit()" x-on:input="remember($event)" class="flex flex-wrap items-end gap-2" x-show="!voiceBusy">
                             <input
                                 type="file"
                                 multiple
@@ -412,11 +406,18 @@
                                 accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.mp3,.ogg,.m4a,.mp4"
                                 x-on:change="addFiles($event.target.files); $event.target.value = ''"
                             >
+                            {{-- Abas Responder/Nota: na mesma linha do resto em coluna larga (@xl), em linha própria abaixo disso. --}}
+                            <div data-testid="composer-modes" class="@max-xl:basis-full">
+                                <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
+                                    <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
+                                    <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
+                                </div>
+                            </div>
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
                             <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-show="mode === 'reply'" x-on:click="$dispatch('voice-start')" />
                             <flux:button type="button" x-show="mode === 'reply'" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
 
-                            <div class="flex-1" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
+                            <div class="min-w-28 flex-1" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
                                 @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())
                                     <ul class="mb-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface text-sm" role="listbox" aria-label="Respostas rápidas">
                                         @foreach ($suggestions as $suggestion)
@@ -436,6 +437,7 @@
                             </div>
                             <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-show="mode === 'reply'" x-bind:disabled="uploading > 0" />
                             <button type="submit" x-show="mode === 'note'" x-cloak class="rounded-md bg-warn px-3 py-2 text-sm font-medium text-warn-foreground hover:brightness-95 disabled:opacity-50" x-bind:disabled="uploading > 0">Salvar nota</button>
+                            <p x-show="mode === 'note'" x-cloak class="basis-full text-xs text-warn" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
                         </form>
                     </div>
                 @elseif ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)

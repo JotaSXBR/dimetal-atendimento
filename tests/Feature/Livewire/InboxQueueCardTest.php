@@ -102,6 +102,19 @@ class InboxQueueCardTest extends TestCase
         $this->assertMatchesRegularExpression('/class="sr-only">[^<]*Gama, Delta/', $this->html());
     }
 
+    public function test_title_do_mais_n_fica_no_trecho_visual_e_nao_duplica_o_texto_do_leitor_de_tela(): void
+    {
+        $ticket = $this->ticket();
+        $ticket->tags()->attach(Tag::factory()->count(4)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Gama'], ['name' => 'Delta'])->create());
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->html(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+
+        $this->assertSame('', $xpath->query('//*[@data-testid="card-tags-more"]')->item(0)?->getAttribute('title'));
+        $this->assertSame('Gama, Delta', $xpath->query('//*[@data-testid="card-tags-more"]/*[@aria-hidden="true"]')->item(0)?->getAttribute('title'));
+    }
+
     public function test_espera_aparece_com_waiting_since(): void
     {
         $this->travelTo(now()->startOfMinute());

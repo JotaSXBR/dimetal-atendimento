@@ -1,7 +1,8 @@
-<div>
+{{-- Compacto (Inbox): a raiz e o resumo não geram caixa (`contents`), para o rodapé `sticky` grudar no fim do `aside` de rolagem. --}}
+<div @class(['contents' => $compact && ! $editing])>
 @php($tz = config()->string('app.display_timezone'))
 @if ($compact && ! $editing)
-    <div class="space-y-2 text-sm">
+    <div class="contents text-sm">
         <x-disclosure title="Contato" testid="details-contact">
         <div class="space-y-4">
         <div>
@@ -27,7 +28,7 @@
         </x-disclosure>
 
         {{-- A chave muda quando o contato passa a ter (ou deixa de ter) anteriores: o `wire:ignore.self` congela o `open`, e a chave nova recria o bloco. --}}
-        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history" wire:key="history-{{ $historyTotal > 0 ? 'has' : 'none' }}">
+        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history" wire:key="history-block-{{ $historyTotal > 0 ? 'has' : 'none' }}">
             <ul class="space-y-2">
                 @forelse ($history as $past)
                     @php($mine = in_array($past->id, $openable, true))
@@ -69,8 +70,15 @@
         @endif
 
         @unless ($readonly)
-            @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'w-full'])
-            <flux:button size="sm" variant="subtle" icon="pencil-square" class="w-full" wire:click="toggleEdit">Editar contato</flux:button>
+            {{-- Rodapé fixo do painel: separador e grupo de botões do Flux (as variantes `filled`/`outline` se colam). `-bottom-4 -mx-4 -mb-4` acertam o `p-4` do
+                 `aside` (ticket-details); `mt-auto` o leva ao fim do painel quando há pouco conteúdo. --}}
+            <div data-testid="contact-actions" class="sticky -bottom-4 -mx-4 -mb-4 mt-auto bg-surface px-4 pt-1 pb-4">
+                <flux:separator class="mb-3" />
+                <flux:button.group>
+                    @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'flex-1', 'variant' => 'filled', 'size' => 'xs'])
+                    <flux:button size="xs" variant="filled" icon="pencil-square" class="flex-1" wire:click="toggleEdit">Editar contato</flux:button>
+                </flux:button.group>
+            </div>
         @endunless
     </div>
 @else
