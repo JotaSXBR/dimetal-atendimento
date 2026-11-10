@@ -186,6 +186,20 @@ class SidebarTest extends TestCase
         $this->assertStringContainsString('WhatsApp desconectado', $this->page(UserRole::ATENDENTE));
     }
 
+    public function test_aviso_de_whatsapp_tem_texto_e_icone_com_rotulo_para_a_sidebar_fechada(): void
+    {
+        Channel::factory()->create(['status' => ChannelStatus::STOPPED]);
+
+        $xpath = $this->xpath($this->page(UserRole::ATENDENTE));
+        $notice = $xpath->query('//*[@data-test="whatsapp-down"]')->item(0);
+
+        $this->assertNotNull($notice);
+        $this->assertSame('WhatsApp desconectado', $xpath->query('.//*[@aria-label="WhatsApp desconectado"]', $notice)->item(0)?->getAttribute('aria-label'));
+        $text = $xpath->query('.//p', $notice)->item(0);
+        $this->assertStringContainsString('As mensagens ficam aguardando', (string) $text?->textContent);
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:hidden', (string) $text?->getAttribute('class'));
+    }
+
     public function test_sem_aviso_com_canal_conectado(): void
     {
         Channel::factory()->connected()->create();
