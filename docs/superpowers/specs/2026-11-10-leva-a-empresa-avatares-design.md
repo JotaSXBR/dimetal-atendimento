@@ -66,7 +66,7 @@ código. Está atrasado com o projeto: esta leva junta quatro pedidos num só br
   (`avatars/contacts/…`, `avatars/users/…`, `branding/…`).
 - **Imagem:** servidor reduz para quadrado (~256 px para pessoas e logo; miniatura de contato menor, ~128 px) e converte para WebP; entrada PNG/JPG/WebP
   até 1 MB para o upload do dono, sem SVG; valida o tipo pelo conteúdo, não pela extensão. Biblioteca: `intervention/image-laravel` com o driver GD;
-  **conferir o suporte a WebP no GD da imagem de produção antes de adicionar** (mexer no `composer.json` é decisão do dono, já pedida).
+  **conferir o suporte a WebP no GD da imagem de produção antes de adicionar** (mexer no `composer.json` foi autorizado pelo dono em 10/11).
 - **Foto de contato:** `GET /api/contacts/profile-picture` do WAHA devolve só a URL; baixar os bytes pelo servidor (nunca expor ao navegador), com
   tempo-limite curto. Buscar na criação do contato e, depois, no máximo uma vez a cada 24 h por contato, quando chega mensagem nova; respeitar o ritmo
   de chamadas ao WAHA já usado no app. Guardar "sem foto" (cache negativo) com o mesmo prazo de 24 h.
