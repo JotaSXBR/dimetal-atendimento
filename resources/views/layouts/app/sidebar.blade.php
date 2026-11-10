@@ -5,7 +5,7 @@
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
         <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:sidebar.header>
+            <flux:sidebar.header class="in-data-flux-sidebar-collapsed-desktop:flex-col in-data-flux-sidebar-collapsed-desktop:items-center in-data-flux-sidebar-collapsed-desktop:gap-3">
                 <x-app-logo :sidebar="true" href="{{ route('inbox') }}" wire:navigate />
                 <livewire:alerts.bell />
                 <flux:sidebar.collapse />
@@ -31,7 +31,7 @@
                         </x-slot:icon>
                         @if ($item->route === 'inbox' && $counts['breached'] > 0)
                             <x-slot:icon-trailing>
-                                <span data-test="sla-badge" aria-label="{{ $counts['breached'] }} com SLA estourado" class="rounded-full bg-danger px-1.5 text-xs font-semibold text-surface">{{ $counts['breached'] }}</span>
+                                <span data-test="sla-badge" aria-label="{{ $counts['breached'] }} com SLA estourado" class="rounded-full bg-danger px-1.5 text-xs font-semibold text-surface in-data-flux-sidebar-collapsed-desktop:hidden">{{ $counts['breached'] }}</span>
                             </x-slot:icon-trailing>
                         @endif
                         {{ $item->label }}

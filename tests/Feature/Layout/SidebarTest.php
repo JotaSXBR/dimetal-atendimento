@@ -171,6 +171,17 @@ class SidebarTest extends TestCase
         $this->assertSame(0, $xpath->query('//*[@data-test="queue-badge"]')->length);
     }
 
+    public function test_selos_de_texto_somem_com_a_sidebar_fechada_porque_o_ponto_os_substitui(): void
+    {
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create([
+            'status' => TicketStatus::AGUARDANDO, 'waiting_since' => now()->subHour(), 'sla_due_at' => now()->subMinutes(5),
+        ]);
+
+        $sla = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="sla-badge"]')->item(0);
+
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:hidden', (string) $sla?->getAttribute('class'));
+    }
+
     public function test_sem_pendencia_nao_ha_selo(): void
     {
         $xpath = $this->xpath($this->page(UserRole::ADMIN));

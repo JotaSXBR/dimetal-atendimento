@@ -171,11 +171,11 @@
                 $name = $ticket->contact->label();
             @endphp
 
-            <header class="flex items-center gap-3 border-b border-line bg-surface px-4 py-3">
+            <header class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface px-4 py-3">
                 <flux:button variant="subtle" size="sm" icon="arrow-left" class="lg:hidden" wire:click="$set('ticketId', null)" aria-label="Voltar para a lista" />
                 <flux:avatar :name="$name" size="sm" />
 
-                <div class="min-w-0 flex-1">
+                <div class="min-w-0 flex-1 basis-56">
                     <p class="flex items-center gap-2 text-sm font-semibold text-ink">
                         <span class="truncate">{{ $name }}</span>
                         <flux:badge size="sm" :color="$statusColor($ticket->status)">{{ $ticket->status->label() }}</flux:badge>
@@ -200,28 +200,31 @@
                     @endif
                 </div>
 
-                <flux:button size="sm" variant="subtle" icon="information-circle" class="lg:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
-                <flux:button size="sm" variant="subtle" icon="information-circle" class="max-lg:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
+                {{-- Em janela estreita as ações descem para a linha de baixo, à direita, em vez de espremer o nome e o SLA. --}}
+                <div class="ms-auto flex flex-wrap items-center justify-end gap-2">
+                    <flux:button size="sm" variant="subtle" icon="information-circle" class="lg:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
+                    <flux:button size="sm" variant="subtle" icon="information-circle" class="max-lg:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
 
-                @if ($canClaim)
-                    <flux:button variant="primary" size="sm" icon="check" wire:click="claim" wire:loading.attr="disabled">Assumir</flux:button>
-                @endif
+                    @if ($canClaim)
+                        <flux:button variant="primary" size="sm" icon="check" wire:click="claim" wire:loading.attr="disabled">Assumir</flux:button>
+                    @endif
 
-                @if ($canTakeover)
-                    <flux:button size="sm" icon="arrow-uturn-left" wire:click="takeover({{ $ticket->assigned_user_id }})" wire:confirm="Tomar este ticket de {{ $ticket->assignee?->name }}?">Tomar</flux:button>
-                @endif
+                    @if ($canTakeover)
+                        <flux:button size="sm" icon="arrow-uturn-left" wire:click="takeover({{ $ticket->assigned_user_id }})" wire:confirm="Tomar este ticket de {{ $ticket->assignee?->name }}?">Tomar</flux:button>
+                    @endif
 
-                @if ($canTransfer)
-                    <flux:button size="sm" icon="arrows-right-left" wire:click="openPanel('transfer')">Transferir</flux:button>
-                @endif
+                    @if ($canTransfer)
+                        <flux:button size="sm" icon="arrows-right-left" wire:click="openPanel('transfer')">Transferir</flux:button>
+                    @endif
 
-                @if ($canReassign)
-                    <flux:button size="sm" icon="user-plus" wire:click="openPanel('reassign')">Reatribuir</flux:button>
-                @endif
+                    @if ($canReassign)
+                        <flux:button size="sm" icon="user-plus" wire:click="openPanel('reassign')">Reatribuir</flux:button>
+                    @endif
 
-                @if ($canClose)
-                    <flux:button size="sm" wire:click="openPanel('close')">Encerrar</flux:button>
-                @endif
+                    @if ($canClose)
+                        <flux:button size="sm" wire:click="openPanel('close')">Encerrar</flux:button>
+                    @endif
+                </div>
             </header>
 
             @if ($panel === 'transfer')
