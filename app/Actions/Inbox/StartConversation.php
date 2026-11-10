@@ -61,17 +61,17 @@ class StartConversation
         $made = DB::transaction(function () use ($user, $contact, $channel, $sector, $text): array {
             DB::select('select pg_advisory_xact_lock(hashtext(?))', ['ticket:'.$contact->id.':'.$channel->id]);
 
+            $existing = $this->openTicket($contact, $channel);
+
+            if ($existing !== null) {
+                return ['ticket' => $existing, 'message' => null];
+            }
+
             // O setor veio do guard, antes da transação: pode ter sido apagado ou desativado desde então. Nada foi enviado, então o ritmo volta.
             if (Sector::lockForReceiving($sector->id) === null) {
                 $this->releasePace($contact, $channel);
 
                 throw new ConversationNotStarted(self::SECTOR_REFUSED);
-            }
-
-            $existing = $this->openTicket($contact, $channel);
-
-            if ($existing !== null) {
-                return ['ticket' => $existing, 'message' => null];
             }
 
             $ticket = Ticket::create([
@@ -161,7 +161,8 @@ class StartConversation
 
     private function releasePace(Contact $contact, Channel $channel): void
     {
-        RateLimiter::clear($this->channelKey($channel));
+        // Só o que esta chamada reservou: `clear` apagaria também a reserva de outra conversa feita no mesmo canal na janela.
+        RateLimiter::decrement($this->channelKey($channel), self::CHANNEL_GAP_SECONDS);
         RateLimiter::decrement($this->contactKey($contact), 3600);
     }
 

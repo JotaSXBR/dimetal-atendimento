@@ -22,6 +22,7 @@ use App\Services\Inbox\ConversationNotStarted;
 use App\Services\Inbox\IngestMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
@@ -215,6 +216,42 @@ class StartConversationTest extends TestCase
     {
         $this->assertFalse(RateLimiter::tooManyAttempts('start-conversation:channel:'.$this->channel->id, 1));
         $this->assertEquals(0, RateLimiter::attempts('start-conversation:contact:'.$this->contact->id));
+    }
+
+    public function test_ticket_ja_aberto_vence_o_setor_que_sumiu_na_janela(): void
+    {
+        $stale = $this->staleSector();
+        Sector::query()->whereKey($stale->id)->delete();
+        $open = null;
+        // Outra aba abre o ticket depois da checagem de fora da transação e antes da gravação.
+        DB::listen(function ($query) use (&$open): void {
+            if ($open === null && str_contains($query->sql, 'pg_advisory_xact_lock')) {
+                $open = Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $this->channel->id, 'status' => TicketStatus::EM_ATENDIMENTO]);
+            }
+        });
+
+        $result = $this->start(sector: $stale, user: $this->supervisor());
+
+        $this->assertFalse($result['created']);
+        $this->assertNotNull($open);
+        $this->assertSame($open->id, $result['ticket']->id);
+    }
+
+    public function test_recusa_devolve_so_o_proprio_ritmo_e_nao_o_de_outra_conversa_no_canal(): void
+    {
+        $stale = $this->staleSector();
+        Sector::query()->whereKey($stale->id)->delete();
+        $channelKey = 'start-conversation:channel:'.$this->channel->id;
+        // Outra conversa reserva o canal na janela entre a nossa reserva e a recusa.
+        DB::listen(function ($query) use ($channelKey): void {
+            if (str_contains(strtolower($query->sql), 'for share')) {
+                RateLimiter::hit($channelKey, 30);
+            }
+        });
+
+        $this->refuses(fn () => $this->start(sector: $stale, user: $this->supervisor()), 'Escolha um setor');
+
+        $this->assertEquals(1, RateLimiter::attempts($channelKey));
     }
 
     public function test_supervisor_inicia_em_qualquer_setor_que_receba(): void
