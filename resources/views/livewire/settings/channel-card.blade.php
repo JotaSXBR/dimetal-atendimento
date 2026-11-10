@@ -89,7 +89,7 @@
                     <flux:select.option value="15">Últimos 15 dias</flux:select.option>
                     <flux:select.option value="30">Últimos 30 dias</flux:select.option>
                 </flux:select>
-                <x-ui.button variant="secondary" wire:click="importNow" wire:confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." wire:loading.attr="disabled">Importar agora</x-ui.button>
+                <flux:button size="sm" variant="filled" wire:click="importNow" wire:confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." wire:loading.attr="disabled">Importar agora</flux:button>
                 @error('importDays')
                     <p class="basis-full text-xs text-danger">{{ $message }}</p>
                 @enderror
@@ -102,7 +102,7 @@
                     <flux:select.option value="24">Últimas 24 horas</flux:select.option>
                     <flux:select.option value="72">Últimas 72 horas</flux:select.option>
                 </flux:select>
-                <x-ui.button variant="secondary" wire:click="recover" wire:loading.attr="disabled">Recuperar mensagens</x-ui.button>
+                <flux:button size="sm" variant="filled" wire:click="recover" wire:loading.attr="disabled">Recuperar mensagens</flux:button>
                 <p class="basis-full text-xs leading-relaxed text-ink-3">Busca no WhatsApp o que não chegou ao sistema nesse período. Repetir não duplica nada. A recuperação roda sozinha depois de uma queda e todo dia de madrugada.</p>
                 @error('recoverHours')
                     <p class="basis-full text-xs text-danger">{{ $message }}</p>
@@ -115,15 +115,15 @@
 
         <div class="mt-4 flex flex-wrap items-center gap-2">
             @if ($inactive)
-                <x-ui.button variant="primary" wire:click="reactivate" wire:loading.attr="disabled">Reativar</x-ui.button>
+                <flux:button size="sm" variant="primary" wire:click="reactivate" wire:loading.attr="disabled">Reativar</flux:button>
             @else
-                <x-ui.button variant="primary" wire:click="connect" wire:loading.attr="disabled">{{ $primary }}</x-ui.button>
-                <x-ui.button variant="secondary" wire:click="disconnect" wire:loading.attr="disabled">Desconectar</x-ui.button>
-                <x-ui.button variant="secondary" wire:click="ask('deactivate')">Desativar</x-ui.button>
+                <flux:button size="sm" variant="primary" wire:click="connect" wire:loading.attr="disabled">{{ $primary }}</flux:button>
+                <flux:button size="sm" variant="filled" wire:click="disconnect" wire:loading.attr="disabled">Desconectar</flux:button>
+                <flux:button size="sm" variant="filled" wire:click="ask('deactivate')">Desativar</flux:button>
             @endif
-            <x-ui.button variant="secondary" wire:click="ask('delete-session')">Excluir sessão</x-ui.button>
+            <flux:button size="sm" variant="filled" wire:click="ask('delete-session')">Excluir sessão</flux:button>
             @unless ($hasHistory)
-                <x-ui.button variant="ghost" wire:click="ask('delete-channel')">Apagar canal</x-ui.button>
+                <flux:button size="sm" variant="ghost" wire:click="ask('delete-channel')">Apagar canal</flux:button>
             @endunless
         </div>
 
@@ -143,8 +143,8 @@
                     Um canal ativo sem sessão conta como queda e dispara o alerta de canal desconectado. Para parar sem alerta, use Desativar.
                 @endif
                 <div class="mt-2 flex gap-2">
-                    <x-ui.button variant="primary" wire:click="{{ $confirmAction }}" wire:loading.attr="disabled">Confirmar {{ $confirmLabel }}</x-ui.button>
-                    <x-ui.button variant="secondary" wire:click="cancel">Cancelar</x-ui.button>
+                    <flux:button size="sm" variant="primary" wire:click="{{ $confirmAction }}" wire:loading.attr="disabled">Confirmar {{ $confirmLabel }}</flux:button>
+                    <flux:button size="sm" variant="filled" wire:click="cancel">Cancelar</flux:button>
                 </div>
             </div>
         @endif
@@ -201,9 +201,9 @@
                                     <p class="text-xs text-danger">{{ $message }}</p>
                                 @enderror
 
-                                <x-ui.button variant="secondary" wire:click="requestPairingCode" wire:loading.attr="disabled">
+                                <flux:button size="sm" variant="filled" wire:click="requestPairingCode" wire:loading.attr="disabled">
                                     Gerar código
-                                </x-ui.button>
+                                </flux:button>
 
                                 @if ($pairingCode)
                                     <div class="rounded-[10px] bg-canvas px-4 py-3">
@@ -232,9 +232,9 @@
                         @enderror
 
                         <div class="mt-3">
-                            <x-ui.button variant="secondary" wire:click="sendTest" wire:loading.attr="disabled">
+                            <flux:button size="sm" variant="filled" wire:click="sendTest" wire:loading.attr="disabled">
                                 Enviar teste
-                            </x-ui.button>
+                            </flux:button>
                         </div>
 
                         @if ($sentMessage)

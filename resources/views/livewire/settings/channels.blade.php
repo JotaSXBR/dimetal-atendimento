@@ -25,9 +25,9 @@
                             <p class="mt-2 text-xs text-danger">{{ $message }}</p>
                         @enderror
                     </div>
-                    <x-ui.button variant="primary" wire:click="addChannel" wire:loading.attr="disabled">
+                    <flux:button size="sm" variant="primary" wire:click="addChannel" wire:loading.attr="disabled">
                         Adicionar
-                    </x-ui.button>
+                    </flux:button>
                 </div>
 
                 <p class="mt-2 text-xs leading-relaxed text-ink-3">

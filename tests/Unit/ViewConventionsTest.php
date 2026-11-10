@@ -41,4 +41,14 @@ class ViewConventionsTest extends TestCase
             }
         }
     }
+
+    /** Só `flux:button`: o `x-ui.button` próprio foi migrado e removido (regra em docs/ui-botoes.md). */
+    public function test_nenhuma_view_usa_x_ui_button(): void
+    {
+        foreach ($this->views() as $path => $html) {
+            $this->assertStringNotContainsString('<x-ui.button', $html, "{$path}: use <flux:button> (docs/ui-botoes.md)");
+        }
+
+        $this->assertFileDoesNotExist(dirname(__DIR__, 2).'/resources/views/components/ui/button.blade.php');
+    }
 }
