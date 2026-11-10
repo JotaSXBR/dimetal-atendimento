@@ -127,7 +127,7 @@
                                     <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-ink-3">
                                         @if ($item->assignee)
                                             <span class="inline-flex shrink-0 items-center gap-1 text-ink-2">
-                                                <flux:avatar :name="$item->assignee->name" size="xs" />
+                                                <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
                                                 <span data-testid="card-assignee-name">{{ \Illuminate\Support\Str::before($item->assignee->name, ' ') }}</span>
                                             </span>
                                         @endif
