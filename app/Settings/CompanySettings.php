@@ -15,7 +15,13 @@ final class CompanySettings
     {
         $name = Setting::get('company.name');
 
-        return is_string($name) && $name !== '' ? $name : config()->string('app.name');
+        if (is_string($name) && $name !== '') {
+            return $name;
+        }
+
+        $app = config('app.name');
+
+        return is_string($app) && $app !== '' ? $app : 'Laravel';
     }
 
     public static function signatureEnabled(): bool
