@@ -19,11 +19,12 @@ class TransferTicket
      */
     public function __invoke(Ticket $ticket, ?User $actor, Sector $to, ?string $note = null): bool
     {
-        if (! $to->status->receivesTickets()) {
-            return false;
-        }
-
         return DB::transaction(function () use ($ticket, $actor, $to, $note): bool {
+            // O setor é relido com trava antes do ticket (mesma ordem do DeleteSector): o modelo recebido pode estar velho.
+            if (Sector::lockForReceiving($to->id) === null) {
+                return false;
+            }
+
             $wasPending = Ticket::query()->whereKey($ticket->id)->lockForUpdate()->first(['id', 'status'])?->status === TicketStatus::PENDENTE;
 
             $moved = Ticket::query()
