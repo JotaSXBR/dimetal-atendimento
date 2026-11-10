@@ -9,10 +9,10 @@
 <div>
     <div role="alert" aria-live="assertive">
         @if ($down->isNotEmpty())
-            <div class="{{ $edge }} flex items-center gap-x-3 bg-danger px-5 py-1.5 text-xs text-danger-foreground" data-alert="connection-down">
+            <div class="{{ $edge }} flex items-center gap-x-3 max-sm:flex-wrap max-sm:gap-y-1 bg-danger px-5 py-1.5 text-xs text-danger-foreground" data-alert="connection-down">
                 <flux:icon.exclamation-triangle variant="mini" class="size-4 shrink-0" />
-                <p class="min-w-0 flex-1 truncate" title="WhatsApp desconectado · {{ $downRest }}"><strong>WhatsApp desconectado</strong> · {{ $downRest }}</p>
-                <div class="flex shrink-0 items-center gap-2">
+                <p class="min-w-0 flex-1 sm:truncate" title="WhatsApp desconectado · {{ $downRest }}"><strong>WhatsApp desconectado</strong> · {{ $downRest }}</p>
+                <div class="flex shrink-0 items-center gap-2 max-sm:w-full max-sm:flex-wrap">
                     <flux:button size="xs" variant="ghost" wire:click="mute(15)" class="border border-white/60 text-danger-foreground! hover:bg-white/10!">Silenciar som 15 min</flux:button>
                     <flux:button size="xs" variant="ghost" wire:click="mute(60)" class="border border-white/60 text-danger-foreground! hover:bg-white/10!">Silenciar 1 h</flux:button>
                     @if ($canSeeChannels)
@@ -25,18 +25,18 @@
 
     <div role="status" aria-live="polite">
         @if ($recovered !== '')
-            <div class="{{ $edge }} flex items-center gap-3 bg-ok/10 px-5 py-1.5 text-xs text-ok" data-alert="connection-up"
+            <div class="{{ $edge }} flex items-center gap-3 max-sm:flex-wrap bg-ok/10 px-5 py-1.5 text-xs text-ok" data-alert="connection-up"
                 x-data x-init="setTimeout(() => $wire.dismissRecovered(), 10000)">
                 <flux:icon.check-circle variant="mini" class="size-4 shrink-0" />
-                <p class="min-w-0 flex-1 truncate" title="WhatsApp voltou · {{ $recoveredRest }}"><strong>WhatsApp voltou</strong> · {{ $recoveredRest }}</p>
+                <p class="min-w-0 flex-1 sm:truncate" title="WhatsApp voltou · {{ $recoveredRest }}"><strong>WhatsApp voltou</strong> · {{ $recoveredRest }}</p>
                 <span class="text-xs">some em 10 s</span>
             </div>
         @endif
 
         @if ($breached > 0)
-            <div class="{{ $edge }} flex items-center gap-x-3 border-b border-line bg-danger/10 px-5 py-1.5 text-xs text-danger" data-alert="sla-breached">
+            <div class="{{ $edge }} flex items-center gap-x-3 max-sm:flex-wrap max-sm:gap-y-1 border-b border-line bg-danger/10 px-5 py-1.5 text-xs text-danger" data-alert="sla-breached">
                 <flux:icon.clock variant="mini" class="size-4 shrink-0" />
-                <p class="min-w-0 flex-1 truncate" title="SLA estourado · {{ $breachedRest }}"><strong>SLA estourado</strong> · {{ $breachedRest }}</p>
+                <p class="min-w-0 flex-1 sm:truncate" title="SLA estourado · {{ $breachedRest }}"><strong>SLA estourado</strong> · {{ $breachedRest }}</p>
                 <flux:button size="xs" variant="danger" :href="route('inbox')" wire:navigate class="shrink-0">Abrir atendimento</flux:button>
             </div>
         @endif

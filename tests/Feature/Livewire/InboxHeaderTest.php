@@ -55,6 +55,8 @@ class InboxHeaderTest extends TestCase
             $this->assertNotNull($button, $action);
             $label = $xpath->query('.//span[contains(@class, "@2xl:inline")]', $button)->item(0);
             $this->assertSame($action, trim((string) $label?->textContent), $action);
+            // O slot nunca fica vazio (tem o rótulo escondido), então o Flux não faz o botão quadrado: `w-8` sem padding faz isso (32x32) em coluna estreita.
+            $this->assertStringContainsString('@max-2xl:w-8', $button->getAttribute('class'), $action);
         }
     }
 

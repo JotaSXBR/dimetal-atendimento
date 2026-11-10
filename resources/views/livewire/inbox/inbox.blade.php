@@ -217,11 +217,11 @@
                     @endif
 
                     @if ($canTransfer)
-                        <flux:button size="sm" icon="arrows-right-left" wire:click="openPanel('transfer')" aria-label="Transferir" tooltip="Transferir"><span class="hidden @2xl:inline">Transferir</span></flux:button>
+                        <flux:button size="sm" icon="arrows-right-left" class="@max-2xl:w-8 @max-2xl:px-0" wire:click="openPanel('transfer')" aria-label="Transferir" tooltip="Transferir"><span class="hidden @2xl:inline">Transferir</span></flux:button>
                     @endif
 
                     @if ($canReassign)
-                        <flux:button size="sm" icon="user-plus" wire:click="openPanel('reassign')" aria-label="Reatribuir" tooltip="Reatribuir"><span class="hidden @2xl:inline">Reatribuir</span></flux:button>
+                        <flux:button size="sm" icon="user-plus" class="@max-2xl:w-8 @max-2xl:px-0" wire:click="openPanel('reassign')" aria-label="Reatribuir" tooltip="Reatribuir"><span class="hidden @2xl:inline">Reatribuir</span></flux:button>
                     @endif
 
                     @if ($canClose)
@@ -408,10 +408,10 @@
                             >
                             {{-- Abas Responder/Nota: na mesma linha do resto em coluna larga (@xl), em linha própria abaixo disso. --}}
                             <div data-testid="composer-modes" class="@max-xl:basis-full">
-                            <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
-                                <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
-                                <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
-                            </div>
+                                <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
+                                    <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
+                                    <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
+                                </div>
                             </div>
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
                             <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-show="mode === 'reply'" x-on:click="$dispatch('voice-start')" />
@@ -437,7 +437,7 @@
                             </div>
                             <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-show="mode === 'reply'" x-bind:disabled="uploading > 0" />
                             <button type="submit" x-show="mode === 'note'" x-cloak class="rounded-md bg-warn px-3 py-2 text-sm font-medium text-warn-foreground hover:brightness-95 disabled:opacity-50" x-bind:disabled="uploading > 0">Salvar nota</button>
-                                <p x-show="mode === 'note'" x-cloak class="basis-full text-xs text-warn" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
+                            <p x-show="mode === 'note'" x-cloak class="basis-full text-xs text-warn" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
                         </form>
                     </div>
                 @elseif ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)

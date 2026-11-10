@@ -109,4 +109,15 @@ class TicketDetailsBlocksTest extends TestCase
         $this->assertMatchesRegularExpression('/<aside[^>]*id="ticket-details"[^>]*x-bind:class="[^"]*lg:flex lg:flex-col/', $html);
         $this->assertMatchesRegularExpression('/data-testid="contact-actions" class="[^"]*\bmt-auto\b/', $html);
     }
+
+    /** O painel é coluna flex (stretch): o botão "Voltar à conversa" do celular não pode virar uma barra de largura total. */
+    public function test_botao_voltar_do_celular_nao_estica_na_gaveta(): void
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->inboxHtml(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $button = (new \DOMXPath($dom))->query('//aside[@id="ticket-details"]//button[contains(normalize-space(.), "Voltar")]')->item(0);
+
+        $this->assertNotNull($button);
+        $this->assertStringContainsString('self-start', $button->getAttribute('class'));
+    }
 }

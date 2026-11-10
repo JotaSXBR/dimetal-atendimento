@@ -61,4 +61,22 @@ class AlertBannersCompactTest extends TestCase
             $this->assertStringContainsString('h-6', $button->getAttribute('class'), trim($button->textContent));
         }
     }
+
+    /** Em tela estreita (celular) o texto não pode ficar sem largura: o aviso quebra linha e mostra o texto inteiro; a linha única é de `sm` para cima. */
+    public function test_avisos_quebram_linha_e_mostram_o_texto_inteiro_em_tela_estreita(): void
+    {
+        $xpath = $this->xpath();
+
+        foreach (['connection-down', 'sla-breached'] as $kind) {
+            $alert = $xpath->query('//*[@data-alert="'.$kind.'"]')->item(0);
+            $text = $xpath->query('.//p', $alert)->item(0);
+
+            $this->assertStringContainsString('max-sm:flex-wrap', $alert->getAttribute('class'), $kind);
+            $this->assertStringContainsString('sm:truncate', $text->getAttribute('class'), $kind);
+            $this->assertDoesNotMatchRegularExpression('/(^|\s)truncate(\s|$)/', $text->getAttribute('class'), $kind);
+        }
+
+        $audio = $xpath->query('//*[@id="alerts-audio"]')->item(0);
+        $this->assertStringContainsString('max-sm:flex-wrap', $audio->getAttribute('class'));
+    }
 }

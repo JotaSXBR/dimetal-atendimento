@@ -70,7 +70,8 @@
         @endif
 
         @unless ($readonly)
-            {{-- Rodapé fixo do painel: separador e grupo de botões do Flux (as variantes `filled`/`outline` se colam). --}}
+            {{-- Rodapé fixo do painel: separador e grupo de botões do Flux (as variantes `filled`/`outline` se colam). `-bottom-4 -mx-4 -mb-4` acertam o `p-4` do
+                 `aside` (ticket-details); `mt-auto` o leva ao fim do painel quando há pouco conteúdo. --}}
             <div data-testid="contact-actions" class="sticky -bottom-4 -mx-4 -mb-4 mt-auto bg-surface px-4 pt-1 pb-4">
                 <flux:separator class="mb-3" />
                 <flux:button.group>
