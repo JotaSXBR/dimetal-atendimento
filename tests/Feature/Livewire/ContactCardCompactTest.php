@@ -324,4 +324,50 @@ class ContactCardCompactTest extends TestCase
             ->call('toggleEdit')->set('form.name', 'Digitado')->call('refresh')
             ->assertSet('editing', true)->assertSet('form.name', 'Digitado');
     }
+
+    private function dom(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    /** Rodapé fixo no padrão Flux: `button.group` com as duas ações, separador do Flux acima, grudado no fim do painel. */
+    public function test_acoes_do_contato_ficam_num_grupo_de_botoes_no_rodape(): void
+    {
+        $this->contact->update(['wa_id' => '5511999990000@c.us']);
+        $xpath = $this->dom($this->card(['compact' => true])->html());
+
+        $footer = $xpath->query('//*[@data-testid="contact-actions"]')->item(0);
+
+        $this->assertNotNull($footer);
+        $this->assertStringContainsString('sticky', $footer->getAttribute('class'));
+        $this->assertStringContainsString('bottom-0', $footer->getAttribute('class'));
+        $this->assertSame(1, $xpath->query('.//*[@data-flux-separator]', $footer)->length);
+        $group = $xpath->query('.//*[@data-flux-button-group]', $footer)->item(0);
+        $this->assertNotNull($group);
+        $labels = [];
+        foreach ($xpath->query('.//button', $group) as $button) {
+            $labels[] = trim($button->textContent);
+            $this->assertStringNotContainsString('w-full', $button->getAttribute('class'));
+        }
+        $this->assertSame(['Conversar', 'Editar contato'], $labels);
+    }
+
+    public function test_somente_leitura_nao_tem_rodape_de_acoes(): void
+    {
+        $this->assertSame(0, $this->dom($this->card(['compact' => true, 'readonly' => true])->html())->query('//*[@data-testid="contact-actions"]')->length);
+    }
+
+    /** `contents`: o cartão não gera caixa, e o rodapé `sticky` passa a grudar no fim do `aside` de rolagem (só no modo compacto). */
+    public function test_raiz_do_cartao_compacto_nao_gera_caixa_e_o_completo_sim(): void
+    {
+        $compact = $this->dom($this->card(['compact' => true])->html());
+        $this->assertStringContainsString('contents', $compact->query('//div[@*[name()="wire:id"]]')->item(0)?->getAttribute('class') ?? '');
+        $this->assertGreaterThan(0, $compact->query('//div[contains(@class, "contents") and contains(@class, "text-sm")]')->length);
+
+        $full = $this->dom($this->card()->html());
+        $this->assertStringNotContainsString('contents', $full->query('//div[@*[name()="wire:id"]]')->item(0)?->getAttribute('class') ?? '');
+    }
 }

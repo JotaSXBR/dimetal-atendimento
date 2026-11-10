@@ -90,4 +90,13 @@ class TicketDetailsBlocksTest extends TestCase
 
         Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)->assertSee('alfa, Árvore, Zeta');
     }
+
+    public function test_blocos_do_painel_tem_espacamento_compacto(): void
+    {
+        $html = $this->inboxHtml();
+
+        $this->assertMatchesRegularExpression('/<details[^>]*data-testid="details-ticket"[^>]*\spy-0\.5[\s"]/', $html);
+        $this->assertStringContainsString('min-h-9', $html);
+        $this->assertStringNotContainsString('min-h-11', $html);
+    }
 }

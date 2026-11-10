@@ -1,7 +1,8 @@
-<div>
+{{-- Compacto (Inbox): a raiz e o resumo não geram caixa (`contents`), para o rodapé `sticky` grudar no fim do `aside` de rolagem. --}}
+<div @class(['contents' => $compact && ! $editing])>
 @php($tz = config()->string('app.display_timezone'))
 @if ($compact && ! $editing)
-    <div class="space-y-2 text-sm">
+    <div class="contents text-sm">
         <x-disclosure title="Contato" testid="details-contact">
         <div class="space-y-4">
         <div>
@@ -69,8 +70,14 @@
         @endif
 
         @unless ($readonly)
-            @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'w-full'])
-            <flux:button size="sm" variant="subtle" icon="pencil-square" class="w-full" wire:click="toggleEdit">Editar contato</flux:button>
+            {{-- Rodapé fixo do painel: separador e grupo de botões do Flux (as variantes `filled`/`outline` se colam). --}}
+            <div data-testid="contact-actions" class="sticky bottom-0 -mx-4 -mb-4 bg-surface px-4 pt-1 pb-3">
+                <flux:separator class="mb-3" />
+                <flux:button.group>
+                    @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'flex-1', 'variant' => 'filled'])
+                    <flux:button size="sm" variant="filled" icon="pencil-square" class="flex-1" wire:click="toggleEdit">Editar contato</flux:button>
+                </flux:button.group>
+            </div>
         @endunless
     </div>
 @else
