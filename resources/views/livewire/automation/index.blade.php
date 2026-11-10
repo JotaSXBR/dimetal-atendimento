@@ -65,7 +65,7 @@
                 @endif
             </li>
         @empty
-            <li class="rounded-[14px] border border-line bg-surface px-4 py-6 text-center text-sm text-ink-3">Nenhum workflow ainda. Crie o primeiro a partir do modelo.</li>
+            <li class="rounded-[14px] border border-line bg-surface"><x-empty-state icon="bolt" title="Nenhum workflow ainda." description="Crie o primeiro a partir do modelo." /></li>
         @endforelse
     </ul>
 </x-settings-page>

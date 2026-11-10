@@ -35,7 +35,7 @@
                 <flux:button size="xs" variant="subtle" icon="trash" wire:click="delete({{ $reply->id }})" wire:confirm="Apagar esta resposta rápida?" aria-label="Apagar /{{ $reply->shortcut }}" />
             </li>
         @empty
-            <li class="px-4 py-6 text-center text-sm text-ink-3">Nenhuma resposta cadastrada.</li>
+            <li><x-empty-state icon="chat-bubble-bottom-center-text" title="Nenhuma resposta cadastrada." description="Cadastre atalhos para as respostas mais comuns." /></li>
         @endforelse
     </ul>
 </x-settings-page>

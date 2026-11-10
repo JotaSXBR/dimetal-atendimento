@@ -40,7 +40,7 @@
                     </button>
                 </li>
             @empty
-                <li class="px-3.5 py-6 text-center text-sm text-ink-3">Nenhum alerta nos últimos 7 dias.</li>
+                <li><x-empty-state compact icon="bell" title="Nenhum alerta nos últimos 7 dias." /></li>
             @endforelse
         </ul>
 

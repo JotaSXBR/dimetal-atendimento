@@ -51,6 +51,8 @@
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
+            <x-skeleton-rows wire:loading.delay wire:target="q,from,to,sectorId,outcome,userId" />
+
             @forelse ($tickets as $item)
                 <button
                     type="button"
@@ -79,7 +81,7 @@
                     </span>
                 </button>
             @empty
-                <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket encerrado com esses filtros.</p>
+                <x-empty-state icon="archive-box" title="Nenhum ticket encerrado com esses filtros." description="Ajuste o período ou os filtros." />
             @endforelse
 
             @if ($tickets->hasPages())

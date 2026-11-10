@@ -76,7 +76,7 @@
                 @endforeach
 
                 @if ($closed->isEmpty())
-                    <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket encerrado nos últimos 7 dias.</p>
+                    <x-empty-state compact icon="archive-box" title="Nenhum ticket encerrado nos últimos 7 dias." />
                 @endif
 
                 <p class="p-4 text-center text-xs"><a href="{{ route('historico') }}" wire:navigate class="text-accent-content underline">Busca completa</a></p>
@@ -152,7 +152,7 @@
             @endforeach
 
             @if ($pending->isEmpty() && $waiting->isEmpty() && $active->isEmpty())
-                <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket por aqui.</p>
+                <x-empty-state compact icon="inbox" title="Nenhum ticket por aqui." />
             @endif
             @endif
         </div>
