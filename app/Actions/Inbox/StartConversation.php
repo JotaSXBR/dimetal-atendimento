@@ -35,6 +35,8 @@ class StartConversation
 
     private const CONTACT_PER_HOUR = 4;
 
+    private const SECTOR_REFUSED = 'Escolha um setor que receba tickets e que você atenda.';
+
     public function __construct(private readonly SendTicketMessage $messages) {}
 
     /**
@@ -58,6 +60,13 @@ class StartConversation
 
         $made = DB::transaction(function () use ($user, $contact, $channel, $sector, $text): array {
             DB::select('select pg_advisory_xact_lock(hashtext(?))', ['ticket:'.$contact->id.':'.$channel->id]);
+
+            // O setor veio do guard, antes da transação: pode ter sido apagado ou desativado desde então. Nada foi enviado, então o ritmo volta.
+            if (Sector::lockForReceiving($sector->id) === null) {
+                $this->releasePace($contact, $channel);
+
+                throw new ConversationNotStarted(self::SECTOR_REFUSED);
+            }
 
             $existing = $this->openTicket($contact, $channel);
 
@@ -102,7 +111,7 @@ class StartConversation
             ! $user->active => 'Seu usuário está inativo.',
             ! $channel->active || ! $channel->isConnected() => 'Este canal está desativado ou desconectado do WhatsApp.',
             ! str_ends_with((string) $contact->wa_id, '@c.us') => 'Este contato não tem telefone: só dá para conversar com quem tem número de WhatsApp.',
-            ! $sector->status->receivesTickets() || ! $user->canHandleSector($sector->id) => 'Escolha um setor que receba tickets e que você atenda.',
+            ! $sector->status->receivesTickets() || ! $user->canHandleSector($sector->id) => self::SECTOR_REFUSED,
             default => null,
         };
 
@@ -137,8 +146,8 @@ class StartConversation
     /** @throws ConversationNotStarted */
     private function reservePace(Contact $contact, Channel $channel): void
     {
-        $channelKey = 'start-conversation:channel:'.$channel->id;
-        $contactKey = 'start-conversation:contact:'.$contact->id;
+        $channelKey = $this->channelKey($channel);
+        $contactKey = $this->contactKey($contact);
 
         foreach ([[$channelKey, 1], [$contactKey, self::CONTACT_PER_HOUR]] as [$key, $max]) {
             if (RateLimiter::tooManyAttempts($key, $max)) {
@@ -148,5 +157,21 @@ class StartConversation
 
         RateLimiter::hit($channelKey, self::CHANNEL_GAP_SECONDS);
         RateLimiter::hit($contactKey, 3600);
+    }
+
+    private function releasePace(Contact $contact, Channel $channel): void
+    {
+        RateLimiter::clear($this->channelKey($channel));
+        RateLimiter::decrement($this->contactKey($contact), 3600);
+    }
+
+    private function channelKey(Channel $channel): string
+    {
+        return 'start-conversation:channel:'.$channel->id;
+    }
+
+    private function contactKey(Contact $contact): string
+    {
+        return 'start-conversation:contact:'.$contact->id;
     }
 }

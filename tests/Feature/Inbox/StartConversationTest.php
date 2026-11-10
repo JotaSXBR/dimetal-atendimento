@@ -5,6 +5,7 @@ namespace Tests\Feature\Inbox;
 use App\Actions\Inbox\StartConversation;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
+use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Jobs\SendTicketMessageJob;
@@ -174,6 +175,46 @@ class StartConversationTest extends TestCase
 
         $this->refuses(fn () => $this->start(sector: $off), 'setor');
         $this->refuses(fn () => $this->start(sector: $other), 'setor');
+    }
+
+    public function test_setor_apagado_depois_do_guard_nao_cria_nada(): void
+    {
+        $stale = $this->staleSector();
+        Sector::query()->whereKey($stale->id)->delete();
+
+        $this->refuses(fn () => $this->start(sector: $stale, user: $this->supervisor()), 'Escolha um setor');
+        $this->assertPaceNotSpent();
+    }
+
+    public function test_setor_desativado_depois_do_guard_nao_cria_nada(): void
+    {
+        $stale = $this->staleSector();
+        Sector::query()->whereKey($stale->id)->update(['status' => SectorStatus::DESATIVADO]);
+
+        $this->refuses(fn () => $this->start(sector: $stale, user: $this->supervisor()), 'Escolha um setor');
+        $this->assertPaceNotSpent();
+    }
+
+    /** Supervisor: apagar o setor desfaz o vínculo do atendente, e o `guard` já recusaria; o supervisor só cai na releitura. */
+    private function supervisor(): User
+    {
+        return User::factory()->create(['role' => UserRole::SUPERVISOR, 'sign_messages' => false]);
+    }
+
+    /** O modelo é carregado ainda recebendo; o teste muda o banco depois, como outra aba faria. */
+    private function staleSector(): Sector
+    {
+        RateLimiter::clear('start-conversation:channel:'.$this->channel->id);
+        RateLimiter::clear('start-conversation:contact:'.$this->contact->id);
+
+        return Sector::factory()->create();
+    }
+
+    /** Recusar dentro da transação não pode gastar o ritmo do canal nem o do contato. */
+    private function assertPaceNotSpent(): void
+    {
+        $this->assertFalse(RateLimiter::tooManyAttempts('start-conversation:channel:'.$this->channel->id, 1));
+        $this->assertSame(0, RateLimiter::attempts('start-conversation:contact:'.$this->contact->id));
     }
 
     public function test_supervisor_inicia_em_qualquer_setor_que_receba(): void
