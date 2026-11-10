@@ -82,4 +82,12 @@ class TicketDetailsBlocksTest extends TestCase
 
         Livewire::actingAs($this->admin())->test(History::class)->call('select', $ticket->id)->assertSee('Etiquetas')->assertSee('Alfa');
     }
+
+    public function test_etiquetas_do_painel_ordenam_sem_diferenciar_maiuscula_nem_acento(): void
+    {
+        $ticket = $this->ticket(TicketStatus::AGUARDANDO);
+        $ticket->tags()->attach(Tag::factory()->count(3)->sequence(['name' => 'Zeta'], ['name' => 'alfa'], ['name' => 'Árvore'])->create());
+
+        Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)->assertSee('alfa, Árvore, Zeta');
+    }
 }

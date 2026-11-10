@@ -129,6 +129,17 @@ class SidebarTest extends TestCase
         $this->assertStringContainsString('3 aguardando', (string) $dot?->textContent);
     }
 
+    /** O anel do ponto imita o fundo da sidebar: as duas cores saem da mesma variável, para não se separarem. */
+    public function test_anel_do_ponto_e_fundo_da_sidebar_usam_a_mesma_variavel(): void
+    {
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create(['status' => TicketStatus::AGUARDANDO]);
+
+        $xpath = $this->xpath($this->page(UserRole::ADMIN));
+
+        $this->assertStringContainsString('bg-(--sidebar-bg)', (string) $xpath->query('//ui-sidebar')->item(0)?->getAttribute('class'));
+        $this->assertStringContainsString('ring-(--sidebar-bg)', (string) $xpath->query('//*[@data-test="queue-dot"]')->item(0)?->getAttribute('class'));
+    }
+
     public function test_sem_pendencia_nao_ha_ponto_da_fila(): void
     {
         $this->assertSame(0, $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->length);

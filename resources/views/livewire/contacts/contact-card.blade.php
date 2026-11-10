@@ -27,7 +27,7 @@
         </x-disclosure>
 
         {{-- A chave muda quando o contato passa a ter (ou deixa de ter) anteriores: o `wire:ignore.self` congela o `open`, e a chave nova recria o bloco. --}}
-        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history" wire:key="history-{{ $historyTotal > 0 ? 'has' : 'none' }}">
+        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history" wire:key="history-block-{{ $historyTotal > 0 ? 'has' : 'none' }}">
             <ul class="space-y-2">
                 @forelse ($history as $past)
                     @php($mine = in_array($past->id, $openable, true))

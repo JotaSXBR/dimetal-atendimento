@@ -4,7 +4,8 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        {{-- --sidebar-bg: fundo da sidebar, também usado no anel do ponto da Fila (uma só fonte para as duas cores). --}}
+        <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-(--sidebar-bg) [--sidebar-bg:var(--color-zinc-50)] dark:border-zinc-700 dark:[--sidebar-bg:var(--color-zinc-900)]">
             <flux:sidebar.header class="in-data-flux-sidebar-collapsed-desktop:flex-col in-data-flux-sidebar-collapsed-desktop:items-center in-data-flux-sidebar-collapsed-desktop:gap-3">
                 <x-app-logo :sidebar="true" href="{{ route('inbox') }}" wire:navigate />
                 <livewire:alerts.bell />
@@ -24,7 +25,7 @@
                         <x-slot:icon>
                             <flux:icon :icon="$item->icon" class="size-4" />
                             @if ($item->route === 'inbox' && ($counts['breached'] > 0 || $counts['waiting'] > 0))
-                                <span data-test="queue-dot" class="absolute -end-0.5 -top-0.5 hidden size-2.5 rounded-full ring-2 ring-zinc-50 in-data-flux-sidebar-collapsed-desktop:block dark:ring-zinc-900 {{ $counts['breached'] > 0 ? 'bg-danger' : 'bg-accent' }}">
+                                <span data-test="queue-dot" class="absolute -end-0.5 -top-0.5 hidden size-2.5 rounded-full ring-2 ring-(--sidebar-bg) in-data-flux-sidebar-collapsed-desktop:block {{ $counts['breached'] > 0 ? 'bg-danger' : 'bg-accent' }}">
                                     <span class="sr-only">{{ $counts['breached'] > 0 ? $counts['breached'].' com SLA estourado' : $counts['waiting'].' aguardando' }}</span>
                                 </span>
                             @endif

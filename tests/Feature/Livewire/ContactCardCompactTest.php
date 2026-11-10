@@ -91,12 +91,12 @@ class ContactCardCompactTest extends TestCase
     public function test_bloco_de_anteriores_muda_de_chave_quando_passa_a_ter_anteriores(): void
     {
         $card = $this->card(['compact' => true]);
-        $this->assertStringContainsString('wire:key="history-none"', $card->html());
+        $this->assertStringContainsString('wire:key="history-block-none"', $card->html());
 
         $this->past(1);
 
         $html = $card->call('$refresh')->html();
-        $this->assertStringContainsString('wire:key="history-has"', $html);
+        $this->assertStringContainsString('wire:key="history-block-has"', $html);
         $this->assertMatchesRegularExpression('/\sopen[\s>]/', $this->detailsTag($html, 'details-history'));
     }
 

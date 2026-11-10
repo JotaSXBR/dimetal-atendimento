@@ -147,7 +147,7 @@
                                             <span data-testid="card-tag" class="inline-flex shrink-0 items-center gap-1 text-ink-2"><span class="size-2 shrink-0 rounded-full" style="background-color: {{ $tag->color }}"></span><span class="max-w-20 truncate">{{ $tag->name }}</span></span>
                                         @endforeach
                                         @if ($tagsRest->isNotEmpty())
-                                            <span data-testid="card-tags-more" title="{{ $tagsRest->pluck('name')->join(', ') }}"><span aria-hidden="true">+{{ $tagsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $tagsRest->pluck('name')->join(', ') }}</span></span>
+                                            <span data-testid="card-tags-more"><span aria-hidden="true" title="{{ $tagsRest->pluck('name')->join(', ') }}">+{{ $tagsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $tagsRest->pluck('name')->join(', ') }}</span></span>
                                         @endif
                                     </span>
                                 @endif
