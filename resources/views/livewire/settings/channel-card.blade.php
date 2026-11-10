@@ -1,24 +1,8 @@
 @php
     $status = $channel->status;
     $inactive = ! $channel->active;
-    $tone = $inactive ? 'ink-3' : match ($status) {
-        \App\Enums\ChannelStatus::WORKING => 'ok',
-        \App\Enums\ChannelStatus::FAILED => 'danger',
-        \App\Enums\ChannelStatus::SCAN_QR_CODE, \App\Enums\ChannelStatus::PASSKEY_REQUIRED, \App\Enums\ChannelStatus::PASSKEY_CONFIRMATION_REQUIRED => 'warn',
-        default => 'ink-3',
-    };
-    $dot = match ($tone) {
-        'ok' => 'bg-ok',
-        'danger' => 'bg-danger',
-        'warn' => 'bg-warn',
-        default => 'bg-ink-3',
-    };
-    $badge = match ($tone) {
-        'ok' => 'bg-ok/10 text-ok',
-        'danger' => 'bg-danger/10 text-danger',
-        'warn' => 'bg-warn/10 text-warn',
-        default => 'bg-canvas text-ink-2',
-    };
+    // O tom vem do enum (`tone()`); desativado é neutro e sessão removida é erro.
+    $tone = $inactive ? 'neutral' : ($sessionMissing ? 'danger' : $status->tone());
     $label = $inactive ? 'Desativado' : ($sessionMissing ? 'Sessão removida' : $status->label());
     $hint = match (true) {
         $inactive => 'Desligado de propósito: aparelho desvinculado, sem alertas e sem resposta nos tickets deste número. Reative e leia o QR para voltar.',
@@ -45,10 +29,7 @@
                 @endif
             </div>
 
-            <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $badge }}">
-                <span class="size-1.5 rounded-full {{ $dot }}"></span>
-                {{ $label }}
-            </span>
+            <x-status-badge :tone="$tone" class="shrink-0">{{ $label }}</x-status-badge>
         </div>
 
         <div class="mt-4 flex gap-4">
