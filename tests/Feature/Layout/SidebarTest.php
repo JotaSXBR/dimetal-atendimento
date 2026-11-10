@@ -206,6 +206,8 @@ class SidebarTest extends TestCase
 
         $this->assertNotNull($notice);
         $this->assertSame('WhatsApp desconectado', $xpath->query('.//*[@aria-label="WhatsApp desconectado"]', $notice)->item(0)?->getAttribute('aria-label'));
+        // `aria-label` num elemento sem papel costuma ser ignorado por leitores de tela: o ícone precisa de `role="img"`.
+        $this->assertSame('img', $xpath->query('.//*[@aria-label="WhatsApp desconectado"]', $notice)->item(0)?->getAttribute('role'));
         $text = $xpath->query('.//p', $notice)->item(0);
         $this->assertStringContainsString('As mensagens ficam aguardando', (string) $text?->textContent);
         $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:hidden', (string) $text?->getAttribute('class'));
