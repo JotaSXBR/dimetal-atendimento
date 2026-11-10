@@ -74,4 +74,12 @@ class TicketDetailsBlocksTest extends TestCase
             ->assertSee('Etiquetas')
             ->assertSee('Alfa, Beta, Gama');
     }
+
+    public function test_painel_do_historico_tambem_mostra_as_etiquetas(): void
+    {
+        $ticket = $this->ticket(TicketStatus::ENCERRADO);
+        $ticket->tags()->attach(Tag::factory()->create(['name' => 'Alfa']));
+
+        Livewire::actingAs($this->admin())->test(History::class)->call('select', $ticket->id)->assertSee('Etiquetas')->assertSee('Alfa');
+    }
 }
