@@ -99,4 +99,14 @@ class TicketDetailsBlocksTest extends TestCase
         $this->assertStringContainsString('min-h-9', $html);
         $this->assertStringNotContainsString('min-h-11', $html);
     }
+
+    /** O painel é uma coluna flex para o rodapé de ações ir para o fim mesmo com pouco conteúdo (1080p, 2K). */
+    public function test_painel_e_coluna_flex_e_o_rodape_de_acoes_vai_para_o_fim(): void
+    {
+        $ticket = $this->ticket(TicketStatus::EM_ATENDIMENTO);
+        $html = Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)->html();
+
+        $this->assertMatchesRegularExpression('/<aside[^>]*id="ticket-details"[^>]*x-bind:class="[^"]*lg:flex lg:flex-col/', $html);
+        $this->assertMatchesRegularExpression('/data-testid="contact-actions" class="[^"]*\bmt-auto\b/', $html);
+    }
 }

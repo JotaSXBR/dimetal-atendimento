@@ -71,11 +71,11 @@
 
         @unless ($readonly)
             {{-- Rodapé fixo do painel: separador e grupo de botões do Flux (as variantes `filled`/`outline` se colam). --}}
-            <div data-testid="contact-actions" class="sticky bottom-0 -mx-4 -mb-4 bg-surface px-4 pt-1 pb-3">
+            <div data-testid="contact-actions" class="sticky -bottom-4 -mx-4 -mb-4 mt-auto bg-surface px-4 pt-1 pb-4">
                 <flux:separator class="mb-3" />
                 <flux:button.group>
-                    @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'flex-1', 'variant' => 'filled'])
-                    <flux:button size="sm" variant="filled" icon="pencil-square" class="flex-1" wire:click="toggleEdit">Editar contato</flux:button>
+                    @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'flex-1', 'variant' => 'filled', 'size' => 'xs'])
+                    <flux:button size="xs" variant="filled" icon="pencil-square" class="flex-1" wire:click="toggleEdit">Editar contato</flux:button>
                 </flux:button.group>
             </div>
         @endunless

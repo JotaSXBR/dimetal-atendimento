@@ -5,7 +5,7 @@
     id="ticket-details"
     aria-label="Detalhes do ticket"
     class="overflow-y-auto border-s border-line bg-surface p-4"
-    x-bind:class="sheet ? 'block fixed inset-0 z-40' : (details ? 'hidden lg:block' : 'hidden')"
+    x-bind:class="sheet ? 'flex flex-col fixed inset-0 z-40' : (details ? 'hidden lg:flex lg:flex-col' : 'hidden')"
 >
     <flux:button size="sm" variant="subtle" icon="arrow-left" class="mb-3 lg:hidden" x-on:click="sheet = false">Voltar à conversa</flux:button>
 

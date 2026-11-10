@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\ChannelStatus;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\Inbox\Inbox;
@@ -77,5 +78,22 @@ class InboxComposerLayoutTest extends TestCase
 
         $this->assertSame(0, $xpath->query('//*[@data-testid="composer-form"]')->length);
         $this->assertStringContainsString('Assuma o ticket para responder.', $xpath->query('//footer')->item(0)?->textContent ?? '');
+    }
+
+    /** Uma linha só: o aviso do canal trunca (texto completo no `title`) e a caixa de texto cabe com o enviar na mesma linha em ~600px. */
+    public function test_aviso_de_canal_desconectado_do_compositor_ocupa_uma_linha_e_a_caixa_tem_largura_minima_menor(): void
+    {
+        Channel::factory()->create(['status' => ChannelStatus::FAILED]);
+        $admin = $this->admin();
+        $xpath = $this->xpath($admin, TicketStatus::EM_ATENDIMENTO, $admin->id);
+
+        $notice = $xpath->query('//footer//p[@role="status" and contains(., "WhatsApp deste canal")]')->item(0);
+        $this->assertNotNull($notice);
+        $this->assertStringContainsString('truncate', $notice->getAttribute('class'));
+        $this->assertSame(trim(preg_replace('/\s+/', ' ', $notice->textContent)), $notice->getAttribute('title'));
+
+        $field = $xpath->query('//form[@data-testid="composer-form"]//div[contains(@class, "flex-1")]')->item(0);
+        $this->assertStringContainsString('min-w-28', $field->getAttribute('class'));
+        $this->assertStringNotContainsString('min-w-48', $field->getAttribute('class'));
     }
 }

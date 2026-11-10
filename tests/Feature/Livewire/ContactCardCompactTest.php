@@ -343,7 +343,8 @@ class ContactCardCompactTest extends TestCase
 
         $this->assertNotNull($footer);
         $this->assertStringContainsString('sticky', $footer->getAttribute('class'));
-        $this->assertStringContainsString('bottom-0', $footer->getAttribute('class'));
+        // `-bottom-4` (= o padding do painel): sem isso o rodapé gruda 16px acima do fim e deixa texto aparecer por baixo.
+        $this->assertStringContainsString('-bottom-4', $footer->getAttribute('class'));
         $this->assertSame(1, $xpath->query('.//*[@data-flux-separator]', $footer)->length);
         $group = $xpath->query('.//*[@data-flux-button-group]', $footer)->item(0);
         $this->assertNotNull($group);
@@ -351,6 +352,7 @@ class ContactCardCompactTest extends TestCase
         foreach ($xpath->query('.//button', $group) as $button) {
             $labels[] = trim($button->textContent);
             $this->assertStringNotContainsString('w-full', $button->getAttribute('class'));
+            $this->assertStringContainsString('h-6', $button->getAttribute('class'), 'botões xs cabem os dois lado a lado no painel de 280px');
         }
         $this->assertSame(['Conversar', 'Editar contato'], $labels);
     }
