@@ -80,4 +80,13 @@ class AvatarImageTest extends TestCase
 
         $this->assertSame('image/webp', getimagesizefromstring($out)['mime']);
     }
+
+    public function test_lado_acima_de_3000_px_e_recusado_mas_3000_passa(): void
+    {
+        $this->assertSame(256, getimagesizefromstring((new AvatarImage)->fromBinary($this->png(3000, 10), 256))[0]);
+
+        $this->expectException(InvalidImage::class);
+
+        (new AvatarImage)->fromBinary($this->png(3001, 10), 256);
+    }
 }

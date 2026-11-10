@@ -16,8 +16,8 @@ class AvatarImage
 
     public const SIZE_LOGO = 256;
 
-    /** Teto por lado: a checagem vem do cabeçalho, antes de decodificar, para uma imagem gigante não estourar a memória. */
-    private const MAX_SIDE = 4096;
+    /** Teto por lado (3000 px custam cerca de 36 MB no GD, com folga no memory_limit padrão): a checagem vem do cabeçalho, antes de decodificar, para uma imagem gigante não estourar a memória. */
+    private const MAX_SIDE = 3000;
 
     private const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 

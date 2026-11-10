@@ -7,7 +7,7 @@
         <div class="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
             <div class="flex w-full max-w-md flex-col gap-6">
                 <a href="{{ route('home') }}" class="flex flex-col items-center gap-2 font-medium" wire:navigate>
-                    <x-avatar :src="\App\Settings\CompanySettings::logoUrl()" :name="\App\Settings\CompanySettings::name()" shape="rounded" size="lg" single decorative />
+                    <x-avatar :src="\App\Settings\CompanySettings::logoUrl()" :name="\App\Settings\CompanySettings::name()" shape="rounded" size="lg" single accent decorative />
 
                     <span class="sr-only">{{ \App\Settings\CompanySettings::name() }}</span>
                 </a>

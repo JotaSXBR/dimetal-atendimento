@@ -97,4 +97,27 @@ class AvatarComponentTest extends TestCase
 
         $this->actingAs($user)->get('/inbox')->assertOk()->assertSee('/avatares/users/'.$user->id, false);
     }
+
+    public function test_nome_vazio_nao_gera_rotulo_vazio_e_some_para_o_leitor_de_tela(): void
+    {
+        $this->blade('<x-avatar name="" />')
+            ->assertSee('aria-hidden="true"', false)
+            ->assertDontSee('aria-label', false);
+    }
+
+    public function test_accent_usa_o_amarelo_da_marca_e_o_padrao_usa_cor_automatica(): void
+    {
+        $this->blade('<x-avatar name="Zeta" accent />')
+            ->assertSee('bg-accent', false)
+            ->assertSee('text-accent-foreground', false)
+            ->assertDontSee('bg-amber-200', false);
+
+        $this->blade('<x-avatar name="Zeta" />')->assertDontSee('bg-accent', false);
+    }
+
+    public function test_monograma_da_marca_no_menu_e_no_login_e_amarelo(): void
+    {
+        $this->get('/login')->assertOk()->assertSee('bg-accent', false);
+        $this->actingAs(User::factory()->create())->get('/inbox')->assertOk()->assertSee('bg-accent', false);
+    }
 }

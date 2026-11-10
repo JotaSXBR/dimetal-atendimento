@@ -211,4 +211,44 @@ class AvatarDeliveryTest extends TestCase
         $big = Contact::factory()->create(['avatar_url' => 'https://pps.whatsapp.net/grande']);
         $this->actingAs($viewer)->get($big->avatarUrl())->assertNotFound();
     }
+
+    public function test_304_sai_antes_de_abrir_o_objeto_no_disco(): void
+    {
+        $viewer = User::factory()->create();
+        $user = User::factory()->create();
+        $user->setAvatar($this->webp());
+        $etag = (string) $this->actingAs($viewer)->get($user->avatarUrl())->headers->get('ETag');
+
+        // Com o objeto fora do disco, só um 304 que nem toca o disco ainda responde.
+        Storage::disk(config()->string('media.disk'))->delete((string) $user->avatar_path);
+
+        $this->actingAs($viewer)->get($user->avatarUrl(), ['If-None-Match' => $etag])->assertStatus(304);
+    }
+
+    public function test_url_sem_versao_ou_com_versao_velha_revalida_em_vez_de_ficar_imutavel(): void
+    {
+        $viewer = User::factory()->create();
+        $user = User::factory()->create();
+        $user->setAvatar($this->webp());
+
+        foreach ([route('avatar', ['users', $user->id]), route('avatar', ['users', $user->id, 'v' => 'antiga'])] as $url) {
+            $cache = (string) $this->actingAs($viewer)->get($url)->assertOk()->headers->get('Cache-Control');
+
+            $this->assertStringContainsString('no-cache', $cache);
+            $this->assertStringNotContainsString('immutable', $cache);
+        }
+
+        $this->assertStringContainsString('immutable', (string) $this->actingAs($viewer)->get($user->avatarUrl())->headers->get('Cache-Control'));
+    }
+
+    public function test_logo_so_e_imutavel_com_a_versao_atual(): void
+    {
+        CompanySettings::setLogo($this->webp());
+
+        $this->assertStringContainsString('immutable', (string) $this->get((string) CompanySettings::logoUrl())->headers->get('Cache-Control'));
+
+        $semVersao = (string) $this->get(route('logo'))->assertOk()->headers->get('Cache-Control');
+        $this->assertStringContainsString('no-cache', $semVersao);
+        $this->assertStringNotContainsString('immutable', $semVersao);
+    }
 }

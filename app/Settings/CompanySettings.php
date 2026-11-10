@@ -32,10 +32,17 @@ final class CompanySettings
         return is_string($path) && $path !== '' ? $path : null;
     }
 
+    public static function logoVersion(): ?string
+    {
+        $version = Setting::get('company.logo_version');
+
+        return is_string($version) && $version !== '' ? $version : null;
+    }
+
     /** URL pública do logo (a tela de login o mostra); a versão na URL força o navegador a buscar de novo ao trocar a imagem. */
     public static function logoUrl(): ?string
     {
-        return self::logoPath() === null ? null : route('logo', ['v' => Setting::get('company.logo_version')]);
+        return self::logoPath() === null ? null : route('logo', ['v' => self::logoVersion()]);
     }
 
     /** Grava o logo novo e só depois apaga o antigo. */

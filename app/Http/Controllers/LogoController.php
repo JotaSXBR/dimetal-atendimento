@@ -15,6 +15,6 @@ class LogoController extends Controller
 
         abort_if($path === null, 404);
 
-        return $storage->response($path, public: true);
+        return $storage->response($path, public: true, versioned: request()->query('v') === CompanySettings::logoVersion());
     }
 }

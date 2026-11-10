@@ -18,20 +18,28 @@ class DeleteSector
     /** @throws SectorInUse */
     public function __invoke(Sector $sector): void
     {
-        $reasons = array_values(array_filter([
+        DB::transaction(function () use ($sector): void {
+            // A linha do setor fica travada (FOR UPDATE) antes de conferir o uso: um ticket que esteja sendo movido para ele
+            // segura a trava de chave estrangeira e a conferência abaixo o enxerga, em vez de passar por cima.
+            $locked = Sector::query()->whereKey($sector->id)->lockForUpdate()->firstOrFail();
+
+            if (($reasons = $this->reasonsInUse($locked)) !== []) {
+                throw new SectorInUse('Não dá para apagar: '.implode('; ', $reasons).'.');
+            }
+
+            $locked->users()->detach();
+            $locked->delete();
+        });
+    }
+
+    /** @return list<string> */
+    private function reasonsInUse(Sector $sector): array
+    {
+        return array_values(array_filter([
             $sector->hasOpenTickets() ? 'há tickets abertos neste setor (transfira ou encerre antes)' : null,
             ($flows = $this->flowsTransferringTo($sector)) === [] ? null : 'ele é destino de transferência nos fluxos da Automação: '.implode(', ', $flows),
             QuickReply::query()->where('sector_id', $sector->id)->exists() ? 'há respostas rápidas deste setor (mude ou apague em Respostas rápidas)' : null,
         ]));
-
-        if ($reasons !== []) {
-            throw new SectorInUse('Não dá para apagar: '.implode('; ', $reasons).'.');
-        }
-
-        DB::transaction(function () use ($sector): void {
-            $sector->users()->detach();
-            $sector->delete();
-        });
     }
 
     /** @return list<string> nomes dos fluxos */

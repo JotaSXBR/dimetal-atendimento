@@ -17,10 +17,10 @@ class AvatarController extends Controller
             return $proxy->response(Contact::query()->findOrFail($id));
         }
 
-        $path = User::query()->findOrFail($id)->avatar_path;
+        $user = User::query()->findOrFail($id);
 
-        abort_if($path === null, 404);
+        abort_if($user->avatar_path === null, 404);
 
-        return $storage->response($path, public: false);
+        return $storage->response($user->avatar_path, public: false, versioned: request()->query('v') === $user->avatar_version);
     }
 }

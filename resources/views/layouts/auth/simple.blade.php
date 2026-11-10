@@ -6,7 +6,7 @@
     <body class="min-h-screen bg-canvas text-ink antialiased">
         <div class="flex min-h-svh flex-col items-center justify-center gap-8 p-6 md:p-10">
             <a href="{{ route('home') }}" class="flex items-center gap-2.5" wire:navigate>
-                <x-avatar :src="\App\Settings\CompanySettings::logoUrl()" :name="\App\Settings\CompanySettings::name()" shape="rounded" size="sm" single decorative />
+                <x-avatar :src="\App\Settings\CompanySettings::logoUrl()" :name="\App\Settings\CompanySettings::name()" shape="rounded" size="sm" single accent decorative />
                 <span class="text-sm font-semibold tracking-tight">{{ \App\Settings\CompanySettings::name() }}</span>
             </a>
 

@@ -7,6 +7,7 @@ use App\Actions\Sectors\SectorInUse;
 use App\Enums\SectorStatus;
 use App\Models\Sector;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,8 @@ use Livewire\Component;
 class Sectors extends Component
 {
     public const NAME_LIMIT = 60;
+
+    private const DUPLICATE_MESSAGE = 'Já existe um setor com esse nome.';
 
     public string $newName = '';
 
@@ -44,11 +47,18 @@ class Sectors extends Component
 
         $last = Sector::query()->max('menu_order');
 
-        Sector::query()->create([
-            'name' => $name,
-            'menu_order' => (is_numeric($last) ? (int) $last : 0) + 1,
-            'status' => SectorStatus::ATIVO,
-        ]);
+        try {
+            DB::transaction(fn () => Sector::query()->create([
+                'name' => $name,
+                'menu_order' => (is_numeric($last) ? (int) $last : 0) + 1,
+                'status' => SectorStatus::ATIVO,
+            ]));
+        } catch (UniqueConstraintViolationException) {
+            // Outro admin criou o mesmo nome entre a validação e o insert: o índice barrou, a tela explica.
+            $this->addError('newName', self::DUPLICATE_MESSAGE);
+
+            return;
+        }
 
         $this->newName = '';
     }
@@ -67,7 +77,11 @@ class Sectors extends Component
             return;
         }
 
-        $sector->update(['name' => $name]);
+        try {
+            DB::transaction(fn () => $sector->update(['name' => $name]));
+        } catch (UniqueConstraintViolationException) {
+            $this->addError('rename.'.$id, self::DUPLICATE_MESSAGE);
+        }
     }
 
     public function remove(int $id, DeleteSector $delete): void
@@ -141,7 +155,7 @@ class Sectors extends Component
         ], [
             'name.required' => 'Informe o nome do setor.',
             'name.max' => 'O nome pode ter até '.self::NAME_LIMIT.' caracteres.',
-            'name.unique' => 'Já existe um setor com esse nome.',
+            'name.unique' => self::DUPLICATE_MESSAGE,
         ])->errors()->first('name') ?: null;
     }
 

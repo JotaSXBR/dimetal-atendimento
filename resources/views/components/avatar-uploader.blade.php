@@ -5,13 +5,14 @@
     'name' => '',
     'shape' => 'round',
     'single' => false,
+    'accent' => false,
 ])
 
 {{-- Escolhe a imagem, abre o enquadramento (arrastar/aproximar) e envia só o recorte. Ver resources/js/avatar-cropper.js.
      `model` é a propriedade `$photo` do componente (trait ReceivesAvatar); `action` é o método que grava depois do envio. --}}
 <div x-data="avatarCropper(@js($model), @js($action))" data-testid="avatar-uploader" {{ $attributes->class('flex flex-col gap-3') }}>
     <div class="flex flex-wrap items-center gap-4">
-        <x-avatar :src="$current" :name="$name" :shape="$shape" :single="$single" size="xl" decorative />
+        <x-avatar :src="$current" :name="$name" :shape="$shape" :single="$single" :accent="$accent" size="xl" decorative />
 
         <div class="flex flex-wrap items-center gap-2">
             <flux:button size="sm" type="button" icon="photo" x-on:click="$refs.file.click()">Escolher imagem</flux:button>

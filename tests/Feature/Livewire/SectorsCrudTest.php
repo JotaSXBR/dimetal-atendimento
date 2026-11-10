@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -177,5 +178,47 @@ class SectorsCrudTest extends TestCase
             ->assertSee('Novo setor')
             ->assertSee('Renomear Vendas')
             ->assertSee('Apagar Vendas');
+    }
+
+    public function test_corrida_ao_criar_com_o_mesmo_nome_mostra_a_mensagem_e_nao_estoura(): void
+    {
+        // Entre a validação e o insert, outro admin cria o mesmo nome: o índice único barra e a tela explica.
+        Sector::creating(function (Sector $sector): void {
+            if ($sector->name === 'Logística') {
+                DB::table('sectors')->insert(['name' => 'Logística', 'menu_order' => 9, 'status' => 'ativo', 'created_at' => now(), 'updated_at' => now()]);
+            }
+        });
+
+        $this->page()->call('create', 'Logística')->assertHasErrors('newName')->assertSee('Já existe um setor com esse nome.');
+    }
+
+    public function test_corrida_ao_renomear_para_um_nome_que_acabou_de_existir_mostra_a_mensagem(): void
+    {
+        $sector = Sector::factory()->create(['name' => 'Antigo']);
+        Sector::updating(function (Sector $changing): void {
+            if ($changing->name === 'Novo') {
+                DB::table('sectors')->insert(['name' => 'Novo', 'menu_order' => 9, 'status' => 'ativo', 'created_at' => now(), 'updated_at' => now()]);
+            }
+        });
+
+        $this->page()->call('rename', $sector->id, 'Novo')->assertHasErrors('rename.'.$sector->id);
+
+        $this->assertSame('Antigo', $sector->fresh()?->name);
+    }
+
+    public function test_apagar_trava_a_linha_do_setor_antes_de_conferir_o_uso(): void
+    {
+        $sector = Sector::factory()->create();
+        DB::enableQueryLog();
+
+        $this->page()->call('remove', $sector->id)->assertHasNoErrors();
+
+        $queries = array_column(DB::getQueryLog(), 'query');
+        $lock = array_search(true, array_map(fn (string $q): bool => str_contains(strtolower($q), 'from "sectors"') && str_contains(strtolower($q), 'for update'), $queries), true);
+        $check = array_search(true, array_map(fn (string $q): bool => str_contains(strtolower($q), 'from "tickets"'), $queries), true);
+
+        $this->assertNotFalse($lock, 'O setor deveria ser lido com FOR UPDATE.');
+        $this->assertNotFalse($check);
+        $this->assertLessThan($check, $lock, 'A trava vem antes de conferir os tickets abertos.');
     }
 }

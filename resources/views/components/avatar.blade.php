@@ -5,6 +5,7 @@
     'size' => 'md',
     'single' => false,
     'decorative' => false,
+    'accent' => false,
 ])
 
 @php
@@ -16,6 +17,8 @@
         'xs' => 'rounded-sm',
         default => 'rounded-lg',
     };
+    // Sem nome não há o que anunciar (e `aria-label=""` seria ruído): o avatar vira decorativo.
+    $decorative = $decorative || trim((string) $name) === '';
     $initials = $single && trim((string) $name) !== '' ? mb_strtoupper(mb_substr(trim((string) $name), 0, 1)) : null;
 @endphp
 
@@ -25,7 +28,7 @@
     @if ($decorative) aria-hidden="true" @else role="img" aria-label="{{ $name }}" @endif
     {{ $attributes->class('relative inline-flex flex-none') }}
 >
-    <flux:avatar :name="$name" :initials="$initials" :circle="$round" :size="$size" color="auto" aria-hidden="true" />
+    <flux:avatar :name="$name" :initials="$initials" :circle="$round" :size="$size" :color="$accent ? null : 'auto'" :class="$accent ? 'bg-accent text-accent-foreground' : ''" aria-hidden="true" />
     @if ($src)
         <img
             src="{{ $src }}"
