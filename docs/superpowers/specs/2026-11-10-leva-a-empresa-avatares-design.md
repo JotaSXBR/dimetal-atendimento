@@ -21,7 +21,7 @@ código. Está atrasado com o projeto: esta leva junta quatro pedidos num só br
    e em Contatos. Sem foto ou privacidade restrita: monograma. Nenhuma tela chama o WAHA nem o CDN do WhatsApp.
 5. **Setores pela UI:** criar, renomear e apagar, além de estado e ordem já existentes, com o padrão (Vendas, Financeiro, Comercial, SAC, Diretoria,
    na ordem do menu, ativos) carregado numa instalação nova sem comando manual e sem recriar o que o admin editou ou apagou.
-6. **Fechar a importação de histórico** (validada pelo dono em 10/11): merge do branch `feat/importacao-historico` e atualização da memória.
+6. **Importação de histórico:** já está na `main` (commit `005faa7`, conferido em 10/11); não há merge a fazer. Só atualizar a memória.
 
 ## Não metas
 
@@ -43,8 +43,10 @@ código. Está atrasado com o projeto: esta leva junta quatro pedidos num só br
 - Renovação da foto de contato a cada **24 horas**; expira em **90 dias** sem atualização, pela rotina de purga de mídia que já existe
   (`PurgeMediaCommand`, tela Retenção).
 - Editor de enquadramento como nas redes sociais (arrastar, zoom, moldura), compactando o original no formato do app.
-- Logo: quadrado com cantos arredondados; pessoas: redondo. A recusa de imagem não quadrada (decisão de 01/11) vale só se o editor falhar; com o
-  editor o dono enquadra.
+- Logo: quadrado com cantos arredondados; pessoas: redondo. **Um só método para os três** (logo, usuário e contato): mesmo editor e mesmo
+  tratamento no servidor; só a moldura (CSS) muda. Imagem não quadrada nunca é recusada: o editor abre com recorte central (cobrindo o maior
+  quadrado possível) e o dono ajusta; o servidor repete o recorte central como rede de segurança. A recusa de 01/11 deixa de valer.
+- Fotos só são vistas depois do login. O logo é a exceção, porque aparece na tela de login.
 - Pesquisa na documentação de Flux, Livewire e Laravel: nenhum tem componente de recorte; `flux:file-upload` é Pro. Seguir com o desenho abaixo.
 - Setores: só apaga sem ticket aberto e sem workflow apontando; o histórico guarda o nome do setor.
 
@@ -61,27 +63,54 @@ código. Está atrasado com o projeto: esta leva junta quatro pedidos num só br
 
 ## Restrições
 
-- **Armazenamento:** disco S3 do RustFS (`Message::mediaDisk()` como referência); entrega pelo app (rota própria com cache), no mesmo estilo de
-  `MessageMediaController`, porque o login é público e o logo precisa aparecer nele. Chaves de objeto sem dado pessoal, com prefixo por tipo
-  (`avatars/contacts/…`, `avatars/users/…`, `branding/…`).
-- **Imagem:** servidor reduz para quadrado (~256 px para pessoas e logo; miniatura de contato menor, ~128 px) e converte para WebP; entrada PNG/JPG/WebP
-  até 1 MB para o upload do dono, sem SVG; valida o tipo pelo conteúdo, não pela extensão. Biblioteca: `intervention/image-laravel` com o driver GD;
-  **conferir o suporte a WebP no GD da imagem de produção antes de adicionar** (mexer no `composer.json` foi autorizado pelo dono em 10/11).
-- **Foto de contato:** `GET /api/contacts/profile-picture` do WAHA devolve só a URL; baixar os bytes pelo servidor (nunca expor ao navegador), com
-  tempo-limite curto. Buscar na criação do contato e, depois, no máximo uma vez a cada 24 h por contato, quando chega mensagem nova; respeitar o ritmo
-  de chamadas ao WAHA já usado no app. Guardar "sem foto" (cache negativo) com o mesmo prazo de 24 h.
+- **Armazenamento:** disco S3 do RustFS (`Message::mediaDisk()` como referência); entrega pelo app (rota própria, lendo o stream do disco), no
+  estilo de `MessageMediaController`. Chaves de objeto sem dado pessoal, com prefixo por tipo (`avatars/contacts/…`, `avatars/users/…`,
+  `branding/…`; este último é só o logo da empresa).
+- **Quem vê:** `avatars/*` exige sessão autenticada. Só o logo (`branding/*`) é público, porque a tela de login o mostra.
+- **Cache da entrega:** a URL leva versão (hash curto do conteúdo, guardado junto do caminho no banco), então trocar a imagem muda a URL e o
+  cabeçalho pode ser longo: `Cache-Control: private, max-age=31536000, immutable` nas fotos e `public` no logo, mais `ETag`. Sem versão na
+  URL não se usa cache longo.
+- **Imagem:** o navegador já recorta e reduz (canvas quadrado, ~512 px) e envia só esse recorte, nunca o original; o limite de 1 MB vale para esse
+  recorte. O servidor revalida, aplica recorte central de segurança, reduz (~256 px para pessoas e logo; ~128 px para contato) e converte para WebP;
+  entrada PNG/JPG/WebP, sem SVG; tipo pelo conteúdo, não pela extensão. Biblioteca: `intervention/image-laravel` (v1.x, driver GD por padrão,
+  `Image::decode` aceita o upload e o binário baixado), numa única classe de serviço usada por logo, usuário e contato. **Conferir o WebP no GD da
+  imagem de produção antes de adicionar** (`composer.json` autorizado em 10/11).
+- **Foto de contato:** `GET /api/contacts/profile-picture` (query `contactId`, `session`, opcional `refresh`) do WAHA devolve só a URL
+  (`profilePictureURL`), que o WAHA já guarda em cache por 24 h; baixar os bytes pelo servidor (nunca expor ao navegador), com tempo-limite curto,
+  teto de tamanho e validação do tipo pelo conteúdo. **Tudo roda em job na fila, nunca no caminho do webhook**: WAHA lento ou fora do ar não
+  atrasa a ingestão. Disparo: na criação do contato e, depois, no máximo uma vez a cada 24 h por contato, quando chega mensagem nova; sem
+  `refresh=true` (o WAHA avisa de `rate-overlimit`); respeitar o ritmo de chamadas já usado no app.
+- **Resposta sem foto (GOWS, o engine em uso):** a documentação do WAHA lista o endpoint como suportado no GOWS, mas não descreve o corpo
+  quando o contato não tem foto ou restringiu a privacidade; na prática o WhatsApp devolve vazio, e o cliente pode ver `null`, campo ausente,
+  404 ou erro. Regra: **200 com URL** = baixar; **200 com `null`/ausente/vazio ou 404** = "sem foto" definitivo (cache negativo de 24 h, monograma);
+  **timeout, 5xx, 429 ou falha ao baixar** = falha transitória, não grava cache negativo longo, refaz com atraso crescente (no máximo 3 tentativas)
+  e então tenta de novo na próxima mensagem após 1 h. Antes de fechar o plano, conferir no beta com um contato com foto e outro sem, para
+  registrar o corpo real e ajustar os testes a ele.
+- **Estado no banco** (`contacts`): caminho do objeto e versão (hash), data da última checagem e se a última checagem achou foto. Isso é o que
+  diz se a próxima mensagem deve buscar de novo.
 - **Expiração:** objeto de contato não atualizado há 90 dias sai pela rotina de purga existente (estender `PurgeMediaCommand` ou comando irmão no
-  mesmo agendamento); o contato volta ao monograma e a próxima mensagem repõe a foto.
-- **Setores:** criar o padrão em migration ou passo de primeiro acesso (idempotente, sem recriar apagados: guardar marca de que o padrão já foi
-  carregado). Cuidar de `sector_user`, `appearsInMenu`, workflows que apontam setor e tickets antigos. Autorização `admin`.
-- **Editor:** componente Blade `x-avatar-uploader` (props `shape="round|rounded"`, `size`, `wire:model`), Alpine + Cropper.js carregado só nas telas
-  que o usam; teclado e leitor de tela (arrastar tem alternativa por botões de zoom e setas); `motion-safe:`.
+  mesmo agendamento); **a purga zera também as colunas do contato**, para a tela não apontar para objeto que não existe. O contato volta ao
+  monograma e a próxima mensagem repõe a foto. Contato ativo renova a cada 24 h e nunca expira.
+- **Setores, apagar:** `sectors` ganha `SoftDeletes`. Hoje `tickets.sector_id` é `nullOnDelete` (apagar de verdade faria os tickets antigos
+  perderem o nome do setor) e `quick_replies.sector_id` é `cascadeOnDelete` (apagaria as respostas rápidas). Com soft delete o ticket antigo
+  continua mostrando o nome. O índice único do nome passa a valer só para setores não apagados (índice parcial no PostgreSQL), para poder recriar
+  um nome apagado. Antes de apagar, recusar com mensagem clara se houver: ticket aberto, workflow (rascunho ou publicado) com nó apontando o
+  setor, ou resposta rápida do setor. Ao apagar, soltar os vínculos em `sector_user`. Renomear mexe só no nome. Criar entra no fim da ordem do menu,
+  ativo. Autorização `admin`.
+- **Setores, padrão:** não vai em migration (entraria em todo banco de teste e quebraria contagens). Um passo idempotente, no mesmo ponto do deploy
+  que já roda `migrate` (o builder confere onde fica), cria Vendas, Financeiro, Comercial, SAC e Diretoria uma única vez, protegido pela marca
+  `sectors.defaults_loaded` em `Setting`; se já houver setores (o beta já tem) só grava a marca. Apagar um padrão nunca o recria. O
+  `SectorSeeder` passa a usar a mesma classe.
+- **Editor:** componente Blade `x-avatar-uploader` (props `shape="round|rounded"`, `size`, `wire:model`), Alpine + Cropper.js v2 (`cropperjs`,
+  elementos `cropper-canvas`/`cropper-image`/`cropper-selection` com proporção 1:1, `$toCanvas({width, height})` e `toBlob`). Instalado por npm e
+  empacotado pelo Vite, com `import()` dinâmico para só carregar nas telas que usam (nada de CDN). Teclado e leitor de tela (arrastar tem
+  alternativa por botões de zoom e setas); `motion-safe:`. O recorte usa canvas e `blob:`: se o CSP for ligado na leva C, liberar `img-src blob:`.
 - **Qualidade:** tokens do `app.css`, contraste AA, 1280x720, 1920x1080, 2560x1440 e 360 px, claro e escuro; buscas em Blade por `grep` (CodeGraph não
   indexa Blade); sem referências de pesquisa em commit ou PR.
 
 ## Deixado ao builder
 
-Tamanhos finais em pixels e qualidade do WebP; nomes das chaves e da rota de entrega; o cabeçalho de cache; se a purga estende o comando atual ou cria
+Tamanhos finais em pixels e qualidade do WebP; nomes das chaves e da rota de entrega; se a purga estende o comando atual ou cria
 um irmão; onde exatamente a foto do usuário aparece além do perfil e da lista; como o monograma escolhe a cor; a forma de gravar a marca "padrão de
 setores já carregado".
 
