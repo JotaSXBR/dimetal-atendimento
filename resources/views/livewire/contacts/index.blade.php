@@ -1,4 +1,4 @@
-<section class="mx-auto grid w-full max-w-6xl gap-6 p-6 lg:grid-cols-[1fr_22rem]">
+<section class="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 p-6 lg:grid-cols-[1fr_22rem]">
     <div>
         <x-page-header title="Contatos" subtitle="Quem fala com a Dimetal. Edite o nome e os dados; contatos editados vão para o Google Contacts.">
             <flux:button variant="primary" icon="plus" wire:click="$toggle('showNew')">Novo contato</flux:button>
@@ -26,7 +26,7 @@
             <flux:input icon="magnifying-glass" placeholder="Buscar por nome, telefone, e-mail ou empresa" wire:model.live.debounce.300ms="search" clearable />
         </div>
 
-        <x-skeleton-rows :rows="4" wire:loading.delay.block wire:target="search" class="mt-4 rounded-[14px] border border-line bg-surface" />
+        <x-skeleton-rows :rows="4" wire:loading.delay wire:target="search" class="mt-4 rounded-[14px] border border-line bg-surface" />
 
         <ul wire:loading.remove.delay wire:target="search" class="mt-4 divide-y divide-line rounded-[14px] border border-line bg-surface">
             @forelse ($contacts as $contact)
