@@ -18,7 +18,7 @@
                         <flux:button size="xs" variant="subtle" icon="chevron-down" wire:click="move({{ $sector->id }}, 'down')" aria-label="Descer {{ $sector->name }}" />
                     </div>
 
-                    <div class="min-w-0 flex-1" x-data="{ editing: false, name: @js($sector->name) }">
+                    <div class="min-w-36 flex-1" x-data="{ editing: false, name: @js($sector->name) }">
                         <p x-show="! editing" class="flex items-center gap-1 text-sm font-semibold text-ink">
                             <span class="me-1 font-mono text-xs text-ink-3">{{ $loop->iteration }}</span>
                             <span class="truncate">{{ $sector->name }}</span>
