@@ -47,7 +47,7 @@ class AvatarStorage
         ];
 
         // Em If-None-Match vale a comparação fraca: `W/"x"` casa com `"x"`. O `*` fica sem 304 de propósito (serviria objeto sumido).
-        $sent = array_map(fn (string $tag): string => (string) preg_replace('#^W/#', '', $tag), request()->getETags());
+        $sent = array_map(fn (mixed $tag): mixed => is_string($tag) ? preg_replace('#^W/#', '', $tag) : $tag, request()->getETags());
 
         if (in_array($etag, $sent, true)) {
             return response('', 304, $headers);
