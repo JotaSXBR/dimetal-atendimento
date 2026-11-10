@@ -5,6 +5,7 @@ namespace Tests\Feature\Media;
 use App\Jobs\SyncContactPhotoJob;
 use App\Models\Channel;
 use App\Models\Contact;
+use App\Models\Setting;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Media\AvatarImage;
@@ -238,6 +239,30 @@ class AvatarDeliveryTest extends TestCase
 
         // `*` fica sem 304 de propósito: 200 com o corpo é resposta válida e não serve objeto que sumiu do disco.
         $this->actingAs($viewer)->get($user->avatarUrl(), ['If-None-Match' => '*'])->assertOk();
+    }
+
+    public function test_foto_sem_versao_gravada_nunca_fica_imutavel(): void
+    {
+        $viewer = User::factory()->create();
+        $user = User::factory()->create();
+        $user->setAvatar($this->webp());
+        User::query()->whereKey($user->id)->update(['avatar_version' => null]);
+
+        $cache = (string) $this->actingAs($viewer)->get(route('avatar', ['users', $user->id]))->assertOk()->headers->get('Cache-Control');
+
+        $this->assertStringContainsString('no-cache', $cache);
+        $this->assertStringNotContainsString('immutable', $cache);
+    }
+
+    public function test_logo_sem_versao_gravada_nunca_fica_imutavel(): void
+    {
+        CompanySettings::setLogo($this->webp());
+        Setting::put('company.logo_version', null);
+
+        $cache = (string) $this->get(route('logo'))->assertOk()->headers->get('Cache-Control');
+
+        $this->assertStringContainsString('no-cache', $cache);
+        $this->assertStringNotContainsString('immutable', $cache);
     }
 
     public function test_url_sem_versao_ou_com_versao_velha_revalida_em_vez_de_ficar_imutavel(): void

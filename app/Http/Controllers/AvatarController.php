@@ -21,6 +21,6 @@ class AvatarController extends Controller
 
         abort_if($user->avatar_path === null, 404);
 
-        return $storage->response($user->avatar_path, public: false, versioned: request()->query('v') === $user->avatar_version);
+        return $storage->response($user->avatar_path, public: false, version: $user->avatar_version);
     }
 }
