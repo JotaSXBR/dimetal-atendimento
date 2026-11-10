@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class SyncContactPhotoTest extends TestCase
@@ -169,6 +170,31 @@ class SyncContactPhotoTest extends TestCase
 
         $this->assertNull($contact->fresh()?->avatar_checked_at);
         $this->assertSame(self::CDN, $contact->fresh()?->avatar_url);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function historyModes(): array
+    {
+        return ['importação' => ['imported'], 'recuperação' => ['recovered']];
+    }
+
+    #[DataProvider('historyModes')]
+    public function test_importacao_e_recuperacao_nao_enfileiram_foto_de_contato(string $mode): void
+    {
+        Queue::fake();
+        Http::fake();
+        $event = WahaEvent::create([
+            'waha_event_id' => 'evt_'.uniqid(),
+            'channel_id' => $this->channel->id,
+            'event' => 'message',
+            'session' => 'main',
+            'payload' => ['event' => 'message', 'session' => 'main', 'mode' => $mode, 'payload' => ['id' => 'false_H1', 'from' => self::PHONE, 'fromMe' => false, 'body' => 'antiga', 'timestamp' => now()->subDays(3)->timestamp]],
+            'received_at' => now(),
+        ]);
+
+        app(IngestMessage::class)($event);
+
+        Queue::assertNotPushed(SyncContactPhotoJob::class);
     }
 
     public function test_ingestao_de_mensagem_enfileira_o_job_e_nao_chama_o_waha(): void

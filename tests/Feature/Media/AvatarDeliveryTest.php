@@ -166,6 +166,33 @@ class AvatarDeliveryTest extends TestCase
         $this->actingAs(User::factory()->create())->get($contact->avatarUrl())->assertNotFound();
 
         Queue::assertPushed(SyncContactPhotoJob::class, fn (SyncContactPhotoJob $job): bool => $job->contactId === $contact->id && $job->channelId === $channel->id);
+        // A URL vencida sai da tela de uma vez: nada de pedir a mesma imagem de novo a cada renderização.
+        $this->assertNull($contact->fresh()?->avatar_url);
+    }
+
+    public function test_url_vencida_devolvida_de_novo_pelo_waha_nao_vira_laco_de_jobs(): void
+    {
+        Queue::fake();
+        Http::fake(['https://pps.whatsapp.net/*' => Http::response('', 403)]);
+        $channel = Channel::factory()->create();
+        $contact = Contact::factory()->create(['avatar_url' => 'https://pps.whatsapp.net/v/t61/foto.jpg?sig=1']);
+        Ticket::factory()->create(['contact_id' => $contact->id, 'channel_id' => $channel->id]);
+        $viewer = User::factory()->create();
+
+        $this->actingAs($viewer)->get($contact->avatarUrl())->assertNotFound();
+        // O WAHA guarda a URL por 24 h e devolve a mesma, já vencida: o job a grava de novo e a tela pede outra vez.
+        Contact::query()->whereKey($contact->id)->update(['avatar_url' => 'https://pps.whatsapp.net/v/t61/foto.jpg?sig=1']);
+        $this->actingAs($viewer)->get((string) $contact->fresh()?->avatarUrl())->assertNotFound();
+
+        Queue::assertPushed(SyncContactPhotoJob::class, 1);
+    }
+
+    public function test_foto_de_contato_com_content_length_acima_do_limite_e_recusada(): void
+    {
+        Http::fake(['https://pps.whatsapp.net/*' => Http::response('pequeno', 200, ['Content-Type' => 'image/jpeg', 'Content-Length' => '3000000'])]);
+        $contact = Contact::factory()->create(['avatar_url' => 'https://pps.whatsapp.net/v/t61/enorme.jpg']);
+
+        $this->actingAs(User::factory()->create())->get($contact->avatarUrl())->assertNotFound();
     }
 
     public function test_foto_de_contato_recusa_http_texto_e_arquivo_grande(): void

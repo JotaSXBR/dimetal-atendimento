@@ -54,9 +54,8 @@ class IngestMessage
         }
 
         $contact = ($this->resolveContact)($incoming->peer, $incoming->alternateJid, $incoming->pushName);
-        app(FillContactName::class)->queueFor($contact, $channel);
-        app(SyncContactPhoto::class)->queueFor($contact, $channel);
         $mode = IngestMode::of($event);
+        $this->queueEnrichment($contact, $channel, $mode);
 
         // Já há ticket aberto do contato que começou antes desta mensagem: ela pertence a ele, não ao histórico.
         if ($mode === IngestMode::IMPORTED && $this->hasOpenTicketBefore($channel, $contact, $incoming)) {
@@ -82,6 +81,16 @@ class IngestMessage
         $late = $event->received_at->diffInSeconds($incoming->sentAt, true) <= self::LATE_LIVE_SECONDS;
 
         return $mode === IngestMode::LIVE && $late ? $event->received_at : $incoming->sentAt;
+    }
+
+    /** Nome e foto do contato vêm do WAHA em jobs na fila; a foto só ao vivo, para importar milhares de conversas não virar milhares de chamadas de uma vez. */
+    private function queueEnrichment(Contact $contact, Channel $channel, IngestMode $mode): void
+    {
+        app(FillContactName::class)->queueFor($contact, $channel);
+
+        if ($mode === IngestMode::LIVE) {
+            app(SyncContactPhoto::class)->queueFor($contact, $channel);
+        }
     }
 
     private function find(Channel $channel, string $waId): ?Message
