@@ -28,7 +28,7 @@
                 <flux:select size="sm" wire:model.live="sectorId" label="Setor">
                     <flux:select.option value="">Todos</flux:select.option>
                     @foreach ($sectors as $sector)
-                        <flux:select.option :value="$sector->id">{{ $sector->name }}</flux:select.option>
+                        <flux:select.option :value="$sector->id">{{ $sector->name }}{{ $sector->trashed() ? ' (apagado)' : '' }}</flux:select.option>
                     @endforeach
                 </flux:select>
 
@@ -62,7 +62,7 @@
                     wire:key="history-{{ $item->id }}"
                     class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
                 >
-                    <flux:avatar :name="$item->contact->label()" size="sm" />
+                    <x-avatar :src="$item->contact->avatarUrl()" :name="$item->contact->label()" shape="round" size="lg" decorative />
 
                     <span class="min-w-0 flex-1">
                         <span class="flex items-baseline justify-between gap-2">
@@ -98,7 +98,7 @@
         @if ($ticket)
             <header class="flex items-center gap-3 border-b border-line bg-surface px-4 py-3">
                 <flux:button variant="subtle" size="sm" icon="arrow-left" class="lg:hidden" wire:click="$set('ticketId', null)" aria-label="Voltar para a lista" />
-                <flux:avatar :name="$ticket->contact->label()" size="sm" />
+                <x-avatar :src="$ticket->contact->avatarUrl()" :name="$ticket->contact->label()" shape="round" size="lg" decorative />
 
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-semibold text-ink">{{ $ticket->contact->label() }}</p>

@@ -11,7 +11,7 @@ export function qrOptions(value, size, logoUrl) {
         height: size,
         type: 'canvas',
         data: value,
-        image: logoUrl,
+        ...(logoUrl ? { image: logoUrl } : {}),
         margin: 0,
         qrOptions: { errorCorrectionLevel: 'H' },
         imageOptions: { hideBackgroundDots: true, imageSize: LOGO_MAX_RATIO, margin: 4, crossOrigin: 'anonymous' },

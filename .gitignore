@@ -47,3 +47,4 @@ yarn-error.log
 /.codegraph
 /.phpstan.cache
 /.pint.cache
+/docs/ux-refactor-prompt.md

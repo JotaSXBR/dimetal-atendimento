@@ -15,4 +15,5 @@ import './quote-jump';
 import './alerts';
 import './relative-time';
 import './channel-qr';
+import './avatar-cropper';
 import './flow-editor';

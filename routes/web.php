@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\GoogleConnectionController;
+use App\Http\Controllers\LogoController;
 use App\Http\Controllers\MessageMediaController;
 use App\Http\Controllers\Webhooks\WahaWebhookController;
 use App\Livewire\Audit\Index as AuditIndex;
@@ -24,12 +26,14 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/inbox')->name('home');
 
 Route::post('webhooks/waha', WahaWebhookController::class)->middleware('throttle:webhook')->name('webhooks.waha');
+Route::get('marca/logo', LogoController::class)->name('logo');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('inbox', Inbox::class)->name('inbox');
     Route::get('contatos', ContactsIndex::class)->name('contatos');
     Route::get('historico', HistoryIndex::class)->name('historico');
     Route::get('midia/{message}', MessageMediaController::class)->name('midia');
+    Route::get('avatares/{type}/{id}', AvatarController::class)->whereIn('type', ['users', 'contacts'])->whereNumber('id')->name('avatar');
 });
 
 Route::middleware(['auth', 'can:supervisor'])->group(function () {

@@ -2,24 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Enums\SectorStatus;
-use App\Models\Sector;
+use App\Services\Setup\DefaultSectors;
 use Illuminate\Database\Seeder;
 
 class SectorSeeder extends Seeder
 {
-    /**
-     * Ordem do menu do chatbot.
-     */
-    public const SECTORS = ['Vendas', 'Financeiro', 'Comercial', 'SAC', 'Diretoria'];
-
+    /** O mesmo passo que o agendador roda numa instalação nova: cria o padrão uma vez e nunca recria o que o admin apagou. */
     public function run(): void
     {
-        foreach (self::SECTORS as $index => $name) {
-            Sector::firstOrCreate(
-                ['name' => $name],
-                ['menu_order' => $index + 1, 'status' => SectorStatus::ATIVO],
-            );
-        }
+        DefaultSectors::install();
     }
 }

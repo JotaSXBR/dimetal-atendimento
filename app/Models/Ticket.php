@@ -283,7 +283,8 @@ class Ticket extends Model
      */
     public function sector(): BelongsTo
     {
-        return $this->belongsTo(Sector::class);
+        // Setor apagado continua dando nome ao ticket antigo.
+        return $this->belongsTo(Sector::class)->withTrashed();
     }
 
     /**

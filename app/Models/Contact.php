@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property list<string>|null $urls
  * @property string|null $name_source
  * @property CarbonImmutable|null $edited_at
+ * @property string|null $avatar_url
+ * @property CarbonImmutable|null $avatar_checked_at
  * @property string|null $google_resource_name
  * @property string|null $google_etag
  * @property string|null $google_payload_hash
@@ -44,6 +46,14 @@ class Contact extends Model
 {
     /** @use HasFactory<ContactFactory> */
     use HasFactory;
+
+    /** A foto não é guardada aqui: só a URL do CDN vive em `avatar_url`; a tela a recebe pela rota que a repassa sem gravar. */
+    public function avatarUrl(): ?string
+    {
+        $url = $this->avatar_url;
+
+        return $url === null ? null : route('avatar', ['contacts', $this->id, 'v' => substr(sha1($url), 0, 10)]);
+    }
 
     protected static function booted(): void
     {
@@ -69,6 +79,7 @@ class Contact extends Model
             'edited_at' => 'datetime',
             'google_synced_at' => 'datetime',
             'google_attempted_at' => 'datetime',
+            'avatar_checked_at' => 'datetime',
         ];
     }
 

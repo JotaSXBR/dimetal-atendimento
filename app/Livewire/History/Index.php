@@ -119,7 +119,10 @@ class Index extends Component
             'events' => TicketTimeline::changes($events),
             'timeline' => new TicketTimeline($events),
             'closer' => $closer,
-            'sectors' => Sector::query()->orderBy('name')->get(['id', 'name']),
+            // Setor apagado que já teve ticket continua filtrável; o que nunca teve não polui a lista.
+            'sectors' => Sector::withTrashed()
+                ->where(fn ($query) => $query->whereNull('deleted_at')->orWhereIn('id', Ticket::query()->select('sector_id')->whereNotNull('sector_id')))
+                ->orderBy('name')->get(['id', 'name', 'deleted_at']),
             'agents' => $user->canSeeAllSectors() ? User::query()->orderBy('name')->get(['id', 'name']) : null,
             'outcomes' => CloseOutcome::cases(),
             'filteredContact' => $this->contactId === null ? null : Contact::query()->find($this->contactId)?->label(),

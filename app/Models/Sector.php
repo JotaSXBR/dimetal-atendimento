@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Enums\SectorStatus;
+use App\Enums\TicketStatus;
 use Database\Factories\SectorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -24,6 +26,9 @@ class Sector extends Model
 {
     /** @use HasFactory<SectorFactory> */
     use HasFactory;
+
+    /** Apagar não remove a linha: o ticket antigo continua mostrando o nome do setor (ver `DeleteSector`). */
+    use SoftDeletes;
 
     /**
      * @return array<string, string>
@@ -41,6 +46,12 @@ class Sector extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);
+    }
+
+    /** Ticket ainda não encerrado neste setor (impede apagar e desativar). */
+    public function hasOpenTickets(): bool
+    {
+        return Ticket::query()->where('sector_id', $this->id)->where('status', '<>', TicketStatus::ENCERRADO->value)->exists();
     }
 
     /**

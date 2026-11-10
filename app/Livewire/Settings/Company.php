@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Settings;
 
+use App\Livewire\Concerns\ReceivesAvatar;
 use App\Services\Inbox\Signature;
+use App\Services\Media\AvatarImage;
 use App\Settings\CompanySettings;
 use App\Support\WhatsAppText;
 use Illuminate\Contracts\View\View;
@@ -13,6 +15,8 @@ use Livewire\Component;
 #[Title('Empresa e assinatura')]
 class Company extends Component
 {
+    use ReceivesAvatar;
+
     public string $name = '';
 
     public bool $signatureEnabled = true;
@@ -22,6 +26,20 @@ class Company extends Component
     public string $signaturePosition = 'inicio';
 
     public bool $saved = false;
+
+    public function saveLogo(): void
+    {
+        $this->authorize('admin');
+
+        CompanySettings::setLogo($this->avatarWebp(AvatarImage::SIZE_LOGO));
+    }
+
+    public function removeLogo(): void
+    {
+        $this->authorize('admin');
+
+        CompanySettings::clearLogo();
+    }
 
     public function mount(): void
     {

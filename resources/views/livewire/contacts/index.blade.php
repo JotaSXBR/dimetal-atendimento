@@ -32,7 +32,7 @@
             @forelse ($contacts as $contact)
                 <li wire:key="contact-{{ $contact->id }}" class="flex items-center pe-3 {{ $selectedId === $contact->id ? 'bg-surface-2' : '' }}">
                     <button type="button" wire:click="select({{ $contact->id }})" class="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-start hover:bg-surface-2">
-                        <flux:avatar :name="$contact->label()" size="sm" />
+                        <x-avatar :src="$contact->avatarUrl()" :name="$contact->label()" shape="round" size="lg" decorative />
                         <span class="min-w-0 flex-1">
                             <span class="block truncate text-sm font-semibold text-ink">{{ $contact->label() }}</span>
                             <span class="block truncate text-xs text-ink-3">

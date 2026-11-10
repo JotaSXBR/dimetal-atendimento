@@ -63,7 +63,7 @@
                         wire:key="closed-{{ $item->id }}"
                         class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
                     >
-                        <flux:avatar :name="$item->contact->label()" size="sm" />
+                        <x-avatar :src="$item->contact->avatarUrl()" :name="$item->contact->label()" shape="round" size="lg" decorative />
 
                         <span class="min-w-0 flex-1">
                             <span class="flex items-baseline justify-between gap-2">
@@ -101,7 +101,7 @@
                                 $hasMeta = $item->assignee !== null || ($showSector && $item->sector !== null) || $showChannel || $item->tags->isNotEmpty();
                             @endphp
                             <span class="relative shrink-0">
-                                <flux:avatar :name="$item->contact->label()" size="sm" />
+                                <x-avatar :src="$item->contact->avatarUrl()" :name="$item->contact->label()" shape="round" size="lg" decorative />
                                 @if ($sla)
                                     <span data-testid="card-sla" title="{{ $sla === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}" class="absolute -end-0.5 -bottom-0.5 block size-2.5 rounded-full ring-2 ring-surface {{ $sla === 'estourou' ? 'bg-danger' : 'bg-warn' }}"><span class="sr-only">{{ $sla === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span></span>
                                 @endif
@@ -127,7 +127,7 @@
                                     <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-ink-3">
                                         @if ($item->assignee)
                                             <span class="inline-flex shrink-0 items-center gap-1 text-ink-2">
-                                                <flux:avatar :name="$item->assignee->name" size="xs" />
+                                                <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
                                                 <span data-testid="card-assignee-name">{{ \Illuminate\Support\Str::before($item->assignee->name, ' ') }}</span>
                                             </span>
                                         @endif
@@ -168,7 +168,7 @@
 
             <header class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-surface px-4 py-2">
                 <flux:button variant="subtle" size="sm" icon="arrow-left" class="lg:hidden" wire:click="$set('ticketId', null)" aria-label="Voltar para a lista" />
-                <flux:avatar :name="$name" size="sm" />
+                <x-avatar :src="$ticket->contact->avatarUrl()" :name="$name" shape="round" size="lg" decorative />
 
                 <div class="min-w-0 flex-1 basis-56">
                     <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink">

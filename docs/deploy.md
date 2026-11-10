@@ -19,12 +19,12 @@ Projeto `dimetal-main` (produção) e projeto `dimetal-beta` (teste), cada um co
 Não há `compose.coolify.yaml`. Um Service ou uma aplicação docker-compose apareceria como **um**
 recurso com vários containers pendurados — exatamente o que não queremos.
 
-Recursos separados só se falam pela rede Docker `coolify`. Por isso:
+Recursos separados só se falam por uma rede Docker compartilhada. O beta vive na rede própria `dimetal-beta` (os demais
+projetos do Coolify ficam fora dela). Por isso:
 
-- os quatro Applications têm **Connect to predefined network** ligado;
-- cada um tem **Network Aliases** único por projeto: `app-beta`, `worker-beta`, `scheduler-beta`,
-  `waha-beta` (no main, `-main`). Main e beta dividem a rede, então nome sem sufixo resolveria para
-  o projeto errado;
+- os Applications têm **Connect to predefined network** ligado;
+- a API do Coolify não dá apelido de rede ao WAHA, ao app nem ao worker: o host que um usa para falar com o outro é o UUID do
+  container (`WAHA_URL`, `DB_HOST`, `REDIS_HOST`). Só o `rustfs-beta` tem apelido (`custom_network_aliases: rustfs-beta`);
 - `pg` e `redis` não aceitam alias na API: o host é o nome interno que o Coolify gera e mostra na
   URL interna (estável entre deploys).
 
