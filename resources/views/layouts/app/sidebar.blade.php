@@ -8,13 +8,11 @@
         <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-(--sidebar-bg) [--sidebar-bg:var(--color-zinc-50)] dark:border-zinc-700 dark:[--sidebar-bg:var(--color-zinc-900)]">
             <flux:sidebar.header class="in-data-flux-sidebar-collapsed-desktop:flex-col in-data-flux-sidebar-collapsed-desktop:items-center in-data-flux-sidebar-collapsed-desktop:gap-3">
                 {{-- Fechada, o Flux tira a marca do fluxo no hover e só então mostra o botão de colapso: sem mouse (toque, teclado) não haveria como
-                     reabrir, e o sino pulava de lugar. Aqui a marca fica fixa e o botão fica sempre à vista, logo abaixo dela (o `order-*` só
-                     troca a ordem fechada: marca, botão, sino; aberta segue marca, sino, botão). --}}
-                <x-app-logo :sidebar="true" href="{{ route('inbox') }}" aria-label="{{ config('app.name') }}" wire:navigate class="order-1 in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:static! in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:opacity-100!" />
-                <div class="order-2 in-data-flux-sidebar-collapsed-desktop:order-3">
-                    <livewire:alerts.bell />
-                </div>
-                <flux:sidebar.collapse tooltip="Recolher ou expandir menu" class="order-3 in-data-flux-sidebar-collapsed-desktop:order-2 in-data-flux-sidebar-collapsed-desktop:static! in-data-flux-sidebar-collapsed-desktop:opacity-100!" />
+                     reabrir, e o sino pulava de lugar. Aqui a marca fica fixa e o botão fica sempre à vista. A ordem do DOM é a ordem visual nos dois
+                     estados (marca, botão, sino): o Tab segue o que se vê. --}}
+                <x-app-logo :sidebar="true" href="{{ route('inbox') }}" aria-label="{{ config('app.name') ?: 'Laravel' }}" wire:navigate class="in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:static! in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:opacity-100!" />
+                <flux:sidebar.collapse tooltip="Recolher ou expandir menu" class="in-data-flux-sidebar-collapsed-desktop:static! in-data-flux-sidebar-collapsed-desktop:opacity-100!" />
+                <livewire:alerts.bell />
             </flux:sidebar.header>
 
             @php
@@ -33,14 +31,12 @@
                     @endphp
                     <flux:sidebar.item :href="route($item->route)" :current="request()->routeIs($item->match)" aria-label="{{ $name }}" wire:navigate
                         :badge="$item->route === 'inbox' ? ($counts['waiting'] ?: null) : null" badge-color="yellow"
-                        badge:data-test="queue-badge" badge:aria-label="{{ $counts['waiting'] }} aguardando">
+                        badge:data-test="queue-badge">
                         {{-- Fechada, o Flux esconde badge e selo: o estado da Fila vai num ponto sobre o ícone (vermelho só com SLA estourado). --}}
                         <x-slot:icon>
                             <flux:icon :icon="$item->icon" class="size-4" />
                             @if ($item->route === 'inbox' && ($counts['breached'] > 0 || $counts['waiting'] > 0))
-                                <span data-test="queue-dot" class="absolute -end-0.5 -top-0.5 hidden size-2.5 rounded-full ring-2 ring-(--sidebar-bg) in-data-flux-sidebar-collapsed-desktop:block {{ $counts['breached'] > 0 ? 'bg-danger' : 'bg-accent' }}">
-                                    <span class="sr-only">{{ $counts['breached'] > 0 ? $counts['breached'].' com SLA estourado' : $counts['waiting'].' aguardando' }}</span>
-                                </span>
+                                <span data-test="queue-dot" aria-hidden="true" class="absolute -end-0.5 -top-0.5 hidden size-2.5 rounded-full ring-2 ring-(--sidebar-bg) in-data-flux-sidebar-collapsed-desktop:block {{ $counts['breached'] > 0 ? 'bg-danger' : 'bg-accent' }}"></span>
                             @endif
                         </x-slot:icon>
                         @if ($item->route === 'inbox' && $counts['breached'] > 0)

@@ -116,7 +116,8 @@ class SidebarTest extends TestCase
         $dot = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->item(0);
 
         $this->assertStringContainsString('bg-danger', (string) $dot?->getAttribute('class'));
-        $this->assertStringContainsString('1 com SLA estourado', (string) $dot?->textContent);
+        $this->assertSame('true', $dot?->getAttribute('aria-hidden'));
+        $this->assertSame('', trim((string) $dot?->textContent));
     }
 
     public function test_ponto_da_fila_fechada_e_amarelo_com_aguardando(): void
@@ -126,7 +127,8 @@ class SidebarTest extends TestCase
         $dot = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-dot"]')->item(0);
 
         $this->assertStringContainsString('bg-accent', (string) $dot?->getAttribute('class'));
-        $this->assertStringContainsString('3 aguardando', (string) $dot?->textContent);
+        $this->assertSame('true', $dot?->getAttribute('aria-hidden'));
+        $this->assertSame('', trim((string) $dot?->textContent));
     }
 
     /** O anel do ponto imita o fundo da sidebar: as duas cores saem da mesma variável, para não se separarem. */
@@ -191,6 +193,41 @@ class SidebarTest extends TestCase
         $link = $this->xpath($this->page(UserRole::ADMIN))->query('//a[@data-flux-sidebar-item][1]')->item(0);
 
         $this->assertSame('Fila, 3 aguardando, 1 com SLA estourado', $link?->getAttribute('aria-label'));
+    }
+
+    /** A ordem do Tab é a do DOM: marca, botão de colapso, sino, igual à ordem visual aberta e fechada (sem `order-*`). */
+    public function test_ordem_do_cabecalho_e_a_mesma_aberta_e_fechada(): void
+    {
+        $xpath = $this->xpath($this->page(UserRole::ADMIN));
+        $header = $xpath->query('//ui-sidebar//*[@data-flux-sidebar-brand]/ancestor::*[@data-flux-sidebar-header][1]')->item(0)
+            ?? $xpath->query('//ui-sidebar//*[@data-flux-sidebar-brand]/..')->item(0);
+
+        $kinds = [];
+        foreach ($xpath->query('.//*[@data-flux-sidebar-brand or @data-flux-sidebar-collapse or (self::button and @aria-haspopup)]', $header) as $node) {
+            $kinds[] = $node->hasAttribute('data-flux-sidebar-brand') ? 'marca' : ($node->hasAttribute('data-flux-sidebar-collapse') ? 'botao' : 'sino');
+        }
+
+        $this->assertSame(['marca', 'botao', 'sino'], $kinds);
+        $this->assertSame(0, $xpath->query('.//*[contains(@class, "order-1") or contains(@class, "order-2") or contains(@class, "order-3")]', $header)->length);
+    }
+
+    public function test_selo_da_fila_nao_repete_aria_label(): void
+    {
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create(['status' => TicketStatus::AGUARDANDO]);
+
+        $badge = $this->xpath($this->page(UserRole::ADMIN))->query('//*[@data-test="queue-badge"]')->item(0);
+
+        $this->assertNotNull($badge);
+        $this->assertFalse($badge->hasAttribute('aria-label'));
+    }
+
+    public function test_rotulo_do_logo_cai_para_laravel_sem_nome_do_app(): void
+    {
+        config(['app.name' => null]);
+
+        $brand = $this->xpath($this->page(UserRole::ADMIN))->query('//a[@data-flux-sidebar-brand]')->item(0);
+
+        $this->assertSame('Laravel', $brand?->getAttribute('aria-label'));
     }
 
     public function test_sem_pendencia_nao_ha_ponto_da_fila(): void
