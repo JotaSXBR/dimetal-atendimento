@@ -11,6 +11,16 @@ abstract class TestCase extends BaseTestCase
 {
     protected function setUp(): void
     {
+        // Em paralelo, cada processo do paratest usa o próprio banco do Redis: o flushdb abaixo não apaga o dos outros.
+        $token = getenv('TEST_TOKEN');
+
+        if ($token !== false && $token !== '') {
+            foreach (['REDIS_DB', 'REDIS_CACHE_DB'] as $key) {
+                putenv("{$key}={$token}");
+                $_ENV[$key] = $_SERVER[$key] = $token;
+            }
+        }
+
         parent::setUp();
 
         // No CI o cache é o Redis e sobrevive entre os testes: o bloqueio de um job único (`ShouldBeUnique*`) deixado por

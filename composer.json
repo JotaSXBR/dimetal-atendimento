@@ -96,7 +96,7 @@
             "@php artisan test --parallel"
         ],
         "coverage": [
-            "@php artisan test --coverage --min=80"
+            "@php artisan test --parallel --coverage --min=80"
         ],
         "security:audit": [
             "composer audit --no-interaction",
