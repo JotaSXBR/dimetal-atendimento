@@ -225,6 +225,21 @@ class AvatarDeliveryTest extends TestCase
         $this->actingAs($viewer)->get($user->avatarUrl(), ['If-None-Match' => $etag])->assertStatus(304);
     }
 
+    public function test_etag_fraco_e_lista_de_etags_tambem_dao_304(): void
+    {
+        $viewer = User::factory()->create();
+        $user = User::factory()->create();
+        $user->setAvatar($this->webp());
+        $etag = (string) $this->actingAs($viewer)->get($user->avatarUrl())->headers->get('ETag');
+
+        foreach (['W/'.$etag, '"outro", W/'.$etag] as $header) {
+            $this->actingAs($viewer)->get($user->avatarUrl(), ['If-None-Match' => $header])->assertStatus(304);
+        }
+
+        // `*` fica sem 304 de propósito: 200 com o corpo é resposta válida e não serve objeto que sumiu do disco.
+        $this->actingAs($viewer)->get($user->avatarUrl(), ['If-None-Match' => '*'])->assertOk();
+    }
+
     public function test_url_sem_versao_ou_com_versao_velha_revalida_em_vez_de_ficar_imutavel(): void
     {
         $viewer = User::factory()->create();
