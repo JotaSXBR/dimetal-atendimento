@@ -2,6 +2,7 @@
 // e a gravação vai para o Livewire (`$wire`), que valida no servidor. Ver flow-editor/editor.js.
 
 import { BLOCKS } from './flow-editor/nodes.js';
+import { messagesOf, withMessages } from './flow-editor/serialize.js';
 
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('flowEditor', ($wire, config) => {
@@ -13,6 +14,8 @@ document.addEventListener('alpine:init', () => {
             sectors: config.sectors,
             tags: config.tags,
             versions: config.versions,
+            catalog: config.messages,
+            messages: messagesOf(config.graph),
             selected: null,
             errors: [],
             status: '',
@@ -55,6 +58,37 @@ document.addEventListener('alpine:init', () => {
                 this.apply();
             },
 
+            /** Texto próprio da mensagem; em branco volta ao padrão (a chave sai do grafo). */
+            setMessage(key, value) {
+                if (value.trim() === '') {
+                    delete this.messages[key];
+                } else {
+                    this.messages[key] = value;
+                }
+
+                this.dirty = true;
+            },
+
+            resetMessage(key) {
+                delete this.messages[key];
+                this.dirty = true;
+            },
+
+            /** O rodapé do #sair é o único que pode sumir: texto vazio no grafo. */
+            exitHintHidden() {
+                return this.messages.rodape_sair === '';
+            },
+
+            toggleExitHint(hide) {
+                if (hide) {
+                    this.messages.rodape_sair = '';
+                } else {
+                    delete this.messages.rodape_sair;
+                }
+
+                this.dirty = true;
+            },
+
             apply() {
                 api?.updateData(this.selected.id, JSON.parse(JSON.stringify(this.selected.data)));
             },
@@ -78,7 +112,7 @@ document.addEventListener('alpine:init', () => {
                 this.errors = [];
 
                 try {
-                    return await action(api.getGraph());
+                    return await action(withMessages(api.getGraph(), this.messages));
                 } finally {
                     this.busy = false;
                 }
@@ -114,6 +148,7 @@ document.addEventListener('alpine:init', () => {
                 const result = await $wire.restore(versionId);
 
                 await api.load(result.graph);
+                this.messages = messagesOf(result.graph);
                 this.selected = null;
                 this.dirty = false;
                 this.status = 'Versão copiada para o rascunho. Publique para valer.';

@@ -10,6 +10,7 @@ use App\Services\Bot\DefaultWorkflow;
 use App\Services\Bot\WorkflowPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class AutomationEditorTest extends TestCase
@@ -107,6 +108,61 @@ class AutomationEditorTest extends TestCase
 
         $this->assertCount(5, $this->workflow->fresh()?->draft['nodes']);
         $this->assertCount(5, $page->get('result')['graph']['nodes']);
+    }
+
+    public function test_salvar_rascunho_guarda_as_mensagens(): void
+    {
+        $graph = [...DefaultWorkflow::blank(), 'settings' => ['mensagens' => ['opcao_invalida' => 'Tente de novo', 'rodape_sair' => '']]];
+
+        Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])
+            ->call('saveDraft', $graph)
+            ->assertHasNoErrors();
+
+        $this->assertEquals(['opcao_invalida' => 'Tente de novo', 'rodape_sair' => ''], $this->workflow->fresh()?->draft['settings']['mensagens']);
+    }
+
+    /** @return array<string, array{mixed}> */
+    public static function badSettings(): array
+    {
+        return [
+            'settings que nao e lista' => ['texto'],
+            'mensagens que nao e lista' => [['mensagens' => 'texto']],
+            'chave desconhecida' => [['mensagens' => ['magia' => 'x']]],
+            'valor que nao e texto' => [['mensagens' => ['opcao_invalida' => 5]]],
+            'texto grande demais' => [['mensagens' => ['opcao_invalida' => str_repeat('a', 1001)]]],
+        ];
+    }
+
+    #[DataProvider('badSettings')]
+    public function test_mensagens_invalidas_sao_recusadas_e_nada_e_gravado(mixed $settings): void
+    {
+        $before = $this->workflow->fresh()?->draft;
+
+        Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])
+            ->call('saveDraft', [...DefaultWorkflow::blank(), 'settings' => $settings])
+            ->assertHasErrors('graph');
+
+        $this->assertSame($before, $this->workflow->fresh()?->draft);
+    }
+
+    public function test_restaurar_traz_as_mensagens_da_versao(): void
+    {
+        $publisher = app(WorkflowPublisher::class);
+        $publisher->saveDraft($this->workflow, [...DefaultWorkflow::graph(), 'settings' => ['mensagens' => ['opcao_invalida' => 'Da versão']]], $this->user);
+        $version = $publisher->publish($this->workflow->fresh() ?? $this->workflow, $this->user);
+        $publisher->saveDraft($this->workflow, DefaultWorkflow::graph(), $this->user);
+
+        $page = Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->call('restore', $version->id);
+
+        $this->assertSame('Da versão', $page->get('result')['graph']['settings']['mensagens']['opcao_invalida']);
+    }
+
+    public function test_pagina_do_editor_traz_o_painel_de_mensagens(): void
+    {
+        Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])
+            ->assertSee('Mensagens do bot')
+            ->assertSee('encaminhamento_setor')
+            ->assertSee('rodape_sair');
     }
 
     public function test_atendente_nao_chama_as_acoes(): void

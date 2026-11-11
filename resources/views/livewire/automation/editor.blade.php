@@ -92,13 +92,42 @@
                     </template>
 
                     <p x-show="selected.type === 'mensagem' || selected.type === 'pergunta' || selected.type === 'menu' || selected.type === 'menu_setores'" class="text-[11px] text-ink-3">
-                        Variáveis: &#123;&#123;nome&#125;&#125;, &#123;&#123;protocolo&#125;&#125;, &#123;&#123;setor&#125;&#125;, &#123;&#123;horario&#125;&#125;, &#123;&#123;proximo_horario&#125;&#125; e as das perguntas.
+                        Variáveis: &#123;&#123;nome&#125;&#125;, &#123;&#123;empresa&#125;&#125;, &#123;&#123;protocolo&#125;&#125;, &#123;&#123;setor&#125;&#125;, &#123;&#123;horario&#125;&#125;, &#123;&#123;proximo_horario&#125;&#125; e as das perguntas.
                     </p>
 
                     <flux:button size="sm" variant="subtle" icon="trash" x-show="selected.type !== 'inicio'" x-on:click="remove()">Remover bloco</flux:button>
                 </div>
             </template>
-            <p x-show="! selected" class="text-xs text-ink-3">Clique em um bloco para editar. Arraste da bolinha de saída até a entrada de outro bloco para ligar.</p>
+            <div x-show="! selected" class="space-y-3">
+                <p class="text-xs text-ink-3">Clique em um bloco para editar. Arraste da bolinha de saída até a entrada de outro bloco para ligar.</p>
+
+                <hr class="border-line">
+
+                <div class="space-y-3">
+                    <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Mensagens do bot</p>
+                    <p class="text-[11px] text-ink-3">O que o bot diz sozinho. Em branco vale o texto padrão (mostrado cinza). O aviso de um bloco, quando preenchido, vale mais que estes.</p>
+
+                    <template x-for="item in catalog" x-bind:key="item.key">
+                        <div class="text-xs text-ink-2">
+                            <label>
+                                <span x-text="item.label"></span>
+                                <textarea rows="3" class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-bind:placeholder="item.default" x-bind:disabled="item.key === 'rodape_sair' && exitHintHidden()" x-bind:value="messages[item.key] ?? ''" x-on:input="setMessage(item.key, $event.target.value)"></textarea>
+                            </label>
+                            <template x-if="item.key === 'rodape_sair'">
+                                <label class="mt-1 flex items-center gap-2">
+                                    <input type="checkbox" x-bind:checked="exitHintHidden()" x-on:change="toggleExitHint($event.target.checked)">
+                                    <span>Não mostrar a dica (o #sair continua valendo)</span>
+                                </label>
+                            </template>
+                            <button type="button" class="mt-1 text-[11px] text-accent-content underline" x-show="item.key in messages && ! (item.key === 'rodape_sair' && exitHintHidden())" x-on:click="resetMessage(item.key)">Usar o padrão</button>
+                        </div>
+                    </template>
+
+                    <p class="text-[11px] text-ink-3">
+                        Variáveis: &#123;&#123;nome&#125;&#125;, &#123;&#123;empresa&#125;&#125;, &#123;&#123;protocolo&#125;&#125;, &#123;&#123;setor&#125;&#125; (só nos avisos de encaminhamento), &#123;&#123;horario&#125;&#125; e &#123;&#123;proximo_horario&#125;&#125;.
+                    </p>
+                </div>
+            </div>
 
             <hr class="border-line">
 

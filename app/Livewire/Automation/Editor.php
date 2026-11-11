@@ -7,6 +7,7 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
+use App\Services\Bot\BotMessages;
 use App\Services\Bot\Flow\NodeType;
 use App\Services\Bot\InvalidFlowException;
 use App\Services\Bot\WorkflowPublisher;
@@ -121,6 +122,7 @@ class Editor extends Component
             count($nodes) > self::MAX_NODES || count($edges) > self::MAX_EDGES => 'O workflow passou do tamanho máximo.',
             strlen((string) json_encode($graph)) > self::MAX_BYTES => 'O workflow passou do tamanho máximo.',
             array_filter($nodes, fn (mixed $n): bool => ! $this->knownNode($n)) !== [] => 'O workflow tem um bloco de tipo desconhecido.',
+            ! $this->validSettings($graph['settings'] ?? null) => 'As mensagens do bot são inválidas.',
             default => null,
         };
 
@@ -134,12 +136,42 @@ class Editor extends Component
         return false;
     }
 
+    /** `settings` ausente vale; presente, só as mensagens conhecidas, em texto e dentro do limite. */
+    private function validSettings(mixed $settings): bool
+    {
+        if ($settings === null) {
+            return true;
+        }
+
+        $messages = is_array($settings) ? ($settings['mensagens'] ?? []) : null;
+
+        return is_array($messages) && array_filter(
+            $messages,
+            fn (mixed $text, mixed $key): bool => ! in_array($key, BotMessages::KEYS, true) || ! is_string($text) || mb_strlen($text) > BotMessages::MAX_LENGTH,
+            ARRAY_FILTER_USE_BOTH,
+        ) === [];
+    }
+
     /** Bloco com id simples e tipo que o motor conhece. */
     private function knownNode(mixed $node): bool
     {
         return is_array($node)
             && is_string($node['id'] ?? null) && strlen($node['id']) <= 40
             && is_string($node['type'] ?? null) && NodeType::tryFrom($node['type']) !== null;
+    }
+
+    /** @return list<array{key: string, label: string, default: string}> */
+    private function messageCatalog(): array
+    {
+        $labels = [
+            'encaminhamento_setor' => 'Aviso ao entregar à fila (com setor)',
+            'encaminhamento_geral' => 'Aviso ao entregar à fila (sem setor)',
+            'opcao_invalida' => 'Aviso de opção inválida (menu)',
+            'resposta_invalida' => 'Aviso de resposta inválida (pergunta)',
+            'rodape_sair' => 'Dica de como falar com um atendente (fim do menu)',
+        ];
+
+        return array_map(fn (string $key): array => ['key' => $key, 'label' => $labels[$key], 'default' => BotMessages::DEFAULTS[$key]], BotMessages::KEYS);
     }
 
     /** @return list<array{id: int, number: int, at: string, by: string}> */
@@ -170,6 +202,7 @@ class Editor extends Component
                 'sectors' => Sector::query()->orderBy('menu_order')->get(['id', 'name'])->map(fn (Sector $s): array => ['id' => $s->id, 'name' => $s->name])->all(),
                 'tags' => Tag::query()->orderBy('name')->get(['id', 'name'])->map(fn (Tag $t): array => ['id' => $t->id, 'name' => $t->name])->all(),
                 'versions' => $this->versions(),
+                'messages' => $this->messageCatalog(),
             ],
         ]);
     }
