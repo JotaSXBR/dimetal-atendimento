@@ -11,7 +11,7 @@ import { MinimapPlugin } from 'rete-minimap-plugin';
 import { getDOMSocketPosition } from 'rete-render-utils';
 import { LitElement, html } from 'lit';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
-import { History, ICONS, arrange, categoryOf, connectionPath, duplicate, previewOf } from './appearance.js';
+import { History, ICONS, arrange, categoryOf, connectionPath, duplicate, hasPositions, previewOf } from './appearance.js';
 import { BLOCKS, defaultData, outputsFor } from './nodes.js';
 import { fromGraph, toGraph } from './serialize.js';
 
@@ -271,6 +271,7 @@ export async function createEditor(container, graph, hooks) {
     /** Troca o conteúdo do canvas por `source` e recomeça o histórico. */
     async function load(source) {
         await draw(source);
+        if (!hasPositions(source?.nodes)) await api.organize();
         history = new History();
         last = snapshot();
         announce();
