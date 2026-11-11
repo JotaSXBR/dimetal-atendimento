@@ -327,6 +327,15 @@ class SidebarTest extends TestCase
         $this->assertSame('D Dimetal Distribuidora', $brand->getAttribute('aria-label'));
     }
 
+    public function test_o_rotulo_da_marca_ignora_espacos_nas_pontas_do_nome(): void
+    {
+        CompanySettings::save(['name' => '  Dimetal  ']);
+
+        $brand = $this->xpath($this->page(UserRole::ATENDENTE))->query('//a[@data-flux-sidebar-brand]')->item(0);
+
+        $this->assertSame('D Dimetal', $brand?->getAttribute('aria-label'));
+    }
+
     public function test_sem_aviso_com_canal_conectado(): void
     {
         Channel::factory()->connected()->create();

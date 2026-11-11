@@ -23,6 +23,14 @@ class EmojiDataTest extends TestCase
         $this->assertSame('rosto risonho', $smile[0]['annotation'] ?? null);
     }
 
+    public function test_os_dados_de_terceiros_levam_o_aviso_de_licenca(): void
+    {
+        $dir = dirname(__DIR__, 2).'/public/vendor/emoji';
+
+        $this->assertStringContainsString('Apache License', (string) file_get_contents($dir.'/LICENSE'));
+        $this->assertStringContainsString('emoji-picker-element-data', (string) file_get_contents($dir.'/NOTICE.md'));
+    }
+
     public function test_o_seletor_e_o_compositor_nao_referenciam_host_externo(): void
     {
         $root = dirname(__DIR__, 2);

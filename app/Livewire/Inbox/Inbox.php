@@ -113,7 +113,7 @@ class Inbox extends Component
             // Abrir outro ticket (um encerrado, por exemplo) não pode fazer o atual sumir sem volta.
             $this->previousTicketId = $this->ticketId ?? $this->previousTicketId;
             // O campo é um só: o texto de um ticket não pode aparecer (nem ser enviado) em outro. O rascunho fica no navegador.
-            $this->reset('draft');
+            $this->reset('draft', 'showQuickReplies');
         }
 
         $this->ticketId = $ticketId;

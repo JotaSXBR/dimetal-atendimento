@@ -110,6 +110,30 @@ class InboxQuickRepliesButtonTest extends TestCase
         $this->assertStringNotContainsString('emoji-closed', $html);
     }
 
+    public function test_trocar_de_ticket_fecha_a_lista_de_respostas_rapidas(): void
+    {
+        $outro = Ticket::factory()->create([
+            'channel_id' => $this->ticket->channel_id,
+            'contact_id' => Contact::factory()->create()->id,
+            'status' => TicketStatus::EM_ATENDIMENTO,
+            'assigned_user_id' => $this->me->id,
+        ]);
+
+        $this->inbox()->call('toggleQuickReplies')->assertSet('showQuickReplies', true)
+            ->call('select', $outro->id)->assertSet('showQuickReplies', false);
+    }
+
+    public function test_os_gatilhos_da_lista_declaram_um_popup_generico_e_nao_um_listbox(): void
+    {
+        $html = $this->inbox()->html();
+
+        // A lista é de botões comuns (cada um insere um texto), não um `listbox` com opções selecionáveis.
+        foreach (['Respostas rápidas', 'Mais ações do compositor'] as $label) {
+            $this->assertSame(1, preg_match('/<button[^>]*aria-label="'.preg_quote($label, '/').'"[^>]*>/', $html, $m), $label);
+            $this->assertStringContainsString('aria-haspopup="true"', $m[0], $label);
+        }
+    }
+
     public function test_o_atalho_barra_continua_listando_sugestoes(): void
     {
         QuickReply::query()->create(['shortcut' => 'ola', 'body' => 'Olá, tudo bem?']);
