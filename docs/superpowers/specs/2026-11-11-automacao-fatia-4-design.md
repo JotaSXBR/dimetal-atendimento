@@ -20,6 +20,7 @@ O dono opera a automação no beta praticamente como vai operar em produção, e
 
 - Integração com ERP, API externa, webhook, pesquisa de satisfação (continua fora, como na spec da leva). Por isso **nenhum modelo promete resposta automática de status, boleto ou agenda**: eles coletam e entregam.
 - Rodízio de atribuição entre quem está online (fica para depois; "Atribuir a" é pessoa fixa).
+- **Etiquetas do contato** (hoje a etiqueta é só do ticket; o dono quer etiqueta também no contato, como em outros inboxes). Fica **anotado para uma fatia própria**: pede coluna ou tabela nova, tela de contato, filtro em Contatos e decisão sobre o que acontece com a etiqueta do ticket. Quando existir, a Condição "tem a etiqueta X" e o Etiquetar com destino (ticket ou contato) entram juntos.
 - Salvar o próprio fluxo como modelo, exportar e importar modelo (feature à parte).
 - Horário por canal, tema claro e QA de acessibilidade completo (leva C).
 - Mudar o comportamento de qualquer workflow já publicado ou o texto que o cliente recebe hoje.
@@ -36,7 +37,8 @@ O dono opera a automação no beta praticamente como vai operar em produção, e
 - Laravel 13, Livewire 4.4, Flux 2, Rete.js 2. Sem dependência nova (a validação de CNPJ é interna: o cálculo é módulo 11 de poucas linhas, verificado com exemplo oficial).
 - O grafo publicado é versionado: toda chave nova é **opcional** e o padrão é o comportamento de hoje. Versões já publicadas continuam válidas e rodando igual.
 - O motor é um só, em produção e no simulador.
-- `ticket_notes.user_id` é `NOT NULL` hoje. A nota do bot não tem autor humano: a coluna passa a aceitar nulo (migração que só relaxa a regra, compatível com o código antigo) e a tela mostra "Bot" como autor; nota de bot não é editável nem apagável por usuário.
+- **Nomes:** a automação por blocos é o **Bot**; quando houver IA, ela se chamará **IA** (ou Agente) na interface e nos dados. Nada novo mistura os dois nomes.
+- `ticket_notes.user_id` é `NOT NULL` hoje. A nota automática não tem autor humano. Em vez de só aceitar nulo (que não diz *quem* escreveu), a nota ganha uma **origem** própria: coluna `origin` (texto, padrão `equipe`, valores `equipe` e `bot` agora; `ia` quando a IA existir) e `user_id` passa a aceitar nulo (as duas mudanças são compatíveis com o código antigo: linhas existentes ficam `equipe` com autor). Regra: origem `equipe` exige autor; as demais não têm autor. A tela mostra o rótulo da origem ("Bot", depois "IA") no lugar do nome; nota que não é da equipe não é editável nem apagável por usuário. Enum `NoteOrigin` com `label()`, no padrão dos outros enums do app.
 - Texto novo para o cliente nasce igual ao de hoje; textos de modelo são texto de modelo (o dono edita depois).
 - Sem referência a projetos ou bibliotecas de terceiros em código, commit e PR.
 
@@ -62,7 +64,7 @@ O dono opera a automação no beta praticamente como vai operar em produção, e
 
 **Condição nova.** `condicao.kind` ganha `nome` ("o contato já tem nome") e `retorno` ("já houve ticket anterior deste contato"). Mesmas portas `true`/`false`.
 
-**Nota para a equipe.** Novo tipo `nota` (porta `out`, texto com variáveis `{{...}}`, no máximo 1000 caracteres, obrigatório). Grava `TicketNote` sem autor humano. Entra em `NodeType`, validador (texto), motor, editor e paleta (categoria Ações).
+**Nota para a equipe.** Novo tipo `nota` (porta `out`, texto com variáveis `{{...}}`, no máximo 1000 caracteres, obrigatório). Grava `TicketNote` com origem `bot` e sem autor. Entra em `NodeType`, validador (texto), motor, editor e paleta (categoria Ações).
 
 ## Fatia 4b: efeitos e simulador
 
@@ -108,9 +110,9 @@ Cada modelo é registrado com chave, nome, descrição honesta do que faz e do q
 
 ## Decisões minhas (custo se erradas)
 
-- **Condição por etiqueta fica de fora:** a etiqueta é do ticket (nasce a cada conversa) e o contato não tem etiqueta; a condição teria pouco uso. Custo: se o dono quiser, é um `kind` a mais.
+- **Condição por etiqueta fica de fora desta fatia:** a etiqueta é do ticket (nasce a cada conversa), então a condição teria pouco uso. O dono quer etiqueta também no contato; isso é uma fatia própria (ver Não objetivos) e a condição entra com ela. Custo: nenhum agora.
 - **Resposta validada guardada já formatada:** o atendente lê direto. Custo: quem quiser o número cru para outra coisa precisa limpar a máscara.
-- **Nota do bot sem autor (coluna nula):** a alternativa era um usuário "Bot" fictício, que polui listas de usuários e permissões. Custo: telas que supõem autor precisam tratar nulo; o construtor varre os usos.
+- **Origem da nota em coluna própria (`origin`), autor nulo para bot e IA:** a alternativa era um usuário "Bot" fictício, que polui listas de usuários e permissões, e um autor nulo sem origem não distingue Bot de IA. Custo: telas que supõem autor precisam tratar nulo e ler a origem; o construtor varre os usos (Transcript, política, fábrica de teste).
 - **Seletor de horário no simulador:** não estava pedido, mas sem ele não dá para testar o ramo "fora do expediente" fora do expediente. Custo: um valor a mais passado ao motor de teste.
 - **Segmentos e setores padrão:** a lista de oito é minha proposta, e os setores são os cinco padrões da instalação. Custo: segmento que o dono não atende vira peso morto na galeria; ele pode pedir para tirar.
 - **Três fatias, um planejamento cada:** 4a blocos, 4b efeitos e simulador, 4c galeria, nessa ordem, para o simulador já cobrir os blocos novos e os modelos serem testados por ele.
