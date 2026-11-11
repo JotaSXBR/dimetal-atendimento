@@ -35,7 +35,11 @@ use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Throwable;
 
-/** O bot de verdade: grava, envia e muda o ticket. */
+/**
+ * O bot de verdade: grava, envia e muda o ticket.
+ *
+ * @SuppressWarnings("PHPMD.TooManyPublicMethods") a interface tem um método por tipo de efeito, de propósito
+ */
 final class LiveEffects implements BotEffects
 {
     public function __construct(private readonly Ticket $ticket) {}
@@ -138,16 +142,22 @@ final class LiveEffects implements BotEffects
      */
     public function enterQueue(?Sector $sector, ?User $assignTo): ?int
     {
-        $canAssign = $assignTo !== null && $assignTo->active && $assignTo->canHandleSector($sector?->id);
+        $user = self::assignable($assignTo, $sector);
 
-        $this->queue($sector, announce: ! $canAssign);
-        $assigned = $canAssign ? $this->assign($assignTo) : null;
+        $this->queue($sector, announce: $user === null);
+        $assigned = $user !== null ? $this->assign($user) : null;
 
-        if ($canAssign && $assigned === null) {
+        if ($user !== null && $assigned === null) {
             app(AlertDispatcher::class)->queued($this->ticket->refresh());
         }
 
         return $assigned;
+    }
+
+    /** A pessoa, se ela existe, está ativa e atende o setor (ticket sem setor é de todos); senão nulo. */
+    public static function assignable(?User $user, ?Sector $sector): ?User
+    {
+        return $user !== null && $user->active && $user->canHandleSector($sector?->id) ? $user : null;
     }
 
     public function logHandoff(string $reason, ?Sector $sector, ?int $assignedUserId): void
