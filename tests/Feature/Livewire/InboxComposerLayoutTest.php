@@ -70,11 +70,11 @@ class InboxComposerLayoutTest extends TestCase
         $this->assertStringNotContainsString('@max-xl:basis-full', $html, 'as abas não disputam mais a linha do campo');
     }
 
-    public function test_a_linha_de_ferramentas_tem_anexo_campo_e_mic_nessa_ordem(): void
+    public function test_a_linha_de_ferramentas_tem_emoji_anexo_respostas_campo_e_mic_nessa_ordem(): void
     {
         $html = $this->inbox()->html();
 
-        $this->assertInOrder($html, ['data-testid="composer-tools"', 'aria-label="Anexar arquivo"', 'aria-label="Mensagem"', 'aria-label="Gravar áudio"', 'aria-label="Enviar"']);
+        $this->assertInOrder($html, ['data-testid="composer-tools"', 'aria-label="Emoji"', 'aria-label="Anexar arquivo"', 'aria-label="Respostas rápidas"', 'aria-label="Mensagem"', 'aria-label="Gravar áudio"', 'aria-label="Enviar"']);
     }
 
     public function test_sem_arquivo_o_mic_e_o_enviar_alternam_por_filled(): void

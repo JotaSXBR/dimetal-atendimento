@@ -10,6 +10,7 @@ import './attach-tray';
 import './voice-recorder';
 import './typing-presence';
 import './composer-mode';
+import './emoji-picker';
 import './client-presence';
 import './quote-jump';
 import './alerts';
