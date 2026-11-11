@@ -52,6 +52,8 @@ O dono opera a automação no beta praticamente como vai operar em produção, e
 
 **Atribuir a.** `transferir.data.atribuir_a` (id de usuário, opcional). Depois de o ticket entrar na fila (`enterQueue`), o motor tenta assumi-lo para a pessoa pelo caminho de `ClaimTicket` (atômico). Fica só na fila do setor, sem erro, se a pessoa estiver inativa, não atender o setor (`canHandleSector`) ou o ticket já tiver dono. A publicação recusa pessoa inexistente ou inativa (o validador recebe a lista de usuários ativos, como já recebe setores e etiquetas). O aviso de "ticket na fila" não deve tocar para todos quando o ticket nasce atribuído: o construtor confere como o alerta de fila e o de atribuição se comportam e escolhe o aviso certo.
 
+**Fila geral no Transferir.** `transferir.data.fila_geral` (booleano, opcional). Marcado, ignora o setor e entrega o ticket à fila geral, sem setor, que quem vê tudo e o atendente sem setor enxergam. É o destino do ramo "Fechado" do horário: o SLA já é contado em segundos de expediente (`SlaClock` com `BusinessHours::addBusinessSeconds`), então o prazo só começa quando o expediente abre. Pode combinar com "Atribuir a". O modelo "Atendimento com horário" usa a fila geral fora do expediente.
+
 **Horário na paleta.** Item "Horário de atendimento" que cria uma `condicao` com `kind: horario`. As portas continuam `true` e `false` no grafo (versões publicadas seguem válidas); o canvas e o painel as rotulam "Aberto" e "Fechado" quando o `kind` é horário. O modelo "Atendimento com horário" passa a usá-lo.
 
 **Pergunta com validação.** `validacao` ganha `cnpj`, `cpf`, `cep`, `telefone`, `data`. Regras:
