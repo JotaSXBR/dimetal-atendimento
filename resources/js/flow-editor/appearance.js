@@ -122,7 +122,7 @@ export function errorNodeIds(errors, nodeIds) {
     return found;
 }
 
-const COL = 300;
+const COL = 340;
 const ROW = 150;
 
 /**
@@ -195,6 +195,20 @@ export function arrange(nodes, edges) {
     }
 
     return positions;
+}
+
+/**
+ * O caminho da ligação entre a saída `start` e a entrada `end` (pontos no espaço do canvas): curva de Bézier com tangentes
+ * horizontais, que termina `gap` antes da bolinha de entrada para a seta aparecer, e com folga mínima para a ligação curta (ou
+ * a que volta) não ficar rígida.
+ */
+export function connectionPath(start, end, gap = 9) {
+    if (!start || !end) return '';
+
+    const endX = end.x - gap;
+    const reach = Math.max(Math.abs(endX - start.x) * 0.5, 70);
+
+    return `M ${start.x} ${start.y} C ${start.x + reach} ${start.y}, ${endX - reach} ${end.y}, ${endX} ${end.y}`;
 }
 
 /** Cópia do bloco para o ponto 40 px abaixo e à direita, sem ligações; o Início não se duplica. */

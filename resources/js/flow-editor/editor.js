@@ -11,7 +11,7 @@ import { MinimapPlugin } from 'rete-minimap-plugin';
 import { getDOMSocketPosition } from 'rete-render-utils';
 import { LitElement, html } from 'lit';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
-import { History, ICONS, arrange, categoryOf, duplicate, previewOf } from './appearance.js';
+import { History, ICONS, arrange, categoryOf, connectionPath, duplicate, previewOf } from './appearance.js';
 import { BLOCKS, defaultData, outputsFor } from './nodes.js';
 import { fromGraph, toGraph } from './serialize.js';
 
@@ -78,10 +78,11 @@ function nodeTemplate(node, emit) {
     </div>`;
 }
 
+// A espessura acompanha o zoom (`--flow-zoom`, posta no canvas): nunca menos de 2,5 px no canvas nem menos de 1,6 px na tela.
 const CONNECTION_CSS = `
     .flow-conn { position: absolute; overflow: visible !important; width: 9999px; height: 9999px; pointer-events: none; color: var(--color-ink-3, #78716c); }
-    .flow-conn-line { fill: none; stroke: currentColor; stroke-width: 2.5px; }
-    .flow-conn-hit { fill: none; stroke: transparent; stroke-width: 16px; pointer-events: stroke; }
+    .flow-conn-line { fill: none; stroke: currentColor; stroke-width: max(2.5px, calc(1.6px / var(--flow-zoom, 1))); stroke-linecap: round; transition: stroke 0.12s; }
+    .flow-conn-hit { fill: none; stroke: transparent; stroke-width: max(16px, calc(10px / var(--flow-zoom, 1))); pointer-events: stroke; }
     .flow-conn:hover { color: var(--color-accent-content, #854d0e); }
 `;
 
@@ -114,12 +115,14 @@ if (!customElements.get('flow-node')) {
 }
 
 /** A linha: o traço que o Rete calcula, com uma faixa invisível mais larga para o mouse acertar e uma seta no fim. */
-function connectionTemplate({ path }) {
+function connectionTemplate({ start, end, path }) {
+    const d = connectionPath(start, end) || path;
+
     // A linha vive no shadow DOM do wrapper do Rete: o CSS global não chega aqui, então o estilo vai junto.
     return html`<style>${CONNECTION_CSS}</style><svg class="flow-conn" data-testid="connection">
-        <defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-        <path class="flow-conn-hit" d=${path}/>
-        <path class="flow-conn-line" d=${path} marker-end="url(#flow-arrow)"/>
+        <defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L10 5L0 9z" fill="currentColor"/></marker></defs>
+        <path class="flow-conn-hit" d=${d}/>
+        <path class="flow-conn-line" d=${d} marker-end="url(#flow-arrow)"/>
     </svg>`;
 }
 
@@ -173,6 +176,7 @@ export async function createEditor(container, graph, hooks) {
     area.use(connection);
     area.use(render);
     AreaExtensions.simpleNodesOrder(area);
+    AreaExtensions.restrictor(area, { scaling: { min: 0.15, max: 2.5 } });
 
     // O minimapa é um extra: se não carregar, o editor abre do mesmo jeito.
     try {
@@ -214,6 +218,7 @@ export async function createEditor(container, graph, hooks) {
             const { x, y, k } = area.area.transform;
 
             container.style.backgroundSize = `${24 * k}px ${24 * k}px`;
+            container.style.setProperty('--flow-zoom', String(k));
             container.style.backgroundPosition = `${x}px ${y}px`;
         } else if (context.type === 'nodetranslated') {
             changed();
@@ -332,8 +337,10 @@ export async function createEditor(container, graph, hooks) {
         /** Aproxima (factor > 1) ou afasta (< 1) a partir do centro do canvas. */
         async zoomBy(factor) {
             const box = container.getBoundingClientRect();
+            const { x, y, k } = area.area.transform;
 
-            await area.area.zoom(area.area.transform.k * factor, box.width / 2, box.height / 2);
+            // O segundo e o terceiro argumento do Rete são o quanto a tela desliza, não o ponto do zoom: para firmar o centro, desliza (centro − posição) × (1 − fator).
+            await area.area.zoom(k * factor, (box.width / 2 - x) * (1 - factor), (box.height / 2 - y) * (1 - factor));
         },
 
         async fit() {
