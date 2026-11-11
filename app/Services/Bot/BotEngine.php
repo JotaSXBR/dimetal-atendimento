@@ -72,7 +72,7 @@ class BotEngine
 
         $text = $message->type === 'text' ? trim($message->body) : '';
 
-        if (mb_strtolower($text) === '#sair') {
+        if (ChoiceReply::wantsOut($text)) {
             $this->handoff($session, 'sair');
 
             return;
@@ -108,10 +108,10 @@ class BotEngine
             $sector = $to !== null && $to->status->receivesTickets() ? $to : $this->defaultSector();
 
             if ($reason !== 'fluxo') {
-                $this->say($ticket, Vars::render(
-                    $sector !== null ? 'Vou encaminhar você para o setor {{setor}}. Seu protocolo é {{protocolo}}.' : 'Vou encaminhar você para um atendente. Seu protocolo é {{protocolo}}.',
-                    ['setor' => $sector !== null ? $sector->name : '', 'protocolo' => (string) $ticket->protocol],
-                ));
+                $flow = FlowGraph::fromArray($locked->version()->firstOrFail()->graph);
+                $vars = [...(new BotRun($this, $locked, $ticket, $flow))->vars(), 'setor' => $sector !== null ? $sector->name : ''];
+
+                $this->say($ticket, Vars::render(BotMessages::text($flow, $sector !== null ? 'encaminhamento_setor' : 'encaminhamento_geral'), $vars));
             }
 
             $this->enterQueue($ticket, $sector);

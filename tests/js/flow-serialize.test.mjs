@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BLOCKS, defaultData, outputsFor } from '../../resources/js/flow-editor/nodes.js';
-import { fromGraph, toGraph } from '../../resources/js/flow-editor/serialize.js';
+import { fromGraph, messagesOf, toGraph, withMessages } from '../../resources/js/flow-editor/serialize.js';
 
 const graph = {
     nodes: [
@@ -54,4 +54,25 @@ test('todo bloco da paleta tem rótulo e dados iniciais; só o início não entr
     assert.equal(defaultData('pergunta').validacao, 'texto');
     assert.equal(BLOCKS.inicio.palette, false);
     assert.equal(BLOCKS.mensagem.palette, true);
+});
+
+test('withMessages junta as mensagens ao grafo sem mexer em blocos e ligações', () => {
+    const out = withMessages(graph, { opcao_invalida: 'Tente de novo' });
+
+    assert.deepEqual(out.nodes, graph.nodes);
+    assert.deepEqual(out.edges, graph.edges);
+    assert.deepEqual(out.settings, { mensagens: { opcao_invalida: 'Tente de novo' } });
+});
+
+test('withMessages descarta o que não é texto e mantém o rodapé vazio', () => {
+    const out = withMessages(graph, { a: 'ok', b: undefined, c: null, d: 5, e: ['x'], rodape_sair: '' });
+
+    assert.deepEqual(out.settings.mensagens, { a: 'ok', rodape_sair: '' });
+});
+
+test('messagesOf devolve as mensagens do grafo ou um objeto vazio', () => {
+    assert.deepEqual(messagesOf(graph), {});
+    assert.deepEqual(messagesOf({ ...graph, settings: { mensagens: { a: 'x' } } }), { a: 'x' });
+    assert.deepEqual(messagesOf({ ...graph, settings: { mensagens: 'quebrado' } }), {});
+    assert.deepEqual(messagesOf(null), {});
 });

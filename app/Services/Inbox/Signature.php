@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Settings\CompanySettings;
 
 /**
- * A assinatura do atendente nas mensagens do painel (como no Chatwoot): `*Jessé @ Dimetal:*`, linha em branco e o texto.
+ * A assinatura do atendente nas mensagens do painel (como no Chatwoot): `*Jessé @ Dimetal:*` e o texto na linha de baixo.
  * Só vale com a assinatura ligada na empresa e por quem envia. A mensagem é gravada já assinada: o eco `fromMe` do WhatsApp
  * traz o mesmo texto e casa com a linha.
  */
@@ -28,10 +28,10 @@ final class Signature
         return self::place($text, $signature, CompanySettings::signaturePosition());
     }
 
-    /** O texto com a assinatura no início ou no fim, separados por uma linha em branco. */
+    /** O texto com a assinatura no início ou no fim, na linha de cima ou de baixo, sem linha em branco no meio. */
     public static function place(string $text, string $signature, string $position): string
     {
-        return $position === 'fim' ? $text."\n\n".$signature : $signature."\n\n".$text;
+        return $position === 'fim' ? $text."\n".$signature : $signature."\n".$text;
     }
 
     public static function render(string $template, string $agent, string $sector, string $company): string

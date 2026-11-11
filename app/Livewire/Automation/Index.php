@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
 use App\Services\Bot\WorkflowPublisher;
+use App\Services\Bot\WorkflowTemplates;
 use DomainException;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Title;
@@ -19,7 +20,7 @@ class Index extends Component
 
     public string $newName = '';
 
-    public bool $fromTemplate = true;
+    public string $template = WorkflowTemplates::STANDARD;
 
     /** O workflow com a lista de versões aberta. */
     public ?int $expanded = null;
@@ -41,9 +42,8 @@ class Index extends Component
             'newName.max' => 'O nome pode ter até 120 caracteres.',
         ]);
 
-        $publisher->create($this->newName, $this->user(), $this->fromTemplate);
-        $this->reset('showNew', 'newName');
-        $this->fromTemplate = true;
+        $publisher->create($this->newName, $this->user(), $this->template);
+        $this->reset('showNew', 'newName', 'template');
         $this->error = null;
     }
 
@@ -109,11 +109,31 @@ class Index extends Component
         return $user;
     }
 
+    /**
+     * Resumo do rascunho para o cartão: quantos blocos e quantos setores ele cita (os fixos dos blocos Transferir, mais um
+     * se há Menu de setores, que leva ao setor que o cliente escolher).
+     *
+     * @param  array<string, mixed>  $draft
+     * @return array{nodes: int, sectors: int}
+     */
+    private function summary(array $draft): array
+    {
+        $raw = $draft['nodes'] ?? [];
+        $nodes = collect(is_array($raw) ? $raw : []);
+        $fixed = $nodes->where('type', 'transferir')->pluck('data.setor_id')->filter(fn ($id): bool => $id !== null && $id !== '')->unique()->count();
+
+        return ['nodes' => $nodes->count(), 'sectors' => $fixed + ($nodes->contains('type', 'menu_setores') ? 1 : 0)];
+    }
+
     public function render(): View
     {
+        $workflows = Workflow::query()->withCount('versions')->with(['versions' => fn ($q) => $q->with('publisher')->orderByDesc('number')])->orderBy('name')->get();
+
         return view('livewire.automation.index', [
-            'workflows' => Workflow::query()->withCount('versions')->with(['versions' => fn ($q) => $q->with('publisher')->orderByDesc('number')])->orderBy('name')->get(),
+            'workflows' => $workflows,
+            'summaries' => $workflows->mapWithKeys(fn (Workflow $workflow): array => [$workflow->id => $this->summary($workflow->draft)]),
             'channels' => Channel::query()->orderBy('name')->get(),
+            'templates' => WorkflowTemplates::all(),
         ]);
     }
 }
