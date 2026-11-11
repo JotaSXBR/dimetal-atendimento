@@ -3,6 +3,7 @@
     {{-- O x-data carrega o grafo da carga da página; sem isto o Livewire reescreve o atributo a cada gravação e o Alpine recria o editor (perde a seleção). --}}
     wire:ignore.self
     x-data="flowEditor($wire, @js($config))"
+    x-on:keydown.window="shortcut($event)"
 >
     <header class="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-4 py-3">
         <a href="{{ route('automacao') }}" wire:navigate class="text-sm text-accent-content hover:underline">← Automação</a>
@@ -48,10 +49,37 @@
             <div wire:ignore class="flow-canvas absolute inset-0 overflow-hidden bg-canvas" x-ref="canvas" aria-label="Canvas do workflow"></div>
 
             <div class="absolute start-3 top-3 z-10 flex flex-wrap gap-1" role="toolbar" aria-label="Controles do canvas">
+                <flux:button size="sm" x-on:click="undo()" x-bind:disabled="failed || !canUndo">Desfazer</flux:button>
+                <flux:button size="sm" x-on:click="redo()" x-bind:disabled="failed || !canRedo">Refazer</flux:button>
                 <flux:button size="sm" x-on:click="zoom(1 / 1.25)" x-bind:disabled="failed" aria-label="Afastar">−</flux:button>
                 <flux:button size="sm" x-on:click="zoom(1.25)" x-bind:disabled="failed" aria-label="Aproximar">+</flux:button>
                 <flux:button size="sm" x-on:click="fit()" x-bind:disabled="failed">Centralizar</flux:button>
                 <flux:button size="sm" x-on:click="organize()" x-bind:disabled="failed">Organizar blocos</flux:button>
+            </div>
+
+            {{-- Menu do clique direito: no fundo adiciona bloco; num bloco duplica ou apaga (o Início não). --}}
+            <div x-show="menu" x-cloak x-on:click.outside="menu = null" x-on:keydown.escape.window="menu = null" role="menu" aria-label="Ações do canvas"
+                 class="fixed z-50 flex w-52 flex-col gap-0.5 rounded-md border border-line bg-surface p-1 shadow-lg"
+                 x-bind:style="menu ? `left:${menu.x}px;top:${menu.y}px` : ''">
+                <template x-if="menu && menu.nodeId">
+                    <div class="flex flex-col gap-0.5">
+                        <template x-if="menu.type === 'inicio'"><p class="px-2 py-1 text-xs text-ink-3">O Início não se duplica nem se apaga.</p></template>
+                        <template x-if="menu.type !== 'inicio'">
+                            <div class="flex flex-col gap-0.5">
+                                <flux:button size="sm" variant="ghost" class="w-full justify-start" x-on:click="menuDuplicate()">Duplicar</flux:button>
+                                <flux:button size="sm" variant="ghost" class="w-full justify-start" x-on:click="menuRemove()">Apagar</flux:button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <template x-if="menu && !menu.nodeId">
+                    <div class="flex flex-col gap-0.5">
+                        <p class="px-2 py-1 font-mono text-[10px] tracking-wider text-ink-3 uppercase">Adicionar bloco</p>
+                        <template x-for="block in palette" x-bind:key="block.type">
+                            <flux:button size="sm" variant="ghost" class="w-full justify-start" x-on:click="menuAdd(block.type)" x-text="block.label"></flux:button>
+                        </template>
+                    </div>
+                </template>
             </div>
         </div>
 

@@ -26,6 +26,9 @@ document.addEventListener('alpine:init', () => {
             dirty: false,
             busy: false,
             failed: false,
+            menu: null,
+            canUndo: false,
+            canRedo: false,
 
             async init() {
                 try {
@@ -34,6 +37,8 @@ document.addEventListener('alpine:init', () => {
                     api = await createEditor(this.$refs.canvas, config.graph, {
                         onSelect: (node) => (this.selected = node),
                         onChange: () => (this.dirty = true),
+                        onHistory: (state) => Object.assign(this, state),
+                        onContextMenu: (info) => (this.menu = info),
                         lookups: { sectors: config.sectors, tags: config.tags },
                     });
                 } catch (error) {
@@ -96,6 +101,61 @@ document.addEventListener('alpine:init', () => {
 
             apply() {
                 api?.updateData(this.selected.id, JSON.parse(JSON.stringify(this.selected.data)));
+            },
+
+            undo() {
+                api?.undo();
+            },
+
+            redo() {
+                api?.redo();
+            },
+
+            duplicate(id) {
+                api?.duplicateNode(id);
+            },
+
+            // Menu de clique direito: cada item age e fecha o menu.
+            menuAdd(type) {
+                api?.addNode(type, { x: this.menu.x, y: this.menu.y });
+                this.menu = null;
+            },
+
+            menuDuplicate() {
+                this.duplicate(this.menu.nodeId);
+                this.menu = null;
+            },
+
+            menuRemove() {
+                api?.removeNode(this.menu.nodeId);
+                this.menu = null;
+            },
+
+            /** Atalhos do canvas; em campo de texto a tecla é do campo. */
+            shortcut(event) {
+                const target = event.target;
+
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName) || target?.isContentEditable) {
+                    return;
+                }
+
+                const mod = event.ctrlKey || event.metaKey;
+                const key = event.key.toLowerCase();
+                const movable = this.selected && this.selected.type !== 'inicio';
+
+                if (!mod && (key === 'delete' || key === 'backspace') && movable) {
+                    this.remove();
+                } else if (mod && key === 'z' && !event.shiftKey) {
+                    this.undo();
+                } else if (mod && (key === 'y' || (key === 'z' && event.shiftKey))) {
+                    this.redo();
+                } else if (mod && key === 'd' && movable) {
+                    this.duplicate(this.selected.id);
+                } else {
+                    return;
+                }
+
+                event.preventDefault();
             },
 
             zoom(factor) {

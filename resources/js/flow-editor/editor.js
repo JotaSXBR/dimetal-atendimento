@@ -11,7 +11,7 @@ import { MinimapPlugin } from 'rete-minimap-plugin';
 import { getDOMSocketPosition } from 'rete-render-utils';
 import { LitElement, html } from 'lit';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
-import { ICONS, arrange, categoryOf, previewOf } from './appearance.js';
+import { History, ICONS, arrange, categoryOf, duplicate, previewOf } from './appearance.js';
 import { BLOCKS, defaultData, outputsFor } from './nodes.js';
 import { fromGraph, toGraph } from './serialize.js';
 
@@ -67,7 +67,7 @@ function nodeTemplate(node, emit) {
     const inputs = Object.entries(node.inputs).map(([key, input]) => (input ? socket('input', key, input.socket) : null));
     const outputs = Object.entries(node.outputs).map(([key, output]) => (output ? html`<div class="flow-out" data-testid=${`output-${key}`}><span class="flow-out-label">${output.label}</span>${socket('output', key, output.socket)}</div>` : null));
 
-    return html`<div class="flow-node ${node.selected ? 'is-selected' : ''} ${node.invalid ? 'is-invalid' : ''}" data-category=${categoryOf(node.type)} data-testid="node">
+    return html`<div data-node-id=${node.id} class="flow-node ${node.selected ? 'is-selected' : ''} ${node.invalid ? 'is-invalid' : ''}" data-category=${categoryOf(node.type)} data-testid="node">
         <div class="flow-head">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${unsafeSVG(ICONS[BLOCKS[node.type]?.icon] ?? '')}</svg>
             <span class="flow-title" data-testid="title">${node.label}</span>
@@ -131,6 +131,25 @@ export async function createEditor(container, graph, hooks) {
     const selector = AreaExtensions.selector();
     const selection = AreaExtensions.selectableNodes(area, selector, { accumulating: AreaExtensions.accumulateOnCtrl() });
     let loading = false;
+    let history = new History();
+    let last = ''; // o último estado guardado no histórico (nós e ligações; as mensagens do bot ficam de fora)
+    let timer = null;
+    const newId = () => `n${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
+    const snapshot = () => JSON.stringify(api.getGraph());
+    const announce = () => hooks.onHistory?.({ canUndo: history.canUndo(), canRedo: history.canRedo() });
+
+    /** Guarda o estado anterior no histórico se algo mudou desde o último registro. */
+    const commit = () => {
+        clearTimeout(timer);
+
+        const now = snapshot();
+
+        if (now !== last) {
+            history.push(last);
+            last = now;
+            announce();
+        }
+    };
 
     const lookups = hooks.lookups ?? {};
 
@@ -161,6 +180,8 @@ export async function createEditor(container, graph, hooks) {
     const changed = () => {
         if (!loading) {
             hooks.onChange?.();
+            clearTimeout(timer);
+            timer = setTimeout(commit, 300);
         }
     };
 
@@ -200,7 +221,7 @@ export async function createEditor(container, graph, hooks) {
 
     const describe = (node) => (node ? { id: node.id, type: node.type, data: structuredClone(node.data) } : null);
 
-    async function load(source) {
+    async function draw(source, { fit = true } = {}) {
         loading = true;
         await editor.clear();
 
@@ -223,12 +244,30 @@ export async function createEditor(container, graph, hooks) {
         }
 
         loading = false;
-        await AreaExtensions.zoomAt(area, editor.getNodes());
+
+        if (fit) {
+            await AreaExtensions.zoomAt(area, editor.getNodes());
+        }
     }
 
-    await load(graph);
+    /** Troca o conteúdo do canvas por `source` e recomeça o histórico. */
+    async function load(source) {
+        await draw(source);
+        history = new History();
+        last = snapshot();
+        announce();
+    }
 
-    return {
+    /** Volta (ou avança) para um estado do histórico sem fechar o enquadramento atual. */
+    async function restore(state) {
+        await draw(JSON.parse(state), { fit: false });
+        last = state;
+        hooks.onSelect?.(null);
+        hooks.onChange?.();
+        announce();
+    }
+
+    const api = {
         getGraph() {
             const nodes = editor.getNodes().map((node) => {
                 const position = area.nodeViews.get(node.id)?.position ?? { x: 0, y: 0 };
@@ -241,14 +280,16 @@ export async function createEditor(container, graph, hooks) {
 
         load,
 
-        async addNode(type) {
+        /** Cria o bloco no ponto da tela dado (clique direito) ou, sem ponto, perto do centro do canvas. */
+        async addNode(type, at = null) {
             const box = container.getBoundingClientRect();
             const { x, y, k } = area.area.transform;
-            const id = `n${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
+            const id = newId();
             const node = new FlowNode(id, type, defaultData(type), lookups);
+            const screen = at ? { x: at.x - box.left, y: at.y - box.top } : { x: box.width / 2 + Math.random() * 40 - 105, y: box.height / 2 + Math.random() * 40 - 60 };
 
             await editor.addNode(node);
-            await area.translate(id, { x: (box.width / 2 - x) / k - 105 + Math.random() * 40, y: (box.height / 2 - y) / k - 60 + Math.random() * 40 });
+            await area.translate(id, { x: (screen.x - x) / k, y: (screen.y - y) / k });
             await selection.select(id, false);
             hooks.onSelect?.(describe(node));
 
@@ -329,8 +370,63 @@ export async function createEditor(container, graph, hooks) {
             }
         },
 
+        async undo() {
+            clearTimeout(timer);
+            commit();
+
+            const state = history.undo(last);
+
+            if (state !== null) {
+                await restore(state);
+            }
+        },
+
+        async redo() {
+            clearTimeout(timer);
+            commit();
+
+            const state = history.redo(last);
+
+            if (state !== null) {
+                await restore(state);
+            }
+        },
+
+        /** Copia o bloco (sem as ligações) para um pouco abaixo e à direita, e o seleciona. */
+        async duplicateNode(id) {
+            const node = editor.getNode(id);
+            const position = area.nodeViews.get(id)?.position;
+            const copy = node && position ? duplicate({ id, type: node.type, x: position.x, y: position.y, data: node.data }, newId()) : null;
+
+            if (!copy) {
+                return null;
+            }
+
+            const clone = new FlowNode(copy.id, copy.type, copy.data, lookups);
+
+            await editor.addNode(clone);
+            await area.translate(copy.id, { x: copy.x, y: copy.y });
+            await selection.select(copy.id, false);
+            hooks.onSelect?.(describe(clone));
+
+            return copy.id;
+        },
+
         destroy() {
+            clearTimeout(timer);
             area.destroy();
         },
     };
+
+    await load(graph);
+
+    // Clique direito: o menu é do Alpine; aqui só se diz onde e sobre qual bloco.
+    container.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        const nodeId = event.target.closest?.('.flow-node')?.dataset.nodeId ?? null;
+
+        hooks.onContextMenu?.({ x: event.clientX, y: event.clientY, nodeId, type: nodeId ? editor.getNode(nodeId)?.type : null });
+    });
+
+    return api;
 }
