@@ -2,6 +2,7 @@
 
 namespace App\Services\Bot;
 
+use App\Actions\Inbox\ClaimTicket;
 use App\Actions\Inbox\TransferTicket;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
@@ -12,6 +13,7 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
+use App\Models\User;
 use App\Models\WorkflowVersion;
 use App\Services\Alerts\AlertDispatcher;
 use App\Services\Bot\Flow\FlowGraph;
@@ -96,9 +98,9 @@ class BotEngine
      * Entrega o ticket à fila: o setor pedido, se ainda recebe tickets, senão o setor padrão (o primeiro do menu); sem
      * nenhum setor, a fila geral. Só vale uma vez por sessão.
      */
-    public function handoff(BotSession $session, string $reason, ?Sector $to = null): void
+    public function handoff(BotSession $session, string $reason, ?Sector $to = null, ?User $assignTo = null): void
     {
-        DB::transaction(function () use ($session, $reason, $to): void {
+        DB::transaction(function () use ($session, $reason, $to, $assignTo): void {
             $locked = BotSession::query()->whereKey($session->id)->lockForUpdate()->first();
 
             if ($locked === null || $locked->state !== BotSession::ACTIVE) {
@@ -116,9 +118,10 @@ class BotEngine
             }
 
             $this->enterQueue($ticket, $sector);
+            $assigned = $this->assign($ticket, $sector, $assignTo);
 
             $locked->update(['state' => BotSession::TRANSFERRED, 'waiting' => null, 'expires_at' => null]);
-            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => ['reason' => $reason, 'sector_id' => $sector?->id]]);
+            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => array_filter(['reason' => $reason, 'sector_id' => $sector?->id, 'assigned_user_id' => $assigned], fn (mixed $v, string $k): bool => $v !== null || $k !== 'assigned_user_id', ARRAY_FILTER_USE_BOTH)]);
         });
 
         $session->refresh();
@@ -197,6 +200,21 @@ class BotEngine
             Step::LEAVE => $this->handoff($run->session, $step->reason),
             default => null,
         };
+    }
+
+    /**
+     * Depois de o ticket entrar na fila, tenta passá-lo à pessoa escolhida no bloco. Fica só na fila (sem erro) se ela estiver
+     * inativa, não atender o setor ou o ticket já tiver dono.
+     */
+    private function assign(Ticket $ticket, ?Sector $sector, ?User $user): ?int
+    {
+        if ($user === null || ! $user->active || ! $user->canHandleSector($sector?->id) || ! (new ClaimTicket)($ticket, $user)) {
+            return null;
+        }
+
+        app(AlertDispatcher::class)->assigned($ticket, $user, null);
+
+        return $user->id;
     }
 
     private function enterQueue(Ticket $ticket, ?Sector $sector): void

@@ -5,17 +5,23 @@ namespace Tests\Feature\Bot;
 use App\Enums\MessageOrigin;
 use App\Enums\NoteOrigin;
 use App\Enums\TicketStatus;
+use App\Enums\UserRole;
 use App\Models\BotSession;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
+use App\Models\TicketEvent;
 use App\Models\TicketNote;
+use App\Models\User;
 use App\Models\WorkflowVersion;
+use App\Notifications\TicketAssigned;
 use App\Services\Bot\BotEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /** Os blocos e validações da fatia 4a, pelo motor real. */
@@ -135,6 +141,72 @@ class EngineBlocksTest extends TestCase
         $this->assertSame(NoteOrigin::BOT, $note->origin);
         $this->assertNull($note->user_id);
         $this->assertSame('CNPJ 11.222.333/0001-81 e []', $note->body);
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function transfer(array $data): BotSession
+    {
+        return $this->start([['i', 'inicio', []], ['t', 'transferir', $data]], [['i', 'out', 't']]);
+    }
+
+    private function attendant(bool $active = true, bool $inVendas = true): User
+    {
+        $user = User::factory()->create(['role' => UserRole::ATENDENTE, 'active' => $active]);
+
+        if ($inVendas) {
+            $user->sectors()->attach(Sector::query()->where('name', 'Vendas')->firstOrFail());
+        }
+
+        return $user;
+    }
+
+    public function test_atribuir_a_assume_o_ticket_para_a_pessoa_do_setor(): void
+    {
+        Notification::fake();
+        $user = $this->attendant();
+
+        $this->transfer(['setor_id' => Sector::query()->firstOrFail()->id, 'atribuir_a' => $user->id]);
+
+        $ticket = $this->ticket->fresh();
+        $this->assertSame(TicketStatus::EM_ATENDIMENTO, $ticket?->status);
+        $this->assertSame($user->id, $ticket?->assigned_user_id);
+        $this->assertTrue(TicketEvent::query()->where('ticket_id', $ticket?->id)->where('type', 'claimed')->exists());
+        Notification::assertSentTo($user, TicketAssigned::class);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function notAssignable(): array
+    {
+        return [
+            'pessoa inativa' => ['inactive'],
+            'pessoa de outro setor' => ['otherSector'],
+            'pessoa que não existe' => ['missing'],
+        ];
+    }
+
+    #[DataProvider('notAssignable')]
+    public function test_atribuir_a_que_nao_pode_deixa_so_na_fila(string $case): void
+    {
+        $id = match ($case) {
+            'inactive' => $this->attendant(active: false)->id,
+            'otherSector' => $this->attendant(inVendas: false)->id,
+            default => 999999,
+        };
+
+        $this->transfer(['setor_id' => Sector::query()->firstOrFail()->id, 'atribuir_a' => $id]);
+
+        $ticket = $this->ticket->fresh();
+        $this->assertSame(TicketStatus::AGUARDANDO, $ticket?->status);
+        $this->assertNull($ticket?->assigned_user_id);
+        $this->assertSame(BotSession::TRANSFERRED, BotSession::query()->where('ticket_id', $ticket?->id)->value('state'));
+    }
+
+    public function test_transferir_sem_atribuir_a_continua_igual(): void
+    {
+        $this->transfer(['setor_id' => Sector::query()->firstOrFail()->id]);
+
+        $this->assertSame(TicketStatus::AGUARDANDO, $this->ticket->fresh()?->status);
+        $this->assertNull($this->ticket->fresh()?->assigned_user_id);
     }
 
     /** @return array{list<array{string, string, array<string, mixed>}>, list<array{string, string, string}>} */

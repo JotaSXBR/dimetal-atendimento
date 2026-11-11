@@ -51,6 +51,7 @@ class WorkflowPublisher
             $workflow->draft,
             array_values(Sector::query()->get(['id'])->map(fn (Sector $s): int => $s->id)->all()),
             array_values(Tag::query()->get(['id'])->map(fn (Tag $t): int => $t->id)->all()),
+            array_values(User::query()->where('active', true)->get(['id'])->map(fn (User $u): int => $u->id)->all()),
         );
     }
 

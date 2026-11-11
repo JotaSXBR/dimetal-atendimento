@@ -97,8 +97,11 @@ export const BLOCKS = {
         icon: 'forward',
         label: 'Transferir para setor',
         palette: true,
-        data: { setor_id: null },
-        fields: [{ key: 'setor_id', label: 'Setor (vazio = o escolhido no menu)', kind: 'sector' }],
+        data: { setor_id: null, atribuir_a: null },
+        fields: [
+            { key: 'setor_id', label: 'Setor (vazio = o escolhido no menu)', kind: 'sector' },
+            { key: 'atribuir_a', label: 'Atribuir a (vazio = só a fila)', kind: 'user' },
+        ],
     },
     nota: {
         icon: 'note',

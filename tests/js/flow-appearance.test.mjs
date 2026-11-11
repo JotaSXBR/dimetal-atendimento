@@ -40,6 +40,10 @@ test('prévia: menus, condição, esperar, salvar, início e fim', () => {
 test('prévia: setor e etiqueta, inclusive os que sumiram', () => {
     assert.deepEqual(previewOf('transferir', { setor_id: 1 }, lookups), ['Vendas']);
     assert.deepEqual(previewOf('transferir', { setor_id: null }, lookups), ['Setor do menu']);
+    const withUsers = { ...lookups, users: [{ id: 5, name: 'Ana' }] };
+    assert.deepEqual(previewOf('transferir', { setor_id: 1, atribuir_a: 5 }, withUsers), ['Vendas → Ana']);
+    assert.deepEqual(previewOf('transferir', { setor_id: 1, atribuir_a: 99 }, withUsers), ['Vendas → pessoa removida']);
+    assert.deepEqual(previewOf('transferir', { atribuir_a: 5 }, withUsers), ['Setor do menu → Ana']);
     assert.deepEqual(previewOf('transferir', { setor_id: 99 }, lookups), ['Setor removido']);
     assert.deepEqual(previewOf('etiquetar', { tag_id: 7 }, lookups), ['VIP']);
     assert.deepEqual(previewOf('etiquetar', { tag_id: 99 }, lookups), ['Etiqueta removida']);

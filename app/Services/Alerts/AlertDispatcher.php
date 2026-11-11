@@ -88,9 +88,10 @@ final class AlertDispatcher
         Notification::send($this->recipients->sla($ticket), $breached ? new SlaBreached($ticket) : new SlaWarning($ticket));
     }
 
-    public function assigned(Ticket $ticket, User $to, User $actor): void
+    /** `$actor` nulo é a automação atribuindo: a pessoa é sempre avisada. */
+    public function assigned(Ticket $ticket, User $to, ?User $actor): void
     {
-        if ($to->id !== $actor->id) {
+        if ($actor === null || $to->id !== $actor->id) {
             $to->notify(new TicketAssigned($ticket));
         }
     }

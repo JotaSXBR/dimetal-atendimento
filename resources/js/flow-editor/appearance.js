@@ -57,6 +57,15 @@ function clip(value) {
     return text.length > MAX_LINE ? `${text.slice(0, MAX_LINE - 1)}…` : text;
 }
 
+/** "Setor" ou "Setor → Pessoa" do bloco Transferir; setor ou pessoa que sumiu aparece como removido. */
+function transferTarget(d, lookups) {
+    const find = (list, id) => (list ?? []).find((item) => String(item.id) === String(id))?.name;
+    const empty = (value) => value == null || value === '';
+    const sector = empty(d.setor_id) ? 'Setor do menu' : (find(lookups.sectors, d.setor_id) ?? 'Setor removido');
+
+    return empty(d.atribuir_a) ? sector : `${sector} → ${find(lookups.users, d.atribuir_a) ?? 'pessoa removida'}`;
+}
+
 /** Até 3 linhas curtas com o conteúdo do bloco, para mostrar dentro dele no canvas. */
 export function previewOf(type, data, lookups = {}) {
     const d = data ?? {};
@@ -93,9 +102,7 @@ export function previewOf(type, data, lookups = {}) {
         case 'etiquetar':
             return [clip(nameOf(lookups.tags, d.tag_id) ?? 'Etiqueta removida')];
         case 'transferir':
-            if (d.setor_id == null || d.setor_id === '') return ['Setor do menu'];
-
-            return [clip(nameOf(lookups.sectors, d.setor_id) ?? 'Setor removido')];
+            return [clip(transferTarget(d, lookups))];
         default:
             return [];
     }

@@ -17,6 +17,7 @@ document.addEventListener('alpine:init', () => {
                 .sort((a, b) => Object.keys(CATEGORIES).indexOf(a.category) - Object.keys(CATEGORIES).indexOf(b.category)),
             sectors: config.sectors,
             tags: config.tags,
+            users: config.users,
             versions: config.versions,
             catalog: config.messages,
             messages: messagesOf(config.graph),
@@ -39,7 +40,7 @@ document.addEventListener('alpine:init', () => {
                         onChange: () => (this.dirty = true),
                         onHistory: (state) => Object.assign(this, state),
                         onContextMenu: (info) => (this.menu = info),
-                        lookups: { sectors: config.sectors, tags: config.tags },
+                        lookups: { sectors: config.sectors, tags: config.tags, users: config.users },
                     });
                 } catch (error) {
                     this.failed = true;
