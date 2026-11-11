@@ -379,7 +379,7 @@ class Inbox extends Component
             ->get();
 
         return view('livewire.inbox.inbox', [
-            'tags' => Tag::query()->orderBy('name')->get(),
+            'tags' => Tag::sortedByName(Tag::query()->get()),
             'pending' => $list->where('status', TicketStatus::PENDENTE),
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),

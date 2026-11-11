@@ -30,7 +30,7 @@
                 </flux:radio.group>
 
                 <flux:dropdown position="bottom" align="end">
-                    <flux:button size="sm" :variant="$moreActive ? 'filled' : 'subtle'" icon-trailing="chevron-down" class="shrink-0 px-2! text-xs!" data-testid="tab-more" aria-label="Mais visões da fila">
+                    <flux:button size="sm" :variant="$moreActive ? 'filled' : 'subtle'" icon-trailing="chevron-down" class="shrink-0 px-2! text-xs!" data-testid="tab-more" aria-label="{{ $moreActive ? $more[$tab].' (mais visões da fila)' : 'Mais visões da fila' }}">
                         {{ $moreActive ? $more[$tab] : 'Mais' }}
                     </flux:button>
 
