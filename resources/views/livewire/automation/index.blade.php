@@ -10,7 +10,18 @@
     @if ($showNew)
         <form wire:submit="create" class="mt-4 space-y-3 rounded-[14px] border border-line bg-surface p-4">
             <flux:input label="Nome" wire:model="newName" maxlength="120" />
-            <flux:checkbox wire:model="fromTemplate" label="Começar do modelo Atendimento padrão (saudação, menu de setores e encaminhamento)" />
+            <fieldset class="space-y-2">
+                <legend class="text-sm font-medium text-ink">Começar de</legend>
+                @foreach ($templates as $option)
+                    <label class="flex cursor-pointer items-start gap-3 rounded-md border border-line p-3 text-sm has-[:checked]:border-accent" wire:key="template-{{ $option['key'] }}">
+                        <input type="radio" class="mt-1" wire:model="template" value="{{ $option['key'] }}">
+                        <span>
+                            <span class="block font-semibold text-ink">{{ $option['name'] }}</span>
+                            <span class="block text-xs text-ink-3">{{ $option['description'] }}</span>
+                        </span>
+                    </label>
+                @endforeach
+            </fieldset>
             @error('newName')
                 <p class="text-xs text-danger" role="alert">{{ $message }}</p>
             @enderror

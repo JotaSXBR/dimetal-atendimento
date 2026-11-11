@@ -18,11 +18,18 @@ class WorkflowPublisher
 {
     public function __construct(private readonly FlowValidator $validator) {}
 
-    public function create(string $name, User $by, bool $fromTemplate = false): Workflow
+    /** `$template`: a chave de um modelo (`WorkflowTemplates`); `true` é o Atendimento padrão e `false`, o em branco. */
+    public function create(string $name, User $by, bool|string $template = false): Workflow
     {
+        $key = match ($template) {
+            true => WorkflowTemplates::STANDARD,
+            false => WorkflowTemplates::BLANK,
+            default => $template,
+        };
+
         return Workflow::create([
             'name' => $name,
-            'draft' => $fromTemplate ? DefaultWorkflow::graph() : DefaultWorkflow::blank(),
+            'draft' => WorkflowTemplates::graph($key),
             'updated_by' => $by->id,
         ]);
     }

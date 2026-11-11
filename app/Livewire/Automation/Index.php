@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
 use App\Services\Bot\WorkflowPublisher;
+use App\Services\Bot\WorkflowTemplates;
 use DomainException;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Title;
@@ -19,7 +20,7 @@ class Index extends Component
 
     public string $newName = '';
 
-    public bool $fromTemplate = true;
+    public string $template = WorkflowTemplates::STANDARD;
 
     /** O workflow com a lista de versões aberta. */
     public ?int $expanded = null;
@@ -41,9 +42,8 @@ class Index extends Component
             'newName.max' => 'O nome pode ter até 120 caracteres.',
         ]);
 
-        $publisher->create($this->newName, $this->user(), $this->fromTemplate);
-        $this->reset('showNew', 'newName');
-        $this->fromTemplate = true;
+        $publisher->create($this->newName, $this->user(), $this->template);
+        $this->reset('showNew', 'newName', 'template');
         $this->error = null;
     }
 
@@ -114,6 +114,7 @@ class Index extends Component
         return view('livewire.automation.index', [
             'workflows' => Workflow::query()->withCount('versions')->with(['versions' => fn ($q) => $q->with('publisher')->orderByDesc('number')])->orderBy('name')->get(),
             'channels' => Channel::query()->orderBy('name')->get(),
+            'templates' => WorkflowTemplates::all(),
         ]);
     }
 }

@@ -100,8 +100,8 @@ class StatusBadgeSettingsTest extends TestCase
     {
         $user = User::factory()->create(['role' => UserRole::SUPERVISOR]);
         $publisher = app(WorkflowPublisher::class);
-        $publisher->publish($publisher->create('Fluxo A', $user, fromTemplate: true), $user);
-        $publisher->create('Fluxo B', $user, fromTemplate: true);
+        $publisher->publish($publisher->create('Fluxo A', $user, template: true), $user);
+        $publisher->create('Fluxo B', $user, template: true);
 
         $xpath = $this->xpath(Livewire::actingAs($user)->test(Automation::class)->html());
 

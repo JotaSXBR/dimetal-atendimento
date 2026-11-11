@@ -26,7 +26,7 @@ class AutomationEditorTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create(['role' => UserRole::SUPERVISOR]);
-        $this->workflow = app(WorkflowPublisher::class)->create('Triagem', $this->user, fromTemplate: true);
+        $this->workflow = app(WorkflowPublisher::class)->create('Triagem', $this->user, template: true);
     }
 
     public function test_so_supervisor_e_admin_abrem_o_editor(): void
