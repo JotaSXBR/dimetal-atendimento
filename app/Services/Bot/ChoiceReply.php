@@ -8,13 +8,22 @@ namespace App\Services\Bot;
  */
 final class ChoiceReply
 {
-    /** O número escolhido, ou nulo quando não há escolha clara (nenhuma linha só de número, ou números diferentes). */
+    /**
+     * O número escolhido, ou nulo quando não há escolha clara (nenhuma linha só de número, ou números diferentes). A linha é o
+     * número sozinho, com ponto, parêntese ou exclamação no fim, ou precedido de "opção", "número" ou "nº" ("Apto 12" não vale).
+     */
     public static function number(string $text): ?int
     {
         $lines = self::lines($text);
-        $numbers = array_values(array_unique(array_map(intval(...), array_filter($lines, fn (string $line): bool => preg_match('/^\d{1,3}$/', $line) === 1))));
+        $numbers = [];
 
-        return count($numbers) === 1 ? $numbers[0] : null;
+        foreach ($lines as $line) {
+            if (preg_match('/^(?:op[çc][aã]o|n[úu]mero|n[º°o]\.?)?\s*(\d{1,3})\s*[.)!]?$/iu', $line, $m) === 1) {
+                $numbers[(int) $m[1]] = true;
+            }
+        }
+
+        return count($numbers) === 1 ? array_key_first($numbers) : null;
     }
 
     /** `#sair` sozinho em qualquer linha da mensagem (sem diferenciar maiúscula). */

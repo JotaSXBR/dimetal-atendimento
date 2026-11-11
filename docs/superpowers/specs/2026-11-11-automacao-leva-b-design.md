@@ -45,6 +45,7 @@ Regra nova (uma classe pequena do bot, usada pelos dois pontos):
 - Mensagem sem linhas vazias significativas: dividir em linhas, aparar cada uma.
 - Número: se o texto inteiro, aparado, é só um número de 1 a 3 dígitos, vale. Senão, as linhas que são **só** um número de 1 a 3 dígitos: se todas forem o mesmo valor (uma ou repetidas), vale esse; se não houver nenhuma ou houver valores diferentes, é resposta inválida.
 - `#sair`: vale se o texto inteiro, ou **qualquer linha**, é `#sair` (sem diferenciar maiúscula). `#sair` vence o número.
+- A linha do número pode ter ponto, parêntese ou exclamação no fim ("1.", "2)") ou vir precedida de "opção", "número" ou "nº" ("opção 2"); "Apto 12" não vale.
 - Telefone, CEP, "Rua 10, 200" e frases não viram opção, porque a linha não é só um número curto.
 - O que o cliente escolheu é o número; o texto da assinatura é ignorado e não é guardado em variável.
 

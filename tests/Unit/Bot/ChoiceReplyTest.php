@@ -20,6 +20,12 @@ class ChoiceReplyTest extends TestCase
             'telefone na assinatura' => ["Fulano\nTel 3333-4444\n1", 1],
             'mesmo numero repetido' => ["1\n1", 1],
             'zero e numero (opcao inexistente)' => ['0', 0],
+            'com ponto' => ['1.', 1],
+            'com parentese' => ['2)', 2],
+            'com exclamacao' => ['3!', 3],
+            'opcao com acento' => ['opção 2', 2],
+            'opcao sem acento e maiuscula' => ['Opcao 3!', 3],
+            'numero por extenso' => ["*#Jessé:*\nNúmero 1", 1],
         ];
     }
 
@@ -42,6 +48,9 @@ class ChoiceReplyTest extends TestCase
             'endereco' => ['Rua 10, 200'],
             'cep na frase' => ["Meu CEP 14010-000\nobrigado"],
             'telefone sozinho' => ['3333-4444'],
+            'apartamento na assinatura' => ['Apto 12'],
+            'decimal' => ['1.5'],
+            'opcao e numero diferentes' => ["opção 1\n2"],
         ];
     }
 
