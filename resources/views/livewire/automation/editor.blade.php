@@ -119,7 +119,7 @@
                                     <span>Não mostrar a dica (o #sair continua valendo)</span>
                                 </label>
                             </template>
-                            <button type="button" class="mt-1 text-[11px] text-accent-content underline" x-show="item.key in messages && ! (item.key === 'rodape_sair' && exitHintHidden())" x-on:click="resetMessage(item.key)">Usar o padrão</button>
+                            <flux:button type="button" size="xs" variant="subtle" class="mt-1" x-show="item.key in messages && ! (item.key === 'rodape_sair' && exitHintHidden())" x-on:click="resetMessage(item.key)">Usar o padrão</flux:button>
                         </div>
                     </template>
 
