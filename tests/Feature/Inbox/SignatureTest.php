@@ -57,14 +57,14 @@ class SignatureTest extends TestCase
 
     public function test_assinatura_no_inicio_como_no_chatwoot(): void
     {
-        $this->assertSame("*Jessé @ Dimetal Distribuidora:*\n\nBom dia! Tudo bem?", Signature::apply('Bom dia! Tudo bem?', $this->me, null));
+        $this->assertSame("*Jessé @ Dimetal Distribuidora:*\nBom dia! Tudo bem?", Signature::apply('Bom dia! Tudo bem?', $this->me, null));
     }
 
     public function test_assinatura_no_fim_com_setor(): void
     {
         $this->save(['signatureTemplate' => '_{{atendente}}_ - {{setor}}', 'signaturePosition' => 'fim']);
 
-        $this->assertSame("Bom dia!\n\n_Jessé_ - Comercial", Signature::apply('Bom dia!', $this->me, Sector::query()->firstOrFail()));
+        $this->assertSame("Bom dia!\n_Jessé_ - Comercial", Signature::apply('Bom dia!', $this->me, Sector::query()->firstOrFail()));
     }
 
     public function test_desligada_no_geral_ou_pelo_atendente_ou_sem_texto(): void
@@ -89,7 +89,7 @@ class SignatureTest extends TestCase
     {
         Livewire::actingAs($this->me)->test(Inbox::class)->set('ticketId', $this->ticket->id)->set('draft', 'Bom dia!')->call('send');
 
-        $this->assertSame("*Jessé @ Dimetal Distribuidora:*\n\nBom dia!", Message::query()->firstOrFail()->body);
+        $this->assertSame("*Jessé @ Dimetal Distribuidora:*\nBom dia!", Message::query()->firstOrFail()->body);
     }
 
     public function test_o_atendente_liga_e_desliga_e_a_escolha_persiste(): void
@@ -119,7 +119,7 @@ class SignatureTest extends TestCase
     {
         $this->me->name = 'Jé*s_s~é';
 
-        $this->assertSame("*Jéssé @ Dimetal Distribuidora:*\n\nOi", Signature::apply('Oi', $this->me, null));
+        $this->assertSame("*Jéssé @ Dimetal Distribuidora:*\nOi", Signature::apply('Oi', $this->me, null));
     }
 
     public function test_rascunho_mais_assinatura_acima_de_4096_e_recusado_sem_enviar(): void
