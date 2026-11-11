@@ -8,8 +8,14 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('composerMode', ($wire, ticketId, userId) => ({
         mode: 'reply',
 
+        // O campo tem texto não vazio: com ele o mic vira Enviar (ver o form em inbox.blade.php).
+        filled: false,
+
         init() {
-            this.$nextTick(() => this.set(this.load('reply'), false));
+            this.$nextTick(() => {
+                this.set(this.load('reply'), false);
+                this.sync();
+            });
         },
 
         key(mode) {
@@ -18,6 +24,10 @@ document.addEventListener('alpine:init', () => {
 
         field() {
             return this.$root.querySelector('textarea');
+        },
+
+        sync() {
+            this.filled = (this.field()?.value ?? '').trim() !== '';
         },
 
         load(mode) {
@@ -42,6 +52,7 @@ document.addEventListener('alpine:init', () => {
 
             field.value = value;
             field.dispatchEvent(new Event('input', { bubbles: true }));
+            this.sync();
         },
 
         remember(event) {
@@ -82,6 +93,8 @@ document.addEventListener('alpine:init', () => {
                 if ($wire.draft === '') {
                     this.save(sent, '');
                 }
+
+                this.$nextTick(() => this.sync());
             });
         },
     }));
