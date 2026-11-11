@@ -7,20 +7,23 @@ const timeout = { key: 'timeout_min', label: 'Minutos sem resposta até ir para 
 const invalid = { key: 'invalido', label: 'Aviso de resposta inválida (opcional)', kind: 'textarea' };
 
 export const BLOCKS = {
-    inicio: { label: 'Início', palette: false, fields: [] },
+    inicio: { icon: 'play', label: 'Início', palette: false, fields: [] },
     mensagem: {
+        icon: 'chat',
         label: 'Mensagem',
         palette: true,
         data: { texto: 'Olá, {{nome}}!' },
         fields: [{ key: 'texto', label: 'Texto', kind: 'textarea' }],
     },
     menu_setores: {
+        icon: 'list',
         label: 'Menu de setores',
         palette: true,
         data: { texto: 'Com qual setor você quer falar? Responda com o número da opção.', timeout_min: 10 },
         fields: [{ key: 'texto', label: 'Texto antes da lista', kind: 'textarea' }, invalid, timeout],
     },
     menu: {
+        icon: 'list',
         label: 'Menu',
         palette: true,
         data: { texto: 'Escolha uma opção:', opcoes: ['Opção 1', 'Opção 2'], timeout_min: 10 },
@@ -32,6 +35,7 @@ export const BLOCKS = {
         ],
     },
     pergunta: {
+        icon: 'question',
         label: 'Pergunta',
         palette: true,
         data: { texto: 'Qual é o seu nome?', variavel: 'resposta', validacao: 'texto', timeout_min: 10 },
@@ -44,6 +48,7 @@ export const BLOCKS = {
         ],
     },
     condicao: {
+        icon: 'branch',
         label: 'Condição',
         palette: true,
         data: { kind: 'horario' },
@@ -55,12 +60,14 @@ export const BLOCKS = {
         ],
     },
     esperar: {
+        icon: 'clock',
         label: 'Esperar',
         palette: true,
         data: { segundos: 3 },
         fields: [{ key: 'segundos', label: 'Segundos mostrando "digitando…" (1 a 30)', kind: 'number', min: 1, max: 30 }],
     },
     midia: {
+        icon: 'image',
         label: 'Enviar mídia',
         palette: true,
         data: { path: '', legenda: '' },
@@ -70,6 +77,7 @@ export const BLOCKS = {
         ],
     },
     salvar_contato: {
+        icon: 'user',
         label: 'Salvar no contato',
         palette: true,
         data: { campo: 'name', variavel: 'resposta' },
@@ -79,18 +87,20 @@ export const BLOCKS = {
         ],
     },
     etiquetar: {
+        icon: 'tag',
         label: 'Etiquetar',
         palette: true,
         data: { tag_id: null },
         fields: [{ key: 'tag_id', label: 'Etiqueta', kind: 'tag' }],
     },
     transferir: {
+        icon: 'forward',
         label: 'Transferir para setor',
         palette: true,
         data: { setor_id: null },
         fields: [{ key: 'setor_id', label: 'Setor (vazio = o escolhido no menu)', kind: 'sector' }],
     },
-    encerrar: { label: 'Encerrar', palette: true, fields: [] },
+    encerrar: { icon: 'stop', label: 'Encerrar', palette: true, fields: [] },
 };
 
 /** Dados iniciais de um bloco novo (cópia, para um bloco não alterar o outro). */

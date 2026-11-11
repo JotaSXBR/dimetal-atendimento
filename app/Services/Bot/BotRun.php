@@ -6,6 +6,7 @@ use App\Models\BotSession;
 use App\Models\Ticket;
 use App\Services\Bot\Flow\FlowGraph;
 use App\Services\Inbox\BusinessHours;
+use App\Settings\CompanySettings;
 use Closure;
 
 /** O contexto de uma execução: ticket, sessão e grafo, mais o que os blocos precisam (falar, ler e gravar variáveis). */
@@ -33,6 +34,7 @@ final class BotRun
         return [
             ...$custom,
             'nome' => $name !== '' ? $name : 'cliente',
+            'empresa' => CompanySettings::name(),
             'protocolo' => (string) $this->ticket->protocol,
             'setor' => is_scalar($this->get('setor')) ? (string) $this->get('setor') : '',
             'horario' => fn (): string => app(BusinessHours::class)->summary(),

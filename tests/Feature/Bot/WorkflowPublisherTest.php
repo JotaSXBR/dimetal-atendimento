@@ -60,7 +60,7 @@ class WorkflowPublisherTest extends TestCase
 
     public function test_criar_do_modelo_copia_o_fluxo_padrao_para_o_rascunho(): void
     {
-        $workflow = $this->publisher->create('Atendimento padrão', $this->user, fromTemplate: true);
+        $workflow = $this->publisher->create('Atendimento padrão', $this->user, template: true);
 
         $this->assertSame(DefaultWorkflow::graph(), $workflow->draft);
         $this->assertSame($this->user->id, $workflow->updated_by);
