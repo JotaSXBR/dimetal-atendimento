@@ -232,14 +232,12 @@
             @if ($panel === 'transfer')
                 <form wire:submit="transfer" class="flex flex-wrap items-end gap-3 border-b border-line bg-surface px-4 py-3">
                     <div class="w-48">
-                        <flux:select wire:model="transferSectorId" label="Transferir para o setor" placeholder="Escolha o setor">
+                        <flux:select wire:model="transferSectorId" label="Transferir para o setor">
+                            <flux:select.option value="">Escolha o setor</flux:select.option>
                             @foreach ($sectors as $sector)
                                 <flux:select.option :value="$sector->id">{{ $sector->name }}</flux:select.option>
                             @endforeach
                         </flux:select>
-                        @error('transferSectorId')
-                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-                        @enderror
                     </div>
                     <div class="min-w-48 flex-1">
                         <flux:input wire:model="transferNote" label="Nota (opcional, só para a equipe)" maxlength="500" />
@@ -254,14 +252,12 @@
                 <form wire:submit="close" class="space-y-3 border-b border-line bg-surface px-4 py-3">
                     <p class="text-xs text-ink-3">Encerrar {{ $ticket->protocol }}. A próxima mensagem do cliente abre um ticket novo.</p>
                     <div class="w-56">
-                        <flux:select wire:model="closeOutcome" label="Motivo do encerramento" placeholder="Escolha o motivo">
+                        <flux:select wire:model="closeOutcome" label="Motivo do encerramento">
+                            <flux:select.option value="">Escolha o motivo</flux:select.option>
                             @foreach (\App\Enums\CloseOutcome::cases() as $outcome)
                                 <flux:select.option :value="$outcome->value">{{ $outcome->label() }}</flux:select.option>
                             @endforeach
                         </flux:select>
-                        @error('closeOutcome')
-                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-                        @enderror
                     </div>
                     <div>
                         <flux:textarea wire:model="closeSummary" rows="3" label="Resumo do atendimento" placeholder="O que foi pedido e o que ficou combinado" maxlength="500" />
@@ -278,14 +274,12 @@
             @elseif ($panel === 'reassign')
                 <form wire:submit="reassign" class="flex flex-wrap items-end gap-3 border-b border-line bg-surface px-4 py-3">
                     <div class="w-64">
-                        <flux:select wire:model="reassignUserId" label="Reatribuir para" placeholder="Escolha a pessoa">
+                        <flux:select wire:model="reassignUserId" label="Reatribuir para">
+                            <flux:select.option value="">Escolha a pessoa</flux:select.option>
                             @foreach ($candidates as $candidate)
                                 <flux:select.option :value="$candidate->id">{{ $candidate->name }}</flux:select.option>
                             @endforeach
                         </flux:select>
-                        @error('reassignUserId')
-                            <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-                        @enderror
                     </div>
                     <flux:button type="submit" variant="primary" size="sm">Reatribuir</flux:button>
                     <flux:button type="button" size="sm" variant="subtle" wire:click="closePanel">Cancelar</flux:button>
