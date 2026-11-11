@@ -38,6 +38,9 @@ trait ComposesMessages
 
     public string $draft = '';
 
+    /** A lista do botão "Respostas rápidas" está aberta. */
+    public bool $showQuickReplies = false;
+
     /** O arquivo que acabou de subir; `commitUpload` o move para a bandeja ou o descarta. */
     public ?TemporaryUploadedFile $upload = null;
 
@@ -46,6 +49,23 @@ trait ComposesMessages
 
     /** @var array<int, TemporaryUploadedFile> Bandeja: arquivos aceitos, na ordem de envio. */
     public array $attachments = [];
+
+    public function toggleQuickReplies(): void
+    {
+        $this->authorize('reply', $this->selected());
+
+        $this->showQuickReplies = ! $this->showQuickReplies;
+    }
+
+    /**
+     * Todas as respostas que o usuário pode usar, para o botão (o `/` filtra pelo atalho, ver `quickReplies`).
+     *
+     * @return Collection<int, QuickReply>
+     */
+    public function allQuickReplies(): Collection
+    {
+        return QuickReply::forUser($this->user())->orderBy('shortcut')->limit(50)->get();
+    }
 
     /** O rascunho `/pre` chama as respostas rápidas do usuário; o texto entra no campo, editável. */
     public function useQuickReply(int $id): void

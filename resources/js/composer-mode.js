@@ -4,6 +4,8 @@
 // sai e traz o do que entra. O campo é o mesmo (`wire:model="draft"`): o modo só decide se o envio chama `send` ou `saveNote`.
 // O "digitando…" ao cliente só vale no modo Responder (ver o `x-on:input` do campo e o evento `composer-mode`).
 
+import { insertAt } from './composer-insert.js';
+
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('composerMode', ($wire, ticketId, userId) => ({
         mode: 'reply',
@@ -53,6 +55,24 @@ document.addEventListener('alpine:init', () => {
             field.value = value;
             field.dispatchEvent(new Event('input', { bubbles: true }));
             this.sync();
+        },
+
+        // Emoji e respostas rápidas entram no cursor, sem apagar o que já está escrito; o rascunho do modo atual é guardado.
+        insert(text) {
+            const field = this.field();
+
+            if (field === null) {
+                return;
+            }
+
+            const at = insertAt(field.value, field.selectionStart ?? field.value.length, field.selectionEnd ?? field.value.length, text);
+
+            field.value = at.value;
+            field.setSelectionRange(at.caret, at.caret);
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            this.save(this.mode, at.value);
+            this.sync();
+            field.focus();
         },
 
         remember(event) {

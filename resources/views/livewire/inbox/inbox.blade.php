@@ -408,6 +408,23 @@
                             <div data-testid="composer-tools" class="flex flex-wrap items-end gap-2">
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" title="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
 
+                            <div class="relative" x-on:keydown.escape.window="$wire.showQuickReplies && $wire.set('showQuickReplies', false)" x-on:click.outside="$wire.showQuickReplies && $wire.set('showQuickReplies', false)">
+                                <flux:button type="button" variant="subtle" icon="bolt" aria-label="Respostas rápidas" title="Respostas rápidas" aria-haspopup="listbox" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
+                                @if ($showQuickReplies)
+                                    <div data-testid="quick-replies-popover" class="absolute bottom-full start-0 z-20 mb-2 w-72 max-w-[80vw] overflow-hidden rounded-lg border border-line bg-surface text-sm shadow-lg">
+                                        <p class="border-b border-line px-3 py-2 text-xs font-semibold text-ink-2">Respostas rápidas</p>
+                                        @forelse ($this->allQuickReplies() as $reply)
+                                            <button type="button" data-body="{{ $reply->body }}" class="flex w-full gap-2 px-3 py-2 text-start hover:bg-surface-2 focus-visible:bg-surface-2" wire:key="qr-all-{{ $reply->id }}" x-on:click="insert($el.dataset.body); $wire.set('showQuickReplies', false)">
+                                                <code class="shrink-0 font-semibold">/{{ $reply->shortcut }}</code>
+                                                <span class="truncate text-ink-2">{{ $reply->body }}</span>
+                                            </button>
+                                        @empty
+                                            <p class="px-3 py-3 text-ink-3">Nenhuma resposta rápida. Cadastre em Configuração.</p>
+                                        @endforelse
+                                    </div>
+                                @endif
+                            </div>
+
                             <div class="min-w-0 flex-1 order-first basis-full @md:order-none @md:basis-0" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
                                 @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())
                                     <ul class="mb-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface text-sm" role="listbox" aria-label="Respostas rápidas">
