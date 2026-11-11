@@ -79,6 +79,9 @@ export function previewOf(type, data, lookups = {}) {
             return options.length > 3 ? [...shown, `+${options.length - 2}`] : shown.length ? shown : ['(sem opções)'];
         }
         case 'condicao':
+            if (d.kind === 'nome') return ['O contato já tem nome?'];
+            if (d.kind === 'retorno') return ['Já foi atendido antes?'];
+
             return d.kind === 'variavel' ? [clip(`${d.var ?? ''} ${OPS[d.op] ?? ''} ${d.valor ?? ''}`)] : ['Dentro do horário?'];
         case 'esperar':
             return [`Digitando por ${d.segundos ?? 0} s`];

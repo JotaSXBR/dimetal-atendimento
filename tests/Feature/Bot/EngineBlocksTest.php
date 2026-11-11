@@ -113,4 +113,44 @@ class EngineBlocksTest extends TestCase
         $this->say($session, '12');
         $this->assertContains('Qtd 12.', $this->botTexts());
     }
+
+    /** @return array{list<array{string, string, array<string, mixed>}>, list<array{string, string, string}>} */
+    private function branch(string $kind): array
+    {
+        return [
+            [['i', 'inicio', []], ['c', 'condicao', ['kind' => $kind]], ['s', 'mensagem', ['texto' => 'SIM']], ['n', 'mensagem', ['texto' => 'NAO']], ['e', 'encerrar', []]],
+            [['i', 'out', 'c'], ['c', 'true', 's'], ['c', 'false', 'n'], ['s', 'out', 'e'], ['n', 'out', 'e']],
+        ];
+    }
+
+    public function test_condicao_nome_segue_pelo_nome_do_contato(): void
+    {
+        $this->start(...$this->branch('nome'));
+        $this->assertSame(['SIM'], $this->botTexts());
+    }
+
+    public function test_condicao_nome_sem_nome_vai_por_nao(): void
+    {
+        $this->ticket->contact()->firstOrFail()->forceFill(['name' => ''])->save();
+
+        $this->start(...$this->branch('nome'));
+
+        $this->assertSame(['NAO'], $this->botTexts());
+    }
+
+    public function test_condicao_retorno_sem_ticket_anterior_vai_por_nao(): void
+    {
+        $this->start(...$this->branch('retorno'));
+
+        $this->assertSame(['NAO'], $this->botTexts());
+    }
+
+    public function test_condicao_retorno_com_ticket_anterior_do_contato_vai_por_sim(): void
+    {
+        Ticket::factory()->create(['channel_id' => $this->ticket->channel_id, 'contact_id' => $this->ticket->contact_id, 'status' => TicketStatus::ENCERRADO]);
+
+        $this->start(...$this->branch('retorno'));
+
+        $this->assertSame(['SIM'], $this->botTexts());
+    }
 }

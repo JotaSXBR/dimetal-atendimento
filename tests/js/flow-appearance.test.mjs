@@ -28,6 +28,8 @@ test('prévia: menus, condição, esperar, salvar, início e fim', () => {
     assert.deepEqual(previewOf('menu', { opcoes: ['A', 'B', 'C', 'D', 'E'] }, lookups), ['1 - A', '2 - B', '+3']);
     assert.deepEqual(previewOf('condicao', { kind: 'horario' }, lookups), ['Dentro do horário?']);
     assert.deepEqual(previewOf('condicao', { kind: 'variavel', var: 'x', op: 'igual', valor: '1' }, lookups), ['x é igual a 1']);
+    assert.deepEqual(previewOf('condicao', { kind: 'nome' }, lookups), ['O contato já tem nome?']);
+    assert.deepEqual(previewOf('condicao', { kind: 'retorno' }, lookups), ['Já foi atendido antes?']);
     assert.deepEqual(previewOf('esperar', { segundos: 4 }, lookups), ['Digitando por 4 s']);
     assert.deepEqual(previewOf('salvar_contato', { campo: 'name', variavel: 'resposta' }, lookups), ['name ← resposta']);
     assert.deepEqual(previewOf('inicio', {}, lookups), ['Começa aqui']);
