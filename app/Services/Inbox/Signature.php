@@ -8,14 +8,14 @@ use App\Settings\CompanySettings;
 
 /**
  * A assinatura do atendente nas mensagens do painel (como no Chatwoot): `*Jessé @ Dimetal:*` e o texto na linha de baixo.
- * Só vale com a assinatura ligada na empresa e por quem envia. A mensagem é gravada já assinada: o eco `fromMe` do WhatsApp
+ * Vale sempre que a empresa liga a assinatura (não há escolha por atendente). A mensagem é gravada já assinada: o eco `fromMe` do WhatsApp
  * traz o mesmo texto e casa com a linha.
  */
 final class Signature
 {
     public static function apply(string $text, User $author, ?Sector $sector): string
     {
-        if ($text === '' || ! CompanySettings::signatureEnabled() || ! $author->sign_messages) {
+        if ($text === '' || ! CompanySettings::signatureEnabled()) {
             return $text;
         }
 

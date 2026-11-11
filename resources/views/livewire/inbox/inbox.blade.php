@@ -30,7 +30,7 @@
                 </flux:radio.group>
 
                 <flux:dropdown position="bottom" align="end">
-                    <flux:button size="sm" :variant="$moreActive ? 'filled' : 'subtle'" icon-trailing="chevron-down" class="shrink-0 px-2! text-xs!" data-testid="tab-more" aria-label="Mais visões da fila">
+                    <flux:button size="sm" :variant="$moreActive ? 'filled' : 'subtle'" icon-trailing="chevron-down" class="shrink-0 px-2! text-xs!" data-testid="tab-more" aria-label="{{ $moreActive ? $more[$tab].' (mais visões da fila)' : 'Mais visões da fila' }}">
                         {{ $moreActive ? $more[$tab] : 'Mais' }}
                     </flux:button>
 
@@ -315,6 +315,8 @@
                     x-data="composerMode($wire, {{ $ticket->id }}, {{ auth()->id() }})"
                     x-on:keydown.alt.p.window.prevent="toggle()"
                     x-on:note-from-message.window="addToNote($event.detail)"
+                    x-on:emoji-insert="insert($event.detail)"
+                    x-on:composer-focus="field()?.focus()"
                     x-bind:class="mode === 'note' ? 'border-warn/30 bg-warn/10' : 'border-line bg-surface'"
                 @endif
                 class="border-t p-3 {{ $canReply ? '' : 'border-line bg-surface' }}"
@@ -387,7 +389,7 @@
                             <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
                         @enderror
 
-                        <form data-testid="composer-form" x-on:submit.prevent="uploading === 0 && submit()" x-on:input="remember($event)" class="flex flex-wrap items-end gap-2" x-show="!voiceBusy">
+                        <form data-testid="composer-form" x-on:submit.prevent="uploading === 0 && submit()" x-on:input="remember($event); sync()" class="flex flex-col gap-2" x-show="!voiceBusy">
                             <input
                                 type="file"
                                 multiple
@@ -397,18 +399,42 @@
                                 accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.mp3,.ogg,.m4a,.mp4"
                                 x-on:change="addFiles($event.target.files); $event.target.value = ''"
                             >
-                            {{-- Abas Responder/Nota: na mesma linha do resto em coluna larga (@xl), em linha própria abaixo disso. --}}
-                            <div data-testid="composer-modes" class="@max-xl:basis-full">
+                            {{-- Linha 1: abas Responder/Nota. Linha 2: ferramentas, campo e mic (vira Enviar com texto ou arquivo). --}}
+                            <div data-testid="composer-modes">
                                 <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
                                     <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
                                     <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
                                 </div>
                             </div>
-                            <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
-                            <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-show="mode === 'reply'" x-on:click="$dispatch('voice-start')" />
-                            <flux:button type="button" x-show="mode === 'reply'" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
+                            {{-- Coluna larga (@md): uma linha só. Coluna estreita (1280 px com o painel de contato aberto): o campo ocupa a linha de cima e as ferramentas ficam embaixo. --}}
+                            <div data-testid="composer-tools" class="flex flex-wrap items-end gap-2">
+                            {{-- Seletor de emoji: o elemento vive no Alpine (wire:ignore); ver resources/js/emoji-picker.js --}}
+                            <div class="relative" wire:ignore x-data="emojiPicker" x-on:keydown.escape="close(true)" x-on:click.outside="close()">
+                                <flux:button type="button" variant="subtle" icon="face-smile" aria-label="Emoji" title="Emoji" aria-haspopup="dialog" x-bind:aria-expanded="open.toString()" x-on:click="toggle()" />
+                                <div x-ref="panel" x-show="open" x-cloak role="dialog" aria-label="Seletor de emoji" class="absolute bottom-full start-0 z-20 mb-2 overflow-hidden rounded-lg border border-line shadow-lg"></div>
+                            </div>
+                            <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" title="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
 
-                            <div class="min-w-28 flex-1" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
+                            <div class="relative" x-on:keydown.escape.window="if ($wire.showQuickReplies) { $wire.set('showQuickReplies', false); $dispatch('composer-focus') }" x-on:click.outside="$wire.showQuickReplies && $wire.set('showQuickReplies', false)">
+                                {{-- Coluna muito estreita (celular): o gatilho vira "+", e a lista é a mesma. --}}
+                                <flux:button type="button" variant="subtle" icon="bolt" class="@max-sm:hidden" aria-label="Respostas rápidas" title="Respostas rápidas" aria-haspopup="true" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
+                                <flux:button type="button" variant="subtle" icon="plus" class="@sm:hidden" aria-label="Mais ações do compositor" title="Mais ações: respostas rápidas" aria-haspopup="true" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
+                                @if ($showQuickReplies)
+                                    <div data-testid="quick-replies-popover" class="absolute bottom-full start-0 z-20 mb-2 w-72 max-w-[80vw] overflow-hidden rounded-lg border border-line bg-surface text-sm shadow-lg">
+                                        <p class="border-b border-line px-3 py-2 text-xs font-semibold text-ink-2">Respostas rápidas</p>
+                                        @forelse ($this->allQuickReplies() as $reply)
+                                            <button type="button" data-body="{{ $reply->body }}" class="flex w-full gap-2 px-3 py-2 text-start hover:bg-surface-2 focus-visible:bg-surface-2" wire:key="qr-all-{{ $reply->id }}" x-on:click="insert($el.dataset.body); $wire.set('showQuickReplies', false)">
+                                                <code class="shrink-0 font-semibold">/{{ $reply->shortcut }}</code>
+                                                <span class="truncate text-ink-2">{{ $reply->body }}</span>
+                                            </button>
+                                        @empty
+                                            <p class="px-3 py-3 text-ink-3">Nenhuma resposta rápida. Cadastre em Configuração.</p>
+                                        @endforelse
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="min-w-0 flex-1 order-first basis-full @md:order-none @md:basis-0" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
                                 @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())
                                     <ul class="mb-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface text-sm" role="listbox" aria-label="Respostas rápidas">
                                         @foreach ($suggestions as $suggestion)
@@ -426,8 +452,14 @@
                                     <p class="mt-1 text-xs text-danger">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <flux:button type="submit" variant="primary" icon="paper-airplane" aria-label="Enviar" x-show="mode === 'reply'" x-bind:disabled="uploading > 0" />
-                            <button type="submit" x-show="mode === 'note'" x-cloak class="rounded-md bg-warn px-3 py-2 text-sm font-medium text-warn-foreground hover:brightness-95 disabled:opacity-50" x-bind:disabled="uploading > 0">Salvar nota</button>
+                            @if ($attachments === [])
+                                <flux:button type="button" variant="subtle" icon="microphone" class="@max-md:ms-auto" aria-label="Gravar áudio" title="Gravar áudio" x-show="mode === 'reply' && !filled" x-on:click="$dispatch('voice-start')" />
+                                <flux:button type="submit" variant="primary" icon="paper-airplane" class="@max-md:ms-auto" aria-label="Enviar" title="Enviar" x-show="mode === 'reply' && filled" x-bind:disabled="uploading > 0" />
+                            @else
+                                <flux:button type="submit" variant="primary" icon="paper-airplane" class="@max-md:ms-auto" aria-label="Enviar" title="Enviar" x-show="mode === 'reply'" x-bind:disabled="uploading > 0" />
+                            @endif
+                            <button type="submit" x-show="mode === 'note'" x-cloak class="@max-md:ms-auto rounded-md bg-warn px-3 py-2 text-sm font-medium text-warn-foreground hover:brightness-95 disabled:opacity-50" x-bind:disabled="uploading > 0">Salvar nota</button>
+                            </div>
                             <p x-show="mode === 'note'" x-cloak class="basis-full text-xs text-warn" role="status">Só a equipe vê. O cliente não recebe esta nota. (Alt+P alterna)</p>
                         </form>
                     </div>

@@ -67,7 +67,7 @@ class ViewConventionsTest extends TestCase
             'livewire/contacts/index.blade.php' => 1, // linha da lista de contatos
             'livewire/history/index.blade.php' => 1, // linha da lista do Histórico
             'livewire/inbox/audio-player.blade.php' => 2, // controles do player
-            'livewire/inbox/inbox.blade.php' => 6, // cartões da fila (2), abas Responder/Nota (2), item de resposta rápida, Salvar nota (colorido do modo nota)
+            'livewire/inbox/inbox.blade.php' => 7, // cartões da fila (2), abas Responder/Nota (2), itens de resposta rápida (sugestão do / e lista do botão), Salvar nota (colorido do modo nota)
             'livewire/inbox/media.blade.php' => 2, // abrir a foto e fechar a prévia (sobre fundo escuro)
             'livewire/inbox/new-conversation.blade.php' => 1, // item da lista de contatos
             'livewire/inbox/transcript.blade.php' => 11, // citação clicável, menu da mensagem e seus itens, reações

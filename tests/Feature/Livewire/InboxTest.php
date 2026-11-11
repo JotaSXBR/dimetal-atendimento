@@ -12,6 +12,7 @@ use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Settings\CompanySettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
@@ -32,7 +33,9 @@ class InboxTest extends TestCase
 
     private function user(UserRole $role = UserRole::ATENDENTE): User
     {
-        return User::factory()->create(['role' => $role, 'sign_messages' => false]);
+        CompanySettings::save(['signatureEnabled' => false]);
+
+        return User::factory()->create(['role' => $role]);
     }
 
     private function ticket(TicketStatus $status = TicketStatus::AGUARDANDO, ?User $owner = null, string $name = 'Maria Souza'): Ticket

@@ -13,6 +13,7 @@ use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Settings\CompanySettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -45,7 +46,8 @@ class InboxAttachmentsTest extends TestCase
         Storage::fake('local');
         RateLimiter::clear('send-message:1');
 
-        $this->me = User::factory()->create(['role' => UserRole::ATENDENTE, 'sign_messages' => false]);
+        CompanySettings::save(['signatureEnabled' => false]);
+        $this->me = User::factory()->create(['role' => UserRole::ATENDENTE]);
         $this->ticket = Ticket::factory()->create([
             'channel_id' => Channel::factory()->connected()->create()->id,
             'contact_id' => Contact::factory()->create()->id,

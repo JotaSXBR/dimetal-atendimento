@@ -34,7 +34,7 @@ class InboxClosedTabTest extends TestCase
 
         $this->channel = Channel::factory()->create();
         $this->mine = Sector::factory()->create();
-        $this->agent = User::factory()->create(['role' => UserRole::ATENDENTE, 'sign_messages' => false]);
+        $this->agent = User::factory()->create(['role' => UserRole::ATENDENTE]);
         $this->agent->sectors()->attach($this->mine);
     }
 

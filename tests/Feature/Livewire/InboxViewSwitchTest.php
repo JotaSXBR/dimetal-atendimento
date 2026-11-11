@@ -74,6 +74,19 @@ class InboxViewSwitchTest extends TestCase
         $this->assertSame('Encerrados', $this->text($inbox, 'tab-encerrados'));
     }
 
+    public function test_o_rotulo_acessivel_do_botao_mais_comeca_pelo_texto_visivel(): void
+    {
+        foreach (['todos', 'pendentes', 'encerrados'] as $tab) {
+            $inbox = $this->inbox($tab);
+            $visible = $this->text($inbox, 'tab-more');
+
+            $this->assertSame(1, preg_match('/data-testid="tab-more"[^>]*aria-label="([^"]+)"|aria-label="([^"]+)"[^>]*data-testid="tab-more"/', $inbox->html(), $m), $tab);
+            $label = $m[1] !== '' ? $m[1] : $m[2];
+
+            $this->assertStringStartsWith((string) $visible, $label, "o nome acessível contém o texto visível ({$tab})");
+        }
+    }
+
     public function test_o_botao_mais_mostra_a_visao_escolhida_dentro_do_menu(): void
     {
         // Só o nome: com a contagem o botão não cabe ao lado das três visões (a contagem fica no menu e no título da seção).

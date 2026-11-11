@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\Channel;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Settings\CompanySettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -178,7 +179,8 @@ class SidebarTest extends TestCase
         }
 
         $this->assertSame(['Fila', 'Contatos', 'Histórico', 'Relatórios', 'Auditoria', 'Configuração'], $names);
-        $this->assertSame(config('app.name'), $xpath->query('//a[@data-flux-sidebar-brand]')->item(0)?->getAttribute('aria-label'));
+        // Com a inicial do monograma (texto visível) na frente do nome: WCAG 2.5.3, o nome acessível contém o rótulo visível.
+        $this->assertSame(mb_strtoupper(mb_substr((string) config('app.name'), 0, 1)).' '.config('app.name'), $xpath->query('//a[@data-flux-sidebar-brand]')->item(0)?->getAttribute('aria-label'));
     }
 
     /** O `aria-label` do link substitui o conteúdo dele: as contagens do selo precisam entrar no nome. */
@@ -227,7 +229,7 @@ class SidebarTest extends TestCase
 
         $brand = $this->xpath($this->page(UserRole::ADMIN))->query('//a[@data-flux-sidebar-brand]')->item(0);
 
-        $this->assertSame('Laravel', $brand?->getAttribute('aria-label'));
+        $this->assertSame('L Laravel', $brand?->getAttribute('aria-label'));
     }
 
     public function test_sem_pendencia_nao_ha_ponto_da_fila(): void
@@ -312,6 +314,26 @@ class SidebarTest extends TestCase
         $text = $xpath->query('.//p', $notice)->item(0);
         $this->assertStringContainsString('As mensagens ficam aguardando', (string) $text?->textContent);
         $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:hidden', (string) $text?->getAttribute('class'));
+    }
+
+    public function test_o_nome_acessivel_da_marca_contem_o_texto_visivel(): void
+    {
+        CompanySettings::save(['name' => 'Dimetal Distribuidora']);
+
+        $brand = $this->xpath($this->page(UserRole::ATENDENTE))->query('//a[@data-flux-sidebar-brand]')->item(0);
+
+        $this->assertNotNull($brand);
+        // O texto visível é o monograma (a inicial) mais o nome; o nome acessível precisa começar por ele (WCAG 2.5.3).
+        $this->assertSame('D Dimetal Distribuidora', $brand->getAttribute('aria-label'));
+    }
+
+    public function test_o_rotulo_da_marca_ignora_espacos_nas_pontas_do_nome(): void
+    {
+        CompanySettings::save(['name' => '  Dimetal  ']);
+
+        $brand = $this->xpath($this->page(UserRole::ATENDENTE))->query('//a[@data-flux-sidebar-brand]')->item(0);
+
+        $this->assertSame('D Dimetal', $brand?->getAttribute('aria-label'));
     }
 
     public function test_sem_aviso_com_canal_conectado(): void

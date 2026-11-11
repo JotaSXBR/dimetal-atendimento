@@ -6,7 +6,27 @@ use PHPUnit\Framework\TestCase;
 
 class ThemeTokensTest extends TestCase
 {
-    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'accent-deep', 'warn', 'danger', 'ok', 'bot', 'ink-foreground', 'danger-foreground', 'warn-foreground'];
+    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'warn', 'danger', 'ok', 'bot', 'danger-foreground', 'warn-foreground'];
+
+    public function test_todo_token_tem_algum_uso(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $sources = '';
+
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root.'/resources/views', \FilesystemIterator::SKIP_DOTS)) as $file) {
+            $sources .= (string) file_get_contents($file->getPathname());
+        }
+
+        $css = (string) file_get_contents($root.'/resources/css/app.css');
+        $unused = array_values(array_filter(self::TOKENS, function (string $token) use ($sources, $css): bool {
+            $usage = '/(?:bg|text|border|ring|fill|stroke|from|to|via|outline|divide|placeholder|decoration|shadow|accent|caret)-'.preg_quote($token, '/').'(?![a-z0-9-])/';
+            $used = preg_match($usage, $sources) === 1 || preg_match($usage, $css) === 1 || str_contains($css, 'var(--color-'.$token.')');
+
+            return ! $used;
+        }));
+
+        $this->assertSame([], $unused, 'token definido e nunca usado: remova do CSS e da lista');
+    }
 
     private function css(): string
     {
@@ -88,7 +108,7 @@ class ThemeTokensTest extends TestCase
     public function test_cada_fundo_de_token_tem_texto_proprio_com_contraste(): void
     {
         foreach ($this->themes() as $theme => $t) {
-            foreach (['accent', 'ink', 'danger', 'warn'] as $ground) {
+            foreach (['accent', 'danger', 'warn'] as $ground) {
                 $this->assertGreaterThanOrEqual(4.5, $this->ratio($t[$ground.'-foreground'], $t[$ground]), "{$theme}: {$ground}-foreground sobre {$ground}");
             }
         }

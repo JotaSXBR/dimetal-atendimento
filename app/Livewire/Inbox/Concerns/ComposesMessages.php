@@ -38,8 +38,8 @@ trait ComposesMessages
 
     public string $draft = '';
 
-    /** Assinar as mensagens (a escolha do atendente, guardada em `users.sign_messages`). */
-    public bool $sign = true;
+    /** A lista do botão "Respostas rápidas" está aberta. */
+    public bool $showQuickReplies = false;
 
     /** O arquivo que acabou de subir; `commitUpload` o move para a bandeja ou o descarta. */
     public ?TemporaryUploadedFile $upload = null;
@@ -50,15 +50,21 @@ trait ComposesMessages
     /** @var array<int, TemporaryUploadedFile> Bandeja: arquivos aceitos, na ordem de envio. */
     public array $attachments = [];
 
-    public function mountComposesMessages(): void
+    public function toggleQuickReplies(): void
     {
-        $this->sign = $this->user()->sign_messages;
+        $this->authorize('reply', $this->selected());
+
+        $this->showQuickReplies = ! $this->showQuickReplies;
     }
 
-    public function toggleSign(): void
+    /**
+     * Todas as respostas que o usuário pode usar, para o botão (o `/` filtra pelo atalho, ver `quickReplies`).
+     *
+     * @return Collection<int, QuickReply>
+     */
+    public function allQuickReplies(): Collection
     {
-        $this->sign = ! $this->sign;
-        $this->user()->forceFill(['sign_messages' => $this->sign])->save();
+        return QuickReply::forUser($this->user())->orderBy('shortcut')->limit(50)->get();
     }
 
     /** O rascunho `/pre` chama as respostas rápidas do usuário; o texto entra no campo, editável. */

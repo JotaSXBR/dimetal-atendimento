@@ -87,6 +87,6 @@ class Tags extends Component
 
     public function render(): View
     {
-        return view('livewire.settings.tags', ['tags' => Tag::query()->withCount('tickets')->orderBy('name')->get()]);
+        return view('livewire.settings.tags', ['tags' => Tag::sortedByName(Tag::query()->withCount('tickets')->get())]);
     }
 }

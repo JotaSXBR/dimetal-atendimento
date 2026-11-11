@@ -113,7 +113,7 @@ class Inbox extends Component
             // Abrir outro ticket (um encerrado, por exemplo) não pode fazer o atual sumir sem volta.
             $this->previousTicketId = $this->ticketId ?? $this->previousTicketId;
             // O campo é um só: o texto de um ticket não pode aparecer (nem ser enviado) em outro. O rascunho fica no navegador.
-            $this->reset('draft');
+            $this->reset('draft', 'showQuickReplies');
         }
 
         $this->ticketId = $ticketId;
@@ -379,7 +379,7 @@ class Inbox extends Component
             ->get();
 
         return view('livewire.inbox.inbox', [
-            'tags' => Tag::query()->orderBy('name')->get(),
+            'tags' => Tag::sortedByName(Tag::query()->get()),
             'pending' => $list->where('status', TicketStatus::PENDENTE),
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),

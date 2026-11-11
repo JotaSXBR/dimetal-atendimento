@@ -29,7 +29,7 @@ class InboxSlaTest extends TestCase
         parent::setUp();
 
         $this->channel = Channel::factory()->create();
-        $this->agent = User::factory()->create(['role' => UserRole::ATENDENTE, 'sign_messages' => false]);
+        $this->agent = User::factory()->create(['role' => UserRole::ATENDENTE]);
     }
 
     /** Um horário de São Paulo (sexta 30/10/2026) como o instante em UTC. */

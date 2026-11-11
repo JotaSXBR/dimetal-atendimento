@@ -6,7 +6,7 @@
     x-on:keydown.window="shortcut($event)"
 >
     <header class="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-4 py-3">
-        <a href="{{ route('automacao') }}" wire:navigate class="text-sm text-accent-content hover:underline">← Automação</a>
+        <a href="{{ route('automacao') }}" wire:navigate class="inline-flex min-h-8 items-center text-sm text-accent-content hover:underline">← Automação</a>
         <h1 class="min-w-0 flex-1 truncate text-base font-semibold text-ink">{{ $workflow->name }}</h1>
 
         <p class="text-xs text-ink-3" role="status" x-text="busy ? 'Salvando…' : (dirty ? 'Alterações não salvas' : status)"></p>
