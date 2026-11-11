@@ -124,3 +124,72 @@ select:focus[data-flux-control] {
         outline-offset: 2px;
     }
 }
+
+/* Editor de workflows (/automacao/{id}): blocos, bolinhas e linhas desenhados em resources/js/flow-editor/editor.js.
+   As cores de categoria são do editor, nos dois temas; o resto usa os tokens do projeto. */
+.flow-canvas {
+    --flow-cat-inicio: #166534;
+    --flow-cat-fala: #1d4ed8;
+    --flow-cat-espera: #6d28d9;
+    --flow-cat-logica: #b45309;
+    --flow-cat-acao: #0f766e;
+    --flow-cat-fim: #4a5a66;
+    background-image: radial-gradient(circle, var(--color-line) 1px, transparent 1.5px);
+    background-size: 24px 24px;
+    touch-action: none;
+}
+
+.dark .flow-canvas {
+    --flow-cat-inicio: #4ade80;
+    --flow-cat-fala: #93c5fd;
+    --flow-cat-espera: #c4b5fd;
+    --flow-cat-logica: #fdba74;
+    --flow-cat-acao: #5eead4;
+    --flow-cat-fim: #94a3b8;
+}
+
+flow-node { display: block; }
+
+.flow-node {
+    --flow-cat: var(--flow-cat-acao);
+    position: relative;
+    width: 230px;
+    border: 1.5px solid var(--color-line);
+    border-radius: 10px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+    font-size: 12px;
+    cursor: grab;
+}
+.flow-node[data-category='inicio'] { --flow-cat: var(--flow-cat-inicio); }
+.flow-node[data-category='fala'] { --flow-cat: var(--flow-cat-fala); }
+.flow-node[data-category='espera'] { --flow-cat: var(--flow-cat-espera); }
+.flow-node[data-category='logica'] { --flow-cat: var(--flow-cat-logica); }
+.flow-node[data-category='acao'] { --flow-cat: var(--flow-cat-acao); }
+.flow-node[data-category='fim'] { --flow-cat: var(--flow-cat-fim); }
+.flow-node.is-selected { border-color: var(--color-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent); }
+.flow-node.is-invalid { border-color: var(--color-danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 30%, transparent); }
+
+.flow-head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 8px 8px 0 0;
+    background: color-mix(in srgb, var(--flow-cat) 14%, var(--color-surface));
+    color: var(--flow-cat);
+    font-weight: 600;
+}
+.flow-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink); }
+
+.flow-body { padding: 6px 10px; color: var(--color-ink-2); overflow-wrap: anywhere; }
+.flow-body p { margin: 0; line-height: 18px; }
+
+.flow-out { position: relative; display: flex; align-items: center; justify-content: flex-end; min-height: 28px; padding: 0 14px 0 10px; border-top: 1px solid var(--color-line); color: var(--color-ink-2); }
+.flow-out-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.flow-socket { position: absolute; top: 50%; translate: 0 -50%; display: block; line-height: 0; }
+.flow-socket-input { left: -8px; }
+.flow-socket-output { right: -8px; }

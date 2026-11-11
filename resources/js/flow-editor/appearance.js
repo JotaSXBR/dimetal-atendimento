@@ -58,7 +58,7 @@ function clip(value) {
 /** Até 3 linhas curtas com o conteúdo do bloco, para mostrar dentro dele no canvas. */
 export function previewOf(type, data, lookups = {}) {
     const d = data ?? {};
-    const nameOf = (list, id) => (list ?? []).find((item) => item.id === id)?.name;
+    const nameOf = (list, id) => (list ?? []).find((item) => String(item.id) === String(id))?.name;
 
     switch (type) {
         case 'inicio':
@@ -87,7 +87,7 @@ export function previewOf(type, data, lookups = {}) {
         case 'etiquetar':
             return [clip(nameOf(lookups.tags, d.tag_id) ?? 'Etiqueta removida')];
         case 'transferir':
-            if (d.setor_id == null) return ['Setor do menu'];
+            if (d.setor_id == null || d.setor_id === '') return ['Setor do menu'];
 
             return [clip(nameOf(lookups.sectors, d.setor_id) ?? 'Setor removido')];
         default:

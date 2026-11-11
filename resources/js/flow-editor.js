@@ -1,6 +1,7 @@
 // Alpine do editor de workflows (/automacao/{id}). O canvas (Rete) só é baixado quando a tela abre; o estado fica aqui
 // e a gravação vai para o Livewire (`$wire`), que valida no servidor. Ver flow-editor/editor.js.
 
+import { CATEGORIES, categoryOf } from './flow-editor/appearance.js';
 import { BLOCKS } from './flow-editor/nodes.js';
 import { messagesOf, withMessages } from './flow-editor/serialize.js';
 
@@ -10,7 +11,10 @@ document.addEventListener('alpine:init', () => {
         let api = null;
 
         return {
-            palette: Object.entries(BLOCKS).filter(([, block]) => block.palette).map(([type, block]) => ({ type, label: block.label })),
+            palette: Object.entries(BLOCKS)
+                .filter(([, block]) => block.palette)
+                .map(([type, block]) => ({ type, label: block.label, category: categoryOf(type), group: CATEGORIES[categoryOf(type)].label }))
+                .sort((a, b) => Object.keys(CATEGORIES).indexOf(a.category) - Object.keys(CATEGORIES).indexOf(b.category)),
             sectors: config.sectors,
             tags: config.tags,
             versions: config.versions,
@@ -30,6 +34,7 @@ document.addEventListener('alpine:init', () => {
                     api = await createEditor(this.$refs.canvas, config.graph, {
                         onSelect: (node) => (this.selected = node),
                         onChange: () => (this.dirty = true),
+                        lookups: { sectors: config.sectors, tags: config.tags },
                     });
                 } catch (error) {
                     this.failed = true;

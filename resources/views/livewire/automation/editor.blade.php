@@ -35,13 +35,16 @@
     <div class="flex min-h-0 flex-1">
         <aside class="w-44 shrink-0 space-y-1 overflow-y-auto border-e border-line bg-surface p-3" aria-label="Blocos">
             <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Adicionar bloco</p>
-            <template x-for="block in palette" x-bind:key="block.type">
-                <button type="button" class="w-full rounded-md border border-line px-2 py-1.5 text-start text-xs text-ink hover:bg-canvas" x-on:click="add(block.type)" x-text="block.label"></button>
+            <template x-for="(block, index) in palette" x-bind:key="block.type">
+                <div>
+                    <p x-show="index === 0 || palette[index - 1].group !== block.group" class="mt-2 font-mono text-[10px] tracking-wider text-ink-3 uppercase" x-text="block.group"></p>
+                    <button type="button" class="w-full rounded-md border border-line px-2 py-1.5 text-start text-xs text-ink hover:bg-canvas" x-on:click="add(block.type)" x-text="block.label"></button>
+                </div>
             </template>
         </aside>
 
         {{-- O canvas é do Rete: o Livewire não pode reescrever o que está aqui dentro. --}}
-        <div wire:ignore class="relative min-w-0 flex-1 overflow-hidden bg-canvas" x-ref="canvas" aria-label="Canvas do workflow"></div>
+        <div wire:ignore class="flow-canvas relative min-w-0 flex-1 overflow-hidden bg-canvas" x-ref="canvas" aria-label="Canvas do workflow"></div>
 
         <aside class="w-72 shrink-0 space-y-4 overflow-y-auto border-s border-line bg-surface p-4" aria-label="Propriedades do bloco">
             <template x-if="selected">
