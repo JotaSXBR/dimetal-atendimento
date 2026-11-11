@@ -3,20 +3,20 @@
 namespace App\Services\Bot;
 
 use App\Models\BotSession;
-use App\Models\Ticket;
+use App\Services\Bot\Effects\BotEffects;
 use App\Services\Bot\Flow\FlowGraph;
 use App\Services\Inbox\BusinessHours;
 use App\Settings\CompanySettings;
 use Closure;
 
-/** O contexto de uma execução: ticket, sessão e grafo, mais o que os blocos precisam (falar, ler e gravar variáveis). */
+/** O contexto de uma execução: sessão, grafo e efeitos, mais o que os blocos precisam (falar, ler e gravar variáveis). */
 final class BotRun
 {
     public function __construct(
         public readonly BotEngine $engine,
         public readonly BotSession $session,
-        public readonly Ticket $ticket,
         public readonly FlowGraph $flow,
+        public readonly BotEffects $fx,
     ) {}
 
     /** @return array<string, string|int|Closure(): string> */
@@ -29,13 +29,13 @@ final class BotRun
             }
         }
 
-        $name = trim((string) $this->ticket->contact()->first()?->name);
+        $name = $this->fx->contactName();
 
         return [
             ...$custom,
             'nome' => $name !== '' ? $name : 'cliente',
             'empresa' => CompanySettings::name(),
-            'protocolo' => (string) $this->ticket->protocol,
+            'protocolo' => $this->fx->protocol(),
             'setor' => is_scalar($this->get('setor')) ? (string) $this->get('setor') : '',
             'horario' => fn (): string => app(BusinessHours::class)->summary(),
             'proximo_horario' => fn (): string => app(BusinessHours::class)->nextOpeningLabel(now()),
@@ -54,6 +54,6 @@ final class BotRun
 
     public function say(string $template): void
     {
-        $this->engine->say($this->ticket, Vars::render($template, $this->vars()));
+        $this->fx->say(Vars::render($template, $this->vars()));
     }
 }

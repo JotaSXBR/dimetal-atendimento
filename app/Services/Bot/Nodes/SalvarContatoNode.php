@@ -2,7 +2,6 @@
 
 namespace App\Services\Bot\Nodes;
 
-use App\Actions\Contacts\SaveContact;
 use App\Services\Bot\BotRun;
 use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
@@ -18,7 +17,7 @@ final class SalvarContatoNode extends Node
         $value = $run->get($data->string('variavel'));
 
         if (in_array($field, self::FIELDS, true) && is_scalar($value) && trim((string) $value) !== '') {
-            (new SaveContact)($run->ticket->contact()->firstOrFail(), [$field => (string) $value]);
+            $run->fx->saveContactField($field, (string) $value);
         }
 
         return Step::next();

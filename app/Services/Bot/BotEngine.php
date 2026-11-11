@@ -2,12 +2,6 @@
 
 namespace App\Services\Bot;
 
-use App\Actions\Inbox\ClaimTicket;
-use App\Actions\Inbox\TransferTicket;
-use App\Enums\MessageOrigin;
-use App\Enums\TicketStatus;
-use App\Events\TicketUpdated;
-use App\Jobs\SendTicketMessageJob;
 use App\Models\BotSession;
 use App\Models\Message;
 use App\Models\Sector;
@@ -15,7 +9,7 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
 use App\Models\WorkflowVersion;
-use App\Services\Alerts\AlertDispatcher;
+use App\Services\Bot\Effects\LiveEffects;
 use App\Services\Bot\Flow\FlowGraph;
 use App\Services\Bot\Flow\NodeType;
 use App\Services\Bot\Nodes\CondicaoNode;
@@ -32,36 +26,32 @@ use App\Services\Bot\Nodes\NotaNode;
 use App\Services\Bot\Nodes\PerguntaNode;
 use App\Services\Bot\Nodes\SalvarContatoNode;
 use App\Services\Bot\Nodes\TransferirNode;
-use App\Services\Inbox\SendTicketMessage;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Conduz a conversa do cliente pelo grafo publicado. Uma sessão por ticket; o ticket fica `pendente` até o bot
  * entregá-lo à fila de um setor (`aguardando`) ou encerrá-lo. Quem chama garante que só uma execução por ticket roda
- * por vez (ver `AdvanceBotSessionJob`).
+ * por vez (ver `AdvanceBotSessionJob`). Tudo que sai do motor passa pelos efeitos do `BotRun`: o simulador do editor usa
+ * este mesmo motor com efeitos que só registram.
  */
 class BotEngine
 {
     /** Teto de blocos por execução: protege de um laço que passou despercebido. */
     public const MAX_STEPS = 50;
 
-    public function __construct(private readonly SendTicketMessage $send) {}
-
     public function start(Ticket $ticket, WorkflowVersion $version): BotSession
     {
         $flow = FlowGraph::fromArray($version->graph);
-        $start = $flow->start();
 
         $session = BotSession::create([
             'ticket_id' => $ticket->id,
             'workflow_version_id' => $version->id,
-            'node_id' => $start,
+            'node_id' => $flow->start(),
             'vars' => [],
             'state' => BotSession::ACTIVE,
         ]);
         TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_started', 'payload' => ['workflow_version_id' => $version->id]]);
 
-        $this->run(new BotRun($this, $session, $ticket, $flow), $start);
+        $this->begin(new BotRun($this, $session, $flow, new LiveEffects($ticket)));
 
         return $session;
     }
@@ -69,29 +59,36 @@ class BotEngine
     /** A resposta do cliente ao bloco em que a sessão está esperando. */
     public function receive(BotSession $session, Message $message): void
     {
-        if ($session->state !== BotSession::ACTIVE) {
+        $this->reply($this->liveRun($session), $message->type === 'text' ? trim($message->body) : '');
+    }
+
+    /** Roda a conversa a partir do Início. */
+    public function begin(BotRun $run): void
+    {
+        $this->run($run, $run->flow->start());
+    }
+
+    /** A resposta do cliente ao bloco em que a sessão está esperando; "#sair" leva à fila em qualquer bloco. */
+    public function reply(BotRun $run, string $text): void
+    {
+        if ($run->session->state !== BotSession::ACTIVE) {
             return;
         }
-
-        $text = $message->type === 'text' ? trim($message->body) : '';
 
         if (ChoiceReply::wantsOut($text)) {
-            $this->handoff($session, 'sair');
+            $this->deliver($run, 'sair');
 
             return;
         }
 
-        $ticket = $session->ticket()->firstOrFail();
-        $flow = FlowGraph::fromArray($session->version()->firstOrFail()->graph);
-        $id = $session->node_id;
-        $type = $id === null ? null : $flow->type($id);
+        $id = $run->session->node_id;
+        $type = $id === null ? null : $run->flow->type($id);
 
         if ($id === null || $type === null || ! $type->waits()) {
             return;
         }
 
-        $run = new BotRun($this, $session, $ticket, $flow);
-        $this->advance($run, $id, $this->node($type)->answer($run, $flow->data($id), $text));
+        $this->advance($run, $id, $this->node($type)->answer($run, $run->flow->data($id), $text));
     }
 
     /**
@@ -100,14 +97,13 @@ class BotEngine
      */
     public function handoff(BotSession $session, string $reason, ?Sector $to = null, ?User $assignTo = null, bool $generalQueue = false): void
     {
-        DB::transaction(function () use ($session, $reason, $to, $assignTo, $generalQueue): void {
-            $locked = BotSession::query()->whereKey($session->id)->lockForUpdate()->first();
+        $this->deliver($this->liveRun($session), $reason, $to, $assignTo, $generalQueue);
+    }
 
-            if ($locked === null || $locked->state !== BotSession::ACTIVE) {
-                return;
-            }
-
-            $ticket = Ticket::query()->findOrFail($locked->ticket_id);
+    /** O mesmo que `handoff`, para uma execução já montada (a de produção ou a do simulador). */
+    public function deliver(BotRun $run, string $reason, ?Sector $to = null, ?User $assignTo = null, bool $generalQueue = false): void
+    {
+        $run->fx->exclusive($run->session, function () use ($run, $reason, $to, $assignTo, $generalQueue): void {
             $sector = match (true) {
                 $generalQueue => null,
                 $to !== null && $to->status->receivesTickets() => $to,
@@ -115,25 +111,23 @@ class BotEngine
             };
 
             if ($reason !== 'fluxo') {
-                $flow = FlowGraph::fromArray($locked->version()->firstOrFail()->graph);
-                $vars = [...(new BotRun($this, $locked, $ticket, $flow))->vars(), 'setor' => $sector !== null ? $sector->name : ''];
+                $vars = [...$run->vars(), 'setor' => $sector !== null ? $sector->name : ''];
 
-                $this->say($ticket, Vars::render(BotMessages::text($flow, $sector !== null ? 'encaminhamento_setor' : 'encaminhamento_geral'), $vars));
+                $run->fx->say(Vars::render(BotMessages::text($run->flow, $sector !== null ? 'encaminhamento_setor' : 'encaminhamento_geral'), $vars));
             }
 
-            $assigned = $this->queueAndAssign($ticket, $sector, $assignTo);
+            $assigned = $run->fx->enterQueue($sector, $assignTo);
 
-            $locked->update(['state' => BotSession::TRANSFERRED, 'waiting' => null, 'expires_at' => null]);
-            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => ['reason' => $reason, 'sector_id' => $sector?->id, ...($assigned !== null ? ['assigned_user_id' => $assigned] : [])]]);
+            $run->session->fill(['state' => BotSession::TRANSFERRED, 'waiting' => null, 'expires_at' => null]);
+            $run->fx->save($run->session);
+            $run->fx->logHandoff($reason, $sector, $assigned);
         });
-
-        $session->refresh();
     }
 
     /** O canal deixou de ter workflow antes de a conversa começar: o ticket vai direto à fila geral. */
     public function release(Ticket $ticket): void
     {
-        $this->enterQueue($ticket, null);
+        (new LiveEffects($ticket))->enterQueue(null, null);
         TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => ['reason' => 'sem_workflow']]);
     }
 
@@ -143,15 +137,14 @@ class BotEngine
         return Sector::query()->receivingTickets()->orderBy('menu_order')->orderBy('id')->first();
     }
 
-    /** Grava e despacha uma mensagem do bot; visto e "digitando" saem em `SendTicketMessage::deliver`, como no envio humano. */
-    public function say(Ticket $ticket, string $text): void
+    private function liveRun(BotSession $session): BotRun
     {
-        if (trim($text) === '') {
-            return;
-        }
-
-        $message = $this->send->create($ticket, null, $text, MessageOrigin::BOT);
-        SendTicketMessageJob::dispatch($message->id)->afterCommit();
+        return new BotRun(
+            $this,
+            $session,
+            FlowGraph::fromArray($session->version()->firstOrFail()->graph),
+            new LiveEffects($session->ticket()->firstOrFail()),
+        );
     }
 
     private function run(BotRun $run, ?string $id): void
@@ -160,11 +153,12 @@ class BotEngine
             $type = $id === null ? null : $run->flow->type($id);
 
             if ($id === null || $type === null) {
-                $this->handoff($run->session, 'erros');
+                $this->deliver($run, 'erros');
 
                 return;
             }
 
+            $run->fx->entered($id);
             $run->session->attempts = 0;
             $step = $this->node($type)->enter($run, $run->flow->data($id));
 
@@ -177,7 +171,7 @@ class BotEngine
             $id = $run->flow->next($id, $step->port);
         }
 
-        $this->handoff($run->session, 'erros');
+        $this->deliver($run, 'erros');
     }
 
     private function advance(BotRun $run, string $from, Step $step): void
@@ -195,79 +189,20 @@ class BotEngine
     private function settle(BotRun $run, string $id, Step $step): void
     {
         match ($step->kind) {
-            Step::WAIT => $run->session->update([
-                'node_id' => $id,
-                'waiting' => $step->waiting,
-                'expires_at' => now()->addMinutes($step->minutes),
-            ]),
-            Step::LEAVE => $this->handoff($run->session, $step->reason),
+            Step::WAIT => $this->wait($run, $id, $step),
+            Step::LEAVE => $this->deliver($run, $step->reason),
             default => null,
         };
     }
 
-    /** Passa o ticket (já na fila) à pessoa; devolve o id dela, ou nulo se ele já tinha dono ou foi assumido antes. */
-    private function assign(Ticket $ticket, ?User $user): ?int
+    private function wait(BotRun $run, string $id, Step $step): void
     {
-        if ($user === null || ! (new ClaimTicket)($ticket, $user)) {
-            return null;
-        }
-
-        app(AlertDispatcher::class)->assigned($ticket, $user, null);
-
-        return $user->id;
-    }
-
-    /**
-     * Entra na fila e, se a pessoa escolhida pode, passa o ticket a ela; devolve o id de quem assumiu. Com atribuição possível a
-     * fila não toca o som; se a atribuição falhar, ela é avisada em seguida.
-     */
-    private function queueAndAssign(Ticket $ticket, ?Sector $sector, ?User $assignTo): ?int
-    {
-        $canAssign = $this->canAssign($assignTo, $sector);
-
-        $this->enterQueue($ticket, $sector, announce: ! $canAssign);
-        $assigned = $canAssign ? $this->assign($ticket, $assignTo) : null;
-
-        if ($canAssign && $assigned === null) {
-            app(AlertDispatcher::class)->queued($ticket->refresh());
-        }
-
-        return $assigned;
-    }
-
-    /** A pessoa existe, está ativa e atende o setor (ticket sem setor é de todos). */
-    private function canAssign(?User $user, ?Sector $sector): bool
-    {
-        return $user !== null && $user->active && $user->canHandleSector($sector?->id);
-    }
-
-    private function enterQueue(Ticket $ticket, ?Sector $sector, bool $announce = true): void
-    {
-        if ($sector !== null) {
-            (new TransferTicket)($ticket, null, $sector, announce: $announce);
-
-            return;
-        }
-
-        // Nenhum setor recebe tickets: vai para a fila geral, que o atendente sem setor e os supervisores veem.
-        $moved = Ticket::query()->whereKey($ticket->id)->where('status', TicketStatus::PENDENTE->value)->update([
-            'status' => TicketStatus::AGUARDANDO->value,
-            'waiting_since' => now(),
-            'sla_warn_at' => null,
-            'sla_due_at' => null,
-            'sla_warned_at' => null,
-            'sla_breached_at' => null,
-            'updated_at' => now(),
-        ]) === 1;
-
-        if ($moved) {
-            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'transferred', 'payload' => []]);
-            $ticket->refresh();
-            TicketUpdated::dispatch($ticket);
-            if ($announce) {
-                app(AlertDispatcher::class)->queued($ticket);
-            }
-        }
+        $run->session->fill([
+            'node_id' => $id,
+            'waiting' => $step->waiting,
+            'expires_at' => now()->addMinutes($step->minutes),
+        ]);
+        $run->fx->save($run->session);
     }
 
     private function node(NodeType $type): Node
