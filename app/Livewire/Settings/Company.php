@@ -76,10 +76,10 @@ class Company extends Component
         $this->saved = true;
     }
 
-    /** Como a assinatura aparece numa mensagem de exemplo, com o nome de quem está editando. */
+    /** Como a assinatura aparece numa mensagem de exemplo, com o nome de quem está editando; desligada, a mensagem sai sem ela. */
     public function preview(): HtmlString
     {
-        $signature = Signature::render($this->signatureTemplate, (string) auth()->user()?->name, 'Comercial', $this->name);
+        $signature = $this->signatureEnabled ? Signature::render($this->signatureTemplate, (string) auth()->user()?->name, 'Comercial', $this->name) : '';
         $sample = 'Bom dia! Tudo bem?';
 
         return WhatsAppText::html($signature === '' ? $sample : Signature::place($sample, $signature, $this->signaturePosition));

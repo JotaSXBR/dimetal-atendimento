@@ -76,6 +76,39 @@ class CompanyPageTest extends TestCase
             ->assertSeeHtml('Bom dia! Tudo bem?');
     }
 
+    public function test_a_previa_acompanha_a_posicao_da_assinatura(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN, 'name' => 'Jessé']);
+        $signature = '<strong>Jessé @ Dimetal Distribuidora:</strong>';
+
+        Livewire::actingAs($admin)->test(Company::class)
+            ->set('name', 'Dimetal Distribuidora')
+            ->set('signaturePosition', 'fim')
+            ->assertSeeHtmlInOrder(['Bom dia! Tudo bem?', $signature])
+            ->set('signaturePosition', 'inicio')
+            ->assertSeeHtmlInOrder([$signature, 'Bom dia! Tudo bem?']);
+    }
+
+    public function test_a_previa_nao_mostra_a_assinatura_com_ela_desligada(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN, 'name' => 'Jessé']);
+
+        Livewire::actingAs($admin)->test(Company::class)
+            ->assertSeeHtml('<strong>Jessé @ ')
+            ->set('signatureEnabled', false)
+            ->assertDontSeeHtml('<strong>Jessé @ ')
+            ->assertSeeHtml('Bom dia! Tudo bem?');
+    }
+
+    public function test_os_campos_que_mudam_a_previa_atualizam_ao_vivo(): void
+    {
+        $this->page()
+            ->assertSeeHtml('wire:model.live="signaturePosition"')
+            ->assertSeeHtml('wire:model.live="signatureEnabled"')
+            ->assertSeeHtml('wire:model.live.debounce.300ms="name"')
+            ->assertSeeHtml('wire:model.live.debounce.300ms="signatureTemplate"');
+    }
+
     public function test_so_admin_entra(): void
     {
         $this->actingAs(User::factory()->create(['role' => UserRole::SUPERVISOR]))->get('/configuracoes/empresa')->assertForbidden();
