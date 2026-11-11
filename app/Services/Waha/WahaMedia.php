@@ -2,6 +2,7 @@
 
 namespace App\Services\Waha;
 
+use App\Services\Inbox\OggOpus;
 use Illuminate\Http\Client\Response;
 
 /**
@@ -18,7 +19,7 @@ class WahaMedia
 
     /**
      * Envia um arquivo em base64. O endpoint depende do tipo: imagem, vídeo, voz (o WAHA converte para OGG/OPUS com
-     * `convert`) ou arquivo/documento. Áudio não tem legenda no WhatsApp.
+     * `convert`, menos quando o arquivo já é OGG/Opus mono: vai como está) ou arquivo/documento. Áudio não tem legenda no WhatsApp.
      *
      * @param  string  $kind  `image`, `video`, `audio` ou `document` (qualquer outro valor vai como arquivo)
      * @return array<string, mixed> a resposta do WAHA (traz o `id` da mensagem)
@@ -43,7 +44,13 @@ class WahaMedia
         }
 
         if ($kind === 'audio') {
-            $body['convert'] = true;
+            // Só o começo importa para a assinatura: 88 caracteres de base64 são 66 bytes, e o arquivo todo não é decodificado aqui.
+            $native = OggOpus::isMono((string) base64_decode(substr($data, 0, 88), true));
+            $body['convert'] = ! $native;
+
+            if ($native) {
+                $body['file']['mimetype'] = 'audio/ogg; codecs=opus';
+            }
         } elseif ($caption !== '') {
             $body['caption'] = $caption;
         }

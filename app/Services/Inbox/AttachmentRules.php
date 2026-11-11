@@ -46,15 +46,12 @@ final class AttachmentRules
     ];
 
     /**
-     * Gravação do microfone: o Chrome grava webm/opus, o Safari mp4/aac.
+     * Gravação do microfone: só OGG/Opus mono, que o navegador monta sem recodificar (resources/js/voice-config.js) e o
+     * WAHA envia sem converter. Qualquer outra coisa é recusada: o caminho antigo, convertido pelo WAHA, perdia a onda.
      *
      * @var array<string, list<string>>
      */
     private const VOICE_TYPES = [
-        'audio/webm' => ['webm'],
-        'video/webm' => ['webm'],
-        'audio/mp4' => ['mp4', 'm4a'],
-        'video/mp4' => ['mp4', 'm4a'],
         'audio/ogg' => ['ogg'],
         'application/ogg' => ['ogg'],
     ];
@@ -91,15 +88,28 @@ final class AttachmentRules
         $detected = (new finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath());
         $mime = is_string($detected) ? strtolower(trim(explode(';', $detected)[0])) : '';
         $ext = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
-        $accepted = ($voice ? self::VOICE_TYPES : self::TYPES)[$mime] ?? null;
 
-        if ($accepted === null || ! in_array($ext, $accepted, true)) {
-            return "O arquivo {$name} não é de um tipo aceito (fotos, PDF, Word, Excel, áudio e vídeo MP4).";
+        if (! self::accepts($file, $mime, $ext, $voice)) {
+            return $voice
+                ? "A gravação {$name} não é OGG/Opus mono. Grave de novo no Chrome, Edge ou Firefox."
+                : "O arquivo {$name} não é de um tipo aceito (fotos, PDF, Word, Excel, áudio e vídeo MP4).";
         }
 
         $kind = self::kind($mime, $ext, $voice);
 
         return ['mime' => self::normalizedMime($mime, $kind, $ext), 'ext' => $ext, 'kind' => $kind, 'name' => $name];
+    }
+
+    /** Tipo e extensão combinam; na gravação do microfone o cabeçalho ainda precisa ser Opus mono. */
+    private static function accepts(UploadedFile $file, string $mime, string $ext, bool $voice): bool
+    {
+        $accepted = ($voice ? self::VOICE_TYPES : self::TYPES)[$mime] ?? null;
+
+        if ($accepted === null || ! in_array($ext, $accepted, true)) {
+            return false;
+        }
+
+        return ! $voice || OggOpus::isMono((string) file_get_contents((string) $file->getRealPath(), false, null, 0, 38));
     }
 
     /** `image`, `video`, `audio` ou `document`, pelo endpoint que o WAHA exige para cada um. */

@@ -2,20 +2,15 @@
 //
 // Fluxo: gravar -> ouvir -> regravar, descartar ou enviar. Enquanto grava, avisa o servidor a cada poucos segundos para o
 // cliente ver "gravando áudio…"; ao parar ou descartar, avisa que parou. O arquivo sobe como `voice` e o servidor o envia
-// como mensagem de voz (o WAHA converte para OGG/OPUS).
+// como mensagem de voz. O WebM/Opus do Chrome vira OGG/Opus no navegador (sem recodificar, ver voice-config.js e webm-to-ogg.js);
+// o que não puder virar segue como veio e o WAHA converte.
+
+import { VOICE_BITS_PER_SECOND, VOICE_CONSTRAINTS, voiceFile } from './voice-config.js';
 
 const MAX_SECONDS = 300;
 const MIN_SECONDS = 1;
 const HEARTBEAT_MS = 4000;
-const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
-
-function extensionFor(mime) {
-    if (mime.includes('mp4')) {
-        return 'm4a';
-    }
-
-    return mime.includes('ogg') ? 'ogg' : 'webm';
-}
+const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
 
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('voiceRecorder', ($wire, ticketId) => ({
@@ -57,7 +52,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             try {
-                this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                this.stream = await navigator.mediaDevices.getUserMedia(VOICE_CONSTRAINTS);
             } catch {
                 this.error = 'Permita o microfone no navegador para gravar.';
 
@@ -65,8 +60,17 @@ document.addEventListener('alpine:init', () => {
             }
 
             const supported = MIME_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type));
-            this.recorder = new MediaRecorder(this.stream, supported ? { mimeType: supported } : undefined);
-            this.mime = this.recorder.mimeType || supported || 'audio/webm';
+
+            // Sem WebM/Opus nem OGG/Opus (Safari) não há como montar o OGG; avisa antes de gravar em vão.
+            if (!supported) {
+                this.releaseStream();
+                this.error = 'Este navegador não grava mensagem de voz. Use o Chrome, Edge ou Firefox.';
+
+                return;
+            }
+
+            this.recorder = new MediaRecorder(this.stream, { mimeType: supported, audioBitsPerSecond: VOICE_BITS_PER_SECOND });
+            this.mime = this.recorder.mimeType || supported;
             this.chunks = [];
             this.recorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
@@ -98,7 +102,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        finish() {
+        async finish() {
             this.releaseStream();
 
             if (this.seconds < MIN_SECONDS) {
@@ -107,7 +111,22 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.blob = new Blob(this.chunks, { type: this.mime });
+            const file = await voiceFile(new Blob(this.chunks, { type: this.mime }), this.mime);
+
+            // Descartou enquanto o arquivo era preparado: nada de prévia.
+            if (this.phase !== 'recording') {
+                return;
+            }
+
+            if (!file) {
+                this.discard();
+                this.error = 'Não foi possível preparar a gravação. Grave de novo.';
+
+                return;
+            }
+
+            this.blob = file.blob;
+            this.mime = file.mime;
             this.url = URL.createObjectURL(this.blob);
             this.setPhase('preview');
             $wire.recording(false, ticketId);
@@ -153,7 +172,7 @@ document.addEventListener('alpine:init', () => {
             this.sending = true;
             this.error = '';
 
-            const file = new File([this.blob], `audio.${extensionFor(this.mime)}`, { type: this.mime });
+            const file = new File([this.blob], 'audio.ogg', { type: this.mime });
 
             $wire.$upload(
                 'voice',
