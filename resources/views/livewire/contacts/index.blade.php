@@ -23,7 +23,7 @@
         @endif
 
         <div class="mt-4">
-            <flux:input icon="magnifying-glass" placeholder="Buscar por nome, telefone, e-mail ou empresa" wire:model.live.debounce.300ms="search" clearable />
+            <flux:input icon="magnifying-glass" aria-label="Buscar contatos" placeholder="Buscar por nome, telefone, e-mail ou empresa" wire:model.live.debounce.300ms="search" clearable />
         </div>
 
         <x-skeleton-rows :rows="4" wire:loading.delay wire:target="search" class="mt-4 rounded-[14px] border border-line bg-surface" />

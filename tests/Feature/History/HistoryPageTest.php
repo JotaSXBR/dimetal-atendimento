@@ -55,6 +55,21 @@ class HistoryPageTest extends TestCase
         ], $override));
     }
 
+    public function test_sem_ticket_aberto_a_coluna_de_detalhes_nao_ocupa_espaco(): void
+    {
+        $ticket = $this->closed('Maria');
+
+        $this->assertStringNotContainsString('var(--details-w', $this->page()->html(), 'sem ticket escolhido não sobra uma coluna vazia à direita');
+        $this->assertStringContainsString('var(--details-w', $this->page()->set('ticketId', $ticket->id)->html());
+    }
+
+    public function test_o_texto_da_busca_cabe_na_coluna_da_lista(): void
+    {
+        $html = $this->page()->html();
+
+        $this->assertStringContainsString('placeholder="Contato, protocolo ou texto"', $html);
+    }
+
     private function page(?User $user = null): Testable
     {
         return Livewire::actingAs($user ?? $this->agent)->test(Index::class);
