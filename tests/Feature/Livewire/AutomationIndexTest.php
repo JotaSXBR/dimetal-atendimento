@@ -80,6 +80,14 @@ class AutomationIndexTest extends TestCase
         $this->assertSame(1, Workflow::query()->where('name', 'Distribuição')->count());
     }
 
+    public function test_abrir_novo_workflow_limpa_o_aviso_da_criacao_anterior(): void
+    {
+        $this->page()->set('newName', 'Distribuição')->set('template', 'distribuidora')->call('create')
+            ->assertSet('notice', 'Criado. Estes setores do modelo não existem aqui: Vendas, Financeiro, SAC. Escolha o setor nos blocos Transferir.')
+            ->call('$set', 'showNew', true)
+            ->assertSet('notice', null);
+    }
+
     public function test_criar_com_todos_os_setores_nao_avisa(): void
     {
         foreach (['Vendas', 'Financeiro', 'SAC'] as $name) {

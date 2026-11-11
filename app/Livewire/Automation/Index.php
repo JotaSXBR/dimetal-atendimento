@@ -35,6 +35,14 @@ class Index extends Component
         $this->authorize('supervisor');
     }
 
+    /** O aviso é da criação que acabou de acontecer: abrir o formulário de novo o dispensa. */
+    public function updatedShowNew(bool $open): void
+    {
+        if ($open) {
+            $this->notice = null;
+        }
+    }
+
     public function create(WorkflowPublisher $publisher): void
     {
         $this->authorize('supervisor');

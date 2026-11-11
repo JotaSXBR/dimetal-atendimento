@@ -53,7 +53,7 @@ final class Distribuidora implements Template
         $steps = array_map(fn (array $q): array => [
             "{$slug}_{$q[0]}",
             'pergunta',
-            ['texto' => $q[1], 'variavel' => $q[0], ...(isset($q[2]) ? ['validacao' => $q[2]] : []), 'timeout_min' => 10],
+            ['texto' => $q[1], 'variavel' => $q[0], ...(isset($q[2]) ? ['validacao' => $q[2]] : [])],
         ], $questions);
 
         $builder->branch('menu', "opt:{$option}", [
