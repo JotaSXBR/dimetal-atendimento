@@ -100,7 +100,7 @@ Cada modelo é um fluxo completo e curto, com no máximo 5 opções no primeiro 
 
 Cada modelo é registrado com chave, nome, descrição honesta do que faz e do que **não** faz, e aparece na galeria de "Novo workflow" agrupado (o "Atendimento padrão" e o "com horário" continuam).
 
-**Escopo da 4c (decidido pelo dono em 11/11):** esta fatia entrega a infraestrutura (montador de grafo, registro de modelos, resolução de setor por nome com aviso do que faltou, galeria agrupada) e **quatro segmentos**: Distribuidora, Clínica e consultório, Restaurante e delivery e Loja de varejo. Os outros quatro (oficina, escola, imobiliária, salão) ficam para uma fatia seguinte, depois de o dono ver estes no beta; o contrato de cada modelo e a prova abaixo não mudam.
+**Escopo da 4c (decidido pelo dono em 11/11):** esta fatia entrega a infraestrutura (montador de grafo, registro de modelos, resolução de setor por nome com aviso do que faltou, galeria agrupada) e **um segmento**: Distribuidora (reduzido pelo dono no mesmo dia: os outros sete ficam fora, sem data). Um segmento futuro entra só com a classe do modelo e as linhas de prova; o contrato de cada modelo e a prova abaixo não mudam.
 
 **Prova.** Teste que, para cada modelo: o grafo passa no validador com setores resolvidos e com setores ausentes; e o simulador percorre o caminho principal de cada opção do menu com respostas roteirizadas até o desfecho esperado (setor, nota gravada e variável coletada).
 

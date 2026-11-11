@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** "Novo workflow" passa a oferecer modelos prontos por segmento (Distribuidora, Clínica e consultório, Restaurante e delivery, Loja de varejo), cada um montado com os blocos existentes, com o setor resolvido pelo nome e conferido pelo simulador.
+**Goal:** "Novo workflow" passa a oferecer modelos prontos por segmento (nesta fatia só a Distribuidora; os outros segmentos da spec ficam fora), montado com os blocos existentes, com o setor resolvido pelo nome e conferido pelo simulador.
 
 **Architecture:** Um montador de grafo (`FlowBuilder`) escreve o fluxo sem coordenadas; um arquivo PHP por segmento usa o montador e traz o nome dos setores desejados. `WorkflowTemplates::resolve()` troca o nome do setor pelo id do setor que existe (e lista os que faltam); o editor organiza o desenho na primeira abertura de um grafo sem posição. A galeria agrupa os modelos.
 
@@ -15,7 +15,7 @@
 - Sem dependência nova (composer ou npm). Nenhum bloco novo e nenhuma chave nova no grafo: o modelo usa só os blocos e campos que o motor já lê (`menu` com `opcoes`, `pergunta` com `variavel` e `validacao`, `condicao` com `kind: horario`, `nota`, `mensagem`, `transferir` com `setor_id` ou `fila_geral`).
 - Cada modelo: no máximo 5 opções no menu; aviso de horário no início (aberto → saudação e menu; fechado → avisa o horário e entra na **fila geral**, sem perguntas); perguntas validadas (`cnpj`, `data`, `numero`, `telefone` onde couber); uma Nota para a equipe com o que foi coletado; Transferir ao setor certo. "Falar com atendente" já existe em todo menu (`#sair`).
 - Dado pessoal só quando necessário e com a finalidade na pergunta. CNPJ pode; CPF e dado de saúde não são pedidos.
-- Setores usados (os padrões da instalação): `Vendas`, `Financeiro`, `SAC`, `Comercial`. Nome sem diferenciar maiúscula; só setor que recebe tickets (`SectorStatus::receivesTickets()`).
+- Setores usados (os padrões da instalação): `Vendas`, `Financeiro`, `SAC`. **Escopo (dono, 11/11): só a Distribuidora;** a infraestrutura serve a qualquer segmento futuro, mas nenhum outro entra agora. Nome sem diferenciar maiúscula; só setor que recebe tickets (`SectorStatus::receivesTickets()`).
 - Texto ao cliente: usar as variáveis que o motor já tem (`{{nome}}`, `{{empresa}}`, `{{protocolo}}`, `{{setor}}`, `{{horario}}`, `{{proximo_horario}}`).
 - Nomes: "Bot" para a automação; nada novo mistura com "IA". Sem referência a projetos de terceiros em código, commit e PR.
 - Os modelos existentes (`em_branco`, `padrao`, `horario`) e as conversas de versões já publicadas continuam iguais.
@@ -110,13 +110,13 @@
 
 **Files:**
 - Create: `app/Services/Bot/Templates/Segments/Distribuidora.php`; `tests/Feature/Bot/SegmentTemplatesTest.php`
-- Modify: `app/Services/Bot/WorkflowTemplates.php` (registrar em `SEGMENTS`), `tests/Feature/Bot/WorkflowTemplatesTest.php` (a lista agora tem os três básicos mais Distribuidora)
+- Modify: `app/Services/Bot/WorkflowTemplates.php` (registrar em `SEGMENTS`), `tests/Feature/Bot/WorkflowTemplatesTest.php` (a lista agora tem os três básicos mais Distribuidora; atualizar `test_a_lista_traz_os_tres_modelos_na_ordem`)
 
 **Interfaces:**
 - Consumes: `FlowBuilder::start()/opening()/branch()/graph()`, `Template`, `WorkflowTemplates::resolve()`, `BotSimulator::start(array $graph, string $name, string $clock): SimulationState` e `::reply(array $graph, SimulationState $state, string $text): SimulationState`.
 - Produces: `Distribuidora` (key `distribuidora`, name `Distribuidora`, descrição que diz o que faz — coleta CNPJ e dados do pedido e entrega ao setor — e o que **não** faz — não consulta pedido, boleto nem estoque) e o **harness** do `SegmentTemplatesTest`:
-  - `walk(string $key, string $clock, list<string> $replies): SimulationState` (cria os setores `Vendas`, `Financeiro`, `SAC`, `Comercial`, resolve o modelo, inicia o simulador e envia as respostas em ordem);
-  - um `dataProvider` `routes()` com linhas `[chave, relógio 'aberto', respostas, setor esperado, trechos da nota]`; as Tasks 6 a 8 só acrescentam linhas e uma classe.
+  - `walk(string $key, string $clock, list<string> $replies): SimulationState` (cria os setores `Vendas`, `Financeiro`, `SAC`, resolve o modelo, inicia o simulador e envia as respostas em ordem);
+  - um `dataProvider` `routes()` com linhas `[chave, relógio 'aberto', respostas, setor esperado, trechos da nota]`; um segmento futuro só acrescenta linhas e uma classe.
   - Testes genéricos sobre **todos** os `SEGMENTS`: `test_todo_segmento_e_valido_com_e_sem_setores` (validador sem erros com os quatro setores criados e com nenhum), `test_todo_segmento_tem_no_maximo_cinco_opcoes_e_descricao`, `test_fora_do_horario_vai_a_fila_geral_sem_perguntar`, `test_cada_rota_termina_na_fila_do_setor_com_a_nota` (usa `routes()`), `test_tres_cnpj_errados_vao_a_fila` e `test_sair_no_meio_vai_a_fila` (Review Focus 3 e 4).
 
 **Distribuidora** (setor entre parênteses; todas as opções começam pedindo o CNPJ, `variavel: cnpj`, `validacao: cnpj`, texto dizendo que é para localizar o cadastro):
@@ -137,80 +137,11 @@ Depois da nota, uma Mensagem de encaminhamento com `{{protocolo}}` e `{{setor}}`
 - [ ] **Step 4: Run** `php artisan test --filter='SegmentTemplatesTest|WorkflowTemplatesTest'`; Pint, Larastan e PHPMD limpos.
 - [ ] **Step 5: Commit** `feat: modelo de automação para distribuidora, com prova pelo simulador`.
 
-### Task 6: Segmento Clínica e consultório
+### Task 6: Conferência no navegador e anotações
 
 **Files:**
-- Create: `app/Services/Bot/Templates/Segments/Clinica.php`
-- Modify: `WorkflowTemplates::SEGMENTS`, `SegmentTemplatesTest::routes()`
+- Modify: `docs/superpowers/specs/2026-11-11-automacao-fatia-4-design.md` (manter anotado que os demais segmentos ficam fora)
 
-**Interfaces:**
-- Consumes: o harness e o montador da Task 5.
-- Produces: `Clinica` (key `clinica`, name `Clínica e consultório`; **não** pede nem guarda dado de saúde: só nome, data de nascimento e preferência).
-
-| # | Opção | Perguntas (`variavel`, `validacao`) | Nota | Setor |
-|---|---|---|---|---|
-| 1 | Agendar ou remarcar | `paciente` (texto), `convenio` (texto: convênio ou particular), `preferencia` (texto: dia e período) | "Agendamento. {{paciente}}. {{convenio}}. Preferência: {{preferencia}}" | Vendas |
-| 2 | Resultado de exame | `paciente` (texto), `nascimento` (`data`) | "Resultado de exame. {{paciente}}, nascimento {{nascimento}}" | SAC |
-| 3 | Segunda via de cobrança | `paciente` (texto) | "2ª via de cobrança. {{paciente}}" | Financeiro |
-| 4 | Falar com a recepção | — | — (sem nota) | SAC |
-
-- [ ] **Step 1: Write the failing tests:** quatro linhas em `routes()` (a 4 sem nota: o teste afirma que nenhum efeito `registraria a nota` aparece).
-- [ ] **Step 2: Run** `php artisan test --filter=SegmentTemplatesTest` → FAIL nas linhas novas.
-- [ ] **Step 3: Implement** `Clinica` e registrar.
-- [ ] **Step 4: Run** o filtro da Task 5 → PASS (os testes genéricos já cobrem o segmento novo).
-- [ ] **Step 5: Commit** `feat: modelo de automação para clínica e consultório`.
-
-### Task 7: Segmento Restaurante e delivery
-
-**Files:**
-- Create: `app/Services/Bot/Templates/Segments/Restaurante.php`
-- Modify: `WorkflowTemplates::SEGMENTS`, `SegmentTemplatesTest::routes()`
-
-**Interfaces:**
-- Consumes: o harness e o montador da Task 5.
-- Produces: `Restaurante` (key `restaurante`, name `Restaurante e delivery`; não calcula valor nem confirma disponibilidade).
-
-| # | Opção | Perguntas | Nota | Setor |
-|---|---|---|---|---|
-| 1 | Fazer pedido | `itens` (texto), `endereco` (texto), `pagamento` (texto: dinheiro, cartão ou Pix) | "Pedido. Itens: {{itens}}. Entrega: {{endereco}}. Pagamento: {{pagamento}}" | Vendas |
-| 2 | Acompanhar pedido | `pedido` (`numero`) | "Acompanhar pedido {{pedido}}" | SAC |
-| 3 | Reclamação | `descricao` (texto) | "Reclamação: {{descricao}}" | SAC |
-| 4 | Reserva | `data_reserva` (`data`), `pessoas` (`numero`) | "Reserva para {{data_reserva}}, {{pessoas}} pessoas" | Vendas |
-
-- [ ] **Step 1: Write the failing tests:** quatro linhas em `routes()`.
-- [ ] **Step 2: Run** `php artisan test --filter=SegmentTemplatesTest` → FAIL nas linhas novas.
-- [ ] **Step 3: Implement** `Restaurante` e registrar.
-- [ ] **Step 4: Run** o filtro da Task 5 → PASS.
-- [ ] **Step 5: Commit** `feat: modelo de automação para restaurante e delivery`.
-
-### Task 8: Segmento Loja de varejo
-
-**Files:**
-- Create: `app/Services/Bot/Templates/Segments/Varejo.php`
-- Modify: `WorkflowTemplates::SEGMENTS`, `SegmentTemplatesTest::routes()`
-
-**Interfaces:**
-- Consumes: o harness e o montador da Task 5.
-- Produces: `Varejo` (key `varejo`, name `Loja de varejo`; não consulta estoque nem preço).
-
-| # | Opção | Perguntas | Nota | Setor |
-|---|---|---|---|---|
-| 1 | Disponibilidade de produto | `produto` (texto) | "Consulta de produto: {{produto}}" | Vendas |
-| 2 | Troca | `pedido` (`numero`), `motivo` (texto) | "Troca. Pedido {{pedido}}. Motivo: {{motivo}}" | SAC |
-| 3 | Pós-venda | `descricao` (texto) | "Pós-venda: {{descricao}}" | SAC |
-| 4 | Pagamento | `pedido` (`numero`) | "Pagamento do pedido {{pedido}}" | Financeiro |
-
-- [ ] **Step 1: Write the failing tests:** quatro linhas em `routes()`.
-- [ ] **Step 2: Run** `php artisan test --filter=SegmentTemplatesTest` → FAIL nas linhas novas.
-- [ ] **Step 3: Implement** `Varejo` e registrar; atualizar o teste da lista para os sete modelos na ordem (três básicos, depois Distribuidora, Clínica, Restaurante, Varejo).
-- [ ] **Step 4: Run** `php artisan test --filter='SegmentTemplatesTest|WorkflowTemplatesTest|AutomationIndexTest'` → PASS.
-- [ ] **Step 5: Commit** `feat: modelo de automação para loja de varejo`.
-
-### Task 9: Conferência no navegador e anotações
-
-**Files:**
-- Modify: `docs/superpowers/specs/2026-11-11-automacao-fatia-4-design.md` (anotar os quatro segmentos que ficam para a fatia seguinte, se ainda não estiver)
-
-- [ ] **Step 1:** com o servidor local (`dimetal_local`, ver nota de memória), criar um workflow de cada segmento pela galeria; conferir o agrupamento, o aviso de setor faltante (apagando um setor antes) e que o editor abre cada modelo já organizado, sem blocos sobrepostos, em 1280 e 800 px de largura.
-- [ ] **Step 2:** rodar "Testar" no editor em cada modelo (relógio aberto e fechado) e conferir trilha, variáveis e desfecho.
+- [ ] **Step 1:** com o servidor local (`dimetal_local`, ver nota de memória), criar um workflow da Distribuidora pela galeria; conferir o agrupamento, o aviso de setor faltante (apagando um setor antes) e que o editor abre cada modelo já organizado, sem blocos sobrepostos, em 1280 e 800 px de largura.
+- [ ] **Step 2:** rodar "Testar" no editor na Distribuidora (relógio aberto e fechado) e conferir trilha, variáveis e desfecho.
 - [ ] **Step 3:** registrar o resultado no ledger e commitar qualquer ajuste de texto ou desenho com `fix:`.
