@@ -47,8 +47,19 @@ class WorkflowPublisher
      */
     public function check(Workflow $workflow): array
     {
+        return $this->checkGraph($workflow->draft);
+    }
+
+    /**
+     * Os erros de um grafo qualquer (o do canvas, ainda não salvo, por exemplo), contra os setores, etiquetas e pessoas de hoje.
+     *
+     * @param  array<string, mixed>  $graph
+     * @return list<string>
+     */
+    public function checkGraph(array $graph): array
+    {
         return $this->validator->validate(
-            $workflow->draft,
+            $graph,
             array_values(Sector::query()->get(['id'])->map(fn (Sector $s): int => $s->id)->all()),
             array_values(Tag::query()->get(['id'])->map(fn (Tag $t): int => $t->id)->all()),
             array_values(User::query()->where('active', true)->get(['id'])->map(fn (User $u): int => $u->id)->all()),
