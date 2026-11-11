@@ -70,6 +70,21 @@ class AutomationIndexTest extends TestCase
         $this->assertCount(8, Workflow::query()->where('name', 'Com horário')->firstOrFail()->draft['nodes']);
     }
 
+    public function test_card_mostra_resumo_do_rascunho(): void
+    {
+        $publisher = app(WorkflowPublisher::class);
+        $publisher->create('Padrão', $this->user, template: 'padrao');
+        $publisher->create('Com horário', $this->user, template: 'horario');
+        Workflow::factory()->create(['name' => 'Fixos', 'draft' => ['nodes' => [
+            ['id' => 'a', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 3]],
+            ['id' => 'b', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 3]],
+            ['id' => 'c', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 4]],
+        ], 'edges' => []]]);
+
+        $this->page()
+            ->assertSeeInOrder(['Com horário', '8 blocos', 'Fixos', '3 blocos', '2 setores', 'Padrão', '5 blocos']);
+    }
+
     public function test_nome_e_obrigatorio(): void
     {
         $this->page()->set('newName', '  ')->call('create')->assertHasErrors(['newName' => 'required']);

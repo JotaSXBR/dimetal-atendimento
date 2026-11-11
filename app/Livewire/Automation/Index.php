@@ -109,10 +109,28 @@ class Index extends Component
         return $user;
     }
 
+    /**
+     * Resumo do rascunho para o cartão: quantos blocos e quantos setores ele cita (os fixos dos blocos Transferir, mais um
+     * se há Menu de setores, que leva ao setor que o cliente escolher).
+     *
+     * @param  array<string, mixed>|null  $draft
+     * @return array{nodes: int, sectors: int}
+     */
+    private function summary(?array $draft): array
+    {
+        $nodes = collect($draft['nodes'] ?? []);
+        $fixed = $nodes->where('type', 'transferir')->pluck('data.setor_id')->filter(fn ($id): bool => $id !== null && $id !== '')->unique()->count();
+
+        return ['nodes' => $nodes->count(), 'sectors' => $fixed + ($nodes->contains('type', 'menu_setores') ? 1 : 0)];
+    }
+
     public function render(): View
     {
+        $workflows = Workflow::query()->withCount('versions')->with(['versions' => fn ($q) => $q->with('publisher')->orderByDesc('number')])->orderBy('name')->get();
+
         return view('livewire.automation.index', [
-            'workflows' => Workflow::query()->withCount('versions')->with(['versions' => fn ($q) => $q->with('publisher')->orderByDesc('number')])->orderBy('name')->get(),
+            'workflows' => $workflows,
+            'summaries' => $workflows->mapWithKeys(fn (Workflow $workflow): array => [$workflow->id => $this->summary($workflow->draft)]),
             'channels' => Channel::query()->orderBy('name')->get(),
             'templates' => WorkflowTemplates::all(),
         ]);

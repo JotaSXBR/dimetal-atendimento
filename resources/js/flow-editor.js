@@ -1,7 +1,7 @@
 // Alpine do editor de workflows (/automacao/{id}). O canvas (Rete) só é baixado quando a tela abre; o estado fica aqui
 // e a gravação vai para o Livewire (`$wire`), que valida no servidor. Ver flow-editor/editor.js.
 
-import { CATEGORIES, categoryOf } from './flow-editor/appearance.js';
+import { CATEGORIES, categoryOf, errorNodeIds } from './flow-editor/appearance.js';
 import { BLOCKS } from './flow-editor/nodes.js';
 import { messagesOf, withMessages } from './flow-editor/serialize.js';
 
@@ -184,9 +184,15 @@ document.addEventListener('alpine:init', () => {
                 api?.focus(error.split(':')[0]);
             },
 
+            /** Pinta de vermelho os blocos citados pelos erros atuais (nenhum, se não há erro). */
+            markErrors() {
+                api?.setErrors(errorNodeIds(this.errors, api.getGraph().nodes.map((node) => node.id)));
+            },
+
             async run(action) {
                 this.busy = true;
                 this.errors = [];
+                this.markErrors();
 
                 try {
                     return await action(withMessages(api.getGraph(), this.messages));
@@ -206,6 +212,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.dirty = false;
                 this.errors = result.errors ?? [];
+                this.markErrors();
                 this.status = this.errors.length === 0 ? 'Tudo certo: o workflow pode ser publicado.' : '';
             },
 
@@ -214,6 +221,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.dirty = false;
                 this.errors = result.errors ?? [];
+                this.markErrors();
                 this.status = result.ok ? `Versão ${result.version} publicada.` : '';
 
                 if (result.ok) {

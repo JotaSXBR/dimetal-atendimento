@@ -40,6 +40,7 @@
                         <p class="text-sm font-semibold text-ink">{{ $workflow->name }}</p>
                         <p class="text-xs text-ink-3">
                             @if ($workflow->versions_count > 0)<x-status-badge tone="ok">Publicado · versão {{ $workflow->versions->first()?->number }}</x-status-badge>@else<x-status-badge tone="neutral">Nunca publicado</x-status-badge>@endif
+                            · {{ $summaries[$workflow->id]['nodes'] }} {{ $summaries[$workflow->id]['nodes'] === 1 ? 'bloco' : 'blocos' }}@if ($summaries[$workflow->id]['sectors'] > 0) · {{ $summaries[$workflow->id]['sectors'] }} {{ $summaries[$workflow->id]['sectors'] === 1 ? 'setor' : 'setores' }}@endif
                             · rascunho editado {{ $workflow->updated_at?->timezone(config('app.display_timezone'))->format('d/m H:i') }}
                         </p>
                     </div>

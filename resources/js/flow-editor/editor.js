@@ -305,6 +305,7 @@ export async function createEditor(container, graph, hooks) {
             }
 
             node.data = data;
+            node.invalid = false; // editar o bloco limpa a marca de erro até a próxima validação
             node.refreshPreview(lookups);
             const removed = node.syncOutputs();
 
