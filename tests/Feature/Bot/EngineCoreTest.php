@@ -15,6 +15,7 @@ use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\WorkflowVersion;
 use App\Services\Bot\BotEngine;
+use App\Settings\CompanySettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -151,6 +152,19 @@ class EngineCoreTest extends TestCase
         $this->assertSame($this->vendas->id, $fresh?->sector_id);
         $this->assertSame('sair', $this->event('bot_handoff')?->payload['reason'] ?? null);
         $this->assertSame(BotSession::TRANSFERRED, $session->fresh()?->state);
+    }
+
+    public function test_empresa_e_variavel_das_mensagens_do_bot(): void
+    {
+        CompanySettings::save(['name' => 'Dimetal Distribuidora']);
+        $version = $this->version(
+            [['i', 'inicio', []], ['g', 'mensagem', ['texto' => 'Bem-vindo a {{empresa}}']], ['t', 'encerrar', []]],
+            [['i', 'out', 'g'], ['g', 'out', 't']],
+        );
+
+        app(BotEngine::class)->start($this->ticket, $version);
+
+        $this->assertSame(['Bem-vindo a Dimetal Distribuidora'], $this->botTexts());
     }
 
     public function test_numero_com_assinatura_do_cliente_escolhe_o_setor(): void
