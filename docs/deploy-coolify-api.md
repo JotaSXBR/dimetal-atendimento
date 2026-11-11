@@ -58,7 +58,7 @@ curl -s -X POST "$COOLIFY_URL/api/v1/applications/public" \
 `worker-beta` e `scheduler-beta` são iguais ao app, sem `domains`, e usam `dockerfile_target_build`
 `worker` e `scheduler` (estágios do `docker/Dockerfile`; o `app` usa `runtime`). **Não** use
 `start_command`: em build por Dockerfile o Coolify o ignora e o container sobe o servidor web. O
-healthcheck deles vem do `HEALTHCHECK` de cada estágio do Dockerfile (`healthcheck-queue` e `healthcheck-schedule`); o Coolify o prefere ao configurado no recurso e a API não tem campo para o tipo `cmd`.
+healthcheck deles vem do `HEALTHCHECK` de cada estágio do Dockerfile (`healthcheck-queue` e `healthcheck-schedule`); a API não tem campo para o tipo `cmd`, então o healthcheck do painel fica **desligado** (`health_check_enabled: false`) nesses dois recursos; ligado, o Coolify injeta o check HTTP em `/` e o container fica `unhealthy`.
 
 `reverb-beta` também é igual ao app, com `dockerfile_target_build` `reverb`, alias `reverb-beta`,
 healthcheck `http` em `/up` (porta 8080) e `domains` `https://dimetal-beta.fluxie.com.br/app`

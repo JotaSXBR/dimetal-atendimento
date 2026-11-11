@@ -7,19 +7,26 @@
         <div class="mt-4 rounded-md border border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="alert">{{ $error }}</div>
     @endif
 
+    @if ($notice)
+        <div class="mt-4 rounded-md border border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="status">{{ $notice }}</div>
+    @endif
+
     @if ($showNew)
         <form wire:submit="create" class="mt-4 space-y-3 rounded-[14px] border border-line bg-surface p-4">
             <flux:input label="Nome" wire:model="newName" maxlength="120" />
             <fieldset class="space-y-2">
                 <legend class="text-sm font-medium text-ink">Começar de</legend>
-                @foreach ($templates as $option)
-                    <label class="flex cursor-pointer items-start gap-3 rounded-md border border-line p-3 text-sm has-[:checked]:border-accent" wire:key="template-{{ $option['key'] }}">
-                        <input type="radio" class="mt-1" wire:model="template" value="{{ $option['key'] }}">
-                        <span>
-                            <span class="block font-semibold text-ink">{{ $option['name'] }}</span>
-                            <span class="block text-xs text-ink-3">{{ $option['description'] }}</span>
-                        </span>
-                    </label>
+                @foreach (collect($templates)->groupBy('group') as $group => $options)
+                    <p class="pt-1 text-xs font-semibold uppercase tracking-wide text-ink-3" wire:key="template-group-{{ $group }}">{{ $group }}</p>
+                    @foreach ($options as $option)
+                        <label class="flex cursor-pointer items-start gap-3 rounded-md border border-line p-3 text-sm has-[:checked]:border-accent" wire:key="template-{{ $option['key'] }}">
+                            <input type="radio" class="mt-1" wire:model="template" value="{{ $option['key'] }}">
+                            <span>
+                                <span class="block font-semibold text-ink">{{ $option['name'] }}</span>
+                                <span class="block text-xs text-ink-3">{{ $option['description'] }}</span>
+                            </span>
+                        </label>
+                    @endforeach
                 @endforeach
             </fieldset>
             @error('newName')

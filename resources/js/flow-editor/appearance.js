@@ -122,6 +122,11 @@ export function errorNodeIds(errors, nodeIds) {
     return found;
 }
 
+/** Algum bloco tem posição (`x` e `y` numéricos, `0` inclusive). Grafo de modelo vem sem nenhuma: o editor o organiza ao abrir. */
+export function hasPositions(nodes) {
+    return (nodes ?? []).some((n) => Number.isFinite(n.x) && Number.isFinite(n.y));
+}
+
 const COL = 340;
 const ROW = 150;
 

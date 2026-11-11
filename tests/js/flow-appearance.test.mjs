@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CATEGORIES, History, ICONS, arrange, categoryOf, clampToViewport, connectionPath, duplicate, errorNodeIds, previewOf } from '../../resources/js/flow-editor/appearance.js';
+import { CATEGORIES, History, ICONS, arrange, categoryOf, clampToViewport, connectionPath, duplicate, errorNodeIds, hasPositions, previewOf } from '../../resources/js/flow-editor/appearance.js';
 import { BLOCKS } from '../../resources/js/flow-editor/nodes.js';
 
 const lookups = { sectors: [{ id: 1, name: 'Vendas' }], tags: [{ id: 7, name: 'VIP' }] };
@@ -129,4 +129,13 @@ test('clampToViewport: o menu cabe na tela, com margem', () => {
     assert.deepEqual(clampToViewport(900, 700, 200, 300, 1000, 800), { x: 792, y: 492 }, 'perto do canto inferior direito sobe e recua');
     assert.deepEqual(clampToViewport(-20, -5, 200, 300, 1000, 800), { x: 8, y: 8 });
     assert.deepEqual(clampToViewport(50, 50, 400, 900, 300, 600), { x: 8, y: 8 }, 'maior que a tela fica no canto, sem valor negativo');
+});
+
+test('hasPositions: sem coordenada é falso; 0,0 explícito e um nó com posição valem', () => {
+    assert.equal(hasPositions([{ id: 'a' }, { id: 'b', x: null, y: null }]), false);
+    assert.equal(hasPositions([]), false);
+    assert.equal(hasPositions(undefined), false);
+    assert.equal(hasPositions([{ id: 'a', x: 0, y: 0 }]), true);
+    assert.equal(hasPositions([{ id: 'a' }, { id: 'b', x: 340, y: 150 }]), true);
+    assert.equal(hasPositions([{ id: 'a', x: 10 }]), false);
 });

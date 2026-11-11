@@ -7,6 +7,9 @@ final class DefaultWorkflow
 {
     public const NAME = 'Atendimento padrão';
 
+    /** O aviso de fora do expediente, usado pelos modelos com horário. */
+    public const OUT_OF_HOURS = 'Olá, {{nome}}! Nosso horário de atendimento é {{horario}}. Retornamos {{proximo_horario}} e você já está na fila para ser atendido.';
+
     /** @return array<string, mixed> */
     public static function graph(): array
     {
@@ -47,7 +50,7 @@ final class DefaultWorkflow
                 $node('menu', 'menu_setores', 780, 0, ['texto' => 'Com qual setor você quer falar? Responda com o número da opção:', 'timeout_min' => 5]),
                 $node('encaminhamento', 'mensagem', 1040, 0, ['texto' => 'Certo! Seu protocolo é {{protocolo}}. Você entrou na fila de {{setor}} e um atendente responde em instantes.']),
                 $node('transferir', 'transferir', 1300),
-                $node('fora', 'mensagem', 520, 240, ['texto' => 'Olá, {{nome}}! Nosso horário de atendimento é {{horario}}. Retornamos {{proximo_horario}} e você já está na fila para ser atendido.']),
+                $node('fora', 'mensagem', 520, 240, ['texto' => self::OUT_OF_HOURS]),
                 $node('transferir_fora', 'transferir', 780, 240, ['fila_geral' => true]),
             ],
             'edges' => [

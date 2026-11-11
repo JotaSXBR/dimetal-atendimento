@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire;
 use App\Enums\UserRole;
 use App\Livewire\Automation\Index;
 use App\Models\Channel;
+use App\Models\Sector;
 use App\Models\User;
 use App\Models\Workflow;
 use App\Services\Bot\WorkflowPublisher;
@@ -54,6 +55,46 @@ class AutomationIndexTest extends TestCase
         $this->assertSame(['Do modelo', 'Triagem'], Workflow::query()->orderBy('name')->pluck('name')->all());
         $this->assertCount(5, Workflow::query()->where('name', 'Do modelo')->firstOrFail()->draft['nodes']);
         $this->assertCount(1, Workflow::query()->where('name', 'Triagem')->firstOrFail()->draft['nodes']);
+    }
+
+    public function test_a_galeria_agrupa_os_modelos_em_basicos_e_por_segmento(): void
+    {
+        $html = $this->page()->call('$set', 'showNew', true)->html();
+        $positions = array_map(fn (string $text): int|false => strpos($html, $text), ['Básicos', 'Em branco', 'Atendimento padrão', 'Atendimento com horário', 'Por segmento', 'Distribuidora']);
+
+        $this->assertNotContains(false, $positions);
+        $sorted = $positions;
+        sort($sorted);
+        $this->assertSame($sorted, $positions, 'grupos e modelos na ordem da galeria');
+    }
+
+    public function test_criar_de_modelo_com_setor_faltando_avisa_quais(): void
+    {
+        Sector::factory()->create(['name' => 'Vendas']);
+
+        $this->page()->set('newName', 'Distribuição')->set('template', 'distribuidora')->call('create')
+            ->assertHasNoErrors()
+            ->assertSet('notice', 'Criado. Estes setores do modelo não existem aqui: Financeiro, SAC. Escolha o setor nos blocos Transferir.')
+            ->assertSee('Estes setores do modelo não existem aqui');
+
+        $this->assertSame(1, Workflow::query()->where('name', 'Distribuição')->count());
+    }
+
+    public function test_abrir_novo_workflow_limpa_o_aviso_da_criacao_anterior(): void
+    {
+        $this->page()->set('newName', 'Distribuição')->set('template', 'distribuidora')->call('create')
+            ->assertSet('notice', 'Criado. Estes setores do modelo não existem aqui: Vendas, Financeiro, SAC. Escolha o setor nos blocos Transferir.')
+            ->call('$set', 'showNew', true)
+            ->assertSet('notice', null);
+    }
+
+    public function test_criar_com_todos_os_setores_nao_avisa(): void
+    {
+        foreach (['Vendas', 'Financeiro', 'SAC'] as $name) {
+            Sector::factory()->create(['name' => $name]);
+        }
+
+        $this->page()->set('newName', 'Distribuição')->set('template', 'distribuidora')->call('create')->assertSet('notice', null);
     }
 
     public function test_novo_workflow_lista_os_modelos_e_cria_o_escolhido(): void
