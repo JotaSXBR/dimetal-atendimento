@@ -55,3 +55,7 @@ jobs:
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
+          # Falso positivo do alias do npm: `vite` aqui é `@voidzero-dev/vite-plus-core` (package.json: dependencies e overrides), cujo
+          # número de versão (1.x) cai nos intervalos de advisories do pacote `vite` real (<= 6.4.3, < 2.9.x...). O vite real não está
+          # na árvore; conferido em 11/11/2026 pela faixa de cada advisory em `gh api advisories/<id>`.
+          allow-ghsas: GHSA-mv48-hcvh-8jj8, GHSA-353f-5xf4-qw67, GHSA-587h-7wmj-h5pm, GHSA-c27g-q93r-2cwf
