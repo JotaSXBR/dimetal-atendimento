@@ -3,6 +3,7 @@
 namespace App\Services\Bot\Nodes;
 
 use App\Services\Bot\BotRun;
+use App\Services\Bot\ChoiceReply;
 use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
 
@@ -41,7 +42,7 @@ abstract class ChoiceNode extends Node
     public function answer(BotRun $run, NodeData $data, string $text): Step
     {
         $values = $run->get('_choices');
-        $number = preg_match('/^\d{1,3}$/', $text) === 1 ? (int) $text : 0;
+        $number = ChoiceReply::number($text) ?? 0;
         $picked = is_array($values) ? ($values[$number - 1] ?? null) : null;
 
         if (is_int($picked) || is_string($picked)) {

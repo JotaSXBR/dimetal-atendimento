@@ -72,7 +72,7 @@ class BotEngine
 
         $text = $message->type === 'text' ? trim($message->body) : '';
 
-        if (mb_strtolower($text) === '#sair') {
+        if (ChoiceReply::wantsOut($text)) {
             $this->handoff($session, 'sair');
 
             return;

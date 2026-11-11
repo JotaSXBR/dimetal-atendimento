@@ -153,6 +153,62 @@ class EngineCoreTest extends TestCase
         $this->assertSame(BotSession::TRANSFERRED, $session->fresh()?->state);
     }
 
+    public function test_numero_com_assinatura_do_cliente_escolhe_o_setor(): void
+    {
+        $session = app(BotEngine::class)->start($this->ticket, $this->simple());
+
+        $this->say($session, "*#Jessé:*\n2");
+
+        $fresh = $this->ticket->fresh();
+        $this->assertSame(TicketStatus::AGUARDANDO, $fresh?->status);
+        $this->assertSame($this->suporte->id, $fresh?->sector_id);
+        $this->assertSame('fluxo', $this->event('bot_handoff')?->payload['reason'] ?? null);
+    }
+
+    public function test_valores_diferentes_na_mesma_mensagem_contam_como_opcao_invalida(): void
+    {
+        $session = app(BotEngine::class)->start($this->ticket, $this->simple());
+
+        $this->say($session, "1\n2");
+
+        $this->assertSame(TicketStatus::PENDENTE, $this->ticket->fresh()?->status);
+        $this->assertSame(1, $session->fresh()?->attempts);
+        $this->assertStringContainsString('Opção inválida', $this->botTexts()[2]);
+    }
+
+    public function test_assinatura_sem_numero_conta_como_opcao_invalida(): void
+    {
+        $session = app(BotEngine::class)->start($this->ticket, $this->simple());
+
+        $this->say($session, "*#Jessé:*\nopa");
+
+        $this->assertSame(TicketStatus::PENDENTE, $this->ticket->fresh()?->status);
+        $this->assertSame(1, $session->fresh()?->attempts);
+        $this->assertStringContainsString('Opção inválida', $this->botTexts()[2]);
+    }
+
+    public function test_sair_numa_linha_com_assinatura_vai_a_fila_padrao(): void
+    {
+        $session = app(BotEngine::class)->start($this->ticket, $this->simple());
+
+        $this->say($session, "*#Jessé:*\n#sair");
+
+        $fresh = $this->ticket->fresh();
+        $this->assertSame(TicketStatus::AGUARDANDO, $fresh?->status);
+        $this->assertSame($this->vendas->id, $fresh?->sector_id);
+        $this->assertSame('sair', $this->event('bot_handoff')?->payload['reason'] ?? null);
+    }
+
+    public function test_sair_vence_o_numero_na_mesma_mensagem(): void
+    {
+        $session = app(BotEngine::class)->start($this->ticket, $this->simple());
+
+        $this->say($session, "2\n#sair");
+
+        $this->assertSame($this->vendas->id, $this->ticket->fresh()?->sector_id);
+        $this->assertSame('sair', $this->event('bot_handoff')?->payload['reason'] ?? null);
+    }
+
     public function test_sem_setor_no_menu_vai_para_aguardando_sem_setor(): void
     {
         Sector::query()->update(['status' => 'desativado']);
