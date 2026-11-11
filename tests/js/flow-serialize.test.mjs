@@ -88,3 +88,13 @@ test('atalhos da paleta criam um bloco já configurado', () => {
     assert.deepEqual(horario.data, { kind: 'horario' });
     assert.ok(BLOCKS[horario.type], 'o tipo do atalho existe');
 });
+
+test('dados vazios que o servidor manda como lista viram objeto: campos gravados neles não somem', () => {
+    const { nodes } = fromGraph({ nodes: [{ id: 't', type: 'transferir', x: 0, y: 0, data: [] }, { id: 'u', type: 'encerrar' }], edges: [] });
+
+    for (const node of nodes) {
+        assert.equal(Array.isArray(node.data), false);
+        node.data.fila_geral = true;
+        assert.equal(JSON.parse(JSON.stringify(node.data)).fila_geral, true);
+    }
+});

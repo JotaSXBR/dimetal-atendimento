@@ -58,8 +58,8 @@
             </div>
 
             {{-- Menu do clique direito: no fundo adiciona bloco; num bloco duplica ou apaga (o Início não). --}}
-            <div x-show="menu" x-cloak x-on:click.outside="menu = null" x-on:keydown.escape.window="menu = null" role="menu" aria-label="Ações do canvas"
-                 class="fixed z-50 flex w-52 flex-col gap-0.5 rounded-md border border-line bg-surface p-1 shadow-lg"
+            <div x-show="menu" x-cloak x-on:click.outside="menu = null" x-on:keydown.escape.window="menu = null" x-ref="menu" role="menu" aria-label="Ações do canvas"
+                 class="fixed z-50 flex max-h-[calc(100dvh-1rem)] w-52 flex-col gap-0.5 overflow-y-auto rounded-md border border-line bg-surface p-1 shadow-lg"
                  x-bind:style="menu ? `left:${menu.x}px;top:${menu.y}px` : ''">
                 <template x-if="menu && menu.nodeId">
                     <div class="flex flex-col gap-0.5">
@@ -119,6 +119,9 @@
                                         <option x-bind:value="sector.id" x-text="sector.name"></option>
                                     </template>
                                 </select>
+                            </template>
+                            <template x-if="field.kind === 'flag'">
+                                <input type="checkbox" class="mt-1 block size-4" x-model="selected.data[field.key]" x-on:change="$nextTick(() => apply())">
                             </template>
                             <template x-if="field.kind === 'user'">
                                 <select class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model.number="selected.data[field.key]" x-on:change="apply()">

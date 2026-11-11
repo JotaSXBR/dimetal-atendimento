@@ -61,7 +61,7 @@ function clip(value) {
 function transferTarget(d, lookups) {
     const find = (list, id) => (list ?? []).find((item) => String(item.id) === String(id))?.name;
     const empty = (value) => value == null || value === '';
-    const sector = empty(d.setor_id) ? 'Setor do menu' : (find(lookups.sectors, d.setor_id) ?? 'Setor removido');
+    const sector = d.fila_geral === true ? 'Fila geral (sem setor)' : empty(d.setor_id) ? 'Setor do menu' : (find(lookups.sectors, d.setor_id) ?? 'Setor removido');
 
     return empty(d.atribuir_a) ? sector : `${sector} → ${find(lookups.users, d.atribuir_a) ?? 'pessoa removida'}`;
 }
@@ -209,6 +209,14 @@ export function connectionPath(start, end, gap = 9) {
     const reach = Math.max(Math.abs(endX - start.x) * 0.5, 70);
 
     return `M ${start.x} ${start.y} C ${start.x + reach} ${start.y}, ${endX - reach} ${end.y}, ${endX} ${end.y}`;
+}
+
+/** A posição do menu (canto superior esquerdo) puxada para dentro da tela, com margem; maior que a tela, fica no canto. */
+export function clampToViewport(x, y, width, height, viewWidth, viewHeight, margin = 8) {
+    return {
+        x: Math.max(margin, Math.min(x, viewWidth - width - margin)),
+        y: Math.max(margin, Math.min(y, viewHeight - height - margin)),
+    };
 }
 
 /** Cópia do bloco para o ponto 40 px abaixo e à direita, sem ligações; o Início não se duplica. */

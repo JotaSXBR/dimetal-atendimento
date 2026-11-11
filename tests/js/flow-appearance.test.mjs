@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CATEGORIES, History, ICONS, arrange, categoryOf, connectionPath, duplicate, errorNodeIds, previewOf } from '../../resources/js/flow-editor/appearance.js';
+import { CATEGORIES, History, ICONS, arrange, categoryOf, clampToViewport, connectionPath, duplicate, errorNodeIds, previewOf } from '../../resources/js/flow-editor/appearance.js';
 import { BLOCKS } from '../../resources/js/flow-editor/nodes.js';
 
 const lookups = { sectors: [{ id: 1, name: 'Vendas' }], tags: [{ id: 7, name: 'VIP' }] };
@@ -44,6 +44,8 @@ test('prévia: setor e etiqueta, inclusive os que sumiram', () => {
     assert.deepEqual(previewOf('transferir', { setor_id: 1, atribuir_a: 5 }, withUsers), ['Vendas → Ana']);
     assert.deepEqual(previewOf('transferir', { setor_id: 1, atribuir_a: 99 }, withUsers), ['Vendas → pessoa removida']);
     assert.deepEqual(previewOf('transferir', { atribuir_a: 5 }, withUsers), ['Setor do menu → Ana']);
+    assert.deepEqual(previewOf('transferir', { fila_geral: true, setor_id: 1 }, withUsers), ['Fila geral (sem setor)']);
+    assert.deepEqual(previewOf('transferir', { fila_geral: true, atribuir_a: 5 }, withUsers), ['Fila geral (sem setor) → Ana']);
     assert.deepEqual(previewOf('transferir', { setor_id: 99 }, lookups), ['Setor removido']);
     assert.deepEqual(previewOf('etiquetar', { tag_id: 7 }, lookups), ['VIP']);
     assert.deepEqual(previewOf('etiquetar', { tag_id: 99 }, lookups), ['Etiqueta removida']);
@@ -120,4 +122,11 @@ test('connectionPath: ligação que volta e pontos ausentes não geram NaN', () 
     assert.ok(back.startsWith('M 500 0 C 704.5 0,'));
     assert.equal(connectionPath(null, { x: 1, y: 1 }), '');
     assert.equal(connectionPath({ x: 1, y: 1 }, undefined), '');
+});
+
+test('clampToViewport: o menu cabe na tela, com margem', () => {
+    assert.deepEqual(clampToViewport(100, 100, 200, 300, 1000, 800), { x: 100, y: 100 });
+    assert.deepEqual(clampToViewport(900, 700, 200, 300, 1000, 800), { x: 792, y: 492 }, 'perto do canto inferior direito sobe e recua');
+    assert.deepEqual(clampToViewport(-20, -5, 200, 300, 1000, 800), { x: 8, y: 8 });
+    assert.deepEqual(clampToViewport(50, 50, 400, 900, 300, 600), { x: 8, y: 8 }, 'maior que a tela fica no canto, sem valor negativo');
 });

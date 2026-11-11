@@ -97,9 +97,10 @@ export const BLOCKS = {
         icon: 'forward',
         label: 'Transferir para setor',
         palette: true,
-        data: { setor_id: null, atribuir_a: null },
+        data: { setor_id: null, atribuir_a: null, fila_geral: false },
         fields: [
-            { key: 'setor_id', label: 'Setor (vazio = o escolhido no menu)', kind: 'sector' },
+            { key: 'fila_geral', label: 'Fila geral (sem setor): o SLA só conta no horário de funcionamento', kind: 'flag' },
+            { key: 'setor_id', label: 'Setor (vazio = o escolhido no menu)', kind: 'sector', when: { fila_geral: false } },
             { key: 'atribuir_a', label: 'Atribuir a (vazio = só a fila)', kind: 'user' },
         ],
     },
