@@ -27,6 +27,9 @@ class Index extends Component
 
     public ?string $error = null;
 
+    /** Aviso depois de criar de um modelo: os setores que ele cita e esta instalação não tem. */
+    public ?string $notice = null;
+
     public function mount(): void
     {
         $this->authorize('supervisor');
@@ -42,9 +45,11 @@ class Index extends Component
             'newName.max' => 'O nome pode ter até 120 caracteres.',
         ]);
 
+        $missing = WorkflowTemplates::resolve($this->template)['missing'];
         $publisher->create($this->newName, $this->user(), $this->template);
         $this->reset('showNew', 'newName', 'template');
         $this->error = null;
+        $this->notice = $missing === [] ? null : 'Criado. Estes setores do modelo não existem aqui: '.implode(', ', $missing).'. Escolha o setor nos blocos Transferir.';
     }
 
     public function duplicate(int $id, WorkflowPublisher $publisher): void
