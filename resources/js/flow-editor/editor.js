@@ -142,6 +142,11 @@ export async function createEditor(container, graph, hooks) {
     const commit = () => {
         clearTimeout(timer);
 
+        // Com o canvas sendo redesenhado o grafo está pela metade: gravar agora corromperia o histórico.
+        if (loading) {
+            return;
+        }
+
         const now = snapshot();
 
         if (now !== last) {
@@ -223,6 +228,19 @@ export async function createEditor(container, graph, hooks) {
 
     async function draw(source, { fit = true } = {}) {
         loading = true;
+
+        try {
+            await drawNodes(source);
+        } finally {
+            loading = false;
+        }
+
+        if (fit) {
+            await AreaExtensions.zoomAt(area, editor.getNodes());
+        }
+    }
+
+    async function drawNodes(source) {
         await editor.clear();
 
         const { nodes, connections } = fromGraph(source);
@@ -241,12 +259,6 @@ export async function createEditor(container, graph, hooks) {
             if (from && to && from.outputs[c.sourceOutput] && to.inputs.in) {
                 await editor.addConnection(new ClassicPreset.Connection(from, c.sourceOutput, to, 'in'));
             }
-        }
-
-        loading = false;
-
-        if (fit) {
-            await AreaExtensions.zoomAt(area, editor.getNodes());
         }
     }
 
@@ -372,7 +384,10 @@ export async function createEditor(container, graph, hooks) {
         },
 
         async undo() {
-            clearTimeout(timer);
+            if (loading) {
+                return;
+            }
+
             commit();
 
             const state = history.undo(last);
@@ -383,7 +398,10 @@ export async function createEditor(container, graph, hooks) {
         },
 
         async redo() {
-            clearTimeout(timer);
+            if (loading) {
+                return;
+            }
+
             commit();
 
             const state = history.redo(last);
