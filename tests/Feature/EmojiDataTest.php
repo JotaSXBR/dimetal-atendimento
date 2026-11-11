@@ -40,5 +40,6 @@ class EmojiDataTest extends TestCase
 
         $this->assertStringContainsString("'/vendor/emoji/pt.json'", $js);
         $this->assertStringContainsString("import('emoji-picker-element')", $js);
+        $this->assertStringContainsString("this.\$dispatch('composer-focus')", $js);
     }
 }

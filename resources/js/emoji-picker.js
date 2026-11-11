@@ -2,7 +2,7 @@
 //
 // O web component `emoji-picker-element` só é baixado na primeira abertura. Os dados (português) saem do próprio app, de
 // public/vendor/emoji/pt.json: nada é pedido a CDN nem a terceiros. O emoji escolhido sobe como o evento `emoji-insert`, que o
-// `composerMode` trata inserindo no cursor do campo; fechar sem escolher devolve o foco ao campo (`emoji-closed`).
+// `composerMode` trata inserindo no cursor do campo; fechar com Esc devolve o foco ao campo (`composer-focus`).
 
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('emojiPicker', () => ({
@@ -45,13 +45,17 @@ document.addEventListener('alpine:init', () => {
             this.$dispatch('emoji-insert', unicode);
         },
 
-        close() {
+        // Esc devolve o foco ao campo; o clique fora só fecha (o foco fica onde a pessoa clicou).
+        close(refocus = false) {
             if (! this.open) {
                 return;
             }
 
             this.open = false;
-            this.$dispatch('emoji-closed');
+
+            if (refocus) {
+                this.$dispatch('composer-focus');
+            }
         },
     }));
 });

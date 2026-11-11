@@ -100,6 +100,16 @@ class InboxQuickRepliesButtonTest extends TestCase
         Queue::assertNotPushed(SendTicketMessageJob::class);
     }
 
+    public function test_esc_fecha_a_lista_e_devolve_o_foco_ao_campo(): void
+    {
+        $html = $this->inbox()->html();
+
+        // O rodapé escuta `composer-focus` e foca o campo; a lista e o seletor de emoji disparam esse evento ao fechar com Esc.
+        $this->assertStringContainsString('x-on:composer-focus="field()?.focus()"', $html);
+        $this->assertMatchesRegularExpression('/x-on:keydown\.escape\.window="[^"]*composer-focus[^"]*"/', $html);
+        $this->assertStringNotContainsString('emoji-closed', $html);
+    }
+
     public function test_o_atalho_barra_continua_listando_sugestoes(): void
     {
         QuickReply::query()->create(['shortcut' => 'ola', 'body' => 'Olá, tudo bem?']);

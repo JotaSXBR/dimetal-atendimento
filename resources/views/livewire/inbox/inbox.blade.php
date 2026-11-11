@@ -316,7 +316,7 @@
                     x-on:keydown.alt.p.window.prevent="toggle()"
                     x-on:note-from-message.window="addToNote($event.detail)"
                     x-on:emoji-insert="insert($event.detail)"
-                    x-on:emoji-closed="field()?.focus()"
+                    x-on:composer-focus="field()?.focus()"
                     x-bind:class="mode === 'note' ? 'border-warn/30 bg-warn/10' : 'border-line bg-surface'"
                 @endif
                 class="border-t p-3 {{ $canReply ? '' : 'border-line bg-surface' }}"
@@ -409,13 +409,13 @@
                             {{-- Coluna larga (@md): uma linha só. Coluna estreita (1280 px com o painel de contato aberto): o campo ocupa a linha de cima e as ferramentas ficam embaixo. --}}
                             <div data-testid="composer-tools" class="flex flex-wrap items-end gap-2">
                             {{-- Seletor de emoji: o elemento vive no Alpine (wire:ignore); ver resources/js/emoji-picker.js --}}
-                            <div class="relative" wire:ignore x-data="emojiPicker" x-on:keydown.escape="close()" x-on:click.outside="close()">
+                            <div class="relative" wire:ignore x-data="emojiPicker" x-on:keydown.escape="close(true)" x-on:click.outside="close()">
                                 <flux:button type="button" variant="subtle" icon="face-smile" aria-label="Emoji" title="Emoji" aria-haspopup="dialog" x-bind:aria-expanded="open.toString()" x-on:click="toggle()" />
                                 <div x-ref="panel" x-show="open" x-cloak role="dialog" aria-label="Seletor de emoji" class="absolute bottom-full start-0 z-20 mb-2 overflow-hidden rounded-lg border border-line shadow-lg"></div>
                             </div>
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" title="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
 
-                            <div class="relative" x-on:keydown.escape.window="$wire.showQuickReplies && $wire.set('showQuickReplies', false)" x-on:click.outside="$wire.showQuickReplies && $wire.set('showQuickReplies', false)">
+                            <div class="relative" x-on:keydown.escape.window="if ($wire.showQuickReplies) { $wire.set('showQuickReplies', false); $dispatch('composer-focus') }" x-on:click.outside="$wire.showQuickReplies && $wire.set('showQuickReplies', false)">
                                 {{-- Coluna muito estreita (celular): o gatilho vira "+", e a lista é a mesma. --}}
                                 <flux:button type="button" variant="subtle" icon="bolt" class="@max-sm:hidden" aria-label="Respostas rápidas" title="Respostas rápidas" aria-haspopup="listbox" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
                                 <flux:button type="button" variant="subtle" icon="plus" class="@sm:hidden" aria-label="Mais ações do compositor" title="Mais ações: respostas rápidas" aria-haspopup="listbox" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
