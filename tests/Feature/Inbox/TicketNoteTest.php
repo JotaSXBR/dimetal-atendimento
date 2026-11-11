@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inbox;
 
+use App\Enums\NoteOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\Channel;
@@ -31,6 +32,16 @@ class TicketNoteTest extends TestCase
 
         $this->assertTrue($autor->can('delete', $note));
         $this->assertFalse($outro->can('delete', $note));
+        $this->assertFalse($admin->can('delete', $note));
+    }
+
+    public function test_nota_do_bot_nao_tem_autor_e_ninguem_apaga(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $note = TicketNote::factory()->for($this->ticket(TicketStatus::EM_ATENDIMENTO, $admin))->bot()->create();
+
+        $this->assertSame(NoteOrigin::BOT, $note->fresh()?->origin);
+        $this->assertNull($note->fresh()?->user_id);
         $this->assertFalse($admin->can('delete', $note));
     }
 

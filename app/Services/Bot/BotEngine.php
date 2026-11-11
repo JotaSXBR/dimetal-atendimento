@@ -26,6 +26,7 @@ use App\Services\Bot\Nodes\MenuNode;
 use App\Services\Bot\Nodes\MenuSetoresNode;
 use App\Services\Bot\Nodes\MidiaNode;
 use App\Services\Bot\Nodes\Node;
+use App\Services\Bot\Nodes\NotaNode;
 use App\Services\Bot\Nodes\PerguntaNode;
 use App\Services\Bot\Nodes\SalvarContatoNode;
 use App\Services\Bot\Nodes\TransferirNode;
@@ -240,6 +241,7 @@ class BotEngine
             NodeType::Midia => new MidiaNode,
             NodeType::SalvarContato => new SalvarContatoNode,
             NodeType::Etiquetar => new EtiquetarNode,
+            NodeType::Nota => new NotaNode,
         };
     }
 }

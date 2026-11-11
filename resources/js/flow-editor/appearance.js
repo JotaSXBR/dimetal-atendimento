@@ -22,6 +22,7 @@ export const ICONS = {
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/>',
     tag: '<path d="M3 12V4h8l10 10-8 8z"/><path d="M7.5 7.5h.01"/>',
     forward: '<path d="M4 12h14M13 6l6 6-6 6"/>',
+    note: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
     stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
 };
 
@@ -36,6 +37,7 @@ const BY_TYPE = {
     condicao: 'logica',
     salvar_contato: 'acao',
     etiquetar: 'acao',
+    nota: 'acao',
     transferir: 'acao',
     encerrar: 'fim',
 };
@@ -67,6 +69,7 @@ export function previewOf(type, data, lookups = {}) {
             return ['Encerra o ticket'];
         case 'mensagem':
         case 'pergunta':
+        case 'nota':
             return [clip(d.texto)];
         case 'midia':
             return [clip(d.legenda)];

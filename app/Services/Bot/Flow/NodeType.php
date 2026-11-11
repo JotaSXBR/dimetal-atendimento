@@ -15,6 +15,7 @@ enum NodeType: string
     case Midia = 'midia';
     case SalvarContato = 'salvar_contato';
     case Etiquetar = 'etiquetar';
+    case Nota = 'nota';
     case Transferir = 'transferir';
     case Encerrar = 'encerrar';
 
@@ -43,6 +44,7 @@ enum NodeType: string
             self::Midia => 'Enviar mídia',
             self::SalvarContato => 'Salvar no contato',
             self::Etiquetar => 'Etiquetar',
+            self::Nota => 'Nota para a equipe',
             self::Transferir => 'Transferir para setor',
             self::Encerrar => 'Encerrar',
         };

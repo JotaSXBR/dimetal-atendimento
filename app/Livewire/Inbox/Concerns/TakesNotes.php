@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Inbox\Concerns;
 
+use App\Enums\NoteOrigin;
 use App\Events\TicketUpdated;
 use App\Models\TicketNote;
 
@@ -31,7 +32,7 @@ trait TakesNotes
             return;
         }
 
-        TicketNote::create(['ticket_id' => $ticket->id, 'user_id' => $this->user()->id, 'body' => $this->draft]);
+        TicketNote::create(['ticket_id' => $ticket->id, 'user_id' => $this->user()->id, 'origin' => NoteOrigin::EQUIPE, 'body' => $this->draft]);
         TicketUpdated::dispatch($ticket);
 
         $this->reset('draft');

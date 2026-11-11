@@ -45,6 +45,19 @@ class FlowValidatorTest extends TestCase
         $this->assertSame([], (new FlowValidator)->validate($this->minimal()));
     }
 
+    public function test_nota_exige_texto_de_ate_mil_caracteres(): void
+    {
+        $with = fn (string $text): array => $this->graph(
+            [['i', 'inicio', []], ['n', 'nota', ['texto' => $text]], ['t', 'transferir', []]],
+            [['i', 'out', 'n'], ['n', 'out', 't']],
+        );
+
+        $this->assertSame([], (new FlowValidator)->validate($with('Pedido {{pedido}}')));
+        $this->assertHasError((new FlowValidator)->validate($with('  ')), 'n: escreva o texto.');
+        $this->assertHasError((new FlowValidator)->validate($with(str_repeat('a', 1001))), 'n: a nota passa de 1000 caracteres.');
+        $this->assertSame([], (new FlowValidator)->validate($with(str_repeat('a', 1000))));
+    }
+
     public function test_exige_exatamente_um_inicio(): void
     {
         $none = $this->graph([['m', 'mensagem', ['texto' => 'Oi']], ['t', 'transferir', []]], [['m', 'out', 't']]);

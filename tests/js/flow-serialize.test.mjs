@@ -48,7 +48,7 @@ test('as portas de saída seguem as mesmas regras do servidor', () => {
 test('todo bloco da paleta tem rótulo e dados iniciais; só o início não entra na paleta', () => {
     const types = Object.keys(BLOCKS);
 
-    assert.equal(types.length, 12);
+    assert.equal(types.length, 13);
     assert.ok(types.every((t) => BLOCKS[t].label.length > 0));
     assert.deepEqual(defaultData('menu').opcoes, ['Opção 1', 'Opção 2']);
     assert.equal(defaultData('pergunta').validacao, 'texto');

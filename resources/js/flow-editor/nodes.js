@@ -100,6 +100,13 @@ export const BLOCKS = {
         data: { setor_id: null },
         fields: [{ key: 'setor_id', label: 'Setor (vazio = o escolhido no menu)', kind: 'sector' }],
     },
+    nota: {
+        icon: 'note',
+        label: 'Nota para a equipe',
+        palette: true,
+        data: { texto: 'Pedido: {{pedido}}' },
+        fields: [{ key: 'texto', label: 'Nota (só a equipe vê; aceita {{variáveis}})', kind: 'textarea' }],
+    },
     encerrar: { icon: 'stop', label: 'Encerrar', palette: true, fields: [] },
 };
 

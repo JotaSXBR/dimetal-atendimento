@@ -3,6 +3,7 @@
 namespace Tests\Feature\Bot;
 
 use App\Enums\MessageOrigin;
+use App\Enums\NoteOrigin;
 use App\Enums\TicketStatus;
 use App\Models\BotSession;
 use App\Models\Channel;
@@ -10,6 +11,7 @@ use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
+use App\Models\TicketNote;
 use App\Models\WorkflowVersion;
 use App\Services\Bot\BotEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -112,6 +114,27 @@ class EngineBlocksTest extends TestCase
 
         $this->say($session, '12');
         $this->assertContains('Qtd 12.', $this->botTexts());
+    }
+
+    public function test_nota_grava_origem_bot_sem_autor_com_as_variaveis(): void
+    {
+        $version = WorkflowVersion::factory()->create(['graph' => [
+            'nodes' => [
+                ['id' => 'i', 'type' => 'inicio', 'x' => 0, 'y' => 0, 'data' => []],
+                ['id' => 'p', 'type' => 'pergunta', 'x' => 0, 'y' => 0, 'data' => ['texto' => 'CNPJ?', 'variavel' => 'cnpj', 'validacao' => 'cnpj']],
+                ['id' => 'n', 'type' => 'nota', 'x' => 0, 'y' => 0, 'data' => ['texto' => 'CNPJ {{cnpj}} e [{{inexistente}}]']],
+                ['id' => 'e', 'type' => 'encerrar', 'x' => 0, 'y' => 0, 'data' => []],
+            ],
+            'edges' => [['from' => 'i', 'port' => 'out', 'to' => 'p'], ['from' => 'p', 'port' => 'out', 'to' => 'n'], ['from' => 'n', 'port' => 'out', 'to' => 'e']],
+        ]]);
+        $session = app(BotEngine::class)->start($this->ticket, $version);
+
+        $this->say($session, '11222333000181');
+
+        $note = TicketNote::query()->where('ticket_id', $this->ticket->id)->sole();
+        $this->assertSame(NoteOrigin::BOT, $note->origin);
+        $this->assertNull($note->user_id);
+        $this->assertSame('CNPJ 11.222.333/0001-81 e []', $note->body);
     }
 
     /** @return array{list<array{string, string, array<string, mixed>}>, list<array{string, string, string}>} */
