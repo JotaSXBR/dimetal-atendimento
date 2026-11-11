@@ -20,3 +20,17 @@ export function toGraph(nodes, connections) {
             .map((c) => ({ from: c.source, port: c.sourceOutput, to: c.target })),
     };
 }
+
+/** O grafo com as mensagens do bot junto: o Rete só conhece blocos e ligações, então elas viajam ao lado, em `settings`. */
+export function withMessages(graph, messages) {
+    const mensagens = Object.fromEntries(Object.entries(messages ?? {}).filter(([, value]) => typeof value === 'string'));
+
+    return { ...graph, settings: { mensagens } };
+}
+
+/** As mensagens do bot que o grafo guarda (nenhuma, se não há ou se o formato está quebrado). */
+export function messagesOf(graph) {
+    const mensagens = graph?.settings?.mensagens;
+
+    return mensagens && typeof mensagens === 'object' && !Array.isArray(mensagens) ? { ...mensagens } : {};
+}
