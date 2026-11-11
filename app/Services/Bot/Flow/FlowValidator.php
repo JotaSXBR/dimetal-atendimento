@@ -2,8 +2,6 @@
 
 namespace App\Services\Bot\Flow;
 
-use App\Services\Bot\Nodes\NotaNode;
-
 /**
  * Confere se um grafo pode ser publicado. Devolve as mensagens de erro (vazio = publicável), cada uma começando pelo id
  * do bloco, para o editor destacá-lo.
@@ -99,7 +97,7 @@ final class FlowValidator
             ...($needsText && ! $data->filled('texto') ? ["{$id}: escreva o texto."] : []),
             ...match ($type) {
                 NodeType::Menu => $this->validOptions($data->list('opcoes')) ? [] : ["{$id}: o menu precisa de ao menos uma opção, todas com texto."],
-                NodeType::Nota => mb_strlen($data->string('texto')) > NotaNode::MAX_LENGTH ? ["{$id}: a nota passa de ".NotaNode::MAX_LENGTH.' caracteres.'] : [],
+                NodeType::Nota => mb_strlen($data->string('texto')) > NodeType::NOTE_MAX_LENGTH ? ["{$id}: a nota passa de ".NodeType::NOTE_MAX_LENGTH.' caracteres.'] : [],
                 NodeType::Midia => $data->filled('path') ? [] : ["{$id}: escolha o arquivo."],
                 NodeType::Pergunta => $data->filled('variavel') ? [] : ["{$id}: informe o nome da variável que guarda a resposta."],
                 default => [],

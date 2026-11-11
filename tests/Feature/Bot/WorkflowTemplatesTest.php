@@ -103,7 +103,7 @@ class WorkflowTemplatesTest extends TestCase
         $this->assertSame(TicketStatus::PENDENTE, $this->ticket->fresh()?->status);
     }
 
-    public function test_modelo_com_horario_fora_do_horario_avisa_e_vai_a_fila_padrao(): void
+    public function test_modelo_com_horario_fora_do_horario_avisa_e_vai_a_fila_geral_sem_setor(): void
     {
         BusinessHour::create(['weekday' => 1, 'opens_at' => '08:00:00', 'closes_at' => '18:00:00']);
         $this->travelTo(Carbon::parse('2026-11-09 22:00:00', config()->string('app.display_timezone')));
@@ -115,6 +115,6 @@ class WorkflowTemplatesTest extends TestCase
         $this->assertStringContainsString('segunda, das 8h às 18h', $this->botTexts()[0]);
         $fresh = $this->ticket->fresh();
         $this->assertSame(TicketStatus::AGUARDANDO, $fresh?->status);
-        $this->assertSame($this->vendas->id, $fresh?->sector_id);
+        $this->assertNull($fresh?->sector_id);
     }
 }

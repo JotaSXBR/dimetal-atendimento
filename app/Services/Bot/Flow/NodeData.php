@@ -26,6 +26,12 @@ final class NodeData
         return is_numeric($value) ? (int) $value : $default;
     }
 
+    /** Verdadeiro só para `true` (ou `1`/`"1"`); qualquer outra coisa, inclusive ausente, é falso. */
+    public function bool(string $key): bool
+    {
+        return in_array($this->raw[$key] ?? null, [true, 1, '1'], true);
+    }
+
     /** O texto do campo tem conteúdo (não só espaços). */
     public function filled(string $key): bool
     {

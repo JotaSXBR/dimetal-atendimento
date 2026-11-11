@@ -8,6 +8,7 @@ use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Events\TicketQueued;
 use App\Models\BotSession;
+use App\Models\BusinessHour;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
@@ -19,6 +20,8 @@ use App\Models\User;
 use App\Models\WorkflowVersion;
 use App\Notifications\TicketAssigned;
 use App\Services\Bot\BotEngine;
+use App\Services\Inbox\SlaClock;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -224,6 +227,33 @@ class EngineBlocksTest extends TestCase
         $this->transfer(['setor_id' => Sector::query()->firstOrFail()->id, 'atribuir_a' => $inactive->id]);
 
         Event::assertDispatched(TicketQueued::class, 1);
+    }
+
+    public function test_fila_geral_ignora_o_setor_e_deixa_o_ticket_sem_setor(): void
+    {
+        $this->transfer(['fila_geral' => true, 'setor_id' => Sector::query()->firstOrFail()->id]);
+
+        $ticket = $this->ticket->fresh();
+        $this->assertSame(TicketStatus::AGUARDANDO, $ticket?->status);
+        $this->assertNull($ticket?->sector_id);
+        $this->assertSame(BotSession::TRANSFERRED, BotSession::query()->where('ticket_id', $ticket?->id)->value('state'));
+    }
+
+    public function test_fila_geral_fora_do_expediente_so_comeca_a_contar_o_sla_na_abertura(): void
+    {
+        foreach ([1, 2, 3, 4, 5] as $weekday) {
+            BusinessHour::create(['weekday' => $weekday, 'opens_at' => '08:00', 'closes_at' => '18:00']);
+        }
+
+        // Domingo à noite, em São Paulo: fechado até segunda 08:00.
+        $this->travelTo(CarbonImmutable::parse('2026-11-08 22:00', 'America/Sao_Paulo'));
+
+        $this->transfer(['fila_geral' => true]);
+        app(SlaClock::class)();
+
+        $ticket = $this->ticket->fresh();
+        $this->assertNull($ticket?->sector_id);
+        $this->assertSame('2026-11-09 08:10:00', $ticket?->sla_due_at?->setTimezone('America/Sao_Paulo')->format('Y-m-d H:i:s'));
     }
 
     public function test_transferir_sem_atribuir_a_continua_igual(): void

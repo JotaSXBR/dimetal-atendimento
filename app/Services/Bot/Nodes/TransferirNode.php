@@ -10,7 +10,8 @@ use App\Services\Bot\Step;
 
 /**
  * Entrega o ticket à fila: o setor do bloco ou, sem ele, o escolhido no menu. Setor que não recebe mais tickets cai na fila
- * padrão. Com "Atribuir a", tenta passar o ticket à pessoa depois de ele entrar na fila.
+ * padrão. Com "Fila geral", ignora o setor e deixa o ticket sem setor (fora do horário, por exemplo: o SLA só conta no
+ * expediente). Com "Atribuir a", tenta passar o ticket à pessoa depois de ele entrar na fila.
  */
 final class TransferirNode extends Node
 {
@@ -21,7 +22,7 @@ final class TransferirNode extends Node
 
         $assignTo = $data->has('atribuir_a') ? User::query()->find($data->int('atribuir_a')) : null;
 
-        $run->engine->handoff($run->session, 'fluxo', $sector, $assignTo);
+        $run->engine->handoff($run->session, 'fluxo', $sector, $assignTo, $data->bool('fila_geral'));
 
         return Step::done();
     }

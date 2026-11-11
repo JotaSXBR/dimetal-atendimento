@@ -96,11 +96,11 @@ class BotEngine
 
     /**
      * Entrega o ticket à fila: o setor pedido, se ainda recebe tickets, senão o setor padrão (o primeiro do menu); sem
-     * nenhum setor, a fila geral. Só vale uma vez por sessão.
+     * nenhum setor, a fila geral (ou ela de propósito, com `$generalQueue`). Só vale uma vez por sessão.
      */
-    public function handoff(BotSession $session, string $reason, ?Sector $to = null, ?User $assignTo = null): void
+    public function handoff(BotSession $session, string $reason, ?Sector $to = null, ?User $assignTo = null, bool $generalQueue = false): void
     {
-        DB::transaction(function () use ($session, $reason, $to, $assignTo): void {
+        DB::transaction(function () use ($session, $reason, $to, $assignTo, $generalQueue): void {
             $locked = BotSession::query()->whereKey($session->id)->lockForUpdate()->first();
 
             if ($locked === null || $locked->state !== BotSession::ACTIVE) {
@@ -108,7 +108,11 @@ class BotEngine
             }
 
             $ticket = Ticket::query()->findOrFail($locked->ticket_id);
-            $sector = $to !== null && $to->status->receivesTickets() ? $to : $this->defaultSector();
+            $sector = match (true) {
+                $generalQueue => null,
+                $to !== null && $to->status->receivesTickets() => $to,
+                default => $this->defaultSector(),
+            };
 
             if ($reason !== 'fluxo') {
                 $flow = FlowGraph::fromArray($locked->version()->firstOrFail()->graph);

@@ -5,6 +5,9 @@ namespace App\Services\Bot\Flow;
 /** Os blocos do workflow. O valor é o `type` gravado no grafo. */
 enum NodeType: string
 {
+    /** O texto do bloco Nota para a equipe passa de quantos caracteres é recusado ao publicar. */
+    public const NOTE_MAX_LENGTH = 1000;
+
     case Inicio = 'inicio';
     case Mensagem = 'mensagem';
     case MenuSetores = 'menu_setores';

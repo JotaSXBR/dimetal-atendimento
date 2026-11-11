@@ -12,8 +12,6 @@ use App\Services\Bot\Vars;
 /** Registra uma nota interna (só a equipe vê) com o que o bot coletou; variável que não existe vira vazio. */
 final class NotaNode extends Node
 {
-    public const MAX_LENGTH = 1000;
-
     public function enter(BotRun $run, NodeData $data): Step
     {
         // O `Vars` deixa `{{x}}` literal quando não conhece `x` (serve ao cliente); na nota da equipe o desconhecido some.
