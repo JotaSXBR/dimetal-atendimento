@@ -22,7 +22,7 @@ final class TransferirNode extends Node
 
         $assignTo = $data->has('atribuir_a') ? User::query()->find($data->int('atribuir_a')) : null;
 
-        $run->engine->handoff($run->session, 'fluxo', $sector, $assignTo, $data->bool('fila_geral'));
+        $run->engine->deliver($run, 'fluxo', $sector, $assignTo, $data->bool('fila_geral'));
 
         return Step::done();
     }

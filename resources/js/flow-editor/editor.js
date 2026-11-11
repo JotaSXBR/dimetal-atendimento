@@ -26,6 +26,7 @@ class FlowNode extends ClassicPreset.Node {
         this.data = data;
         this.width = 230;
         this.invalid = false;
+        this.active = false; // o bloco em que a conversa de teste está
         this.preview = [];
         this.refreshPreview(lookups);
 
@@ -67,7 +68,7 @@ function nodeTemplate(node, emit) {
     const inputs = Object.entries(node.inputs).map(([key, input]) => (input ? socket('input', key, input.socket) : null));
     const outputs = Object.entries(node.outputs).map(([key, output]) => (output ? html`<div class="flow-out" data-testid=${`output-${key}`}><span class="flow-out-label">${output.label}</span>${socket('output', key, output.socket)}</div>` : null));
 
-    return html`<div data-node-id=${node.id} class="flow-node ${node.selected ? 'is-selected' : ''} ${node.invalid ? 'is-invalid' : ''}" data-category=${categoryOf(node.type)} data-testid="node">
+    return html`<div data-node-id=${node.id} class="flow-node ${node.selected ? 'is-selected' : ''} ${node.invalid ? 'is-invalid' : ''} ${node.active ? 'is-active' : ''}" data-category=${categoryOf(node.type)} data-testid="node">
         <div class="flow-head">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${unsafeSVG(ICONS[BLOCKS[node.type]?.icon] ?? '')}</svg>
             <span class="flow-title" data-testid="title">${node.label}</span>
@@ -366,6 +367,18 @@ export async function createEditor(container, graph, hooks) {
 
                 if (node.invalid !== invalid) {
                     node.invalid = invalid;
+                    await area.update('node', node.id);
+                }
+            }
+        },
+
+        /** Realça o bloco em que a conversa de teste está (nenhum, se `id` for nulo). */
+        async setActive(id) {
+            for (const node of editor.getNodes()) {
+                const active = node.id === id;
+
+                if (node.active !== active) {
+                    node.active = active;
                     await area.update('node', node.id);
                 }
             }

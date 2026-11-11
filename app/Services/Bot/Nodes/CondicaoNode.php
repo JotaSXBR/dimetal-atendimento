@@ -2,11 +2,9 @@
 
 namespace App\Services\Bot\Nodes;
 
-use App\Models\Ticket;
 use App\Services\Bot\BotRun;
 use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
-use App\Services\Inbox\BusinessHours;
 
 /**
  * Escolhe o caminho `true`/`false` pelo horário de funcionamento (feriados incluídos), por o contato já ter nome, por já ter
@@ -17,9 +15,9 @@ final class CondicaoNode extends Node
     public function enter(BotRun $run, NodeData $data): Step
     {
         $result = match ($data->string('kind')) {
-            'horario' => app(BusinessHours::class)->isOpen(now()),
-            'nome' => trim((string) $run->ticket->contact()->first()?->name) !== '',
-            'retorno' => Ticket::query()->where('contact_id', $run->ticket->contact_id)->whereKeyNot($run->ticket->id)->exists(),
+            'horario' => $run->fx->isOpen(),
+            'nome' => $run->fx->contactName() !== '',
+            'retorno' => $run->fx->returning(),
             default => $this->compare($run, $data),
         };
 

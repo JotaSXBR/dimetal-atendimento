@@ -34,6 +34,8 @@ document.addEventListener('alpine:init', () => {
             menu: null,
             canUndo: false,
             canRedo: false,
+            panel: 'props', // `props` (propriedades do bloco) ou `test` (conversa de teste)
+            clock: 'real', // `real`, `aberto` ou `fechado`: o "agora" do teste
 
             async init() {
                 try {
@@ -252,6 +254,72 @@ document.addEventListener('alpine:init', () => {
                 if (result.ok) {
                     this.versions = result.versions;
                 }
+            },
+
+            // A conversa de teste vive no servidor (`$wire.sim`, só leitura aqui); o motor é o mesmo do bot, sem gravar nem enviar nada.
+            async openTest() {
+                this.panel = 'test';
+
+                if (!$wire.sim?.session && !$wire.simErrors?.length) {
+                    await this.testStart();
+                }
+            },
+
+            closeTest() {
+                this.panel = 'props';
+                api?.setActive(null);
+            },
+
+            /** Chama uma ação do simulador com o grafo do canvas (salvo ou não) e realça o bloco em que a conversa parou. */
+            async testCall(action) {
+                this.busy = true;
+
+                try {
+                    await action(withMessages(api.getGraph(), this.messages));
+                } finally {
+                    this.busy = false;
+                }
+
+                api?.setActive(this.testCurrent());
+            },
+
+            testStart() {
+                return this.testCall((graph) => $wire.simStart(graph, this.clock));
+            },
+
+            testReply() {
+                return this.testCall((graph) => $wire.simReply(graph, $wire.simText));
+            },
+
+            testSilence() {
+                return this.testCall((graph) => $wire.simSilence(graph));
+            },
+
+            testWaiting() {
+                return $wire.sim?.outcome == null && $wire.sim?.session?.waiting != null;
+            },
+
+            /** O bloco em que a conversa está esperando; terminada, o último que ela percorreu. */
+            testCurrent() {
+                const sim = $wire.sim;
+
+                if (!sim?.session) {
+                    return null;
+                }
+
+                return sim.outcome == null ? sim.session.node_id : (sim.trail.at(-1) ?? null);
+            },
+
+            testLabel(id) {
+                const node = api?.getGraph().nodes.find((n) => n.id === id);
+
+                return BLOCKS[node?.type]?.label ?? id;
+            },
+
+            testVars() {
+                return Object.entries($wire.sim?.session?.vars ?? {})
+                    .filter(([key]) => !key.startsWith('_'))
+                    .map(([key, value]) => ({ key, value: String(value) }));
             },
 
             async restore(versionId) {

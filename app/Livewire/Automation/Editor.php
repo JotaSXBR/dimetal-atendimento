@@ -10,14 +10,20 @@ use App\Models\WorkflowVersion;
 use App\Services\Bot\BotMessages;
 use App\Services\Bot\Flow\NodeType;
 use App\Services\Bot\InvalidFlowException;
+use App\Services\Bot\Simulation\BotSimulator;
+use App\Services\Bot\Simulation\SimulationState;
 use App\Services\Bot\WorkflowPublisher;
+use Closure;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
  * O editor visual de um workflow. O canvas vive no navegador (resources/js/flow-editor); aqui chega o grafo inteiro a
  * cada gravação, e o servidor confere a forma antes de guardar. Quem manda no que é publicável é o `FlowValidator`.
+ *
+ * @phpstan-import-type StateShape from SimulationState
  */
 #[Title('Editor de workflow')]
 class Editor extends Component
@@ -27,6 +33,10 @@ class Editor extends Component
     private const MAX_EDGES = 600;
 
     private const MAX_BYTES = 524288;
+
+    private const SIM_TEXT_MAX = 1000;
+
+    private const CLOCKS = ['real', 'aberto', 'fechado'];
 
     public Workflow $workflow;
 
@@ -42,6 +52,97 @@ class Editor extends Component
         $this->authorize('supervisor');
 
         $this->workflow = $workflow;
+    }
+
+    /**
+     * A conversa de teste (`SimulationState::toArray()`); vazia sem teste. Só o servidor a escreve.
+     *
+     * @var StateShape|array{}
+     */
+    #[Locked]
+    public array $sim = [];
+
+    /**
+     * Os erros do rascunho que impediram o teste (a lista do "Validar").
+     *
+     * @var list<string>
+     */
+    #[Locked]
+    public array $simErrors = [];
+
+    public string $simText = '';
+
+    /**
+     * Começa a conversa de teste sobre o grafo do canvas (salvo ou não): o mesmo motor do bot, sem gravar nem enviar nada. Com
+     * erros no grafo mostra a lista do "Validar" em vez de simular.
+     *
+     * @param  array<string, mixed>  $graph
+     */
+    public function simStart(array $graph, string $clock, BotSimulator $simulator, WorkflowPublisher $publisher): void
+    {
+        $this->authorize('supervisor');
+        $this->simReset();
+
+        if (! $this->accept($graph)) {
+            return;
+        }
+
+        $this->simErrors = $publisher->checkGraph($graph);
+
+        if ($this->simErrors === []) {
+            $this->sim = $simulator->start($graph, $this->user()->name, in_array($clock, self::CLOCKS, true) ? $clock : 'real')->toArray();
+        }
+    }
+
+    /** @param  array<string, mixed>  $graph */
+    public function simReply(array $graph, string $text, BotSimulator $simulator): void
+    {
+        $this->authorize('supervisor');
+        $this->resetErrorBag('simText');
+
+        $text = trim($text);
+
+        if ($text === '' || mb_strlen($text) > self::SIM_TEXT_MAX) {
+            $this->addError('simText', 'Escreva uma resposta de até '.self::SIM_TEXT_MAX.' caracteres.');
+
+            return;
+        }
+
+        $this->simContinue($graph, fn (SimulationState $state): SimulationState => $simulator->reply($graph, $state, $text));
+        $this->reset('simText');
+    }
+
+    /**
+     * O cliente ficou em silêncio até o prazo do bloco que espera.
+     *
+     * @param  array<string, mixed>  $graph
+     */
+    public function simSilence(array $graph, BotSimulator $simulator): void
+    {
+        $this->authorize('supervisor');
+
+        $this->simContinue($graph, fn (SimulationState $state): SimulationState => $simulator->silence($graph, $state));
+    }
+
+    public function simReset(): void
+    {
+        $this->authorize('supervisor');
+
+        $this->reset('sim', 'simErrors', 'simText');
+        $this->resetErrorBag('simText');
+    }
+
+    /**
+     * @param  array<string, mixed>  $graph
+     * @param  Closure(SimulationState): SimulationState  $step
+     */
+    private function simContinue(array $graph, Closure $step): void
+    {
+        if ($this->sim === [] || ! $this->accept($graph)) {
+            return;
+        }
+
+        $this->sim = $step(SimulationState::fromArray($this->sim))->toArray();
     }
 
     /** @param  array<string, mixed>  $graph */

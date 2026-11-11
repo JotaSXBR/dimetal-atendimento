@@ -170,6 +170,7 @@ flow-node { display: block; }
 .flow-node[data-category='fim'] { --flow-cat: var(--flow-cat-fim); }
 .flow-node.is-selected { border-color: var(--color-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent); }
 .flow-node.is-invalid { border-color: var(--color-danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 30%, transparent); }
+.flow-node.is-active { border-color: var(--color-ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-ok) 35%, transparent); }
 
 .flow-head {
     position: relative;

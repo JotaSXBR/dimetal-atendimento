@@ -62,7 +62,7 @@ class ViewConventionsTest extends TestCase
         return [
             'flux/navlist/group.blade.php' => 1, // sobrescrita do Flux
             'livewire/alerts/bell.blade.php' => 2, // gatilho do sino e item de alerta (lista selecionável)
-            'livewire/automation/editor.blade.php' => 2, // foco no erro e paleta de blocos (lista)
+            'livewire/automation/editor.blade.php' => 3, // foco no erro (Validar e Testar) e paleta de blocos (lista)
             'livewire/contacts/contact-card.blade.php' => 1, // protocolo que abre o ticket (texto-link)
             'livewire/contacts/index.blade.php' => 1, // linha da lista de contatos
             'livewire/history/index.blade.php' => 1, // linha da lista do Histórico

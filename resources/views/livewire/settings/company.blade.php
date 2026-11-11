@@ -13,7 +13,7 @@
     </section>
 
     <form wire:submit="save" class="mt-6 space-y-6 rounded-[14px] border border-line bg-surface p-5">
-        <flux:input label="Nome fantasia" wire:model="name" />
+        <flux:input label="Nome fantasia" wire:model.live.debounce.300ms="name" />
 
         <div class="space-y-3 border-t border-line pt-5">
             <div class="flex items-center justify-between gap-3">
@@ -21,7 +21,7 @@
                     <p class="text-sm font-semibold text-ink">Assinatura das mensagens</p>
                     <p class="text-xs text-ink-3">Adicionada às mensagens enviadas pelo painel. Não vale para o bot, legendas de arquivo nem reenvios.</p>
                 </div>
-                <flux:switch wire:model="signatureEnabled" aria-label="Assinatura ligada" />
+                <flux:switch wire:model.live="signatureEnabled" aria-label="Assinatura ligada" />
             </div>
 
             <div x-data="{
@@ -47,7 +47,7 @@
                 @enderror
             </div>
 
-            <flux:select wire:model="signaturePosition" label="Posição">
+            <flux:select wire:model.live="signaturePosition" label="Posição">
                 <flux:select.option value="inicio">No início da mensagem</flux:select.option>
                 <flux:select.option value="fim">No fim da mensagem</flux:select.option>
             </flux:select>

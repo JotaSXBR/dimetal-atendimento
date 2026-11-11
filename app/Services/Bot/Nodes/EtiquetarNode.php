@@ -14,7 +14,7 @@ final class EtiquetarNode extends Node
         $tag = Tag::query()->find($data->int('tag_id'));
 
         if ($tag !== null) {
-            $run->ticket->tags()->syncWithoutDetaching([$tag->id]);
+            $run->fx->tag($tag);
         }
 
         return Step::next();

@@ -2,8 +2,6 @@
 
 namespace App\Services\Bot\Nodes;
 
-use App\Enums\NoteOrigin;
-use App\Models\TicketNote;
 use App\Services\Bot\BotRun;
 use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
@@ -18,7 +16,7 @@ final class NotaNode extends Node
         $body = trim((string) preg_replace('/\{\{\s*\w+\s*\}\}/u', '', Vars::render($data->string('texto'), $run->vars())));
 
         if ($body !== '') {
-            TicketNote::create(['ticket_id' => $run->ticket->id, 'origin' => NoteOrigin::BOT, 'body' => $body]);
+            $run->fx->note($body);
         }
 
         return Step::next();
