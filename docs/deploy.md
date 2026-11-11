@@ -78,8 +78,8 @@ Healthchecks do Coolify (a troca de container só acontece quando o novo está s
 |---|---|---|
 | `app` | http | `GET /up` na porta 8080, início de 15 s, 5 tentativas |
 | `waha` | http | `GET /ping` na porta 3000, host `localhost`, retorno 200 (não exige API key) |
-| `worker` | cmd | `healthcheck-queue` (script da imagem; confirma o `queue:work`) |
-| `scheduler` | cmd | `healthcheck-schedule` (script da imagem; confirma o `schedule:work`) |
+| `worker` | HEALTHCHECK do Dockerfile | `healthcheck-queue` (script da imagem base; confirma o `queue:work`) |
+| `scheduler` | HEALTHCHECK do Dockerfile | `healthcheck-schedule` (script da imagem base; confirma o `schedule:work`) |
 
 A imagem do WAHA não tem `curl` nem `wget`, então healthcheck `cmd` com `curl` reprova; o tipo `http`
 funciona porque a requisição parte do Coolify.
@@ -297,8 +297,9 @@ Rollback: reimplante o commit anterior. Migrações destrutivas exigem migraçã
 - **Fila parada** → `worker` precisa estar rodando com o mesmo `QUEUE_CONNECTION` do `app`.
 - **`worker`/`scheduler` rodando o servidor web em vez do comando** → o Coolify ignora `start_command` em build
   por Dockerfile; confira `dockerfile_target_build` (`worker`/`scheduler`) e os estágios do Dockerfile.
-- **`worker`/`scheduler` unhealthy** → o healthcheck usa `healthcheck-queue`/`healthcheck-schedule`
-  (precisam de `pgrep` na imagem). Se reprovar, desligue o healthcheck do recurso e investigue.
+- **`worker`/`scheduler` unhealthy** → o Coolify usa o `HEALTHCHECK` do estágio do Dockerfile (`healthcheck-queue`/
+  `healthcheck-schedule`, com `pgrep`). Sem ele o estágio herda o `curl` no nginx da imagem base e reprova, e a API
+  do Coolify não tem campo para trocar o tipo para `cmd`; corrija no Dockerfile, não no recurso.
 - **`waha` unhealthy** → use healthcheck tipo `http` em `/ping`; o tipo `cmd` com `curl` reprova porque a
   imagem não tem `curl` nem `wget`.
 - **404 do Traefik ou certificado inválido** → o `domains` do recurso não é o domínio real, ou o

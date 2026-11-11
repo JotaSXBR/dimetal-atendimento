@@ -89,6 +89,10 @@ COPY --chmod=755 docker/worker.sh /usr/local/bin/worker.sh
 
 CMD ["/usr/local/bin/worker.sh"]
 
+# A imagem base herda um HEALTHCHECK de curl no nginx, que não existe neste estágio e o deixaria unhealthy;
+# o Coolify usa o HEALTHCHECK da imagem. Troca por checar o processo (script da imagem base, usa pgrep).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD healthcheck-queue
+
 
 FROM runtime AS reverb
 
@@ -102,3 +106,7 @@ FROM runtime AS scheduler
 STOPSIGNAL SIGTERM
 
 CMD ["php", "/var/www/html/artisan", "schedule:work"]
+
+# A imagem base herda um HEALTHCHECK de curl no nginx, que não existe neste estágio e o deixaria unhealthy;
+# o Coolify usa o HEALTHCHECK da imagem. Troca por checar o processo (script da imagem base, usa pgrep).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD healthcheck-schedule
