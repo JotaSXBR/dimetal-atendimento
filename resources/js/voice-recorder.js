@@ -10,15 +10,7 @@ import { VOICE_BITS_PER_SECOND, VOICE_CONSTRAINTS, voiceFile } from './voice-con
 const MAX_SECONDS = 300;
 const MIN_SECONDS = 1;
 const HEARTBEAT_MS = 4000;
-const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
-
-function extensionFor(mime) {
-    if (mime.includes('mp4')) {
-        return 'm4a';
-    }
-
-    return mime.includes('ogg') ? 'ogg' : 'webm';
-}
+const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
 
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('voiceRecorder', ($wire, ticketId) => ({
@@ -68,8 +60,17 @@ document.addEventListener('alpine:init', () => {
             }
 
             const supported = MIME_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type));
-            this.recorder = new MediaRecorder(this.stream, { ...(supported ? { mimeType: supported } : {}), audioBitsPerSecond: VOICE_BITS_PER_SECOND });
-            this.mime = this.recorder.mimeType || supported || 'audio/webm';
+
+            // Sem WebM/Opus nem OGG/Opus (Safari) não há como montar o OGG; avisa antes de gravar em vão.
+            if (!supported) {
+                this.releaseStream();
+                this.error = 'Este navegador não grava mensagem de voz. Use o Chrome, Edge ou Firefox.';
+
+                return;
+            }
+
+            this.recorder = new MediaRecorder(this.stream, { mimeType: supported, audioBitsPerSecond: VOICE_BITS_PER_SECOND });
+            this.mime = this.recorder.mimeType || supported;
             this.chunks = [];
             this.recorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
@@ -114,6 +115,13 @@ document.addEventListener('alpine:init', () => {
 
             // Descartou enquanto o arquivo era preparado: nada de prévia.
             if (this.phase !== 'recording') {
+                return;
+            }
+
+            if (!file) {
+                this.discard();
+                this.error = 'Não foi possível preparar a gravação. Grave de novo.';
+
                 return;
             }
 
@@ -164,7 +172,7 @@ document.addEventListener('alpine:init', () => {
             this.sending = true;
             this.error = '';
 
-            const file = new File([this.blob], `audio.${extensionFor(this.mime)}`, { type: this.mime });
+            const file = new File([this.blob], 'audio.ogg', { type: this.mime });
 
             $wire.$upload(
                 'voice',

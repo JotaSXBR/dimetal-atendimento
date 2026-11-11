@@ -20,18 +20,12 @@ test('voiceFile troca o WebM por OGG quando o remux funciona', async () => {
     assert.ok(result.blob.size > 1000);
 });
 
-test('voiceFile mantém o original quando o remux falha ou o formato é outro', async () => {
+test('voiceFile recusa (null) o que não vira OGG/Opus mono: lixo, outros formatos e OGG que já veio pronto', async () => {
     const garbage = new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/webm' });
-    const failed = await voiceFile(garbage, 'audio/webm');
 
-    assert.equal(failed.blob, garbage);
-    assert.equal(failed.mime, 'audio/webm');
+    assert.equal(await voiceFile(garbage, 'audio/webm'), null);
 
-    for (const mime of ['audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg']) {
-        const blob = new Blob([webm], { type: mime });
-        const same = await voiceFile(blob, mime);
-
-        assert.equal(same.blob, blob, mime);
-        assert.equal(same.mime, mime);
+    for (const mime of ['audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg', '']) {
+        assert.equal(await voiceFile(new Blob([webm], { type: mime }), mime), null, mime);
     }
 });

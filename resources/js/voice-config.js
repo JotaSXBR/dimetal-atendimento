@@ -13,15 +13,24 @@ export const VOICE_CONSTRAINTS = {
 };
 
 /**
- * O arquivo que vai ao servidor: a gravação WebM/Opus do Chrome vira OGG/Opus sem recodificar (o WAHA o aceita como voz sem
- * conversão); qualquer outro formato, ou falha do remux, segue como veio.
+ * O arquivo que vai ao servidor, sempre OGG/Opus mono, ou `null` quando a gravação não pode virar isso (o chamador mostra o
+ * erro e não envia: o caminho antigo, convertido pelo WAHA, perdia a onda). O WebM/Opus do Chrome e do Edge vira OGG sem
+ * recodificar; o OGG do Firefox só passa se o cabeçalho for Opus mono.
  */
 export async function voiceFile(blob, mime) {
-    if (!mime.includes('webm')) {
-        return { blob, mime };
+    if (mime.includes('webm')) {
+        const ogg = await webmToOgg(blob);
+
+        return ogg ? { blob: ogg, mime: 'audio/ogg' } : null;
     }
 
-    const ogg = await webmToOgg(blob);
+    if (mime.includes('ogg')) {
+        const head = new Uint8Array(await blob.slice(0, 38).arrayBuffer());
+        const text = (from, to) => String.fromCharCode(...head.slice(from, to));
+        const mono = head.length === 38 && text(0, 4) === 'OggS' && text(28, 36) === 'OpusHead' && head[37] === 1;
 
-    return ogg ? { blob: ogg, mime: 'audio/ogg' } : { blob, mime };
+        return mono ? { blob, mime: 'audio/ogg' } : null;
+    }
+
+    return null;
 }

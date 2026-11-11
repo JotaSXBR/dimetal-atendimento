@@ -139,13 +139,13 @@ class InboxVoiceTest extends TestCase
         Http::fake(['*' => Http::response(['id' => 'true_'.self::PEER.'_VOZ1'], 201)]);
 
         $this->inbox()
-            ->set('voice', UploadedFile::fake()->createWithContent('audio.webm', self::WEBM))
+            ->set('voice', UploadedFile::fake()->createWithContent('audio.ogg', OggOpusTest::header().str_repeat("\0", 64)))
             ->call('sendVoice', $this->ticket->id)
             ->assertHasNoErrors();
 
         $message = Message::query()->where('direction', MessageDirection::OUT->value)->sole();
         $this->assertSame('media', $message->type);
-        $this->assertSame('audio.webm', $message->media_name);
+        $this->assertSame('audio.ogg', $message->media_name);
         $this->assertStringStartsWith('audio/', (string) $message->media_mime);
         Storage::disk('local')->assertExists((string) $message->media_path);
         Queue::assertPushed(SendTicketMessageJob::class, 1);
@@ -154,35 +154,27 @@ class InboxVoiceTest extends TestCase
 
         $request = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/sendVoice'))->first()[0] ?? null;
         $this->assertNotNull($request);
-        $this->assertTrue($request['convert']);
-        $this->assertSame(base64_encode(self::WEBM), $request['file']['data']);
-    }
-
-    public function test_voz_ogg_opus_mono_vai_sem_conversao_e_com_o_tipo_ogg_opus(): void
-    {
-        Http::fake(['*' => Http::response(['id' => 'true_'.self::PEER.'_VOZ2'], 201)]);
-        $ogg = OggOpusTest::header().str_repeat("\0", 64);
-
-        $this->inbox()->set('voice', UploadedFile::fake()->createWithContent('audio.ogg', $ogg))->call('sendVoice', $this->ticket->id)->assertHasNoErrors();
-        app(SendTicketMessage::class)->deliver(Message::query()->where('direction', MessageDirection::OUT->value)->sole());
-
-        $request = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/sendVoice'))->first()[0] ?? null;
-        $this->assertNotNull($request);
         $this->assertFalse($request['convert']);
         $this->assertSame('audio/ogg; codecs=opus', $request['file']['mimetype']);
-        $this->assertSame(base64_encode($ogg), $request['file']['data']);
+        $this->assertSame(base64_encode(OggOpusTest::header().str_repeat("\0", 64)), $request['file']['data']);
     }
 
-    public function test_voz_ogg_estereo_continua_com_conversao(): void
+    public function test_gravacao_webm_e_recusada_sem_criar_mensagem_nem_chamar_o_waha(): void
     {
-        Http::fake(['*' => Http::response(['id' => 'true_'.self::PEER.'_VOZ3'], 201)]);
+        Http::fake(['*' => Http::response([], 201)]);
 
-        $this->inbox()->set('voice', UploadedFile::fake()->createWithContent('audio.ogg', OggOpusTest::header(2).str_repeat("\0", 64)))->call('sendVoice', $this->ticket->id)->assertHasNoErrors();
-        app(SendTicketMessage::class)->deliver(Message::query()->where('direction', MessageDirection::OUT->value)->sole());
+        $this->inbox()->set('voice', UploadedFile::fake()->createWithContent('audio.webm', self::WEBM))->call('sendVoice', $this->ticket->id)->assertHasErrors('voice');
 
-        $request = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/api/sendVoice'))->first()[0] ?? null;
-        $this->assertNotNull($request);
-        $this->assertTrue($request['convert']);
+        $this->assertSame(0, Message::query()->where('direction', MessageDirection::OUT->value)->count());
+        Queue::assertNotPushed(SendTicketMessageJob::class);
+        Http::assertNothingSent();
+    }
+
+    public function test_gravacao_ogg_estereo_e_recusada(): void
+    {
+        $this->inbox()->set('voice', UploadedFile::fake()->createWithContent('audio.ogg', OggOpusTest::header(2).str_repeat("\0", 64)))->call('sendVoice', $this->ticket->id)->assertHasErrors('voice');
+
+        $this->assertSame(0, Message::query()->where('direction', MessageDirection::OUT->value)->count());
     }
 
     public function test_arquivo_que_nao_e_audio_nao_passa_como_voz(): void
@@ -201,7 +193,7 @@ class InboxVoiceTest extends TestCase
 
         Livewire::actingAs($this->me)->test(Inbox::class)
             ->set('ticketId', $this->ticket->id)
-            ->set('voice', UploadedFile::fake()->createWithContent('audio.webm', self::WEBM))
+            ->set('voice', UploadedFile::fake()->createWithContent('audio.ogg', OggOpusTest::header().str_repeat("\0", 64)))
             ->call('sendVoice', $this->ticket->id)
             ->assertForbidden();
     }
@@ -218,7 +210,7 @@ class InboxVoiceTest extends TestCase
 
         // A gravação nasceu na conversa de $other; o atendente já está na conversa de $this->ticket.
         $this->inbox()
-            ->set('voice', UploadedFile::fake()->createWithContent('audio.webm', self::WEBM))
+            ->set('voice', UploadedFile::fake()->createWithContent('audio.ogg', OggOpusTest::header().str_repeat("\0", 64)))
             ->call('sendVoice', $other->id);
 
         $this->assertSame(0, Message::query()->where('direction', MessageDirection::OUT->value)->count());

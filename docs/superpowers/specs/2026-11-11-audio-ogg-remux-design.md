@@ -36,7 +36,7 @@ do WAHA. A API do `sendVoice` não aceita onda pronta.
 ## Anti-metas
 
 - Enviar ao WhatsApp um OGG que não seja Opus mono com `convert: false` (voz inaudível ou recusada).
-- Perder a gravação se o remux falhar: sempre cai no WebM original.
+- Manter o WebM/MP4 como queda quando o remux falha (decisão do dono em 11/11): gravação que não vira OGG/Opus mono dá erro claro e não envia; o servidor também recusa voz que não seja OGG/Opus mono. Anexos de áudio pelo clipe (mp3/m4a) seguem convertidos pelo WAHA.
 
 ## Abordagens consideradas
 

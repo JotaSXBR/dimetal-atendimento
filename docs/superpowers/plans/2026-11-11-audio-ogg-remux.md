@@ -4,7 +4,7 @@
 
 **Goal:** O áudio gravado no Chrome (WebM/Opus) vira OGG/Opus no navegador sem recodificar e vai ao WAHA com `convert: false` quando os bytes forem OGG/Opus mono; o resto segue como hoje. Depois, comparar a presença da onda antes e depois no beta.
 
-**Architecture:** Um módulo JS puro (`resources/js/webm-to-ogg.js`) lê o WebM da gravação (elementos EBML, Opus em SimpleBlock) e escreve um OGG (OpusHead, OpusTags, páginas com CRC). O `voice-recorder.js` o chama ao parar a gravação, com queda para o WebM original se algo falhar. No servidor, uma checagem de assinatura (`OggOpus::isMono`) decide em `WahaMedia::send` se vai `convert: false`.
+**Architecture:** Um módulo JS puro (`resources/js/webm-to-ogg.js`) lê o WebM da gravação (elementos EBML, Opus em SimpleBlock) e escreve um OGG (OpusHead, OpusTags, páginas com CRC). O `voice-recorder.js` o chama ao parar a gravação, sem queda: se não virar OGG/Opus mono, mostra erro e não envia. No servidor, uma checagem de assinatura (`OggOpus::isMono`) decide em `WahaMedia::send` se vai `convert: false`.
 
 **Tech Stack:** Laravel 13, Livewire 4.4, Alpine, PHPUnit, `node --test`, ffmpeg/ffprobe da imagem `devlikeapro/waha:gows-2026.10.1` (só para conferir arquivos).
 
@@ -13,8 +13,8 @@
 ## Global Constraints
 
 - Sem dependência nova (composer ou npm), sem WASM, sem mudar o WAHA. Voz só passa a `convert: false` com OGG/Opus **mono** de verdade (`OggS` no byte 0, `OpusHead` no byte 28, canais = 1 no byte 37); qualquer outro áudio mantém `convert: true`.
-- Gravação: `MediaRecorder` com `audioBitsPerSecond: 32000`; microfone com `channelCount: 1`, `sampleRate: 48000` (ideais) e eco, ruído e ganho automático ligados. O remux só vale se o `OpusHead` do WebM disser mono; senão sobe o WebM original (caminho de hoje).
-- Falha do remux nunca perde a gravação: sempre cai no arquivo original.
+- Gravação: `MediaRecorder` com `audioBitsPerSecond: 32000`; microfone com `channelCount: 1`, `sampleRate: 48000` (ideais) e eco, ruído e ganho automático ligados. O remux só vale se o `OpusHead` do WebM disser mono; senão a gravação é recusada com erro claro (sem caminho antigo).
+- Sem fallback (decisão do dono): falha do remux → erro e nada é enviado; `AttachmentRules` com `voice: true` aceita só OGG/Opus mono.
 - Anexos de áudio comuns (mp3, m4a) não mudam. Nada muda na UI do gravador.
 - Commits em português com prefixo, um por tarefa; sem referência a projetos de terceiros em código, commit e PR. Editar com `Edit`; script Python no Windows grava CRLF (Pint reprova): `sed -i 's/\r$//'`; Blade/Python com `\` em heredoc: usar arquivo de script.
 - Testes: Postgres de teste no ar (`pg-test`, porta 5432), `php artisan test --parallel`; JS com `node --test tests/js`.
@@ -70,9 +70,9 @@
 
 **Interfaces:**
 - Consumes: `webmToOgg` (Task 2).
-- Produces: `VOICE_BITS_PER_SECOND = 32000`, `VOICE_CONSTRAINTS = { audio: { channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }` e `voiceFile(blob: Blob, mime: string): Promise<{ blob: Blob, mime: string }>` — para `mime` com `webm`, tenta `webmToOgg`; sucesso → `{ blob: oggBlob, mime: 'audio/ogg' }`; falha ou outro `mime` → o original.
+- Produces: `VOICE_BITS_PER_SECOND = 32000`, `VOICE_CONSTRAINTS = { audio: { channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }` e `voiceFile(blob: Blob, mime: string): Promise<{ blob: Blob, mime: string } | null>` (`webm` → remux; `ogg` só com cabeçalho Opus mono; resto → `null`).
 
-- [ ] **Step 1: Write the failing tests:** `test_voice_file_troca_webm_por_ogg_quando_o_remux_funciona` (fixture), `test_voice_file_mantem_o_original_quando_o_remux_falha_ou_o_formato_e_outro` (bytes lixo em `audio/webm`; `audio/mp4`; `audio/ogg`), `test_configuracao_pede_32_kbps_mono_48k_com_processamento_ligado`.
+- [ ] **Step 1: Write the failing tests:** `test_voice_file_troca_webm_por_ogg_quando_o_remux_funciona` (fixture), `test_voice_file_recusa_o_que_nao_vira_ogg_opus_mono` (bytes lixo em `audio/webm`; `audio/mp4`; `audio/ogg`), `test_configuracao_pede_32_kbps_mono_48k_com_processamento_ligado`.
 - [ ] **Step 2: Run** `node --test tests/js` → Expected: FAIL.
 - [ ] **Step 3: Implement** e ligar no `voice-recorder.js`: `getUserMedia(VOICE_CONSTRAINTS)`, `new MediaRecorder(stream, { mimeType, audioBitsPerSecond: VOICE_BITS_PER_SECOND })`, e em `finish()` (que vira `async`) aplicar `voiceFile` ao blob antes de `setPhase('preview')` (a prévia toca o arquivo que vai ser enviado); `this.mime` passa a ser o do arquivo final para `extensionFor`.
 - [ ] **Step 4: Run** `node --test tests/js`, `npm run build` → Expected: PASS / exit 0. No navegador local (o gravador precisa de microfone: conferir só que a tela de gravação abre e a prévia não quebra; a verificação de ponta a ponta é a comparação da Task 4).

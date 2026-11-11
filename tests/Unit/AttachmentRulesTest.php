@@ -133,13 +133,18 @@ class AttachmentRulesTest extends TestCase
         $this->assertStringContainsString('16 MB', (string) AttachmentRules::validate($big));
     }
 
-    public function test_gravacao_do_microfone_aceita_webm_so_no_modo_voz(): void
+    public function test_gravacao_do_microfone_so_aceita_ogg_opus_mono(): void
     {
         $webm = "\x1A\x45\xDF\xA3\x9F\x42\x86\x81\x01\x42\xF7\x81\x01\x42\xF2\x81\x04\x42\xF3\x81\x08\x42\x82\x84webm\x42\x87\x81\x04\x42\x85\x81\x02".str_repeat("\x00", 64);
+        $mono = OggOpusTest::header().str_repeat("\x00", 64);
 
-        $this->assertNull(AttachmentRules::validate($this->file('audio.webm', $webm), voice: true));
-        $this->assertNotNull(AttachmentRules::validate($this->file('audio.webm', $webm)));
-        $this->assertSame('audio', AttachmentRules::inspect($this->file('audio.webm', $webm), voice: true)['kind'] ?? null);
+        $this->assertNull(AttachmentRules::validate($this->file('audio.ogg', $mono), voice: true));
+        $this->assertSame('audio', AttachmentRules::inspect($this->file('audio.ogg', $mono), voice: true)['kind'] ?? null);
+        // Sem o caminho antigo: WebM e OGG estéreo não são mais aceitos como gravação (o WAHA perdia a onda ao convertê-los).
+        $this->assertStringContainsString('OGG/Opus mono', (string) AttachmentRules::validate($this->file('audio.webm', $webm), voice: true));
+        $this->assertStringContainsString('OGG/Opus mono', (string) AttachmentRules::validate($this->file('audio.ogg', OggOpusTest::header(2).str_repeat("\x00", 64)), voice: true));
+        // Anexo comum de áudio não muda: o OGG de qualquer tipo continua aceito pelo clipe.
+        $this->assertNull(AttachmentRules::validate($this->file('audio.ogg', OggOpusTest::header(2).str_repeat("\x00", 64))));
     }
 
     public function test_nome_e_saneado_sem_caminho_nem_controle(): void
