@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
@@ -24,10 +25,10 @@ class Tag extends Model
      * As etiquetas em ordem alfabética sem diferenciar acento nem caixa (o banco ordena pela collation dele, que muda de
      * instalação para instalação: "Ágil" cairia depois de "Zebra" numa collation C).
      *
-     * @param  \Illuminate\Support\Collection<int, Tag>  $tags
-     * @return \Illuminate\Support\Collection<int, Tag>
+     * @param  Collection<int, Tag>  $tags
+     * @return Collection<int, Tag>
      */
-    public static function sortedByName(\Illuminate\Support\Collection $tags): \Illuminate\Support\Collection
+    public static function sortedByName(Collection $tags): Collection
     {
         return $tags->sortBy(fn (Tag $tag): string => Str::ascii(mb_strtolower($tag->name)), SORT_STRING)->values();
     }
