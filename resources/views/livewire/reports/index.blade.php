@@ -22,8 +22,10 @@
         </div>
         <div class="rounded-[14px] border border-line bg-surface p-4">
             <dt class="text-xs text-ink-3">Sem resposta além do SLA</dt>
-            <dd class="mt-1 font-mono text-2xl {{ $data['overdue'] > 0 ? 'text-danger' : 'text-ink' }}">{{ $data['overdue'] }}</dd>
-            <p class="text-xs text-ink-3">tickets vencidos agora</p>
+            <dd class="mt-1">
+                <span class="font-mono text-2xl {{ $data['overdue'] > 0 ? 'text-danger' : 'text-ink' }}">{{ $data['overdue'] }}</span>
+                <p class="text-xs text-ink-3">tickets vencidos agora</p>
+            </dd>
         </div>
     </dl>
 

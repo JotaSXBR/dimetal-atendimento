@@ -10,7 +10,7 @@
                 {{-- Fechada, o Flux tira a marca do fluxo no hover e só então mostra o botão de colapso: sem mouse (toque, teclado) não haveria como
                      reabrir, e o sino pulava de lugar. Aqui a marca fica fixa e o botão fica sempre à vista. A ordem do DOM é a ordem visual nos dois
                      estados (marca, botão, sino): o Tab segue o que se vê. --}}
-                <x-app-logo :sidebar="true" href="{{ route('inbox') }}" aria-label="{{ \App\Settings\CompanySettings::name() }}" wire:navigate class="in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:static! in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:opacity-100!" />
+                <x-app-logo :sidebar="true" href="{{ route('inbox') }}" aria-label="{{ \App\Settings\CompanySettings::logoUrl() === null ? mb_strtoupper(mb_substr(\App\Settings\CompanySettings::name(), 0, 1)).' ' : '' }}{{ \App\Settings\CompanySettings::name() }}" wire:navigate class="in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:static! in-data-flux-sidebar-collapsed-desktop:in-data-flux-sidebar-active:opacity-100!" />
                 <flux:sidebar.collapse tooltip="Recolher ou expandir menu" class="in-data-flux-sidebar-collapsed-desktop:static! in-data-flux-sidebar-collapsed-desktop:opacity-100!" />
                 <livewire:alerts.bell />
             </flux:sidebar.header>
