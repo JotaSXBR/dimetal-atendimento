@@ -2,6 +2,7 @@
 
 namespace App\Services\Bot\Nodes;
 
+use App\Services\Bot\BotMessages;
 use App\Services\Bot\BotRun;
 use App\Services\Bot\ChoiceReply;
 use App\Services\Bot\Flow\NodeData;
@@ -14,8 +15,6 @@ use App\Services\Bot\Step;
 abstract class ChoiceNode extends Node
 {
     public const MAX_ATTEMPTS = 3;
-
-    private const DEFAULT_INVALID = 'Opção inválida. Responda com o número de uma das opções.';
 
     /** @return list<array{label: string, value: int|string}> */
     abstract protected function choices(BotRun $run, NodeData $data): array;
@@ -30,7 +29,7 @@ abstract class ChoiceNode extends Node
             return Step::leave('erros');
         }
 
-        $menu = $this->render($data, $choices);
+        $menu = $this->render($run, $data, $choices);
 
         $run->set('_choices', array_column($choices, 'value'));
         $run->set('_menu', $menu);
@@ -56,20 +55,22 @@ abstract class ChoiceNode extends Node
         }
 
         $menu = $run->get('_menu');
-        $run->say($data->filled('invalido') ? $data->string('invalido') : self::DEFAULT_INVALID);
+        $run->say($data->filled('invalido') ? $data->string('invalido') : BotMessages::text($run->flow, 'opcao_invalida'));
         $run->say(is_string($menu) ? $menu : '');
 
         return Step::wait('menu', $data->int('timeout_min', 10));
     }
 
     /** @param  list<array{label: string, value: int|string}>  $choices */
-    private function render(NodeData $data, array $choices): string
+    private function render(BotRun $run, NodeData $data, array $choices): string
     {
         $lines = [];
         foreach ($choices as $i => $choice) {
             $lines[] = ($i + 1).' - '.$choice['label'];
         }
 
-        return trim($data->string('texto'))."\n\n".implode("\n", $lines)."\n\nPara falar com um atendente digite #sair";
+        $footer = BotMessages::text($run->flow, 'rodape_sair');
+
+        return trim($data->string('texto'))."\n\n".implode("\n", $lines).($footer === '' ? '' : "\n\n".$footer);
     }
 }

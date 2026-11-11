@@ -154,6 +154,85 @@ class EngineCoreTest extends TestCase
         $this->assertSame(BotSession::TRANSFERRED, $session->fresh()?->state);
     }
 
+    /** O `simple()` com `settings.mensagens` (e, se pedido, o bloco do menu com outros dados). */
+    private function withMessages(array $messages, array $menuData = ['texto' => 'Escolha']): WorkflowVersion
+    {
+        $graph = $this->version(
+            [['i', 'inicio', []], ['m', 'menu_setores', $menuData], ['t', 'transferir', []]],
+            [['i', 'out', 'm'], ['m', 'setor', 't']],
+        )->graph;
+        $graph['settings'] = ['mensagens' => $messages];
+
+        return WorkflowVersion::factory()->create(['graph' => $graph]);
+    }
+
+    public function test_aviso_de_encaminhamento_do_workflow_vence_o_padrao(): void
+    {
+        CompanySettings::save(['name' => 'Dimetal Distribuidora']);
+        $session = app(BotEngine::class)->start($this->ticket, $this->withMessages(['encaminhamento_setor' => 'Oi {{nome}}, {{empresa}} vai te atender em {{setor}} (protocolo {{protocolo}}) {{xyz}}']));
+
+        $this->say($session, '#sair');
+
+        $texts = $this->botTexts();
+        $this->assertSame('Oi Maria, Dimetal Distribuidora vai te atender em Vendas (protocolo '.$this->ticket->protocol.') {{xyz}}', end($texts));
+    }
+
+    public function test_aviso_de_encaminhamento_geral_do_workflow(): void
+    {
+        Sector::query()->update(['status' => 'desativado']);
+
+        app(BotEngine::class)->start($this->ticket, $this->withMessages(['encaminhamento_geral' => 'Já já chamo alguém, {{nome}}. Protocolo {{protocolo}}.']));
+
+        $texts = $this->botTexts();
+        $this->assertSame('Já já chamo alguém, Maria. Protocolo '.$this->ticket->protocol.'.', end($texts));
+    }
+
+    public function test_opcao_invalida_do_workflow_vence_o_padrao(): void
+    {
+        $session = app(BotEngine::class)->start($this->ticket, $this->withMessages(['opcao_invalida' => 'Do workflow, {{nome}}.']));
+
+        $this->say($session, '9');
+
+        $this->assertSame('Do workflow, Maria.', $this->botTexts()[1]);
+    }
+
+    public function test_aviso_de_opcao_invalida_do_bloco_vence_o_do_workflow(): void
+    {
+        $session = app(BotEngine::class)->start($this->ticket, $this->withMessages(['opcao_invalida' => 'Do workflow'], ['texto' => 'Escolha', 'invalido' => 'Do bloco']));
+
+        $this->say($session, '9');
+
+        $this->assertSame('Do bloco', $this->botTexts()[1]);
+    }
+
+    public function test_resposta_invalida_da_pergunta_do_workflow(): void
+    {
+        $graph = $this->version(
+            [['i', 'inicio', []], ['p', 'pergunta', ['texto' => 'Quantos?', 'variavel' => 'qtd', 'validacao' => 'numero']], ['t', 'transferir', []]],
+            [['i', 'out', 'p'], ['p', 'out', 't']],
+        )->graph;
+        $graph['settings'] = ['mensagens' => ['resposta_invalida' => 'Só números, por favor.']];
+        $session = app(BotEngine::class)->start($this->ticket, WorkflowVersion::factory()->create(['graph' => $graph]));
+
+        $this->say($session, 'abc');
+
+        $this->assertSame('Só números, por favor.', $this->botTexts()[1]);
+    }
+
+    public function test_rodape_do_workflow_e_rodape_vazio_some(): void
+    {
+        app(BotEngine::class)->start($this->ticket, $this->withMessages(['rodape_sair' => 'Digite #sair para falar com gente']));
+        $this->assertSame("Escolha\n\n1 - Vendas\n2 - Suporte\n\nDigite #sair para falar com gente", $this->botTexts()[0]);
+
+        Message::query()->where('ticket_id', $this->ticket->id)->delete();
+        BotSession::query()->where('ticket_id', $this->ticket->id)->delete();
+        $session = app(BotEngine::class)->start($this->ticket, $this->withMessages(['rodape_sair' => '']));
+        $this->assertSame("Escolha\n\n1 - Vendas\n2 - Suporte", $this->botTexts()[0]);
+
+        $this->say($session, '#sair');
+        $this->assertSame($this->vendas->id, $this->ticket->fresh()?->sector_id);
+    }
+
     public function test_empresa_e_variavel_das_mensagens_do_bot(): void
     {
         CompanySettings::save(['name' => 'Dimetal Distribuidora']);
