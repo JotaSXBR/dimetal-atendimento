@@ -7,10 +7,11 @@ import { ClassicPreset, NodeEditor } from 'rete';
 import { AreaExtensions, AreaPlugin } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
 import { LitPlugin, Presets as LitPresets } from '@retejs/lit-plugin';
+import { MinimapPlugin } from 'rete-minimap-plugin';
 import { getDOMSocketPosition } from 'rete-render-utils';
 import { LitElement, html } from 'lit';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
-import { ICONS, categoryOf, previewOf } from './appearance.js';
+import { ICONS, arrange, categoryOf, previewOf } from './appearance.js';
 import { BLOCKS, defaultData, outputsFor } from './nodes.js';
 import { fromGraph, toGraph } from './serialize.js';
 
@@ -149,6 +150,14 @@ export async function createEditor(container, graph, hooks) {
     area.use(render);
     AreaExtensions.simpleNodesOrder(area);
 
+    // O minimapa é um extra: se não carregar, o editor abre do mesmo jeito.
+    try {
+        render.addPreset(LitPresets.minimap.setup({ size: 180 }));
+        area.use(new MinimapPlugin({ boundViewport: true }));
+    } catch (error) {
+        console.warn('Minimapa indisponível', error);
+    }
+
     const changed = () => {
         if (!loading) {
             hooks.onChange?.();
@@ -264,6 +273,29 @@ export async function createEditor(container, graph, hooks) {
 
             await area.update('node', id);
             changed();
+        },
+
+        /** Aproxima (factor > 1) ou afasta (< 1) a partir do centro do canvas. */
+        async zoomBy(factor) {
+            const box = container.getBoundingClientRect();
+
+            await area.area.zoom(area.area.transform.k * factor, box.width / 2, box.height / 2);
+        },
+
+        async fit() {
+            await AreaExtensions.zoomAt(area, editor.getNodes());
+        },
+
+        /** Arruma os blocos em camadas (ver `arrange`) e enquadra o resultado; conta como alteração do rascunho. */
+        async organize() {
+            const { nodes, edges } = this.getGraph();
+            const positions = arrange(nodes, edges);
+
+            for (const [id, position] of Object.entries(positions)) {
+                await area.translate(id, position);
+            }
+
+            await this.fit();
         },
 
         /** Marca em vermelho os blocos citados por erros de validação. */

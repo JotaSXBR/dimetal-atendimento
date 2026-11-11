@@ -44,7 +44,16 @@
         </aside>
 
         {{-- O canvas é do Rete: o Livewire não pode reescrever o que está aqui dentro. --}}
-        <div wire:ignore class="flow-canvas relative min-w-0 flex-1 overflow-hidden bg-canvas" x-ref="canvas" aria-label="Canvas do workflow"></div>
+        <div class="relative min-w-0 flex-1">
+            <div wire:ignore class="flow-canvas absolute inset-0 overflow-hidden bg-canvas" x-ref="canvas" aria-label="Canvas do workflow"></div>
+
+            <div class="absolute start-3 top-3 z-10 flex flex-wrap gap-1" role="toolbar" aria-label="Controles do canvas">
+                <flux:button size="sm" x-on:click="zoom(1 / 1.25)" x-bind:disabled="failed" aria-label="Afastar">−</flux:button>
+                <flux:button size="sm" x-on:click="zoom(1.25)" x-bind:disabled="failed" aria-label="Aproximar">+</flux:button>
+                <flux:button size="sm" x-on:click="fit()" x-bind:disabled="failed">Centralizar</flux:button>
+                <flux:button size="sm" x-on:click="organize()" x-bind:disabled="failed">Organizar blocos</flux:button>
+            </div>
+        </div>
 
         <aside class="w-72 shrink-0 space-y-4 overflow-y-auto border-s border-line bg-surface p-4" aria-label="Propriedades do bloco">
             <template x-if="selected">

@@ -98,6 +98,18 @@ document.addEventListener('alpine:init', () => {
                 api?.updateData(this.selected.id, JSON.parse(JSON.stringify(this.selected.data)));
             },
 
+            zoom(factor) {
+                api?.zoomBy(factor);
+            },
+
+            fit() {
+                api?.fit();
+            },
+
+            organize() {
+                api?.organize();
+            },
+
             add(type) {
                 api?.addNode(type);
             },

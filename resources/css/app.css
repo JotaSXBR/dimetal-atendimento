@@ -193,3 +193,9 @@ flow-node { display: block; }
 .flow-socket { position: absolute; top: 50%; translate: 0 -50%; display: block; line-height: 0; }
 .flow-socket-input { left: -8px; }
 .flow-socket-output { right: -8px; }
+
+/* O minimapa do editor só aparece com largura para não cobrir o canvas nem o painel de propriedades. */
+.flow-canvas rete-minimap { display: none; }
+@media (min-width: 1100px) {
+    .flow-canvas rete-minimap { display: block; }
+}
