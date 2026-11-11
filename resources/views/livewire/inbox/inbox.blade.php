@@ -416,7 +416,9 @@
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" title="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
 
                             <div class="relative" x-on:keydown.escape.window="$wire.showQuickReplies && $wire.set('showQuickReplies', false)" x-on:click.outside="$wire.showQuickReplies && $wire.set('showQuickReplies', false)">
-                                <flux:button type="button" variant="subtle" icon="bolt" aria-label="Respostas rápidas" title="Respostas rápidas" aria-haspopup="listbox" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
+                                {{-- Coluna muito estreita (celular): o gatilho vira "+", e a lista é a mesma. --}}
+                                <flux:button type="button" variant="subtle" icon="bolt" class="@max-sm:hidden" aria-label="Respostas rápidas" title="Respostas rápidas" aria-haspopup="listbox" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
+                                <flux:button type="button" variant="subtle" icon="plus" class="@sm:hidden" aria-label="Mais ações do compositor" title="Mais ações: respostas rápidas" aria-haspopup="listbox" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
                                 @if ($showQuickReplies)
                                     <div data-testid="quick-replies-popover" class="absolute bottom-full start-0 z-20 mb-2 w-72 max-w-[80vw] overflow-hidden rounded-lg border border-line bg-surface text-sm shadow-lg">
                                         <p class="border-b border-line px-3 py-2 text-xs font-semibold text-ink-2">Respostas rápidas</p>

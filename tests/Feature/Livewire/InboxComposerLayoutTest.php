@@ -97,6 +97,35 @@ class InboxComposerLayoutTest extends TestCase
         $this->assertStringNotContainsString('aria-label="Gravar áudio"', $html);
     }
 
+    /** @return string a tag `<button ...>` que traz o aria-label pedido */
+    private function buttonTag(string $html, string $label): string
+    {
+        $this->assertSame(1, preg_match('/<button[^>]*aria-label="'.preg_quote($label, '/').'"[^>]*>/', $html, $m), "falta o botão {$label}");
+
+        return $m[0];
+    }
+
+    public function test_em_tela_estreita_um_botao_mais_abre_as_respostas_rapidas(): void
+    {
+        $html = $this->inbox()->html();
+
+        $this->assertStringContainsString('@max-sm:hidden', $this->buttonTag($html, 'Respostas rápidas'));
+        $mais = $this->buttonTag($html, 'Mais ações do compositor');
+        $this->assertStringContainsString('@sm:hidden', $mais);
+        $this->assertStringContainsString('toggleQuickReplies', $mais);
+    }
+
+    public function test_modo_nota_esconde_anexo_e_mic_e_mantem_emoji_e_respostas(): void
+    {
+        $html = $this->inbox()->html();
+
+        $this->assertStringContainsString("x-show=\"mode === 'reply'\"", $this->buttonTag($html, 'Anexar arquivo'));
+        $this->assertStringContainsString("mode === 'reply'", $this->buttonTag($html, 'Gravar áudio'));
+        $this->assertStringNotContainsString('x-show', $this->buttonTag($html, 'Emoji'), 'o emoji vale nos dois modos');
+        $this->assertStringNotContainsString('x-show', $this->buttonTag($html, 'Respostas rápidas'), 'as respostas valem nos dois modos');
+        $this->assertStringContainsString('Salvar nota', $html);
+    }
+
     public function test_o_campo_nao_tem_largura_minima_que_o_espreme(): void
     {
         $html = $this->inbox()->html();
