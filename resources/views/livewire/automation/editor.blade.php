@@ -13,6 +13,7 @@
 
         <flux:button size="sm" x-on:click="save()" x-bind:disabled="busy || failed">Salvar rascunho</flux:button>
         <flux:button size="sm" x-on:click="validate()" x-bind:disabled="busy || failed">Validar</flux:button>
+        <flux:button size="sm" x-on:click="panel === 'test' ? closeTest() : openTest()" x-bind:disabled="busy || failed" x-bind:aria-pressed="panel === 'test'">Testar</flux:button>
         <flux:button size="sm" variant="primary" x-on:click="publish()" x-bind:disabled="busy || failed">Publicar</flux:button>
     </header>
 
@@ -83,7 +84,85 @@
             </div>
         </div>
 
-        <aside class="w-72 shrink-0 space-y-4 overflow-y-auto border-s border-line bg-surface p-4" aria-label="Propriedades do bloco">
+        {{-- A conversa de teste ocupa o lugar das propriedades: nada cobre o canvas, nem em janela estreita. O estado vem de `$wire.sim`. --}}
+        <aside x-show="panel === 'test'" x-cloak class="flex w-72 shrink-0 flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4" aria-label="Testar o fluxo">
+            <div class="flex items-center gap-2">
+                <h2 class="flex-1 text-sm font-semibold text-ink">Testar o fluxo</h2>
+                <flux:button size="xs" variant="subtle" x-on:click="closeTest()">Fechar</flux:button>
+            </div>
+            <p class="text-xs text-ink-3">Conversa de teste sobre o rascunho atual, mesmo sem salvar. Nada é enviado nem gravado.</p>
+
+            <label class="block text-xs text-ink-2">
+                <span>Agora</span>
+                <select class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model="clock" x-on:change="testStart()" x-bind:disabled="busy">
+                    <option value="real">Agora: horário real</option>
+                    <option value="aberto">Dentro do expediente</option>
+                    <option value="fechado">Fora do expediente</option>
+                </select>
+            </label>
+
+            <div class="flex gap-2">
+                <flux:button size="xs" x-on:click="testStart()" x-bind:disabled="busy">Reiniciar</flux:button>
+                <flux:button size="xs" x-on:click="testSilence()" x-bind:disabled="busy || !testWaiting()">Simular silêncio</flux:button>
+            </div>
+
+            <div x-show="$wire.simErrors?.length > 0" class="rounded-md border border-warn/30 bg-warn/10 p-2 text-xs text-warn" role="alert">
+                <p class="font-semibold">Corrija o fluxo antes de testar:</p>
+                <ul class="mt-1 list-disc ps-4">
+                    <template x-for="error in $wire.simErrors" x-bind:key="error">
+                        <li><button type="button" class="text-start underline" x-on:click="focus(error)" x-text="error"></button></li>
+                    </template>
+                </ul>
+            </div>
+
+            <div class="space-y-2" role="log" aria-live="polite" aria-label="Conversa de teste">
+                <template x-for="(line, index) in ($wire.sim?.log ?? [])" x-bind:key="index">
+                    <p
+                        class="whitespace-pre-wrap text-sm"
+                        x-bind:class="{
+                            'mr-6 rounded-lg border border-line bg-canvas p-2 text-ink': line.kind === 'bot',
+                            'ml-6 rounded-lg bg-accent/20 p-2 text-ink': line.kind === 'cliente',
+                            'rounded border border-dashed border-line px-2 py-1 text-xs italic text-ink-3': line.kind === 'efeito',
+                            'text-center text-xs text-ink-3': line.kind === 'sistema',
+                        }"
+                        x-text="line.text"
+                    ></p>
+                </template>
+            </div>
+
+            <p x-show="$wire.sim?.outcome" class="rounded-md border border-line bg-canvas p-2 text-xs font-semibold text-ink" x-text="$wire.sim?.outcome === 'fila' ? 'Desfecho: foi para a fila de atendimento.' : 'Desfecho: conversa encerrada pelo bot.'"></p>
+
+            <form x-show="$wire.sim?.session" class="space-y-1" x-on:submit.prevent="testReply()">
+                <label class="block text-xs text-ink-2" for="sim-text">Resposta do cliente</label>
+                <div class="flex gap-2">
+                    <input id="sim-text" type="text" maxlength="1000" autocomplete="off" wire:model="simText" x-bind:disabled="busy || $wire.sim?.outcome" class="min-w-0 flex-1 rounded-md border border-line bg-surface p-2 text-sm text-ink">
+                    <flux:button size="sm" type="submit" x-bind:disabled="busy || $wire.sim?.outcome">Enviar</flux:button>
+                </div>
+                @error('simText')
+                    <p class="text-xs text-danger" role="alert">{{ $message }}</p>
+                @enderror
+            </form>
+
+            <div x-show="($wire.sim?.trail ?? []).length > 0">
+                <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Blocos percorridos</p>
+                <ol class="mt-1 list-decimal space-y-0.5 ps-5 text-xs text-ink-2">
+                    <template x-for="(id, index) in ($wire.sim?.trail ?? [])" x-bind:key="index + id">
+                        <li x-bind:class="id === testCurrent() && 'font-semibold text-ink'" x-text="testLabel(id)"></li>
+                    </template>
+                </ol>
+            </div>
+
+            <div x-show="testVars().length > 0">
+                <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Variáveis</p>
+                <dl class="mt-1 space-y-0.5 text-xs">
+                    <template x-for="item in testVars()" x-bind:key="item.key">
+                        <div class="flex gap-2"><dt class="font-mono text-ink-3" x-text="item.key"></dt><dd class="min-w-0 break-words text-ink" x-text="item.value"></dd></div>
+                    </template>
+                </dl>
+            </div>
+        </aside>
+
+        <aside x-show="panel === 'props'" class="w-72 shrink-0 space-y-4 overflow-y-auto border-s border-line bg-surface p-4" aria-label="Propriedades do bloco">
             <template x-if="selected">
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-ink" x-text="blockLabel(selected.type)"></p>

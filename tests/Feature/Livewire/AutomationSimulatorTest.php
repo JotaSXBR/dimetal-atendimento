@@ -140,6 +140,18 @@ class AutomationSimulatorTest extends TestCase
         $this->assertSame('real', $unknown['clock'], 'valor fora da lista vale o horário real');
     }
 
+    public function test_painel_testar_aparece_no_editor_com_relogio_silencio_e_reiniciar(): void
+    {
+        $this->editor()
+            ->assertSee('Testar o fluxo')
+            ->assertSee('Simular silêncio')
+            ->assertSee('Reiniciar')
+            ->assertSee('Agora: horário real')
+            ->assertSee('Dentro do expediente')
+            ->assertSee('Fora do expediente')
+            ->assertSee('Nada é enviado nem gravado');
+    }
+
     public function test_grafo_com_bloco_de_tipo_desconhecido_e_recusado_como_no_validar(): void
     {
         $graph = $this->graph();
