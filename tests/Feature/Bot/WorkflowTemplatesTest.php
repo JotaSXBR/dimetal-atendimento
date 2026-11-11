@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Bot;
 
+use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\BusinessHour;
@@ -48,6 +49,50 @@ class WorkflowTemplatesTest extends TestCase
     private function botTexts(): array
     {
         return Message::query()->where('ticket_id', $this->ticket->id)->where('origin', 'bot')->orderBy('id')->pluck('body')->all();
+    }
+
+    /** @return array<string, mixed> */
+    private function graphWithSectors(string ...$names): array
+    {
+        return ['nodes' => array_map(fn (string $name): array => ['id' => 't_'.md5($name), 'type' => 'transferir', 'data' => ['setor' => $name]], $names), 'edges' => []];
+    }
+
+    public function test_resolve_troca_o_nome_do_setor_pelo_id_sem_diferenciar_caixa(): void
+    {
+        $sac = Sector::factory()->create(['name' => 'SAC']);
+
+        $result = WorkflowTemplates::resolveGraph($this->graphWithSectors(' sac '));
+
+        $this->assertSame([], $result['missing']);
+        $this->assertSame($sac->id, $result['graph']['nodes'][0]['data']['setor_id']);
+        $this->assertArrayNotHasKey('setor', $result['graph']['nodes'][0]['data']);
+    }
+
+    public function test_resolve_trata_setor_que_nao_recebe_tickets_como_ausente(): void
+    {
+        Sector::factory()->create(['name' => 'SAC', 'status' => SectorStatus::DESATIVADO]);
+
+        $result = WorkflowTemplates::resolveGraph($this->graphWithSectors('SAC'));
+
+        $this->assertSame(['SAC'], $result['missing']);
+        $this->assertArrayNotHasKey('setor_id', $result['graph']['nodes'][0]['data']);
+        $this->assertArrayNotHasKey('setor', $result['graph']['nodes'][0]['data']);
+    }
+
+    public function test_resolve_lista_cada_setor_faltante_uma_vez(): void
+    {
+        $graph = $this->graphWithSectors('Financeiro');
+        $graph['nodes'][] = ['id' => 'outro', 'type' => 'transferir', 'data' => ['setor' => 'Financeiro']];
+        $graph['nodes'][] = ['id' => 'mais', 'type' => 'transferir', 'data' => ['setor' => 'Vendas']];
+
+        $this->assertSame(['Financeiro'], WorkflowTemplates::resolveGraph($graph)['missing']);
+    }
+
+    public function test_all_marca_os_tres_modelos_basicos_no_grupo_basicos(): void
+    {
+        $basicos = array_values(array_filter(WorkflowTemplates::all(), fn (array $t): bool => $t['group'] === 'Básicos'));
+
+        $this->assertSame(['em_branco', 'padrao', 'horario'], array_column($basicos, 'key'));
     }
 
     public function test_a_lista_traz_os_tres_modelos_na_ordem(): void
