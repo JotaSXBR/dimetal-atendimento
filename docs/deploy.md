@@ -299,7 +299,9 @@ Rollback: reimplante o commit anterior. Migrações destrutivas exigem migraçã
   por Dockerfile; confira `dockerfile_target_build` (`worker`/`scheduler`) e os estágios do Dockerfile.
 - **`worker`/`scheduler` unhealthy** → o Coolify usa o `HEALTHCHECK` do estágio do Dockerfile (`healthcheck-queue`/
   `healthcheck-schedule`, com `pgrep`). Sem ele o estágio herda o `curl` no nginx da imagem base e reprova, e a API
-  do Coolify não tem campo para trocar o tipo para `cmd`; corrija no Dockerfile, não no recurso.
+  do Coolify não tem campo para trocar o tipo para `cmd`. Corrija no Dockerfile **e** desligue o healthcheck do painel
+  do recurso (`health_check_enabled: false` no `PATCH`): com ele ligado o Coolify injeta o próprio check HTTP em `/` e o
+  container continua `unhealthy`, mesmo com o `HEALTHCHECK` do estágio certo (conferido em 11/11 no beta).
 - **`waha` unhealthy** → use healthcheck tipo `http` em `/ping`; o tipo `cmd` com `curl` reprova porque a
   imagem não tem `curl` nem `wget`.
 - **404 do Traefik ou certificado inválido** → o `domains` do recurso não é o domínio real, ou o
