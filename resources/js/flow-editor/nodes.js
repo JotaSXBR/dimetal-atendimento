@@ -113,6 +113,9 @@ export const BLOCKS = {
     encerrar: { icon: 'stop', label: 'Encerrar', palette: true, fields: [] },
 };
 
+/** Atalhos da paleta: um bloco já configurado, com nome próprio (não são tipos novos). */
+export const PALETTE_SHORTCUTS = [{ key: 'horario', label: 'Horário de atendimento', type: 'condicao', data: { kind: 'horario' } }];
+
 /** Dados iniciais de um bloco novo (cópia, para um bloco não alterar o outro). */
 export function defaultData(type) {
     return structuredClone(BLOCKS[type]?.data ?? {});
@@ -127,10 +130,16 @@ export function outputsFor(type, data) {
         case 'menu_setores':
             return [{ port: 'setor', label: 'Setor escolhido' }];
         case 'condicao':
-            return [
-                { port: 'true', label: 'Sim' },
-                { port: 'false', label: 'Não' },
-            ];
+            // As portas do grafo são sempre `true` e `false`; só o rótulo muda quando a condição é o horário de atendimento.
+            return data?.kind === 'horario'
+                ? [
+                      { port: 'true', label: 'Aberto' },
+                      { port: 'false', label: 'Fechado' },
+                  ]
+                : [
+                      { port: 'true', label: 'Sim' },
+                      { port: 'false', label: 'Não' },
+                  ];
         case 'menu': {
             const options = Array.isArray(data?.opcoes) ? data.opcoes : [];
 

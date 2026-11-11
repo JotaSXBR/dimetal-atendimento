@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { BLOCKS, defaultData, outputsFor } from '../../resources/js/flow-editor/nodes.js';
+import { BLOCKS, PALETTE_SHORTCUTS, defaultData, outputsFor } from '../../resources/js/flow-editor/nodes.js';
 import { fromGraph, messagesOf, toGraph, withMessages } from '../../resources/js/flow-editor/serialize.js';
 
 const graph = {
@@ -39,6 +39,9 @@ test('as portas de saída seguem as mesmas regras do servidor', () => {
     assert.deepEqual(outputsFor('mensagem', {}).map((o) => o.port), ['out']);
     assert.deepEqual(outputsFor('menu_setores', {}).map((o) => o.port), ['setor']);
     assert.deepEqual(outputsFor('condicao', {}).map((o) => o.port), ['true', 'false']);
+    assert.deepEqual(outputsFor('condicao', { kind: 'horario' }), [{ port: 'true', label: 'Aberto' }, { port: 'false', label: 'Fechado' }]);
+    assert.deepEqual(outputsFor('condicao', { kind: 'variavel' }).map((o) => o.label), ['Sim', 'Não']);
+    assert.deepEqual(outputsFor('condicao', {}).map((o) => o.label), ['Sim', 'Não']);
     assert.deepEqual(outputsFor('menu', { opcoes: ['A', 'B', 'C'] }).map((o) => o.port), ['opt:1', 'opt:2', 'opt:3']);
     assert.deepEqual(outputsFor('menu', { opcoes: [] }).map((o) => o.port), ['opt:1']);
     assert.deepEqual(outputsFor('transferir', {}), []);
@@ -75,4 +78,13 @@ test('messagesOf devolve as mensagens do grafo ou um objeto vazio', () => {
     assert.deepEqual(messagesOf({ ...graph, settings: { mensagens: { a: 'x' } } }), { a: 'x' });
     assert.deepEqual(messagesOf({ ...graph, settings: { mensagens: 'quebrado' } }), {});
     assert.deepEqual(messagesOf(null), {});
+});
+
+test('atalhos da paleta criam um bloco já configurado', () => {
+    const horario = PALETTE_SHORTCUTS.find((s) => s.key === 'horario');
+
+    assert.equal(horario.label, 'Horário de atendimento');
+    assert.equal(horario.type, 'condicao');
+    assert.deepEqual(horario.data, { kind: 'horario' });
+    assert.ok(BLOCKS[horario.type], 'o tipo do atalho existe');
 });

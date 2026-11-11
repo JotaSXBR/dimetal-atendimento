@@ -2,7 +2,7 @@
 // e a gravação vai para o Livewire (`$wire`), que valida no servidor. Ver flow-editor/editor.js.
 
 import { CATEGORIES, categoryOf, errorNodeIds } from './flow-editor/appearance.js';
-import { BLOCKS } from './flow-editor/nodes.js';
+import { BLOCKS, PALETTE_SHORTCUTS } from './flow-editor/nodes.js';
 import { messagesOf, withMessages } from './flow-editor/serialize.js';
 
 document.addEventListener('alpine:init', () => {
@@ -11,9 +11,13 @@ document.addEventListener('alpine:init', () => {
         let api = null;
 
         return {
-            palette: Object.entries(BLOCKS)
-                .filter(([, block]) => block.palette)
-                .map(([type, block]) => ({ type, label: block.label, category: categoryOf(type), group: CATEGORIES[categoryOf(type)].label }))
+            palette: [
+                ...Object.entries(BLOCKS)
+                    .filter(([, block]) => block.palette)
+                    .map(([type, block]) => ({ key: type, type, label: block.label, data: null })),
+                ...PALETTE_SHORTCUTS.map((shortcut) => ({ ...shortcut })),
+            ]
+                .map((item) => ({ ...item, category: categoryOf(item.type), group: CATEGORIES[categoryOf(item.type)].label }))
                 .sort((a, b) => Object.keys(CATEGORIES).indexOf(a.category) - Object.keys(CATEGORIES).indexOf(b.category)),
             sectors: config.sectors,
             tags: config.tags,
@@ -117,8 +121,8 @@ document.addEventListener('alpine:init', () => {
             },
 
             // Menu de clique direito: cada item age e fecha o menu.
-            menuAdd(type) {
-                api?.addNode(type, { x: this.menu.x, y: this.menu.y });
+            menuAdd(item) {
+                api?.addNode(item.type, { x: this.menu.x, y: this.menu.y }, item.data);
                 this.menu = null;
             },
 
@@ -171,8 +175,8 @@ document.addEventListener('alpine:init', () => {
                 api?.organize();
             },
 
-            add(type) {
-                api?.addNode(type);
+            add(item) {
+                api?.addNode(item.type, null, item.data);
             },
 
             remove() {

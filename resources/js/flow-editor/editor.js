@@ -292,12 +292,12 @@ export async function createEditor(container, graph, hooks) {
 
         load,
 
-        /** Cria o bloco no ponto da tela dado (clique direito) ou, sem ponto, perto do centro do canvas. */
-        async addNode(type, at = null) {
+        /** Cria o bloco no ponto da tela dado (clique direito) ou, sem ponto, perto do centro do canvas; `data` troca os dados iniciais (atalhos da paleta). */
+        async addNode(type, at = null, data = null) {
             const box = container.getBoundingClientRect();
             const { x, y, k } = area.area.transform;
             const id = newId();
-            const node = new FlowNode(id, type, defaultData(type), lookups);
+            const node = new FlowNode(id, type, data ? structuredClone(data) : defaultData(type), lookups);
             const screen = at ? { x: at.x - box.left, y: at.y - box.top } : { x: box.width / 2 + Math.random() * 40 - 105, y: box.height / 2 + Math.random() * 40 - 60 };
 
             await editor.addNode(node);

@@ -36,10 +36,10 @@
     <div class="flex min-h-0 flex-1">
         <aside class="w-44 shrink-0 space-y-1 overflow-y-auto border-e border-line bg-surface p-3" aria-label="Blocos">
             <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Adicionar bloco</p>
-            <template x-for="(block, index) in palette" x-bind:key="block.type">
+            <template x-for="(block, index) in palette" x-bind:key="block.key">
                 <div>
                     <p x-show="index === 0 || palette[index - 1].group !== block.group" class="mt-2 font-mono text-[10px] tracking-wider text-ink-3 uppercase" x-text="block.group"></p>
-                    <button type="button" class="w-full rounded-md border border-line px-2 py-1.5 text-start text-xs text-ink hover:bg-canvas" x-on:click="add(block.type)" x-text="block.label"></button>
+                    <button type="button" class="w-full rounded-md border border-line px-2 py-1.5 text-start text-xs text-ink hover:bg-canvas" x-on:click="add(block)" x-text="block.label"></button>
                 </div>
             </template>
         </aside>
@@ -75,8 +75,8 @@
                 <template x-if="menu && !menu.nodeId">
                     <div class="flex flex-col gap-0.5">
                         <p class="px-2 py-1 font-mono text-[10px] tracking-wider text-ink-3 uppercase">Adicionar bloco</p>
-                        <template x-for="block in palette" x-bind:key="block.type">
-                            <flux:button size="sm" variant="ghost" class="w-full justify-start" x-on:click="menuAdd(block.type)" x-text="block.label"></flux:button>
+                        <template x-for="block in palette" x-bind:key="block.key">
+                            <flux:button size="sm" variant="ghost" class="w-full justify-start" x-on:click="menuAdd(block)" x-text="block.label"></flux:button>
                         </template>
                     </div>
                 </template>
