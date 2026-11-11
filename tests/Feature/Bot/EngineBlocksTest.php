@@ -6,6 +6,7 @@ use App\Enums\MessageOrigin;
 use App\Enums\NoteOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Events\TicketQueued;
 use App\Models\BotSession;
 use App\Models\Channel;
 use App\Models\Contact;
@@ -19,6 +20,7 @@ use App\Models\WorkflowVersion;
 use App\Notifications\TicketAssigned;
 use App\Services\Bot\BotEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -199,6 +201,29 @@ class EngineBlocksTest extends TestCase
         $this->assertSame(TicketStatus::AGUARDANDO, $ticket?->status);
         $this->assertNull($ticket?->assigned_user_id);
         $this->assertSame(BotSession::TRANSFERRED, BotSession::query()->where('ticket_id', $ticket?->id)->value('state'));
+    }
+
+    public function test_atribuir_a_nao_toca_o_som_de_fila_do_setor(): void
+    {
+        Event::fake([TicketQueued::class]);
+        $this->attendant(); // outra pessoa do setor, que ouviria o som da fila
+        $assignee = $this->attendant();
+
+        $this->transfer(['setor_id' => Sector::query()->firstOrFail()->id, 'atribuir_a' => $assignee->id]);
+
+        $this->assertSame($assignee->id, $this->ticket->fresh()?->assigned_user_id);
+        Event::assertNotDispatched(TicketQueued::class);
+    }
+
+    public function test_atribuir_a_que_nao_pode_ainda_avisa_a_fila(): void
+    {
+        Event::fake([TicketQueued::class]);
+        $this->attendant(); // quem ouve a fila
+        $inactive = $this->attendant(active: false);
+
+        $this->transfer(['setor_id' => Sector::query()->firstOrFail()->id, 'atribuir_a' => $inactive->id]);
+
+        Event::assertDispatched(TicketQueued::class, 1);
     }
 
     public function test_transferir_sem_atribuir_a_continua_igual(): void

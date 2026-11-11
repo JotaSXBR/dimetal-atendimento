@@ -117,8 +117,7 @@ class BotEngine
                 $this->say($ticket, Vars::render(BotMessages::text($flow, $sector !== null ? 'encaminhamento_setor' : 'encaminhamento_geral'), $vars));
             }
 
-            $this->enterQueue($ticket, $sector);
-            $assigned = $this->assign($ticket, $sector, $assignTo);
+            $assigned = $this->queueAndAssign($ticket, $sector, $assignTo);
 
             $locked->update(['state' => BotSession::TRANSFERRED, 'waiting' => null, 'expires_at' => null]);
             TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => array_filter(['reason' => $reason, 'sector_id' => $sector?->id, 'assigned_user_id' => $assigned], fn (mixed $v, string $k): bool => $v !== null || $k !== 'assigned_user_id', ARRAY_FILTER_USE_BOTH)]);
@@ -206,9 +205,9 @@ class BotEngine
      * Depois de o ticket entrar na fila, tenta passá-lo à pessoa escolhida no bloco. Fica só na fila (sem erro) se ela estiver
      * inativa, não atender o setor ou o ticket já tiver dono.
      */
-    private function assign(Ticket $ticket, ?Sector $sector, ?User $user): ?int
+    private function assign(Ticket $ticket, ?User $user): ?int
     {
-        if ($user === null || ! $user->active || ! $user->canHandleSector($sector?->id) || ! (new ClaimTicket)($ticket, $user)) {
+        if ($user === null || ! (new ClaimTicket)($ticket, $user)) {
             return null;
         }
 
@@ -217,10 +216,34 @@ class BotEngine
         return $user->id;
     }
 
-    private function enterQueue(Ticket $ticket, ?Sector $sector): void
+    /**
+     * Entra na fila e, se a pessoa escolhida pode, passa o ticket a ela; devolve o id de quem assumiu. Com atribuição possível a
+     * fila não toca o som; se a atribuição falhar, ela é avisada em seguida.
+     */
+    private function queueAndAssign(Ticket $ticket, ?Sector $sector, ?User $assignTo): ?int
+    {
+        $canAssign = $this->canAssign($assignTo, $sector);
+
+        $this->enterQueue($ticket, $sector, announce: ! $canAssign);
+        $assigned = $canAssign ? $this->assign($ticket, $assignTo) : null;
+
+        if ($canAssign && $assigned === null) {
+            app(AlertDispatcher::class)->queued($ticket->refresh());
+        }
+
+        return $assigned;
+    }
+
+    /** A pessoa existe, está ativa e atende o setor (ticket sem setor é de todos). */
+    private function canAssign(?User $user, ?Sector $sector): bool
+    {
+        return $user !== null && $user->active && $user->canHandleSector($sector?->id);
+    }
+
+    private function enterQueue(Ticket $ticket, ?Sector $sector, bool $announce = true): void
     {
         if ($sector !== null) {
-            (new TransferTicket)($ticket, null, $sector);
+            (new TransferTicket)($ticket, null, $sector, announce: $announce);
 
             return;
         }
@@ -240,7 +263,9 @@ class BotEngine
             TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'transferred', 'payload' => []]);
             $ticket->refresh();
             TicketUpdated::dispatch($ticket);
-            app(AlertDispatcher::class)->queued($ticket);
+            if ($announce) {
+                app(AlertDispatcher::class)->queued($ticket);
+            }
         }
     }
 
