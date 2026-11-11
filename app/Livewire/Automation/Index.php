@@ -113,12 +113,13 @@ class Index extends Component
      * Resumo do rascunho para o cartão: quantos blocos e quantos setores ele cita (os fixos dos blocos Transferir, mais um
      * se há Menu de setores, que leva ao setor que o cliente escolher).
      *
-     * @param  array<string, mixed>|null  $draft
+     * @param  array<string, mixed>  $draft
      * @return array{nodes: int, sectors: int}
      */
-    private function summary(?array $draft): array
+    private function summary(array $draft): array
     {
-        $nodes = collect($draft['nodes'] ?? []);
+        $raw = $draft['nodes'] ?? [];
+        $nodes = collect(is_array($raw) ? $raw : []);
         $fixed = $nodes->where('type', 'transferir')->pluck('data.setor_id')->filter(fn ($id): bool => $id !== null && $id !== '')->unique()->count();
 
         return ['nodes' => $nodes->count(), 'sectors' => $fixed + ($nodes->contains('type', 'menu_setores') ? 1 : 0)];
