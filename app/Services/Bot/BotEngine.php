@@ -2,6 +2,7 @@
 
 namespace App\Services\Bot;
 
+use App\Actions\Inbox\ClaimTicket;
 use App\Actions\Inbox\TransferTicket;
 use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
@@ -12,6 +13,7 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
+use App\Models\User;
 use App\Models\WorkflowVersion;
 use App\Services\Alerts\AlertDispatcher;
 use App\Services\Bot\Flow\FlowGraph;
@@ -26,6 +28,7 @@ use App\Services\Bot\Nodes\MenuNode;
 use App\Services\Bot\Nodes\MenuSetoresNode;
 use App\Services\Bot\Nodes\MidiaNode;
 use App\Services\Bot\Nodes\Node;
+use App\Services\Bot\Nodes\NotaNode;
 use App\Services\Bot\Nodes\PerguntaNode;
 use App\Services\Bot\Nodes\SalvarContatoNode;
 use App\Services\Bot\Nodes\TransferirNode;
@@ -93,11 +96,11 @@ class BotEngine
 
     /**
      * Entrega o ticket à fila: o setor pedido, se ainda recebe tickets, senão o setor padrão (o primeiro do menu); sem
-     * nenhum setor, a fila geral. Só vale uma vez por sessão.
+     * nenhum setor, a fila geral (ou ela de propósito, com `$generalQueue`). Só vale uma vez por sessão.
      */
-    public function handoff(BotSession $session, string $reason, ?Sector $to = null): void
+    public function handoff(BotSession $session, string $reason, ?Sector $to = null, ?User $assignTo = null, bool $generalQueue = false): void
     {
-        DB::transaction(function () use ($session, $reason, $to): void {
+        DB::transaction(function () use ($session, $reason, $to, $assignTo, $generalQueue): void {
             $locked = BotSession::query()->whereKey($session->id)->lockForUpdate()->first();
 
             if ($locked === null || $locked->state !== BotSession::ACTIVE) {
@@ -105,7 +108,11 @@ class BotEngine
             }
 
             $ticket = Ticket::query()->findOrFail($locked->ticket_id);
-            $sector = $to !== null && $to->status->receivesTickets() ? $to : $this->defaultSector();
+            $sector = match (true) {
+                $generalQueue => null,
+                $to !== null && $to->status->receivesTickets() => $to,
+                default => $this->defaultSector(),
+            };
 
             if ($reason !== 'fluxo') {
                 $flow = FlowGraph::fromArray($locked->version()->firstOrFail()->graph);
@@ -114,10 +121,10 @@ class BotEngine
                 $this->say($ticket, Vars::render(BotMessages::text($flow, $sector !== null ? 'encaminhamento_setor' : 'encaminhamento_geral'), $vars));
             }
 
-            $this->enterQueue($ticket, $sector);
+            $assigned = $this->queueAndAssign($ticket, $sector, $assignTo);
 
             $locked->update(['state' => BotSession::TRANSFERRED, 'waiting' => null, 'expires_at' => null]);
-            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => ['reason' => $reason, 'sector_id' => $sector?->id]]);
+            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => ['reason' => $reason, 'sector_id' => $sector?->id, ...($assigned !== null ? ['assigned_user_id' => $assigned] : [])]]);
         });
 
         $session->refresh();
@@ -198,10 +205,46 @@ class BotEngine
         };
     }
 
-    private function enterQueue(Ticket $ticket, ?Sector $sector): void
+    /** Passa o ticket (já na fila) à pessoa; devolve o id dela, ou nulo se ele já tinha dono ou foi assumido antes. */
+    private function assign(Ticket $ticket, ?User $user): ?int
+    {
+        if ($user === null || ! (new ClaimTicket)($ticket, $user)) {
+            return null;
+        }
+
+        app(AlertDispatcher::class)->assigned($ticket, $user, null);
+
+        return $user->id;
+    }
+
+    /**
+     * Entra na fila e, se a pessoa escolhida pode, passa o ticket a ela; devolve o id de quem assumiu. Com atribuição possível a
+     * fila não toca o som; se a atribuição falhar, ela é avisada em seguida.
+     */
+    private function queueAndAssign(Ticket $ticket, ?Sector $sector, ?User $assignTo): ?int
+    {
+        $canAssign = $this->canAssign($assignTo, $sector);
+
+        $this->enterQueue($ticket, $sector, announce: ! $canAssign);
+        $assigned = $canAssign ? $this->assign($ticket, $assignTo) : null;
+
+        if ($canAssign && $assigned === null) {
+            app(AlertDispatcher::class)->queued($ticket->refresh());
+        }
+
+        return $assigned;
+    }
+
+    /** A pessoa existe, está ativa e atende o setor (ticket sem setor é de todos). */
+    private function canAssign(?User $user, ?Sector $sector): bool
+    {
+        return $user !== null && $user->active && $user->canHandleSector($sector?->id);
+    }
+
+    private function enterQueue(Ticket $ticket, ?Sector $sector, bool $announce = true): void
     {
         if ($sector !== null) {
-            (new TransferTicket)($ticket, null, $sector);
+            (new TransferTicket)($ticket, null, $sector, announce: $announce);
 
             return;
         }
@@ -221,7 +264,9 @@ class BotEngine
             TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'transferred', 'payload' => []]);
             $ticket->refresh();
             TicketUpdated::dispatch($ticket);
-            app(AlertDispatcher::class)->queued($ticket);
+            if ($announce) {
+                app(AlertDispatcher::class)->queued($ticket);
+            }
         }
     }
 
@@ -240,6 +285,7 @@ class BotEngine
             NodeType::Midia => new MidiaNode,
             NodeType::SalvarContato => new SalvarContatoNode,
             NodeType::Etiquetar => new EtiquetarNode,
+            NodeType::Nota => new NotaNode,
         };
     }
 }

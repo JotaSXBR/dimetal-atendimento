@@ -42,7 +42,7 @@ export const BLOCKS = {
         fields: [
             { key: 'texto', label: 'Pergunta', kind: 'textarea' },
             { key: 'variavel', label: 'Guardar a resposta na variável', kind: 'text' },
-            { key: 'validacao', label: 'Aceitar', kind: 'select', options: [['texto', 'Qualquer texto'], ['email', 'E-mail'], ['numero', 'Só números']] },
+            { key: 'validacao', label: 'Aceitar', kind: 'select', options: [['texto', 'Qualquer texto'], ['email', 'E-mail'], ['numero', 'Só números'], ['cnpj', 'CNPJ'], ['cpf', 'CPF'], ['cep', 'CEP'], ['telefone', 'Telefone com DDD'], ['data', 'Data (dd/mm/aaaa)']] },
             invalid,
             timeout,
         ],
@@ -53,7 +53,7 @@ export const BLOCKS = {
         palette: true,
         data: { kind: 'horario' },
         fields: [
-            { key: 'kind', label: 'Testar', kind: 'select', options: [['horario', 'Dentro do horário de funcionamento'], ['variavel', 'Valor de uma variável']] },
+            { key: 'kind', label: 'Testar', kind: 'select', options: [['horario', 'Dentro do horário de funcionamento'], ['nome', 'O contato já tem nome (inclusive o do perfil do WhatsApp)'], ['retorno', 'O cliente já foi atendido antes'], ['variavel', 'Valor de uma variável']] },
             { key: 'var', label: 'Variável', kind: 'text', when: { kind: 'variavel' } },
             { key: 'op', label: 'Comparação', kind: 'select', when: { kind: 'variavel' }, options: [['igual', 'é igual a'], ['diferente', 'é diferente de'], ['contem', 'contém'], ['preenchida', 'está preenchida']] },
             { key: 'valor', label: 'Valor', kind: 'text', when: { kind: 'variavel' } },
@@ -97,11 +97,25 @@ export const BLOCKS = {
         icon: 'forward',
         label: 'Transferir para setor',
         palette: true,
-        data: { setor_id: null },
-        fields: [{ key: 'setor_id', label: 'Setor (vazio = o escolhido no menu)', kind: 'sector' }],
+        data: { setor_id: null, atribuir_a: null, fila_geral: false },
+        fields: [
+            { key: 'fila_geral', label: 'Fila geral (sem setor): o SLA só conta no horário de funcionamento', kind: 'flag' },
+            { key: 'setor_id', label: 'Setor (vazio = o escolhido no menu)', kind: 'sector', when: { fila_geral: false } },
+            { key: 'atribuir_a', label: 'Atribuir a (vazio = só a fila)', kind: 'user' },
+        ],
+    },
+    nota: {
+        icon: 'note',
+        label: 'Nota para a equipe',
+        palette: true,
+        data: { texto: 'Pedido: {{pedido}}' },
+        fields: [{ key: 'texto', label: 'Nota (só a equipe vê; aceita {{variáveis}})', kind: 'textarea' }],
     },
     encerrar: { icon: 'stop', label: 'Encerrar', palette: true, fields: [] },
 };
+
+/** Atalhos da paleta: um bloco já configurado, com nome próprio (não são tipos novos). */
+export const PALETTE_SHORTCUTS = [{ key: 'horario', label: 'Horário de atendimento', type: 'condicao', data: { kind: 'horario' } }];
 
 /** Dados iniciais de um bloco novo (cópia, para um bloco não alterar o outro). */
 export function defaultData(type) {
@@ -117,10 +131,16 @@ export function outputsFor(type, data) {
         case 'menu_setores':
             return [{ port: 'setor', label: 'Setor escolhido' }];
         case 'condicao':
-            return [
-                { port: 'true', label: 'Sim' },
-                { port: 'false', label: 'Não' },
-            ];
+            // As portas do grafo são sempre `true` e `false`; só o rótulo muda quando a condição é o horário de atendimento.
+            return data?.kind === 'horario'
+                ? [
+                      { port: 'true', label: 'Aberto' },
+                      { port: 'false', label: 'Fechado' },
+                  ]
+                : [
+                      { port: 'true', label: 'Sim' },
+                      { port: 'false', label: 'Não' },
+                  ];
         case 'menu': {
             const options = Array.isArray(data?.opcoes) ? data.opcoes : [];
 

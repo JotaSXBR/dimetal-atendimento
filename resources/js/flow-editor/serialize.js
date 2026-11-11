@@ -2,9 +2,12 @@
 //   { nodes: [{id, type, x, y, data}], edges: [{from, port, to}] }
 // O grafo é o único contrato; trocar a biblioteca do canvas não muda o motor.
 
+// O PHP serializa um array vazio como `[]`: em JS isso seria uma lista, e campo gravado nela some no JSON. Dados de bloco são sempre objeto.
+const plainData = (data) => (data && typeof data === 'object' && !Array.isArray(data) ? data : {});
+
 /** @returns {{nodes: object[], connections: object[]}} */
 export function fromGraph(graph) {
-    const nodes = (graph?.nodes ?? []).map((n) => ({ id: n.id, type: n.type, x: n.x ?? 0, y: n.y ?? 0, data: n.data ?? {} }));
+    const nodes = (graph?.nodes ?? []).map((n) => ({ id: n.id, type: n.type, x: n.x ?? 0, y: n.y ?? 0, data: plainData(n.data) }));
     const connections = (graph?.edges ?? []).map((e) => ({ source: e.from, sourceOutput: e.port ?? 'out', target: e.to }));
 
     return { nodes, connections };

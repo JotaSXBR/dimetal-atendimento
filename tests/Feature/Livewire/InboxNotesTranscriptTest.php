@@ -54,6 +54,18 @@ class InboxNotesTranscriptTest extends TestCase
         $this->assertStringContainsString('border-warn/30', $html);
     }
 
+    public function test_nota_do_bot_mostra_o_rotulo_da_origem_e_nao_tem_apagar(): void
+    {
+        [$me, $ticket] = $this->mine();
+        TicketNote::factory()->for($ticket)->bot()->create(['body' => 'CNPJ coletado']);
+
+        Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])
+            ->assertSee('Nota interna · Bot')
+            ->assertSee('CNPJ coletado')
+            ->assertDontSee('Usuário removido')
+            ->assertDontSeeHtml('deleteNote(');
+    }
+
     public function test_apagar_so_aparece_para_o_autor(): void
     {
         [$me, $ticket] = $this->mine();

@@ -15,11 +15,12 @@ class TransferTicket
 {
     /**
      * Devolve o ticket à fila do setor de destino, sem responsável. Falso quando nada mudou: setor que não
-     * recebe tickets, ticket já encerrado ou já parado no destino sem dono.
+     * recebe tickets, ticket já encerrado ou já parado no destino sem dono. `$announce` falso não toca o som de fila (quem
+     * chama vai atribuir o ticket em seguida).
      */
-    public function __invoke(Ticket $ticket, ?User $actor, Sector $to, ?string $note = null): bool
+    public function __invoke(Ticket $ticket, ?User $actor, Sector $to, ?string $note = null, bool $announce = true): bool
     {
-        return DB::transaction(function () use ($ticket, $actor, $to, $note): bool {
+        return DB::transaction(function () use ($ticket, $actor, $to, $note, $announce): bool {
             // O setor é relido com trava antes do ticket (mesma ordem do DeleteSector): o modelo recebido pode estar velho.
             if (Sector::lockForReceiving($to->id) === null) {
                 return false;
@@ -62,7 +63,10 @@ class TransferTicket
 
             if ($moved) {
                 TicketUpdated::dispatch($ticket);
-                app(AlertDispatcher::class)->queued($ticket, $actor?->id);
+
+                if ($announce) {
+                    app(AlertDispatcher::class)->queued($ticket, $actor?->id);
+                }
             }
 
             return $moved;

@@ -1,8 +1,8 @@
 // Alpine do editor de workflows (/automacao/{id}). O canvas (Rete) só é baixado quando a tela abre; o estado fica aqui
 // e a gravação vai para o Livewire (`$wire`), que valida no servidor. Ver flow-editor/editor.js.
 
-import { CATEGORIES, categoryOf, errorNodeIds } from './flow-editor/appearance.js';
-import { BLOCKS } from './flow-editor/nodes.js';
+import { CATEGORIES, categoryOf, clampToViewport, errorNodeIds } from './flow-editor/appearance.js';
+import { BLOCKS, PALETTE_SHORTCUTS } from './flow-editor/nodes.js';
 import { messagesOf, withMessages } from './flow-editor/serialize.js';
 
 document.addEventListener('alpine:init', () => {
@@ -11,12 +11,17 @@ document.addEventListener('alpine:init', () => {
         let api = null;
 
         return {
-            palette: Object.entries(BLOCKS)
-                .filter(([, block]) => block.palette)
-                .map(([type, block]) => ({ type, label: block.label, category: categoryOf(type), group: CATEGORIES[categoryOf(type)].label }))
+            palette: [
+                ...Object.entries(BLOCKS)
+                    .filter(([, block]) => block.palette)
+                    .map(([type, block]) => ({ key: type, type, label: block.label, data: null })),
+                ...PALETTE_SHORTCUTS.map((shortcut) => ({ ...shortcut })),
+            ]
+                .map((item) => ({ ...item, category: categoryOf(item.type), group: CATEGORIES[categoryOf(item.type)].label }))
                 .sort((a, b) => Object.keys(CATEGORIES).indexOf(a.category) - Object.keys(CATEGORIES).indexOf(b.category)),
             sectors: config.sectors,
             tags: config.tags,
+            users: config.users,
             versions: config.versions,
             catalog: config.messages,
             messages: messagesOf(config.graph),
@@ -38,8 +43,11 @@ document.addEventListener('alpine:init', () => {
                         onSelect: (node) => (this.selected = node),
                         onChange: () => (this.dirty = true),
                         onHistory: (state) => Object.assign(this, state),
-                        onContextMenu: (info) => (this.menu = info),
-                        lookups: { sectors: config.sectors, tags: config.tags },
+                        onContextMenu: (info) => {
+                            this.menu = info;
+                            this.$nextTick(() => this.fitMenu());
+                        },
+                        lookups: { sectors: config.sectors, tags: config.tags, users: config.users },
                     });
                 } catch (error) {
                     this.failed = true;
@@ -52,7 +60,7 @@ document.addEventListener('alpine:init', () => {
             },
 
             fields() {
-                return (BLOCKS[this.selected?.type]?.fields ?? []).filter((field) => !field.when || Object.entries(field.when).every(([key, value]) => this.selected.data[key] === value));
+                return (BLOCKS[this.selected?.type]?.fields ?? []).filter((field) => !field.when || Object.entries(field.when).every(([key, value]) => (this.selected.data[key] ?? false) === value));
             },
 
             blockLabel(type) {
@@ -115,9 +123,20 @@ document.addEventListener('alpine:init', () => {
                 api?.duplicateNode(id);
             },
 
+            /** Depois de o menu aparecer, o puxa para dentro da tela (clique direito perto da borda). */
+            fitMenu() {
+                const el = this.$refs.menu;
+
+                if (el && this.menu) {
+                    const box = el.getBoundingClientRect();
+
+                    this.menu = { ...this.menu, ...clampToViewport(this.menu.x, this.menu.y, box.width, box.height, window.innerWidth, window.innerHeight) };
+                }
+            },
+
             // Menu de clique direito: cada item age e fecha o menu.
-            menuAdd(type) {
-                api?.addNode(type, { x: this.menu.x, y: this.menu.y });
+            menuAdd(item) {
+                api?.addNode(item.type, { x: this.menu.x, y: this.menu.y }, item.data);
                 this.menu = null;
             },
 
@@ -141,6 +160,12 @@ document.addEventListener('alpine:init', () => {
 
                 const mod = event.ctrlKey || event.metaKey;
                 const key = event.key.toLowerCase();
+
+                // Backspace com o foco num botão ou link da página não é "apagar o bloco" (Delete continua valendo em qualquer lugar).
+                if (key === 'backspace' && target?.closest?.('button, a, summary, [role="button"], [role="menuitem"]')) {
+                    return;
+                }
+
                 const movable = this.selected && this.selected.type !== 'inicio';
 
                 if (!mod && (key === 'delete' || key === 'backspace') && movable) {
@@ -170,8 +195,8 @@ document.addEventListener('alpine:init', () => {
                 api?.organize();
             },
 
-            add(type) {
-                api?.addNode(type);
+            add(item) {
+                api?.addNode(item.type, null, item.data);
             },
 
             remove() {

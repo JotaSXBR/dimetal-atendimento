@@ -12,9 +12,10 @@ final class FlowValidator
      * @param  array<string, mixed>  $graph
      * @param  list<int>|null  $sectorIds  setores existentes (nulo = não conferir)
      * @param  list<int>|null  $tagIds  etiquetas existentes (nulo = não conferir)
+     * @param  list<int>|null  $userIds  pessoas ativas, para o "Atribuir a" (nulo = não conferir)
      * @return list<string>
      */
-    public function validate(array $graph, ?array $sectorIds = null, ?array $tagIds = null): array
+    public function validate(array $graph, ?array $sectorIds = null, ?array $tagIds = null, ?array $userIds = null): array
     {
         $flow = FlowGraph::fromArray($graph);
         $errors = [];
@@ -24,7 +25,7 @@ final class FlowValidator
         }
 
         foreach ($flow->ids() as $id) {
-            array_push($errors, ...$this->checkNode($flow, $id, $sectorIds, $tagIds));
+            array_push($errors, ...$this->checkNode($flow, $id, $sectorIds, $tagIds, $userIds));
         }
 
         $start = $flow->start();
@@ -35,9 +36,10 @@ final class FlowValidator
     /**
      * @param  list<int>|null  $sectorIds
      * @param  list<int>|null  $tagIds
+     * @param  list<int>|null  $userIds
      * @return list<string>
      */
-    private function checkNode(FlowGraph $flow, string $id, ?array $sectorIds, ?array $tagIds): array
+    private function checkNode(FlowGraph $flow, string $id, ?array $sectorIds, ?array $tagIds, ?array $userIds): array
     {
         $type = $flow->type($id);
 
@@ -46,7 +48,7 @@ final class FlowValidator
         }
 
         $data = $flow->data($id);
-        $errors = [...$this->checkText($id, $type, $data), ...$this->checkReferences($id, $type, $data, $sectorIds, $tagIds)];
+        $errors = [...$this->checkText($id, $type, $data), ...$this->checkReferences($id, $type, $data, $sectorIds, $tagIds, $userIds)];
 
         foreach ($type->ports($data) as $port) {
             if ($flow->next($id, $port) === null) {
@@ -89,43 +91,36 @@ final class FlowValidator
     /** @return list<string> */
     private function checkText(string $id, NodeType $type, NodeData $data): array
     {
-        $errors = [];
+        $needsText = in_array($type, [NodeType::Mensagem, NodeType::MenuSetores, NodeType::Menu, NodeType::Pergunta, NodeType::Nota], true);
 
-        if (in_array($type, [NodeType::Mensagem, NodeType::MenuSetores, NodeType::Menu, NodeType::Pergunta], true) && ! $data->filled('texto')) {
-            $errors[] = "{$id}: escreva o texto.";
-        }
-
-        if ($type === NodeType::Menu && ! $this->validOptions($data->list('opcoes'))) {
-            $errors[] = "{$id}: o menu precisa de ao menos uma opção, todas com texto.";
-        }
-
-        if ($type === NodeType::Midia && ! $data->filled('path')) {
-            $errors[] = "{$id}: escolha o arquivo.";
-        }
-
-        if ($type === NodeType::Pergunta && ! $data->filled('variavel')) {
-            $errors[] = "{$id}: informe o nome da variável que guarda a resposta.";
-        }
-
-        return $errors;
+        return [
+            ...($needsText && ! $data->filled('texto') ? ["{$id}: escreva o texto."] : []),
+            ...match ($type) {
+                NodeType::Menu => $this->validOptions($data->list('opcoes')) ? [] : ["{$id}: o menu precisa de ao menos uma opção, todas com texto."],
+                NodeType::Nota => mb_strlen($data->string('texto')) > NodeType::NOTE_MAX_LENGTH ? ["{$id}: a nota passa de ".NodeType::NOTE_MAX_LENGTH.' caracteres.'] : [],
+                NodeType::Midia => $data->filled('path') ? [] : ["{$id}: escolha o arquivo."],
+                NodeType::Pergunta => $data->filled('variavel') ? [] : ["{$id}: informe o nome da variável que guarda a resposta."],
+                default => [],
+            },
+        ];
     }
 
     /**
      * @param  list<int>|null  $sectorIds
      * @param  list<int>|null  $tagIds
+     * @param  list<int>|null  $userIds
      * @return list<string>
      */
-    private function checkReferences(string $id, NodeType $type, NodeData $data, ?array $sectorIds, ?array $tagIds): array
+    private function checkReferences(string $id, NodeType $type, NodeData $data, ?array $sectorIds, ?array $tagIds, ?array $userIds): array
     {
-        if ($type === NodeType::Transferir && $data->has('setor_id') && $sectorIds !== null && ! in_array($data->int('setor_id'), $sectorIds, true)) {
-            return ["{$id}: o setor {$data->string('setor_id')} não existe."];
-        }
-
-        if ($type === NodeType::Etiquetar && $tagIds !== null && ! in_array($data->int('tag_id'), $tagIds, true)) {
-            return ["{$id}: a etiqueta ".($data->has('tag_id') ? $data->string('tag_id') : '?').' não existe.'];
-        }
-
-        return [];
+        return match ($type) {
+            NodeType::Transferir => [
+                ...($data->has('setor_id') && $sectorIds !== null && ! in_array($data->int('setor_id'), $sectorIds, true) ? ["{$id}: o setor {$data->string('setor_id')} não existe."] : []),
+                ...($data->has('atribuir_a') && $userIds !== null && ! in_array($data->int('atribuir_a'), $userIds, true) ? ["{$id}: a pessoa {$data->string('atribuir_a')} não existe ou está inativa."] : []),
+            ],
+            NodeType::Etiquetar => $tagIds !== null && ! in_array($data->int('tag_id'), $tagIds, true) ? ["{$id}: a etiqueta ".($data->has('tag_id') ? $data->string('tag_id') : '?').' não existe.'] : [],
+            default => [],
+        };
     }
 
     /** @param  list<mixed>  $options */

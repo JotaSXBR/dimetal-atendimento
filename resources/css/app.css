@@ -190,7 +190,8 @@ flow-node { display: block; }
 .flow-out { position: relative; display: flex; align-items: center; justify-content: flex-end; min-height: 28px; padding: 0 14px 0 10px; border-top: 1px solid var(--color-line); color: var(--color-ink-2); }
 .flow-out-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.flow-socket { position: absolute; top: 50%; translate: 0 -50%; display: block; line-height: 0; }
+/* Sem `translate`: o Rete mede a bolinha pelo layout (offsetTop) e não enxerga transformações; 7px é metade dos 14px dela. */
+.flow-socket { position: absolute; top: calc(50% - 7px); display: block; width: 14px; height: 14px; line-height: 0; }
 .flow-socket-input { left: -8px; }
 .flow-socket-output { right: -8px; }
 

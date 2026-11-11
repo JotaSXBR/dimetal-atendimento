@@ -37,6 +37,29 @@ class AutomationEditorTest extends TestCase
         $this->actingAs($this->user)->get($url)->assertOk()->assertSee('Triagem');
     }
 
+    public function test_editor_entrega_so_as_pessoas_ativas_para_atribuir(): void
+    {
+        $inactive = User::factory()->create(['active' => false, 'name' => 'Zé Inativo']);
+
+        $html = Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html();
+
+        $this->assertStringContainsString($this->user->name, html_entity_decode($html));
+        $this->assertStringNotContainsString($inactive->name, html_entity_decode($html));
+    }
+
+    public function test_publicar_recusa_atribuir_a_pessoa_inativa(): void
+    {
+        $inactive = User::factory()->create(['active' => false]);
+        $graph = DefaultWorkflow::blank();
+        $graph['nodes'][] = ['id' => 't', 'type' => 'transferir', 'x' => 200, 'y' => 0, 'data' => ['atribuir_a' => $inactive->id]];
+        $graph['edges'][] = ['from' => 'inicio', 'port' => 'out', 'to' => 't'];
+
+        $result = Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->call('publish', $graph)->get('result');
+
+        $this->assertFalse($result['ok']);
+        $this->assertContains("t: a pessoa {$inactive->id} não existe ou está inativa.", $result['errors']);
+    }
+
     public function test_salvar_rascunho_grava_o_grafo(): void
     {
         $graph = DefaultWorkflow::blank();

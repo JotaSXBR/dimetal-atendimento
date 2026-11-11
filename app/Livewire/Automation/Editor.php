@@ -201,6 +201,7 @@ class Editor extends Component
                 'graph' => $this->workflow->draft,
                 'sectors' => Sector::query()->orderBy('menu_order')->get(['id', 'name'])->map(fn (Sector $s): array => ['id' => $s->id, 'name' => $s->name])->all(),
                 'tags' => Tag::query()->orderBy('name')->get(['id', 'name'])->map(fn (Tag $t): array => ['id' => $t->id, 'name' => $t->name])->all(),
+                'users' => User::query()->where('active', true)->orderBy('name')->get(['id', 'name'])->map(fn (User $u): array => ['id' => $u->id, 'name' => $u->name])->all(),
                 'versions' => $this->versions(),
                 'messages' => $this->messageCatalog(),
             ],

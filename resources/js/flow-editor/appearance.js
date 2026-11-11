@@ -22,6 +22,7 @@ export const ICONS = {
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/>',
     tag: '<path d="M3 12V4h8l10 10-8 8z"/><path d="M7.5 7.5h.01"/>',
     forward: '<path d="M4 12h14M13 6l6 6-6 6"/>',
+    note: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
     stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
 };
 
@@ -36,6 +37,7 @@ const BY_TYPE = {
     condicao: 'logica',
     salvar_contato: 'acao',
     etiquetar: 'acao',
+    nota: 'acao',
     transferir: 'acao',
     encerrar: 'fim',
 };
@@ -55,6 +57,15 @@ function clip(value) {
     return text.length > MAX_LINE ? `${text.slice(0, MAX_LINE - 1)}…` : text;
 }
 
+/** "Setor" ou "Setor → Pessoa" do bloco Transferir; setor ou pessoa que sumiu aparece como removido. */
+function transferTarget(d, lookups) {
+    const find = (list, id) => (list ?? []).find((item) => String(item.id) === String(id))?.name;
+    const empty = (value) => value == null || value === '';
+    const sector = d.fila_geral === true ? 'Fila geral (sem setor)' : empty(d.setor_id) ? 'Setor do menu' : (find(lookups.sectors, d.setor_id) ?? 'Setor removido');
+
+    return empty(d.atribuir_a) ? sector : `${sector} → ${find(lookups.users, d.atribuir_a) ?? 'pessoa removida'}`;
+}
+
 /** Até 3 linhas curtas com o conteúdo do bloco, para mostrar dentro dele no canvas. */
 export function previewOf(type, data, lookups = {}) {
     const d = data ?? {};
@@ -67,6 +78,7 @@ export function previewOf(type, data, lookups = {}) {
             return ['Encerra o ticket'];
         case 'mensagem':
         case 'pergunta':
+        case 'nota':
             return [clip(d.texto)];
         case 'midia':
             return [clip(d.legenda)];
@@ -79,6 +91,9 @@ export function previewOf(type, data, lookups = {}) {
             return options.length > 3 ? [...shown, `+${options.length - 2}`] : shown.length ? shown : ['(sem opções)'];
         }
         case 'condicao':
+            if (d.kind === 'nome') return ['O contato já tem nome?'];
+            if (d.kind === 'retorno') return ['Já foi atendido antes?'];
+
             return d.kind === 'variavel' ? [clip(`${d.var ?? ''} ${OPS[d.op] ?? ''} ${d.valor ?? ''}`)] : ['Dentro do horário?'];
         case 'esperar':
             return [`Digitando por ${d.segundos ?? 0} s`];
@@ -87,9 +102,7 @@ export function previewOf(type, data, lookups = {}) {
         case 'etiquetar':
             return [clip(nameOf(lookups.tags, d.tag_id) ?? 'Etiqueta removida')];
         case 'transferir':
-            if (d.setor_id == null || d.setor_id === '') return ['Setor do menu'];
-
-            return [clip(nameOf(lookups.sectors, d.setor_id) ?? 'Setor removido')];
+            return [clip(transferTarget(d, lookups))];
         default:
             return [];
     }
@@ -109,7 +122,7 @@ export function errorNodeIds(errors, nodeIds) {
     return found;
 }
 
-const COL = 300;
+const COL = 340;
 const ROW = 150;
 
 /**
@@ -182,6 +195,28 @@ export function arrange(nodes, edges) {
     }
 
     return positions;
+}
+
+/**
+ * O caminho da ligação entre a saída `start` e a entrada `end` (pontos no espaço do canvas): curva de Bézier com tangentes
+ * horizontais, que termina `gap` antes da bolinha de entrada para a seta aparecer, e com folga mínima para a ligação curta (ou
+ * a que volta) não ficar rígida.
+ */
+export function connectionPath(start, end, gap = 9) {
+    if (!start || !end) return '';
+
+    const endX = end.x - gap;
+    const reach = Math.max(Math.abs(endX - start.x) * 0.5, 70);
+
+    return `M ${start.x} ${start.y} C ${start.x + reach} ${start.y}, ${endX - reach} ${end.y}, ${endX} ${end.y}`;
+}
+
+/** A posição do menu (canto superior esquerdo) puxada para dentro da tela, com margem; maior que a tela, fica no canto. */
+export function clampToViewport(x, y, width, height, viewWidth, viewHeight, margin = 8) {
+    return {
+        x: Math.max(margin, Math.min(x, viewWidth - width - margin)),
+        y: Math.max(margin, Math.min(y, viewHeight - height - margin)),
+    };
 }
 
 /** Cópia do bloco para o ponto 40 px abaixo e à direita, sem ligações; o Início não se duplica. */

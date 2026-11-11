@@ -31,7 +31,7 @@ final class DefaultWorkflow
 
     /**
      * O modelo "Atendimento com horário": dentro do expediente, saudação, menu de setores e encaminhamento; fora dele, o aviso
-     * do horário e a entrega à fila padrão (Transferir sem setor fixo).
+     * do horário e a entrega à fila geral, sem setor (o SLA só começa a contar quando o expediente abre).
      *
      * @return array<string, mixed>
      */
@@ -48,7 +48,7 @@ final class DefaultWorkflow
                 $node('encaminhamento', 'mensagem', 1040, 0, ['texto' => 'Certo! Seu protocolo é {{protocolo}}. Você entrou na fila de {{setor}} e um atendente responde em instantes.']),
                 $node('transferir', 'transferir', 1300),
                 $node('fora', 'mensagem', 520, 240, ['texto' => 'Olá, {{nome}}! Nosso horário de atendimento é {{horario}}. Retornamos {{proximo_horario}} e você já está na fila para ser atendido.']),
-                $node('transferir_fora', 'transferir', 780, 240),
+                $node('transferir_fora', 'transferir', 780, 240, ['fila_geral' => true]),
             ],
             'edges' => [
                 ['from' => 'inicio', 'port' => 'out', 'to' => 'horario'],

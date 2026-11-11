@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\NoteOrigin;
 use Carbon\CarbonImmutable;
 use Database\Factories\TicketNoteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,17 +15,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $ticket_id
- * @property int $user_id
+ * @property int|null $user_id
+ * @property NoteOrigin $origin
  * @property string $body
  * @property CarbonImmutable $created_at
  */
-#[Fillable(['ticket_id', 'user_id', 'body'])]
+#[Fillable(['ticket_id', 'user_id', 'origin', 'body'])]
 class TicketNote extends Model
 {
     /** @use HasFactory<TicketNoteFactory> */
     use HasFactory;
 
     public const UPDATED_AT = null;
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['origin' => NoteOrigin::class];
+    }
 
     /** @return BelongsTo<Ticket, $this> */
     public function ticket(): BelongsTo

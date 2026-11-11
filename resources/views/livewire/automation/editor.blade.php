@@ -36,10 +36,10 @@
     <div class="flex min-h-0 flex-1">
         <aside class="w-44 shrink-0 space-y-1 overflow-y-auto border-e border-line bg-surface p-3" aria-label="Blocos">
             <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Adicionar bloco</p>
-            <template x-for="(block, index) in palette" x-bind:key="block.type">
+            <template x-for="(block, index) in palette" x-bind:key="block.key">
                 <div>
                     <p x-show="index === 0 || palette[index - 1].group !== block.group" class="mt-2 font-mono text-[10px] tracking-wider text-ink-3 uppercase" x-text="block.group"></p>
-                    <button type="button" class="w-full rounded-md border border-line px-2 py-1.5 text-start text-xs text-ink hover:bg-canvas" x-on:click="add(block.type)" x-text="block.label"></button>
+                    <button type="button" class="w-full rounded-md border border-line px-2 py-1.5 text-start text-xs text-ink hover:bg-canvas" x-on:click="add(block)" x-text="block.label"></button>
                 </div>
             </template>
         </aside>
@@ -58,8 +58,8 @@
             </div>
 
             {{-- Menu do clique direito: no fundo adiciona bloco; num bloco duplica ou apaga (o Início não). --}}
-            <div x-show="menu" x-cloak x-on:click.outside="menu = null" x-on:keydown.escape.window="menu = null" role="menu" aria-label="Ações do canvas"
-                 class="fixed z-50 flex w-52 flex-col gap-0.5 rounded-md border border-line bg-surface p-1 shadow-lg"
+            <div x-show="menu" x-cloak x-on:click.outside="menu = null" x-on:keydown.escape.window="menu = null" x-ref="menu" role="menu" aria-label="Ações do canvas"
+                 class="fixed z-50 flex max-h-[calc(100dvh-1rem)] w-52 flex-col gap-0.5 overflow-y-auto rounded-md border border-line bg-surface p-1 shadow-lg"
                  x-bind:style="menu ? `left:${menu.x}px;top:${menu.y}px` : ''">
                 <template x-if="menu && menu.nodeId">
                     <div class="flex flex-col gap-0.5">
@@ -75,8 +75,8 @@
                 <template x-if="menu && !menu.nodeId">
                     <div class="flex flex-col gap-0.5">
                         <p class="px-2 py-1 font-mono text-[10px] tracking-wider text-ink-3 uppercase">Adicionar bloco</p>
-                        <template x-for="block in palette" x-bind:key="block.type">
-                            <flux:button size="sm" variant="ghost" class="w-full justify-start" x-on:click="menuAdd(block.type)" x-text="block.label"></flux:button>
+                        <template x-for="block in palette" x-bind:key="block.key">
+                            <flux:button size="sm" variant="ghost" class="w-full justify-start" x-on:click="menuAdd(block)" x-text="block.label"></flux:button>
                         </template>
                     </div>
                 </template>
@@ -117,6 +117,17 @@
                                     <option value="">Setor escolhido no menu</option>
                                     <template x-for="sector in sectors" x-bind:key="sector.id">
                                         <option x-bind:value="sector.id" x-text="sector.name"></option>
+                                    </template>
+                                </select>
+                            </template>
+                            <template x-if="field.kind === 'flag'">
+                                <input type="checkbox" class="mt-1 block size-4" x-model="selected.data[field.key]" x-on:change="$nextTick(() => apply())">
+                            </template>
+                            <template x-if="field.kind === 'user'">
+                                <select class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model.number="selected.data[field.key]" x-on:change="apply()">
+                                    <option value="">Ninguém (só a fila)</option>
+                                    <template x-for="user in users" x-bind:key="user.id">
+                                        <option x-bind:value="user.id" x-text="user.name"></option>
                                     </template>
                                 </select>
                             </template>
