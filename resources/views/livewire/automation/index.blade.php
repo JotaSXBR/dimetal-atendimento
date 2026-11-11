@@ -10,7 +10,18 @@
     @if ($showNew)
         <form wire:submit="create" class="mt-4 space-y-3 rounded-[14px] border border-line bg-surface p-4">
             <flux:input label="Nome" wire:model="newName" maxlength="120" />
-            <flux:checkbox wire:model="fromTemplate" label="Começar do modelo Atendimento padrão (saudação, menu de setores e encaminhamento)" />
+            <fieldset class="space-y-2">
+                <legend class="text-sm font-medium text-ink">Começar de</legend>
+                @foreach ($templates as $option)
+                    <label class="flex cursor-pointer items-start gap-3 rounded-md border border-line p-3 text-sm has-[:checked]:border-accent" wire:key="template-{{ $option['key'] }}">
+                        <input type="radio" class="mt-1" wire:model="template" value="{{ $option['key'] }}">
+                        <span>
+                            <span class="block font-semibold text-ink">{{ $option['name'] }}</span>
+                            <span class="block text-xs text-ink-3">{{ $option['description'] }}</span>
+                        </span>
+                    </label>
+                @endforeach
+            </fieldset>
             @error('newName')
                 <p class="text-xs text-danger" role="alert">{{ $message }}</p>
             @enderror
@@ -28,7 +39,8 @@
                     <div class="min-w-0 flex-1">
                         <p class="text-sm font-semibold text-ink">{{ $workflow->name }}</p>
                         <p class="text-xs text-ink-3">
-                            @if ($workflow->versions_count > 0) Publicado: versão {{ $workflow->versions->first()?->number }} @else Nunca publicado @endif
+                            @if ($workflow->versions_count > 0)<x-status-badge tone="ok">Publicado · versão {{ $workflow->versions->first()?->number }}</x-status-badge>@else<x-status-badge tone="neutral">Nunca publicado</x-status-badge>@endif
+                            · {{ $summaries[$workflow->id]['nodes'] }} {{ $summaries[$workflow->id]['nodes'] === 1 ? 'bloco' : 'blocos' }}@if ($summaries[$workflow->id]['sectors'] > 0) · {{ $summaries[$workflow->id]['sectors'] }} {{ $summaries[$workflow->id]['sectors'] === 1 ? 'setor' : 'setores' }}@endif
                             · rascunho editado {{ $workflow->updated_at?->timezone(config('app.display_timezone'))->format('d/m H:i') }}
                         </p>
                     </div>
@@ -65,7 +77,7 @@
                 @endif
             </li>
         @empty
-            <li class="rounded-[14px] border border-line bg-surface px-4 py-6 text-center text-sm text-ink-3">Nenhum workflow ainda. Crie o primeiro a partir do modelo.</li>
+            <li class="rounded-[14px] border border-line bg-surface"><x-empty-state icon="bolt" title="Nenhum workflow ainda." description="Crie o primeiro a partir do modelo." /></li>
         @endforelse
     </ul>
 </x-settings-page>

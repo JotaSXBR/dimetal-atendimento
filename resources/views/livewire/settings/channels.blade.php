@@ -25,9 +25,9 @@
                             <p class="mt-2 text-xs text-danger">{{ $message }}</p>
                         @enderror
                     </div>
-                    <x-ui.button variant="primary" wire:click="addChannel" wire:loading.attr="disabled">
+                    <flux:button size="sm" variant="primary" wire:click="addChannel" wire:loading.attr="disabled">
                         Adicionar
-                    </x-ui.button>
+                    </flux:button>
                 </div>
 
                 <p class="mt-2 text-xs leading-relaxed text-ink-3">
@@ -40,10 +40,7 @@
             <div class="rounded-[14px] border border-line bg-surface p-5">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-sm font-semibold text-ink">Webhook de entrada</p>
-                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $receiving ? 'bg-ok/10 text-ok' : 'bg-canvas text-ink-2' }}">
-                        <span class="size-1.5 rounded-full {{ $receiving ? 'bg-accent' : 'bg-ink-3' }}"></span>
-                        {{ $receiving ? 'recebendo' : 'sem eventos recentes' }}
-                    </span>
+                    <x-status-badge :tone="$receiving ? 'ok' : 'neutral'">{{ $receiving ? 'recebendo' : 'sem eventos recentes' }}</x-status-badge>
                 </div>
                 <p class="mt-2 break-all font-mono text-xs text-ink-2">{{ $webhookUrl }}</p>
             </div>

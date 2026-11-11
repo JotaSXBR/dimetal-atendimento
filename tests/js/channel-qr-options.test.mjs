@@ -27,3 +27,10 @@ test('preto sobre branco, para não atrapalhar a leitura', () => {
     assert.equal(options.dotsOptions.color, '#000000');
     assert.equal(options.backgroundOptions.color, '#ffffff');
 });
+
+test('sem logo da empresa o QR sai sem imagem no centro', () => {
+    const options = qrOptions('abc', 224, null);
+
+    assert.equal(options.image, undefined);
+    assert.equal(options.data, 'abc');
+});

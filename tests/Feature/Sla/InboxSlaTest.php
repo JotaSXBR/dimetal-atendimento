@@ -83,16 +83,18 @@ class InboxSlaTest extends TestCase
 
         $html = $this->inbox()->html();
 
-        $this->assertSame(1, substr_count($html, 'Perto de estourar'));
-        $this->assertSame(1, substr_count($html, 'SLA estourado'));
+        // Um ponto por ticket, com o estado no `title` (o texto também vai, escondido, para o leitor de tela).
+        $this->assertSame(1, substr_count($html, 'title="Perto de estourar"'));
+        $this->assertSame(1, substr_count($html, 'title="SLA estourado"'));
     }
 
-    public function test_cliente_esperando_dentro_do_prazo_mostra_o_horario_limite_na_lista(): void
+    /** O prazo fica na conversa e no painel; a lista mostra só a espera, para não poluir o card. */
+    public function test_cliente_esperando_dentro_do_prazo_mostra_a_espera_e_nao_o_prazo_na_lista(): void
     {
         $this->travelTo($this->sp('2026-10-30 10:00'));
         $this->waiting('Tranquilo', ['sla_warn_at' => $this->sp('2026-10-30 10:30'), 'sla_due_at' => $this->sp('2026-10-30 10:40')]);
 
-        $this->inbox()->assertSee('Responder até hoje às 10h40')->assertDontSee('Perto de estourar');
+        $this->inbox()->assertSeeHtml('data-testid="card-wait"')->assertDontSee('Responder até')->assertDontSee('Perto de estourar');
     }
 
     public function test_sem_espera_nao_ha_selo(): void

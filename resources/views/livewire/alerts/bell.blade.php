@@ -16,7 +16,7 @@
         <div class="flex items-center justify-between border-b border-line px-3.5 py-3">
             <p class="text-sm font-bold">Alertas <span class="ms-1 text-xs font-normal text-ink-3">{{ $unread }} {{ $unread === 1 ? 'novo' : 'novos' }}</span></p>
             @if ($unread > 0)
-                <button type="button" wire:click="markAllRead" class="text-xs font-semibold text-accent-content hover:underline">Marcar todas como lidas</button>
+                <flux:button type="button" size="xs" variant="ghost" wire:click="markAllRead">Marcar todas como lidas</flux:button>
             @endif
         </div>
 
@@ -40,7 +40,7 @@
                     </button>
                 </li>
             @empty
-                <li class="px-3.5 py-6 text-center text-sm text-ink-3">Nenhum alerta nos últimos 7 dias.</li>
+                <li><x-empty-state compact icon="bell" title="Nenhum alerta nos últimos 7 dias." /></li>
             @endforelse
         </ul>
 

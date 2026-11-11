@@ -129,7 +129,8 @@ class OutboxResendTest extends TestCase
         $screen = Livewire::actingAs($this->me)->test(Inbox::class)->call('select', $this->ticket->id);
 
         $html = $screen->html();
-        $this->assertSame(2, substr_count($html, '>Reenviar</button>'));
+        // Dois botões "Reenviar" (flux:button): o seguro e o que pede confirmação.
+        $this->assertSame(2, substr_count($html, 'wire:click="$parent.resend('));
         $this->assertSame(1, substr_count($html, 'wire:confirm="Esta mensagem pode já ter sido enviada'));
     }
 

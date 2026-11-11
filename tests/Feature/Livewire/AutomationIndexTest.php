@@ -34,7 +34,7 @@ class AutomationIndexTest extends TestCase
     private function published(string $name = 'Fluxo A'): Workflow
     {
         $publisher = app(WorkflowPublisher::class);
-        $workflow = $publisher->create($name, $this->user, fromTemplate: true);
+        $workflow = $publisher->create($name, $this->user, template: true);
         $publisher->publish($workflow, $this->user);
 
         return $workflow;
@@ -48,12 +48,41 @@ class AutomationIndexTest extends TestCase
 
     public function test_cria_workflow_vazio_e_do_modelo(): void
     {
-        $this->page()->set('newName', 'Triagem')->set('fromTemplate', false)->call('create')->assertHasNoErrors();
-        $this->page()->set('newName', 'Do modelo')->set('fromTemplate', true)->call('create');
+        $this->page()->set('newName', 'Triagem')->set('template', 'em_branco')->call('create')->assertHasNoErrors();
+        $this->page()->set('newName', 'Do modelo')->set('template', 'padrao')->call('create');
 
         $this->assertSame(['Do modelo', 'Triagem'], Workflow::query()->orderBy('name')->pluck('name')->all());
         $this->assertCount(5, Workflow::query()->where('name', 'Do modelo')->firstOrFail()->draft['nodes']);
         $this->assertCount(1, Workflow::query()->where('name', 'Triagem')->firstOrFail()->draft['nodes']);
+    }
+
+    public function test_novo_workflow_lista_os_modelos_e_cria_o_escolhido(): void
+    {
+        $page = $this->page()->call('$set', 'showNew', true)
+            ->assertSet('template', 'padrao')
+            ->assertSee('Em branco')
+            ->assertSee('Atendimento padrão')
+            ->assertSee('Atendimento com horário')
+            ->assertSee('fora do expediente avisa o horário');
+
+        $page->set('newName', 'Com horário')->set('template', 'horario')->call('create')->assertHasNoErrors();
+
+        $this->assertCount(8, Workflow::query()->where('name', 'Com horário')->firstOrFail()->draft['nodes']);
+    }
+
+    public function test_card_mostra_resumo_do_rascunho(): void
+    {
+        $publisher = app(WorkflowPublisher::class);
+        $publisher->create('Padrão', $this->user, template: 'padrao');
+        $publisher->create('Com horário', $this->user, template: 'horario');
+        Workflow::factory()->create(['name' => 'Fixos', 'draft' => ['nodes' => [
+            ['id' => 'a', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 3]],
+            ['id' => 'b', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 3]],
+            ['id' => 'c', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 4]],
+        ], 'edges' => []]]);
+
+        $this->page()
+            ->assertSeeInOrder(['Com horário', '8 blocos', 'Fixos', '3 blocos', '2 setores', 'Padrão', '5 blocos']);
     }
 
     public function test_nome_e_obrigatorio(): void

@@ -4,13 +4,16 @@ namespace App\Livewire\Settings;
 
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Livewire\Concerns\ReceivesAvatar;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\Media\AvatarImage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -18,6 +21,8 @@ use Livewire\Component;
 class Users extends Component
 {
     public bool $showForm = false;
+
+    use ReceivesAvatar;
 
     public ?int $editingId = null;
 
@@ -60,6 +65,31 @@ class Users extends Component
         $this->role = $target->role->value;
         $this->canTransfer = $target->can_transfer;
         $this->sectorIds = $target->sectors()->get()->map(fn (Sector $sector): int => $sector->id)->all();
+    }
+
+    public function saveAvatar(): void
+    {
+        $this->avatarTarget()->setAvatar($this->avatarWebp(AvatarImage::SIZE_PERSON));
+    }
+
+    public function removeAvatar(): void
+    {
+        $this->avatarTarget()->clearAvatar();
+    }
+
+    /** A foto é de quem está aberto no formulário; quem não pode editar essa pessoa também não mexe na foto dela. */
+    private function avatarTarget(): User
+    {
+        $this->authorize('viewAny', User::class);
+
+        if ($this->editingId === null) {
+            throw ValidationException::withMessages(['photo' => 'Salve o usuário antes de escolher a foto.']);
+        }
+
+        $target = User::query()->findOrFail($this->editingId);
+        $this->authorize('update', $target);
+
+        return $target;
     }
 
     public function cancel(): void
@@ -194,6 +224,7 @@ class Users extends Component
     public function render(): View
     {
         return view('livewire.settings.users', [
+            'editing' => $this->editingId === null ? null : User::query()->find($this->editingId),
             'users' => User::query()
                 ->with('sectors')
                 ->withCount(['assignedTickets as open_tickets_count' => fn (Builder $query) => $query->where('status', '<>', TicketStatus::ENCERRADO->value)])

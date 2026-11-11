@@ -11,13 +11,25 @@ final class FlowGraph
     /**
      * @param  array<string, array<string, mixed>>  $nodes  por id
      * @param  array<string, array<string, string>>  $edges  id de origem → porta → id de destino
+     * @param  array<string, mixed>  $messages  `settings.mensagens`: textos do bot que o workflow trocou
      */
-    private function __construct(private readonly array $nodes, private readonly array $edges) {}
+    private function __construct(private readonly array $nodes, private readonly array $edges, private readonly array $messages = []) {}
 
     /** @param  array<string, mixed>  $graph */
     public static function fromArray(array $graph): self
     {
-        return new self(self::parseNodes($graph['nodes'] ?? null), self::parseEdges($graph['edges'] ?? null));
+        $settings = $graph['settings'] ?? null;
+        $messages = is_array($settings) && is_array($settings['mensagens'] ?? null) ? array_filter($settings['mensagens'], is_string(...), ARRAY_FILTER_USE_KEY) : [];
+
+        return new self(self::parseNodes($graph['nodes'] ?? null), self::parseEdges($graph['edges'] ?? null), $messages);
+    }
+
+    /** O texto que o workflow definiu para a mensagem `$key`, ou nulo (a mensagem não é texto ou não foi definida). */
+    public function message(string $key): ?string
+    {
+        $value = $this->messages[$key] ?? null;
+
+        return is_string($value) ? $value : null;
     }
 
     /** @return array<string, array<string, mixed>> */

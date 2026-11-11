@@ -182,7 +182,7 @@ class ContactCardTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_a_ficha_lista_os_10_atendimentos_mais_recentes_com_motivo_e_resumo(): void
+    public function test_a_ficha_lista_os_5_atendimentos_mais_recentes_com_motivo_e_resumo(): void
     {
         $channel = Channel::factory()->connected()->create();
         foreach (range(1, 11) as $n) {
@@ -198,8 +198,8 @@ class ContactCardTest extends TestCase
         $this->card()
             ->assertSee('Atendimentos')
             ->assertSee('2026-000011')->assertSee('Resumo do ticket 11')->assertSee('Resolvido')
-            ->assertSee('2026-000002')
-            ->assertDontSee('2026-000001');
+            ->assertSee('2026-000007')
+            ->assertDontSee('2026-000006');
     }
 
     public function test_ticket_aberto_aparece_sem_resumo_e_contato_sem_ticket_avisa(): void

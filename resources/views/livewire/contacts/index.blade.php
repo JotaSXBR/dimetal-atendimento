@@ -1,4 +1,4 @@
-<section class="mx-auto grid w-full max-w-6xl gap-6 p-6 lg:grid-cols-[1fr_22rem]">
+<section class="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 p-6 lg:grid-cols-[1fr_22rem]">
     <div>
         <x-page-header title="Contatos" subtitle="Quem fala com a Dimetal. Edite o nome e os dados; contatos editados vão para o Google Contacts.">
             <flux:button variant="primary" icon="plus" wire:click="$toggle('showNew')">Novo contato</flux:button>
@@ -26,11 +26,13 @@
             <flux:input icon="magnifying-glass" placeholder="Buscar por nome, telefone, e-mail ou empresa" wire:model.live.debounce.300ms="search" clearable />
         </div>
 
-        <ul class="mt-4 divide-y divide-line rounded-[14px] border border-line bg-surface">
+        <x-skeleton-rows :rows="4" wire:loading.delay wire:target="search" class="mt-4 rounded-[14px] border border-line bg-surface" />
+
+        <ul wire:loading.remove.delay wire:target="search" class="mt-4 divide-y divide-line rounded-[14px] border border-line bg-surface">
             @forelse ($contacts as $contact)
                 <li wire:key="contact-{{ $contact->id }}" class="flex items-center pe-3 {{ $selectedId === $contact->id ? 'bg-surface-2' : '' }}">
                     <button type="button" wire:click="select({{ $contact->id }})" class="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-start hover:bg-surface-2">
-                        <flux:avatar :name="$contact->label()" size="sm" />
+                        <x-avatar :src="$contact->avatarUrl()" :name="$contact->label()" shape="round" size="lg" decorative />
                         <span class="min-w-0 flex-1">
                             <span class="block truncate text-sm font-semibold text-ink">{{ $contact->label() }}</span>
                             <span class="block truncate text-xs text-ink-3">
@@ -41,7 +43,7 @@
                     @include('livewire.contacts.chat-button', ['contact' => $contact])
                 </li>
             @empty
-                <li class="px-4 py-6 text-center text-sm text-ink-3">Nenhum contato encontrado.</li>
+                <li><x-empty-state icon="users" title="Nenhum contato encontrado." description="Tente outro nome ou telefone." /></li>
             @endforelse
         </ul>
 

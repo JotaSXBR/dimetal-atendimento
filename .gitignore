@@ -38,6 +38,8 @@ yarn-error.log
 /AGENTS.md
 /CLAUDE.md
 /boost.json
+/skills-lock.json
+/.referencias
 /opencode.json
 /opencode.jsonc
 
@@ -47,3 +49,4 @@ yarn-error.log
 /.codegraph
 /.phpstan.cache
 /.pint.cache
+/docs/ux-refactor-prompt.md

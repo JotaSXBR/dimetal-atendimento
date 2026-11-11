@@ -1,24 +1,8 @@
 @php
     $status = $channel->status;
     $inactive = ! $channel->active;
-    $tone = $inactive ? 'ink-3' : match ($status) {
-        \App\Enums\ChannelStatus::WORKING => 'ok',
-        \App\Enums\ChannelStatus::FAILED => 'danger',
-        \App\Enums\ChannelStatus::SCAN_QR_CODE, \App\Enums\ChannelStatus::PASSKEY_REQUIRED, \App\Enums\ChannelStatus::PASSKEY_CONFIRMATION_REQUIRED => 'warn',
-        default => 'ink-3',
-    };
-    $dot = match ($tone) {
-        'ok' => 'bg-ok',
-        'danger' => 'bg-danger',
-        'warn' => 'bg-warn',
-        default => 'bg-ink-3',
-    };
-    $badge = match ($tone) {
-        'ok' => 'bg-ok/10 text-ok',
-        'danger' => 'bg-danger/10 text-danger',
-        'warn' => 'bg-warn/10 text-warn',
-        default => 'bg-canvas text-ink-2',
-    };
+    // O tom vem do enum (`tone()`); desativado é neutro e sessão removida é erro.
+    $tone = $inactive ? 'neutral' : ($sessionMissing ? 'danger' : $status->tone());
     $label = $inactive ? 'Desativado' : ($sessionMissing ? 'Sessão removida' : $status->label());
     $hint = match (true) {
         $inactive => 'Desligado de propósito: aparelho desvinculado, sem alertas e sem resposta nos tickets deste número. Reative e leia o QR para voltar.',
@@ -45,16 +29,13 @@
                 @endif
             </div>
 
-            <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $badge }}">
-                <span class="size-1.5 rounded-full {{ $dot }}"></span>
-                {{ $label }}
-            </span>
+            <x-status-badge :tone="$tone" class="shrink-0">{{ $label }}</x-status-badge>
         </div>
 
         <div class="mt-4 flex gap-4">
             @if (! $inactive && $status === \App\Enums\ChannelStatus::SCAN_QR_CODE && $qrValue)
                 {{-- Desenhado no navegador com a logo; o `wire:ignore` impede o poll de apagar o canvas. A chave nova a cada QR redesenha. --}}
-                <div wire:key="qr-{{ md5($qrValue) }}" x-data="channelQr($wire, @js($qrValue), '{{ asset('images/qr-logo.svg') }}')" class="shrink-0">
+                <div wire:key="qr-{{ md5($qrValue) }}" x-data="channelQr($wire, @js($qrValue), @js(\App\Settings\CompanySettings::logoUrl()))" class="shrink-0">
                     <div wire:ignore x-ref="canvas" class="size-56 rounded-[10px] border border-line bg-white p-2 [&>canvas]:size-full" role="img" aria-label="QR do WhatsApp"></div>
                 </div>
             @elseif (! $inactive && $status === \App\Enums\ChannelStatus::SCAN_QR_CODE && $qr)
@@ -108,7 +89,7 @@
                     <flux:select.option value="15">Últimos 15 dias</flux:select.option>
                     <flux:select.option value="30">Últimos 30 dias</flux:select.option>
                 </flux:select>
-                <x-ui.button variant="secondary" wire:click="importNow" wire:confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." wire:loading.attr="disabled">Importar agora</x-ui.button>
+                <flux:button size="sm" variant="filled" wire:click="importNow" wire:confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." wire:loading.attr="disabled">Importar agora</flux:button>
                 @error('importDays')
                     <p class="basis-full text-xs text-danger">{{ $message }}</p>
                 @enderror
@@ -121,7 +102,7 @@
                     <flux:select.option value="24">Últimas 24 horas</flux:select.option>
                     <flux:select.option value="72">Últimas 72 horas</flux:select.option>
                 </flux:select>
-                <x-ui.button variant="secondary" wire:click="recover" wire:loading.attr="disabled">Recuperar mensagens</x-ui.button>
+                <flux:button size="sm" variant="filled" wire:click="recover" wire:loading.attr="disabled">Recuperar mensagens</flux:button>
                 <p class="basis-full text-xs leading-relaxed text-ink-3">Busca no WhatsApp o que não chegou ao sistema nesse período. Repetir não duplica nada. A recuperação roda sozinha depois de uma queda e todo dia de madrugada.</p>
                 @error('recoverHours')
                     <p class="basis-full text-xs text-danger">{{ $message }}</p>
@@ -134,15 +115,15 @@
 
         <div class="mt-4 flex flex-wrap items-center gap-2">
             @if ($inactive)
-                <x-ui.button variant="primary" wire:click="reactivate" wire:loading.attr="disabled">Reativar</x-ui.button>
+                <flux:button size="sm" variant="primary" wire:click="reactivate" wire:loading.attr="disabled">Reativar</flux:button>
             @else
-                <x-ui.button variant="primary" wire:click="connect" wire:loading.attr="disabled">{{ $primary }}</x-ui.button>
-                <x-ui.button variant="secondary" wire:click="disconnect" wire:loading.attr="disabled">Desconectar</x-ui.button>
-                <x-ui.button variant="secondary" wire:click="ask('deactivate')">Desativar</x-ui.button>
+                <flux:button size="sm" variant="primary" wire:click="connect" wire:loading.attr="disabled">{{ $primary }}</flux:button>
+                <flux:button size="sm" variant="filled" wire:click="disconnect" wire:loading.attr="disabled">Desconectar</flux:button>
+                <flux:button size="sm" variant="filled" wire:click="ask('deactivate')">Desativar</flux:button>
             @endif
-            <x-ui.button variant="secondary" wire:click="ask('delete-session')">Excluir sessão</x-ui.button>
+            <flux:button size="sm" variant="filled" wire:click="ask('delete-session')">Excluir sessão</flux:button>
             @unless ($hasHistory)
-                <x-ui.button variant="ghost" wire:click="ask('delete-channel')">Apagar canal</x-ui.button>
+                <flux:button size="sm" variant="ghost" wire:click="ask('delete-channel')">Apagar canal</flux:button>
             @endunless
         </div>
 
@@ -162,8 +143,8 @@
                     Um canal ativo sem sessão conta como queda e dispara o alerta de canal desconectado. Para parar sem alerta, use Desativar.
                 @endif
                 <div class="mt-2 flex gap-2">
-                    <x-ui.button variant="primary" wire:click="{{ $confirmAction }}" wire:loading.attr="disabled">Confirmar {{ $confirmLabel }}</x-ui.button>
-                    <x-ui.button variant="secondary" wire:click="cancel">Cancelar</x-ui.button>
+                    <flux:button size="sm" variant="primary" wire:click="{{ $confirmAction }}" wire:loading.attr="disabled">Confirmar {{ $confirmLabel }}</flux:button>
+                    <flux:button size="sm" variant="filled" wire:click="cancel">Cancelar</flux:button>
                 </div>
             </div>
         @endif
@@ -220,9 +201,9 @@
                                     <p class="text-xs text-danger">{{ $message }}</p>
                                 @enderror
 
-                                <x-ui.button variant="secondary" wire:click="requestPairingCode" wire:loading.attr="disabled">
+                                <flux:button size="sm" variant="filled" wire:click="requestPairingCode" wire:loading.attr="disabled">
                                     Gerar código
-                                </x-ui.button>
+                                </flux:button>
 
                                 @if ($pairingCode)
                                     <div class="rounded-[10px] bg-canvas px-4 py-3">
@@ -251,9 +232,9 @@
                         @enderror
 
                         <div class="mt-3">
-                            <x-ui.button variant="secondary" wire:click="sendTest" wire:loading.attr="disabled">
+                            <flux:button size="sm" variant="filled" wire:click="sendTest" wire:loading.attr="disabled">
                                 Enviar teste
-                            </x-ui.button>
+                            </flux:button>
                         </div>
 
                         @if ($sentMessage)

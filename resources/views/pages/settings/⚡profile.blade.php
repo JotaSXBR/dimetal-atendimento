@@ -1,6 +1,8 @@
 <?php
 
 use App\Concerns\ProfileValidationRules;
+use App\Livewire\Concerns\ReceivesAvatar;
+use App\Services\Media\AvatarImage;
 /* @chisel-email-verification */
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 /* @end-chisel-email-verification */
@@ -12,7 +14,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Perfil')] class extends Component {
-    use ProfileValidationRules;
+    use ProfileValidationRules, ReceivesAvatar;
 
     public string $name = '';
     public string $email = '';
@@ -44,6 +46,16 @@ new #[Title('Perfil')] class extends Component {
         $user->save();
 
         Flux::toast(variant: 'success', text: __('Profile updated.'));
+    }
+
+    public function saveAvatar(): void
+    {
+        Auth::user()->setAvatar($this->avatarWebp(AvatarImage::SIZE_PERSON));
+    }
+
+    public function removeAvatar(): void
+    {
+        Auth::user()->clearAvatar();
     }
 
     /* @chisel-email-verification */
@@ -86,6 +98,14 @@ new #[Title('Perfil')] class extends Component {
     <flux:heading level="2" class="sr-only">{{ __('Profile settings') }}</flux:heading>
 
     <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
+        <div class="mt-6">
+            <x-avatar-uploader model="photo" action="saveAvatar" :current="auth()->user()->avatarUrl()" :name="auth()->user()->name" shape="round">
+                @if (auth()->user()->avatar_path)
+                    <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" wire:confirm="Remover a sua foto?">Remover</flux:button>
+                @endif
+            </x-avatar-uploader>
+        </div>
+
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
 

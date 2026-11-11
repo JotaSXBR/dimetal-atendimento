@@ -37,6 +37,80 @@ class ContactCardCompactTest extends TestCase
         return Livewire::actingAs($this->user)->test(ContactCard::class, ['contactId' => $this->contact->id, ...$props]);
     }
 
+    /** @return list<Ticket> Do mais antigo ao mais novo, encerrados. */
+    private function past(int $count): array
+    {
+        $channel = Channel::query()->first() ?? Channel::factory()->create();
+
+        return array_map(fn (int $i) => Ticket::factory()->create([
+            'channel_id' => $channel->id,
+            'contact_id' => $this->contact->id,
+            'status' => TicketStatus::ENCERRADO,
+            'opened_at' => now()->subDays(30 - $i),
+            'closed_at' => now()->subDays(30 - $i),
+        ]), range(1, $count));
+    }
+
+    private function detailsTag(string $html, string $testid): string
+    {
+        $this->assertSame(1, preg_match('/<details[^>]*data-testid="'.$testid.'"[^>]*>/', $html, $m), "bloco {$testid} ausente");
+
+        return $m[0];
+    }
+
+    public function test_mostra_so_os_5_ultimos_e_o_link_ao_historico(): void
+    {
+        $tickets = $this->past(7);
+
+        $card = $this->card(['compact' => true])
+            ->assertSee('Anteriores (7)')
+            ->assertSee('Ver todos no Histórico')
+            ->assertSeeHtml('contactId='.$this->contact->id);
+
+        foreach (array_slice($tickets, 2) as $shown) {
+            $card->assertSee($shown->protocol);
+        }
+        $card->assertDontSee($tickets[0]->protocol)->assertDontSee($tickets[1]->protocol);
+    }
+
+    public function test_sem_link_com_5_ou_menos(): void
+    {
+        $this->past(5);
+
+        $this->card(['compact' => true])->assertSee('Anteriores (5)')->assertDontSee('Ver todos no Histórico');
+    }
+
+    public function test_sem_anteriores_o_bloco_vem_fechado(): void
+    {
+        $tag = $this->detailsTag($this->card(['compact' => true])->html(), 'details-history');
+
+        $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $tag);
+    }
+
+    /** `wire:ignore.self` congela o `open` do primeiro render: trocar a chave recria o bloco quando o contato passa a ter anteriores. */
+    public function test_bloco_de_anteriores_muda_de_chave_quando_passa_a_ter_anteriores(): void
+    {
+        $card = $this->card(['compact' => true]);
+        $this->assertStringContainsString('wire:key="history-block-none"', $card->html());
+
+        $this->past(1);
+
+        $html = $card->call('$refresh')->html();
+        $this->assertStringContainsString('wire:key="history-block-has"', $html);
+        $this->assertMatchesRegularExpression('/\sopen[\s>]/', $this->detailsTag($html, 'details-history'));
+    }
+
+    public function test_ficha_completa_tambem_limita_a_5_sem_blocos(): void
+    {
+        $tickets = $this->past(7);
+
+        $this->card()
+            ->assertSee($tickets[6]->protocol)
+            ->assertDontSee($tickets[0]->protocol)
+            ->assertSee('Ver todos no Histórico')
+            ->assertDontSeeHtml('data-testid="details-contact"');
+    }
+
     public function test_inbox_mostra_o_resumo_e_esconde_o_formulario(): void
     {
         $this->card(['compact' => true])
@@ -249,5 +323,53 @@ class ContactCardCompactTest extends TestCase
         $this->card(['compact' => true, 'currentTicketId' => $current->id])
             ->call('toggleEdit')->set('form.name', 'Digitado')->call('refresh')
             ->assertSet('editing', true)->assertSet('form.name', 'Digitado');
+    }
+
+    private function dom(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    /** Rodapé fixo no padrão Flux: `button.group` com as duas ações, separador do Flux acima, grudado no fim do painel. */
+    public function test_acoes_do_contato_ficam_num_grupo_de_botoes_no_rodape(): void
+    {
+        $this->contact->update(['wa_id' => '5511999990000@c.us']);
+        $xpath = $this->dom($this->card(['compact' => true])->html());
+
+        $footer = $xpath->query('//*[@data-testid="contact-actions"]')->item(0);
+
+        $this->assertNotNull($footer);
+        $this->assertStringContainsString('sticky', $footer->getAttribute('class'));
+        // `-bottom-4` (= o padding do painel): sem isso o rodapé gruda 16px acima do fim e deixa texto aparecer por baixo.
+        $this->assertStringContainsString('-bottom-4', $footer->getAttribute('class'));
+        $this->assertSame(1, $xpath->query('.//*[@data-flux-separator]', $footer)->length);
+        $group = $xpath->query('.//*[@data-flux-button-group]', $footer)->item(0);
+        $this->assertNotNull($group);
+        $labels = [];
+        foreach ($xpath->query('.//button', $group) as $button) {
+            $labels[] = trim($button->textContent);
+            $this->assertStringNotContainsString('w-full', $button->getAttribute('class'));
+            $this->assertStringContainsString('h-6', $button->getAttribute('class'), 'botões xs cabem os dois lado a lado no painel de 280px');
+        }
+        $this->assertSame(['Conversar', 'Editar contato'], $labels);
+    }
+
+    public function test_somente_leitura_nao_tem_rodape_de_acoes(): void
+    {
+        $this->assertSame(0, $this->dom($this->card(['compact' => true, 'readonly' => true])->html())->query('//*[@data-testid="contact-actions"]')->length);
+    }
+
+    /** `contents`: o cartão não gera caixa, e o rodapé `sticky` passa a grudar no fim do `aside` de rolagem (só no modo compacto). */
+    public function test_raiz_do_cartao_compacto_nao_gera_caixa_e_o_completo_sim(): void
+    {
+        $compact = $this->dom($this->card(['compact' => true])->html());
+        $this->assertStringContainsString('contents', $compact->query('//div[@*[name()="wire:id"]]')->item(0)?->getAttribute('class') ?? '');
+        $this->assertGreaterThan(0, $compact->query('//div[contains(@class, "contents") and contains(@class, "text-sm")]')->length);
+
+        $full = $this->dom($this->card()->html());
+        $this->assertStringNotContainsString('contents', $full->query('//div[@*[name()="wire:id"]]')->item(0)?->getAttribute('class') ?? '');
     }
 }

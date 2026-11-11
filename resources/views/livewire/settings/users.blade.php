@@ -4,6 +4,16 @@
     </x-slot:actions>
     @if ($showForm)
         <form wire:submit="save" class="mt-6 grid gap-4 rounded-[14px] border border-line bg-surface p-5 md:grid-cols-2">
+            @if ($editing)
+                <div class="md:col-span-2">
+                    <x-avatar-uploader model="photo" action="saveAvatar" :current="$editing->avatarUrl()" :name="$editing->name" shape="round">
+                        @if ($editing->avatar_path)
+                            <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" wire:confirm="Remover a foto de {{ $editing->name }}?">Remover</flux:button>
+                        @endif
+                    </x-avatar-uploader>
+                </div>
+            @endif
+
             <div>
                 <flux:input wire:model="name" label="Nome" maxlength="120" />
                 @error('name') <p class="mt-1 text-xs text-danger">{{ $message }}</p> @enderror
@@ -53,12 +63,13 @@
     <ul class="mt-6 divide-y divide-line rounded-[14px] border border-line bg-surface">
         @foreach ($users as $user)
             <li class="flex flex-wrap items-center gap-3 px-4 py-3" wire:key="user-{{ $user->id }}">
+                <x-avatar :src="$user->avatarUrl()" :name="$user->name" shape="round" size="sm" decorative />
                 <div class="min-w-0 flex-1">
                     <p class="flex items-center gap-2 text-sm font-semibold text-ink">
                         <span class="truncate">{{ $user->name }}</span>
-                        <flux:badge size="sm">{{ $user->role->label() }}</flux:badge>
+                        <x-status-badge tone="neutral">{{ $user->role->label() }}</x-status-badge>
                         @unless ($user->active)
-                            <flux:badge size="sm" color="zinc">Inativo</flux:badge>
+                            <x-status-badge tone="neutral">Inativo</x-status-badge>
                         @endunless
                     </p>
                     <p class="truncate text-xs text-ink-3">

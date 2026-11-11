@@ -32,7 +32,14 @@
             default => ['Enviando', '…', ''],
         };
         // `kind` só devolve algo diferente de `none` para mensagem que falhou: poupa o cálculo nas demais (até 200 por render).
-        $inlineTime = $message->body !== '' && ! $message->hasMedia() && ! in_array($message->type, ['location', 'contact', 'view_once'], true);
+        // Hora e tiques sempre no canto inferior direito: no fim do texto (inline), sobre foto/vídeo sem legenda (overlay) ou na base (below).
+        $visual = $message->hasMedia() && ($message->media_ref !== null || $message->media_path !== null)
+            && ((str_starts_with((string) $message->media_mime, 'image/') && $message->media_mime !== 'image/webp') || str_starts_with((string) $message->media_mime, 'video/'));
+        $timeMode = match (true) {
+            $message->body !== '' && ! in_array($message->type, ['location', 'contact', 'view_once'], true) => 'inline',
+            $visual && $message->body === '' => 'overlay',
+            default => 'below',
+        };
         $resend = $out && ! $readonly && $message->delivery_status === \App\Enums\DeliveryStatus::FAILED
             ? app(\App\Services\Inbox\ResendTicketMessage::class)->kind($message, auth()->user())
             : 'none';
@@ -63,14 +70,14 @@
             @endif
 
             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                <p x-show="! editing" class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}@if ($inlineTime)@include('livewire.inbox.message-time', ['inline' => true])@endif</p>
+                <p x-show="! editing" class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($message->body) }}@if ($timeMode === 'inline')@include('livewire.inbox.message-time', ['mode' => 'inline'])@endif</p>
                 @if (! $readonly)
                     @can('edit', $message)
                         <div x-cloak x-show="editing" class="space-y-1">
                             <textarea x-model="text" rows="3" maxlength="4096" class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm" aria-label="Novo texto da mensagem"></textarea>
                             <div class="flex justify-end gap-2 text-xs">
-                                <button type="button" x-on:click="editing = false" class="text-ink-3 hover:text-ink">Cancelar</button>
-                                <button type="button" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false" class="font-semibold text-accent-content">Salvar</button>
+                                <flux:button type="button" size="xs" variant="subtle" x-on:click="editing = false">Cancelar</flux:button>
+                                <flux:button type="button" size="xs" variant="primary" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false">Salvar</flux:button>
                             </div>
                         </div>
                     @endcan
@@ -105,9 +112,9 @@
             @endif
 
             @if ($resend === 'safe')
-                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" class="mt-1 text-xs text-accent-content underline">Reenviar</button>
+                <flux:button type="button" size="xs" variant="subtle" class="mt-1" wire:click="$parent.resend({{ $message->id }}, true)">Reenviar</flux:button>
             @elseif ($resend === 'confirm')
-                <button type="button" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" class="mt-1 text-xs text-accent-content underline">Reenviar</button>
+                <flux:button type="button" size="xs" variant="subtle" class="mt-1" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?">Reenviar</flux:button>
             @endif
 
             @if (! $readonly && ! $message->revoked_at)
@@ -193,9 +200,9 @@
                 @endcan
             @endif
 
-            @unless ($inlineTime)
-                @include('livewire.inbox.message-time', ['inline' => false])
-            @endunless
+            @if ($timeMode === 'below')
+                @include('livewire.inbox.message-time', ['mode' => 'below'])
+            @endif
         </div>
 
         @if (! $readonly)

@@ -18,7 +18,7 @@ use Livewire\Component;
 /** Ficha editável do contato: vive no painel do inbox e na tela Contatos. */
 class ContactCard extends Component
 {
-    private const HISTORY_LIMIT = 10;
+    private const HISTORY_LIMIT = 5;
 
     #[Locked]
     public int $contactId;
@@ -117,12 +117,16 @@ class ContactCard extends Component
         $user = auth()->user();
         assert($user instanceof User);
 
-        $history = Ticket::query()->with(['sector', 'channel'])->where('contact_id', $contact->id)->when($this->currentTicketId !== null, fn ($query) => $query->whereKeyNot($this->currentTicketId))->latest('opened_at')->limit(self::HISTORY_LIMIT)->get();
+        $others = Ticket::query()->where('contact_id', $contact->id)->when($this->currentTicketId !== null, fn ($query) => $query->whereKeyNot($this->currentTicketId));
+        $history = (clone $others)->with(['sector', 'channel'])->latest('opened_at')->limit(self::HISTORY_LIMIT)->get();
+        $historyTotal = $others->count();
 
         return view('livewire.contacts.contact-card', [
             'contact' => $contact,
             'google' => $syncStatus->describe($contact),
             'history' => $history,
+            'historyTotal' => $historyTotal,
+            'hasMore' => $historyTotal > self::HISTORY_LIMIT,
             'openable' => Ticket::query()->readableBy($user)->whereIn('id', $history->modelKeys())->pluck('id')->all(),
             'currentChannelId' => $this->currentTicketId === null ? null : Ticket::query()->whereKey($this->currentTicketId)->value('channel_id'),
         ]);

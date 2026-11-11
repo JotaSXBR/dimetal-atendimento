@@ -12,6 +12,13 @@
         <header class="space-y-3 border-b border-line p-4">
             <h1 class="text-base font-semibold text-ink">Histórico</h1>
 
+            @if ($filteredContact)
+                <flux:badge size="sm" data-testid="history-contact-filter">
+                    Contato: {{ $filteredContact }}
+                    <flux:badge.close wire:click="$set('contactId', null)" aria-label="Remover filtro de contato" />
+                </flux:badge>
+            @endif
+
             <flux:input icon="magnifying-glass" placeholder="Contato, protocolo ou texto da conversa" wire:model.live.debounce.400ms="q" clearable />
 
             <div class="grid grid-cols-2 gap-2">
@@ -21,7 +28,7 @@
                 <flux:select size="sm" wire:model.live="sectorId" label="Setor">
                     <flux:select.option value="">Todos</flux:select.option>
                     @foreach ($sectors as $sector)
-                        <flux:select.option :value="$sector->id">{{ $sector->name }}</flux:select.option>
+                        <flux:select.option :value="$sector->id">{{ $sector->name }}{{ $sector->trashed() ? ' (apagado)' : '' }}</flux:select.option>
                     @endforeach
                 </flux:select>
 
@@ -44,6 +51,10 @@
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
+            <x-skeleton-rows wire:loading.delay wire:target="q,from,to,sectorId,outcome,userId" />
+
+            <div wire:loading.remove.delay wire:target="q,from,to,sectorId,outcome,userId">
+
             @forelse ($tickets as $item)
                 <button
                     type="button"
@@ -51,7 +62,7 @@
                     wire:key="history-{{ $item->id }}"
                     class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
                 >
-                    <flux:avatar :name="$item->contact->label()" size="sm" />
+                    <x-avatar :src="$item->contact->avatarUrl()" :name="$item->contact->label()" shape="round" size="lg" decorative />
 
                     <span class="min-w-0 flex-1">
                         <span class="flex items-baseline justify-between gap-2">
@@ -59,7 +70,12 @@
                             <span class="font-mono text-[10px] text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m/Y') }}</span>
                         </span>
                         <span class="mt-0.5 block truncate text-xs text-ink-2">
-                            {{ $item->protocol }} · {{ $item->sector?->name ?? 'Sem setor' }} · {{ $item->close_outcome?->label() ?? $item->closed_reason?->label() }}
+                            {{ $item->protocol }} · {{ $item->sector?->name ?? 'Sem setor' }}
+                            @if ($item->close_outcome)
+                                <x-status-badge :status="$item->close_outcome" />
+                            @elseif ($item->closed_reason)
+                                <x-status-badge tone="neutral">{{ $item->closed_reason->label() }}</x-status-badge>
+                            @endif
                         </span>
                         @if ($item->assignee)
                             <span class="block truncate text-xs text-ink-3">{{ $item->assignee->name }}</span>
@@ -67,8 +83,9 @@
                     </span>
                 </button>
             @empty
-                <p class="p-6 text-center text-sm text-ink-3">Nenhum ticket encerrado com esses filtros.</p>
+                <x-empty-state icon="archive-box" title="Nenhum ticket encerrado com esses filtros." description="Ajuste o período ou os filtros." />
             @endforelse
+            </div>
 
             @if ($tickets->hasPages())
                 <div class="border-t border-line p-3">{{ $tickets->links() }}</div>
@@ -81,7 +98,7 @@
         @if ($ticket)
             <header class="flex items-center gap-3 border-b border-line bg-surface px-4 py-3">
                 <flux:button variant="subtle" size="sm" icon="arrow-left" class="lg:hidden" wire:click="$set('ticketId', null)" aria-label="Voltar para a lista" />
-                <flux:avatar :name="$ticket->contact->label()" size="sm" />
+                <x-avatar :src="$ticket->contact->avatarUrl()" :name="$ticket->contact->label()" shape="round" size="lg" decorative />
 
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-semibold text-ink">{{ $ticket->contact->label() }}</p>
@@ -95,7 +112,11 @@
             <div class="border-b border-line bg-surface-2 px-4 py-2 text-xs text-ink-2" role="status">
                 Encerrado em {{ $ticket->closed_at?->timezone($tz)->format('d/m/Y \à\s H:i') }}@if ($closer) por {{ $closer }}@endif
                 · duração {{ (int) $ticket->opened_at->diffInMinutes($ticket->closed_at, true) }} min
-                · {{ $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label() }}
+                @if ($ticket->close_outcome)
+                    <x-status-badge :status="$ticket->close_outcome" />
+                @elseif ($ticket->closed_reason)
+                    <x-status-badge tone="neutral">{{ $ticket->closed_reason->label() }}</x-status-badge>
+                @endif
             </div>
 
             @if ($hasMore)

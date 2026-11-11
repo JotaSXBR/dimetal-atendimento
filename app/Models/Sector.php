@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Enums\SectorStatus;
+use App\Enums\TicketStatus;
 use Database\Factories\SectorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -24,6 +26,9 @@ class Sector extends Model
 {
     /** @use HasFactory<SectorFactory> */
     use HasFactory;
+
+    /** Apagar não remove a linha: o ticket antigo continua mostrando o nome do setor (ver `DeleteSector`). */
+    use SoftDeletes;
 
     /**
      * @return array<string, string>
@@ -41,6 +46,23 @@ class Sector extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);
+    }
+
+    /** Ticket ainda não encerrado neste setor (impede apagar e desativar). */
+    public function hasOpenTickets(): bool
+    {
+        return Ticket::query()->where('sector_id', $this->id)->where('status', '<>', TicketStatus::ENCERRADO->value)->exists();
+    }
+
+    /**
+     * Relê o setor com trava de leitura (`FOR SHARE`) para gravar um ticket nele: o `DeleteSector` o trava para escrita, então
+     * ou ele espera esta transação ou esta vê o setor já apagado. Nulo se sumiu ou deixou de receber tickets. Só dentro de transação.
+     */
+    public static function lockForReceiving(int $id): ?self
+    {
+        $sector = static::query()->whereKey($id)->sharedLock()->first();
+
+        return $sector !== null && $sector->status->receivesTickets() ? $sector : null;
     }
 
     /**

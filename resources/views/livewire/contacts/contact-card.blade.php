@@ -1,10 +1,12 @@
-<div>
+{{-- Compacto (Inbox): a raiz e o resumo não geram caixa (`contents`), para o rodapé `sticky` grudar no fim do `aside` de rolagem. --}}
+<div @class(['contents' => $compact && ! $editing])>
 @php($tz = config()->string('app.display_timezone'))
 @if ($compact && ! $editing)
-    <div class="space-y-4 text-sm">
+    <div class="contents text-sm">
+        <x-disclosure title="Contato" testid="details-contact">
+        <div class="space-y-4">
         <div>
-            <h2 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Cliente</h2>
-            <p class="mt-1 font-semibold text-ink">{{ $contact->label() }}</p>
+            <p class="font-semibold text-ink">{{ $contact->label() }}</p>
             @if ($contact->company || $contact->job_title)
                 <p class="text-ink-2">{{ implode(' · ', array_filter([$contact->company, $contact->job_title])) }}</p>
             @endif
@@ -22,10 +24,12 @@
                 <p class="mt-1 text-xs text-ink-3">Nenhuma observação.</p>
             @endif
         </div>
+        </div>
+        </x-disclosure>
 
-        <div>
-            <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Atendimentos anteriores</h3>
-            <ul class="mt-2 space-y-2">
+        {{-- A chave muda quando o contato passa a ter (ou deixa de ter) anteriores: o `wire:ignore.self` congela o `open`, e a chave nova recria o bloco. --}}
+        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history" wire:key="history-block-{{ $historyTotal > 0 ? 'has' : 'none' }}">
+            <ul class="space-y-2">
                 @forelse ($history as $past)
                     @php($mine = in_array($past->id, $openable, true))
                     @php($closed = $past->status === \App\Enums\TicketStatus::ENCERRADO)
@@ -46,14 +50,17 @@
                         @if (! $closed && $otherNumber)
                             <p class="font-semibold text-warn">também tem ticket aberto no número {{ $number }} ({{ $past->status->label() }})</p>
                         @else
-                            <p class="text-ink-2">{{ $past->status->label() }}@if ($past->close_outcome) · {{ $past->close_outcome->label() }}@endif @if ($otherNumber)· número {{ $number }}@endif</p>
+                            <p class="flex flex-wrap items-center gap-1 text-ink-2"><x-status-badge :status="$past->status" />@if ($past->close_outcome)<x-status-badge :status="$past->close_outcome" />@endif @if ($otherNumber)<span>· número {{ $number }}</span>@endif</p>
                         @endif
                     </li>
                 @empty
                     <li class="text-xs text-ink-3">Nenhum atendimento ainda.</li>
                 @endforelse
             </ul>
-        </div>
+            @if ($hasMore)
+                <x-history-link :contact="$contact" />
+            @endif
+        </x-disclosure>
 
         @if ($google['error'])
             <div class="flex items-start justify-between gap-2 text-xs text-danger" role="alert">
@@ -63,8 +70,15 @@
         @endif
 
         @unless ($readonly)
-            @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'w-full'])
-            <flux:button size="sm" variant="subtle" icon="pencil-square" class="w-full" wire:click="toggleEdit">Editar contato</flux:button>
+            {{-- Rodapé fixo do painel: separador e grupo de botões do Flux (as variantes `filled`/`outline` se colam). `-bottom-4 -mx-4 -mb-4` acertam o `p-4` do
+                 `aside` (ticket-details); `mt-auto` o leva ao fim do painel quando há pouco conteúdo. --}}
+            <div data-testid="contact-actions" class="sticky -bottom-4 -mx-4 -mb-4 mt-auto bg-surface px-4 pt-1 pb-4">
+                <flux:separator class="mb-3" />
+                <flux:button.group>
+                    @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'flex-1', 'variant' => 'filled', 'size' => 'xs'])
+                    <flux:button size="xs" variant="filled" icon="pencil-square" class="flex-1" wire:click="toggleEdit">Editar contato</flux:button>
+                </flux:button.group>
+            </div>
         @endunless
     </div>
 @else
@@ -126,7 +140,7 @@
                             {{ $past->protocol }}
                         @endif
                         <span class="font-sans text-ink-3">· {{ $past->opened_at->timezone(config()->string('app.display_timezone'))->format('d/m/Y') }} · {{ $past->sector?->name ?? 'Fila geral' }}</span></p>
-                    <p class="text-ink-2">{{ $past->status->label() }}@if ($past->close_outcome) · {{ $past->close_outcome->label() }}@endif</p>
+                    <p class="flex flex-wrap items-center gap-1 text-ink-2"><x-status-badge :status="$past->status" />@if ($past->close_outcome)<x-status-badge :status="$past->close_outcome" />@endif</p>
                     @if ($past->close_summary)
                         <p class="text-ink-3">{{ $past->close_summary }}</p>
                     @endif
@@ -135,6 +149,9 @@
                 <li class="text-xs text-ink-3">Nenhum atendimento ainda.</li>
             @endforelse
         </ul>
+        @if ($hasMore)
+            <x-history-link :contact="$contact" />
+        @endif
     </div>
     @endunless
 

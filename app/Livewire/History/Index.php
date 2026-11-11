@@ -4,6 +4,7 @@ namespace App\Livewire\History;
 
 use App\Enums\CloseOutcome;
 use App\Enums\TicketStatus;
+use App\Models\Contact;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
@@ -52,18 +53,22 @@ class Index extends Component
     public string $outcome = '';
 
     #[Url]
+    public ?int $contactId = null;
+
+    #[Url]
     public ?int $ticketId = null;
 
     public function mount(): void
     {
-        if ($this->from === '') {
+        // Vindo do "Ver todos" de um contato, o que interessa são os antigos: sem a janela padrão.
+        if ($this->from === '' && $this->contactId === null) {
             $this->from = CarbonImmutable::now(config()->string('app.display_timezone'))->subDays(self::DEFAULT_DAYS)->toDateString();
         }
     }
 
     public function updated(string $name): void
     {
-        if (in_array($name, ['q', 'from', 'to', 'sectorId', 'userId', 'outcome'], true)) {
+        if (in_array($name, ['q', 'from', 'to', 'sectorId', 'userId', 'outcome', 'contactId'], true)) {
             $this->resetPage();
         }
     }
@@ -84,7 +89,7 @@ class Index extends Component
         assert($user instanceof User);
 
         $tickets = (new HistorySearch)
-            ->query($user, $this->q, $this->from ?: null, $this->to ?: null, $this->sectorId, $this->userId, $this->outcome ?: null)
+            ->query($user, $this->q, $this->from ?: null, $this->to ?: null, $this->sectorId, $this->userId, $this->outcome ?: null, $this->contactId)
             ->with(['contact', 'sector', 'assignee'])
             ->simplePaginate(self::PER_PAGE);
 
@@ -114,9 +119,13 @@ class Index extends Component
             'events' => TicketTimeline::changes($events),
             'timeline' => new TicketTimeline($events),
             'closer' => $closer,
-            'sectors' => Sector::query()->orderBy('name')->get(['id', 'name']),
+            // Setor apagado que já teve ticket continua filtrável; o que nunca teve não polui a lista.
+            'sectors' => Sector::withTrashed()
+                ->where(fn ($query) => $query->whereNull('deleted_at')->orWhereIn('id', Ticket::query()->select('sector_id')->whereNotNull('sector_id')))
+                ->orderBy('name')->get(['id', 'name', 'deleted_at']),
             'agents' => $user->canSeeAllSectors() ? User::query()->orderBy('name')->get(['id', 'name']) : null,
             'outcomes' => CloseOutcome::cases(),
+            'filteredContact' => $this->contactId === null ? null : Contact::query()->find($this->contactId)?->label(),
         ]);
     }
 }

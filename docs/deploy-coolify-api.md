@@ -68,7 +68,7 @@ crie e depois `PATCH /applications/{uuid}` com `{"dockerfile_target_build":"reve
 
 WAHA é `POST /applications/dockerimage` com `docker_registry_image_name: devlikeapro/waha`,
 `docker_registry_image_tag: gows-2026.10.1`, `ports_exposes: 3000`,
-`custom_network_aliases: waha-beta`, `connect_to_docker_network: true`, sem domínio e healthcheck
+`connect_to_docker_network: true` (o host do WAHA para os outros é o UUID do container, sem apelido), sem domínio e healthcheck
 `health_check_type: http`, `health_check_path: /ping`, `health_check_port: 3000`,
 `health_check_host: localhost`, `health_check_return_code: 200` — a imagem não tem `curl` nem `wget`,
 então o tipo `cmd` com `curl` reprova. Worker e scheduler usam `health_check_type: cmd` com

@@ -10,12 +10,12 @@
 
             @if ($contact)
                 <div class="flex items-center gap-3 rounded-lg border border-line bg-canvas px-3 py-2" data-testid="picked-contact">
-                    <flux:avatar :name="$contact->label()" size="sm" />
+                    <x-avatar :src="$contact->avatarUrl()" :name="$contact->label()" shape="round" size="lg" decorative />
                     <span class="min-w-0 flex-1">
                         <span class="block truncate text-sm font-semibold text-ink">{{ $contact->label() }}</span>
                         <span class="block truncate text-xs text-ink-3">{{ $contact->phoneLabel() }}</span>
                     </span>
-                    <button type="button" wire:click="clearContact" class="text-xs text-ink-3 hover:text-ink">Trocar</button>
+                    <flux:button type="button" size="xs" variant="subtle" wire:click="clearContact">Trocar</flux:button>
                 </div>
             @else
                 <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" placeholder="Buscar contato por nome, telefone ou e-mail" />

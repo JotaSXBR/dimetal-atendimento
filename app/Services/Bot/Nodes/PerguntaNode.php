@@ -2,6 +2,7 @@
 
 namespace App\Services\Bot\Nodes;
 
+use App\Services\Bot\BotMessages;
 use App\Services\Bot\BotRun;
 use App\Services\Bot\Flow\NodeData;
 use App\Services\Bot\Step;
@@ -9,8 +10,6 @@ use App\Services\Bot\Step;
 /** Pergunta e guarda a resposta numa variável. Resposta fora da validação repete a pergunta até duas vezes. */
 final class PerguntaNode extends Node
 {
-    private const DEFAULT_INVALID = 'Resposta inválida. Tente de novo.';
-
     public function enter(BotRun $run, NodeData $data): Step
     {
         $run->say($data->string('texto'));
@@ -34,7 +33,7 @@ final class PerguntaNode extends Node
             return Step::leave('erros');
         }
 
-        $run->say($data->filled('invalido') ? $data->string('invalido') : self::DEFAULT_INVALID);
+        $run->say($data->filled('invalido') ? $data->string('invalido') : BotMessages::text($run->flow, 'resposta_invalida'));
         $run->say($data->string('texto'));
 
         return Step::wait('input', $data->int('timeout_min', 10));
