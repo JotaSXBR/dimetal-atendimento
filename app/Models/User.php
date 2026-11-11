@@ -28,7 +28,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property UserRole $role
  * @property bool $active
  * @property bool $can_transfer
- * @property bool $sign_messages
+ * @property bool $sign_messages sem uso desde que a assinatura ficou sempre ativa (a coluna fica, sem migração destrutiva)
  * @property array<string, mixed>|null $alert_settings
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes

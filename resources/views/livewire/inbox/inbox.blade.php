@@ -406,7 +406,6 @@
                             </div>
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
                             <flux:button type="button" variant="subtle" icon="microphone" aria-label="Gravar áudio" x-show="mode === 'reply'" x-on:click="$dispatch('voice-start')" />
-                            <flux:button type="button" x-show="mode === 'reply'" variant="{{ $sign ? 'filled' : 'subtle' }}" icon="pencil-square" aria-pressed="{{ $sign ? 'true' : 'false' }}" aria-label="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" title="Assinatura {{ $sign ? 'ligada' : 'desligada' }}" wire:click="toggleSign" />
 
                             <div class="min-w-28 flex-1" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
                                 @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())

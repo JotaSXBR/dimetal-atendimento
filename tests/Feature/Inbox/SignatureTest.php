@@ -67,12 +67,18 @@ class SignatureTest extends TestCase
         $this->assertSame("Bom dia!\n_Jessé_ - Comercial", Signature::apply('Bom dia!', $this->me, Sector::query()->firstOrFail()));
     }
 
-    public function test_desligada_no_geral_ou_pelo_atendente_ou_sem_texto(): void
+    public function test_a_assinatura_vale_mesmo_com_sign_messages_falso_no_banco(): void
     {
-        $this->assertSame('Oi', Signature::apply('Oi', $this->me->forceFill(['sign_messages' => false]), null));
+        $this->me->forceFill(['sign_messages' => false])->save();
 
+        $this->assertSame('*Jessé @ Dimetal Distribuidora:*
+Oi', Signature::apply('Oi', $this->me->fresh() ?? $this->me, null));
+    }
+
+    public function test_desligada_na_empresa_ou_sem_texto(): void
+    {
         $this->save(['signatureEnabled' => false]);
-        $this->assertSame('Oi', Signature::apply('Oi', $this->me->forceFill(['sign_messages' => true]), null));
+        $this->assertSame('Oi', Signature::apply('Oi', $this->me, null));
 
         $this->save(['signatureEnabled' => true]);
         $this->assertSame('', Signature::apply('', $this->me, null));
@@ -92,16 +98,19 @@ class SignatureTest extends TestCase
         $this->assertSame("*Jessé @ Dimetal Distribuidora:*\nBom dia!", Message::query()->firstOrFail()->body);
     }
 
-    public function test_o_atendente_liga_e_desliga_e_a_escolha_persiste(): void
+    public function test_nao_ha_controle_de_assinatura_na_tela_e_o_envio_sai_assinado(): void
     {
-        $component = Livewire::actingAs($this->me)->test(Inbox::class)->set('ticketId', $this->ticket->id)->assertSet('sign', true)->call('toggleSign')->assertSet('sign', false);
+        $this->me->forceFill(['sign_messages' => false])->save();
 
-        $this->assertFalse($this->me->fresh()?->sign_messages);
+        $component = Livewire::actingAs($this->me->fresh() ?? $this->me)->test(Inbox::class)->set('ticketId', $this->ticket->id)
+            ->assertDontSee('Assinatura ligada')
+            ->assertDontSee('Assinatura desligada')
+            ->assertDontSeeHtml('toggleSign');
 
-        $component->set('draft', 'Sem assinatura')->call('send');
-        $this->assertSame('Sem assinatura', Message::query()->firstOrFail()->body);
+        $component->set('draft', 'Bom dia!')->call('send');
 
-        Livewire::actingAs($this->me->fresh() ?? $this->me)->test(Inbox::class)->assertSet('sign', false);
+        $this->assertSame('*Jessé @ Dimetal Distribuidora:*
+Bom dia!', Message::query()->firstOrFail()->body);
     }
 
     public function test_legenda_de_arquivo_nao_leva_assinatura(): void

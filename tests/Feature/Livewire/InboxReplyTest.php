@@ -42,7 +42,7 @@ class InboxReplyTest extends TestCase
         Storage::fake('local');
         RateLimiter::clear('send-message:1');
 
-        $this->me = User::factory()->create(['role' => UserRole::ATENDENTE, 'sign_messages' => false]);
+        $this->me = User::factory()->create(['role' => UserRole::ATENDENTE]);
         $this->ticket = Ticket::factory()->create([
             'channel_id' => Channel::factory()->connected()->create()->id,
             'contact_id' => Contact::factory()->create(['wa_id' => '5516997524950@c.us', 'name' => 'Maria'])->id,

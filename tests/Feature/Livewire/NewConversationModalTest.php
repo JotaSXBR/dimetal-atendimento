@@ -13,6 +13,7 @@ use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Settings\CompanySettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
@@ -42,7 +43,8 @@ class NewConversationModalTest extends TestCase
 
         $this->channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
         $this->sector = Sector::factory()->create(['name' => 'Vendas']);
-        $this->agent = User::factory()->create(['role' => UserRole::ATENDENTE, 'sign_messages' => false]);
+        CompanySettings::save(['signatureEnabled' => false]);
+        $this->agent = User::factory()->create(['role' => UserRole::ATENDENTE]);
         $this->agent->sectors()->attach($this->sector);
         $this->contact = Contact::factory()->create(['wa_id' => '5516999999999@c.us', 'name' => 'Maria Souza']);
     }

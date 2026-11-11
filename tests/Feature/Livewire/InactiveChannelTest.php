@@ -58,7 +58,7 @@ class InactiveChannelTest extends TestCase
     /** @return array{0: User, 1: Ticket} */
     private function mineOnInactiveChannel(): array
     {
-        $me = User::factory()->create(['role' => UserRole::ADMIN, 'sign_messages' => false]);
+        $me = User::factory()->create(['role' => UserRole::ADMIN]);
         $channel = Channel::factory()->connected()->create(['active' => false]);
         $ticket = Ticket::factory()->create([
             'channel_id' => $channel->id,

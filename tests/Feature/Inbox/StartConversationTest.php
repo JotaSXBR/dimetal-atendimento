@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\WahaEvent;
 use App\Services\Inbox\ConversationNotStarted;
 use App\Services\Inbox\IngestMessage;
+use App\Settings\CompanySettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\DB;
@@ -53,7 +54,8 @@ class StartConversationTest extends TestCase
         $this->channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
         $this->contact = Contact::factory()->create(['wa_id' => self::PEER]);
         $this->sector = Sector::factory()->create();
-        $this->agent = User::factory()->create(['role' => UserRole::ATENDENTE, 'sign_messages' => false]);
+        CompanySettings::save(['signatureEnabled' => false]);
+        $this->agent = User::factory()->create(['role' => UserRole::ATENDENTE]);
         $this->agent->sectors()->attach($this->sector);
     }
 
@@ -199,7 +201,9 @@ class StartConversationTest extends TestCase
     /** Supervisor: apagar o setor desfaz o vínculo do atendente, e o `guard` já recusaria; o supervisor só cai na releitura. */
     private function supervisor(): User
     {
-        return User::factory()->create(['role' => UserRole::SUPERVISOR, 'sign_messages' => false]);
+        CompanySettings::save(['signatureEnabled' => false]);
+
+        return User::factory()->create(['role' => UserRole::SUPERVISOR]);
     }
 
     /** O modelo é carregado ainda recebendo; o teste muda o banco depois, como outra aba faria. */
@@ -256,7 +260,8 @@ class StartConversationTest extends TestCase
 
     public function test_supervisor_inicia_em_qualquer_setor_que_receba(): void
     {
-        $supervisor = User::factory()->create(['role' => UserRole::SUPERVISOR, 'sign_messages' => false]);
+        CompanySettings::save(['signatureEnabled' => false]);
+        $supervisor = User::factory()->create(['role' => UserRole::SUPERVISOR]);
         $other = Sector::factory()->create();
 
         $result = $this->start(sector: $other, user: $supervisor);

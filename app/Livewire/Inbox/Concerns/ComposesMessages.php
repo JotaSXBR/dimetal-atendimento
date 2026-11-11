@@ -38,9 +38,6 @@ trait ComposesMessages
 
     public string $draft = '';
 
-    /** Assinar as mensagens (a escolha do atendente, guardada em `users.sign_messages`). */
-    public bool $sign = true;
-
     /** O arquivo que acabou de subir; `commitUpload` o move para a bandeja ou o descarta. */
     public ?TemporaryUploadedFile $upload = null;
 
@@ -49,17 +46,6 @@ trait ComposesMessages
 
     /** @var array<int, TemporaryUploadedFile> Bandeja: arquivos aceitos, na ordem de envio. */
     public array $attachments = [];
-
-    public function mountComposesMessages(): void
-    {
-        $this->sign = $this->user()->sign_messages;
-    }
-
-    public function toggleSign(): void
-    {
-        $this->sign = ! $this->sign;
-        $this->user()->forceFill(['sign_messages' => $this->sign])->save();
-    }
 
     /** O rascunho `/pre` chama as respostas rápidas do usuário; o texto entra no campo, editável. */
     public function useQuickReply(int $id): void

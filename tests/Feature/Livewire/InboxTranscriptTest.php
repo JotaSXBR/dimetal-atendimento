@@ -49,7 +49,7 @@ class InboxTranscriptTest extends TestCase
     /** @return array{0: User, 1: Ticket} um admin e um ticket em atendimento com ele */
     private function mine(): array
     {
-        $me = User::factory()->create(['role' => UserRole::ADMIN, 'sign_messages' => false]);
+        $me = User::factory()->create(['role' => UserRole::ADMIN]);
         $ticket = $this->ticket();
         $ticket->update(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $me->id]);
 
