@@ -3,6 +3,7 @@
 namespace App\Services\Bot;
 
 use App\Models\Sector;
+use App\Services\Bot\Templates\Segments\Distribuidora;
 use App\Services\Bot\Templates\Template;
 
 /** Os modelos que "Novo workflow" oferece, na ordem em que aparecem. Cada um é só um grafo inicial: o resto é do editor. */
@@ -19,7 +20,7 @@ final class WorkflowTemplates
     public const SEGMENT_GROUP = 'Por segmento';
 
     /** @var list<class-string<Template>> */
-    private const SEGMENTS = [];
+    private const SEGMENTS = [Distribuidora::class];
 
     /** @return list<array{key: string, name: string, description: string, group: string}> */
     public static function all(): array

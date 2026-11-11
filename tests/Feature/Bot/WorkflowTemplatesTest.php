@@ -95,12 +95,12 @@ class WorkflowTemplatesTest extends TestCase
         $this->assertSame(['em_branco', 'padrao', 'horario'], array_column($basicos, 'key'));
     }
 
-    public function test_a_lista_traz_os_tres_modelos_na_ordem(): void
+    public function test_a_lista_traz_os_modelos_na_ordem(): void
     {
         $all = WorkflowTemplates::all();
 
-        $this->assertSame(['em_branco', 'padrao', 'horario'], array_column($all, 'key'));
-        $this->assertSame(['Em branco', 'Atendimento padrão', 'Atendimento com horário'], array_column($all, 'name'));
+        $this->assertSame(['em_branco', 'padrao', 'horario', 'distribuidora'], array_column($all, 'key'));
+        $this->assertSame(['Em branco', 'Atendimento padrão', 'Atendimento com horário', 'Distribuidora'], array_column($all, 'name'));
 
         foreach ($all as $template) {
             $this->assertNotSame('', $template['description']);
