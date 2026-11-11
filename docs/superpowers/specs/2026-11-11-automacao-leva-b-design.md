@@ -9,7 +9,7 @@ Fazer da Automação uma parte confiável e com cara de produto: o bot entende o
 ## Objetivos
 
 1. **Fatia 1, bug do número com assinatura e assinatura sem linha em branco.**
-2. **Fatia 2, mensagens do bot editáveis por workflow.**
+2. **Fatia 2, mensagens do bot editáveis por workflow e galeria de modelos prontos** (inclui o modelo com horário, vindo do fluxo que o dono montou no beta).
 3. **Fatia 3, editor visual:** blocos com cara de produto, organizar, minimapa e zoom, menu de contexto e atalhos, erros de validação no próprio bloco.
 4. **Fatia 4, fluxo mais rico:** simulador de conversa no editor, bloco de horário de atendimento, atribuir a atendente no bloco Transferir.
 
@@ -68,6 +68,16 @@ Textos hoje fixos no código, passam a ter campo no workflow, com o valor de hoj
 - O motor lê as mensagens do grafo da versão da sessão; versões antigas, sem `settings`, comportam-se como hoje.
 - Validação ao publicar: tamanho máximo por texto (mesmo teto dos textos dos blocos) e variáveis desconhecidas como aviso, não bloqueio (`Vars` já deixa a chave desconhecida como está).
 
+**Variável nova `{{empresa}}`**, preenchida com `CompanySettings::name()`, disponível em todas as mensagens do bot (blocos e textos do workflow) e listada nos painéis ao lado das outras.
+
+**Galeria de modelos.** "Novo workflow" passa a abrir a escolha de um modelo em vez de criar direto:
+- **Em branco:** só o Início (`DefaultWorkflow::blank`).
+- **Atendimento padrão:** o modelo de hoje (`DefaultWorkflow::graph`), sem mudança.
+- **Atendimento com horário:** generalização do fluxo que o dono montou no beta. Início → Condição "Dentro do horário de funcionamento". Dentro do horário: Mensagem "Olá, {{nome}}! Bem-vindo a {{empresa}}." → Menu de setores ("Com qual setor você quer falar? Responda com o número da opção:", 5 min sem resposta) → Mensagem "Certo! Seu protocolo é {{protocolo}}. Você entrou na fila de {{setor}} e um atendente responde em instantes." → Transferir (setor escolhido no menu). Fora do horário: Mensagem "Olá, {{nome}}! Nosso horário de atendimento é {{horario}}. Retornamos {{proximo_horario}} e você já está na fila para ser atendido." → Transferir **sem setor fixo** (fila padrão: o primeiro setor do menu). No fluxo do dono o destino fora do horário era o setor "Vendas"; no modelo vira fila padrão e quem aplica troca o setor no bloco se quiser.
+- Cada modelo na galeria mostra nome, uma frase do que faz e, depois da fatia 3, uma miniatura do fluxo. O modelo aplicado cria um workflow novo com rascunho, sem publicar e sem ativar em canal.
+- Os modelos ficam em código (como o `DefaultWorkflow` hoje), com teste de que cada um publica sem erro do `FlowValidator`. Na fatia 4, o modelo com horário troca a Condição pelo bloco `horario`.
+- O fluxo do beta do dono não é alterado.
+
 ## Fatia 3: editor visual
 
 Mantém Rete.js; a base é a troca dos componentes padrão por nossos (`customize.node/socket/connection` do preset Lit).
@@ -108,4 +118,5 @@ Mantém Rete.js; a base é a troca dos componentes padrão por nossos (`customiz
 - **Mensagens guardadas no grafo e não em tabela própria:** acompanham versão e restauração. Custo: trocar um texto exige publicar uma versão nova.
 - **Rodapé vazio some o rodapé:** o dono pode ocultar a dica de `#sair`. Custo: cliente sem dica de como falar com atendente; o `#sair` continua funcionando.
 - **Atribuir via `ClaimTicket`:** reaproveita a disputa por ticket. Custo: se o setor não receber mais, vai só para a fila.
+- **Fila padrão fora do horário no modelo com horário:** diferente do que o dono tem no beta (Vendas fixo). Custo: o texto promete "você já está na fila" e ele cai no primeiro setor do menu, que pode não ser o ideal; quem aplica ajusta o bloco.
 - **Duas dependências possíveis (organizar e histórico) na fatia 3, a confirmar no começo dela:** se o peso do `elkjs` incomodar, "Organizar" sai e o resto fica.
