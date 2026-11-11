@@ -2,6 +2,7 @@
 
 namespace App\Services\Bot\Nodes;
 
+use App\Services\Bot\Answers\Answers;
 use App\Services\Bot\BotMessages;
 use App\Services\Bot\BotRun;
 use App\Services\Bot\Flow\NodeData;
@@ -21,8 +22,10 @@ final class PerguntaNode extends Node
     {
         $variable = $data->string('variavel');
 
-        if ($variable !== '' && $this->valid($data->string('validacao', 'texto'), $text)) {
-            $run->set($variable, $text);
+        $value = $variable !== '' ? $this->accepted($data->string('validacao', 'texto'), $text) : null;
+
+        if ($value !== null) {
+            $run->set($variable, $value);
 
             return Step::next();
         }
@@ -39,12 +42,14 @@ final class PerguntaNode extends Node
         return Step::wait('input', $data->int('timeout_min', 10));
     }
 
-    private function valid(string $kind, string $text): bool
+    /** O valor a guardar (já formatado nos tipos de `Answers`), ou nulo quando a resposta não vale. */
+    private function accepted(string $kind, string $text): ?string
     {
-        return match ($kind) {
-            'email' => filter_var($text, FILTER_VALIDATE_EMAIL) !== false,
-            'numero' => preg_match('/^\d+$/', $text) === 1,
-            default => $text !== '',
+        return match (true) {
+            $kind === 'email' => filter_var($text, FILTER_VALIDATE_EMAIL) !== false ? $text : null,
+            $kind === 'numero' => preg_match('/^\d+$/', $text) === 1 ? $text : null,
+            in_array($kind, Answers::kinds(), true) => Answers::parse($kind, $text),
+            default => $text !== '' ? $text : null,
         };
     }
 }

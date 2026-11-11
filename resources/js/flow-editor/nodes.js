@@ -42,7 +42,7 @@ export const BLOCKS = {
         fields: [
             { key: 'texto', label: 'Pergunta', kind: 'textarea' },
             { key: 'variavel', label: 'Guardar a resposta na variável', kind: 'text' },
-            { key: 'validacao', label: 'Aceitar', kind: 'select', options: [['texto', 'Qualquer texto'], ['email', 'E-mail'], ['numero', 'Só números']] },
+            { key: 'validacao', label: 'Aceitar', kind: 'select', options: [['texto', 'Qualquer texto'], ['email', 'E-mail'], ['numero', 'Só números'], ['cnpj', 'CNPJ'], ['cpf', 'CPF'], ['cep', 'CEP'], ['telefone', 'Telefone com DDD'], ['data', 'Data (dd/mm/aaaa)']] },
             invalid,
             timeout,
         ],
