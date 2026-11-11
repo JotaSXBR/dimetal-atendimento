@@ -120,7 +120,7 @@ class BotEngine
             $assigned = $this->queueAndAssign($ticket, $sector, $assignTo);
 
             $locked->update(['state' => BotSession::TRANSFERRED, 'waiting' => null, 'expires_at' => null]);
-            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => array_filter(['reason' => $reason, 'sector_id' => $sector?->id, 'assigned_user_id' => $assigned], fn (mixed $v, string $k): bool => $v !== null || $k !== 'assigned_user_id', ARRAY_FILTER_USE_BOTH)]);
+            TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_handoff', 'payload' => ['reason' => $reason, 'sector_id' => $sector?->id, ...($assigned !== null ? ['assigned_user_id' => $assigned] : [])]]);
         });
 
         $session->refresh();
@@ -201,10 +201,7 @@ class BotEngine
         };
     }
 
-    /**
-     * Depois de o ticket entrar na fila, tenta passá-lo à pessoa escolhida no bloco. Fica só na fila (sem erro) se ela estiver
-     * inativa, não atender o setor ou o ticket já tiver dono.
-     */
+    /** Passa o ticket (já na fila) à pessoa; devolve o id dela, ou nulo se ele já tinha dono ou foi assumido antes. */
     private function assign(Ticket $ticket, ?User $user): ?int
     {
         if ($user === null || ! (new ClaimTicket)($ticket, $user)) {

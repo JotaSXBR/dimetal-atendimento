@@ -16,7 +16,26 @@ final class Answers
             default => null,
         };
 
-        return $answer !== null ? $answer->parse($text) : trim($text);
+        return $answer !== null ? self::find($answer, $text) : trim($text);
+    }
+
+    /**
+     * O texto inteiro, senão cada linha (cliente cujo sistema acrescenta assinatura), senão cada palavra ("meu cnpj é ..."):
+     * vale o primeiro pedaço que é um valor válido.
+     */
+    private static function find(Answer $answer, string $text): ?string
+    {
+        foreach ([[$text], preg_split('/\R/u', $text) ?: [], preg_split('/\s+/u', $text) ?: []] as $pieces) {
+            foreach ($pieces as $piece) {
+                $value = $answer->parse(trim($piece));
+
+                if ($value !== null) {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
     }
 
     /** @return list<string> os tipos que passam por aqui (o editor oferece estes além de texto, e-mail e número) */

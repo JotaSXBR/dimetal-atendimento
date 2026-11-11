@@ -37,6 +37,13 @@ class AnswersTest extends TestCase
             'bissexto inexistente' => ['data', '29/02/2025', null],
             'bissexto existente' => ['data', '29/02/2024', '29/02/2024'],
             'data iso' => ['data', '2026-11-05', null],
+            'cnpj com assinatura do cliente na linha de cima' => ['cnpj', "*#Jessé:*\n11.222.333/0001-81", '11.222.333/0001-81'],
+            'cnpj dentro de uma frase' => ['cnpj', 'meu cnpj é 11.222.333/0001-81, obrigado', '11.222.333/0001-81'],
+            'cnpj alfanumérico dentro de uma frase' => ['cnpj', 'segue: 12.abc.345/01de-35', '12.ABC.345/01DE-35'],
+            'cpf com outros números na frase' => ['cpf', 'apto 12, cpf 11122233396', '111.222.333-96'],
+            'cep com número de casa na frase' => ['cep', 'rua x 123 cep 01310100', '01310-100'],
+            'duas linhas valem a primeira que vale' => ['cnpj', "11.222.333/0001-81\n11.222.333/0001-80", '11.222.333/0001-81'],
+            'frase sem valor válido' => ['cnpj', 'não sei o cnpj agora', null],
             'tipo desconhecido devolve o texto' => ['qualquer', '  oi  ', 'oi'],
         ];
     }
