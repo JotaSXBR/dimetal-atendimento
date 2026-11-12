@@ -111,4 +111,35 @@ class BackupCatalogTest extends TestCase
         $this->assertSame(0, $this->catalog()->prune());
         Storage::disk('backups')->assertExists('lixo.txt');
     }
+
+    public function test_nome_do_tipo_antes(): void
+    {
+        $at = CarbonImmutable::parse('2026-11-13 05:15:00', 'UTC');
+
+        $this->assertSame('dimetal-2026-11-13-0215-antes.dump', $this->catalog()->name(BackupKind::Antes, $at));
+        $this->assertSame('Antes de restaurar', BackupKind::Antes->label());
+    }
+
+    public function test_lista_reconhece_o_tipo_antes(): void
+    {
+        $name = $this->stored(BackupKind::Antes, 0);
+
+        $this->assertSame(BackupKind::Antes, $this->catalog()->find($name)?->kind);
+    }
+
+    public function test_prune_guarda_os_2_ultimos_antes_sem_mexer_nos_outros_tipos(): void
+    {
+        foreach (range(0, 3) as $i) {
+            $this->stored(BackupKind::Antes, $i);
+        }
+        foreach (range(0, 2) as $i) {
+            $this->stored(BackupKind::Manual, $i);
+        }
+
+        $this->assertSame(2, $this->catalog()->prune());
+
+        $left = collect($this->catalog()->all());
+        $this->assertCount(2, $left->where('kind', BackupKind::Antes));
+        $this->assertCount(3, $left->where('kind', BackupKind::Manual));
+    }
 }

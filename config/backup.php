@@ -18,7 +18,7 @@ return [
 
     'disk' => 'backups',
 
-    'keep' => ['diario' => 7, 'semanal' => 2, 'manual' => 3],
+    'keep' => ['diario' => 7, 'semanal' => 2, 'manual' => 3, 'antes' => 2],
 
     'compress' => 'zstd:3',
 
@@ -27,5 +27,20 @@ return [
     'stale_hours' => 26,
 
     'tmp_path' => storage_path('app/tmp'),
+
+    /*
+    | Restauração pela tela de Backup:
+    | `confirm_word`: o que o admin digita para confirmar; `upload_max_mb`: tamanho máximo do arquivo enviado;
+    | `keep_old_days`: por quantos dias o banco anterior (`<db>_antes_...`) fica guardado para desfazer;
+    | `recover_hours`: até quantas horas para trás se recuperam mensagens do WhatsApp depois da troca;
+    | `staging_timeout`: limite em segundos do `pg_restore` no banco novo (o job todo cabe nos 900 s do worker `history`).
+    */
+    'restore' => [
+        'confirm_word' => 'RESTAURAR',
+        'upload_max_mb' => 100,
+        'keep_old_days' => 7,
+        'recover_hours' => 72,
+        'staging_timeout' => 600,
+    ],
 
 ];
