@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AvatarController;
+use App\Http\Controllers\BackupDownloadController;
 use App\Http\Controllers\GoogleConnectionController;
 use App\Http\Controllers\LogoController;
 use App\Http\Controllers\MessageMediaController;
@@ -12,6 +13,7 @@ use App\Livewire\Contacts\Index as ContactsIndex;
 use App\Livewire\History\Index as HistoryIndex;
 use App\Livewire\Inbox\Inbox;
 use App\Livewire\Reports\Index as ReportsIndex;
+use App\Livewire\Settings\Backups;
 use App\Livewire\Settings\BusinessHoursPage;
 use App\Livewire\Settings\Channels;
 use App\Livewire\Settings\Company;
@@ -54,6 +56,8 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('configuracoes/google/redirect', [GoogleConnectionController::class, 'redirect'])->name('configuracoes.google.redirect');
     Route::get('configuracoes/google/callback', [GoogleConnectionController::class, 'callback'])->name('configuracoes.google.callback');
     Route::get('configuracoes/retencao', Retention::class)->name('configuracoes.retencao');
+    Route::get('configuracoes/backups', Backups::class)->name('configuracoes.backups');
+    Route::get('configuracoes/backups/{name}', BackupDownloadController::class)->where('name', '[A-Za-z0-9._-]+')->name('configuracoes.backups.baixar');
     Route::get('configuracoes/setores', Sectors::class)->name('configuracoes.setores');
 });
 

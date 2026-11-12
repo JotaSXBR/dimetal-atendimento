@@ -40,6 +40,7 @@ class Navigation
             $item('Google Contatos', 'configuracoes.google', 'admin', $config, 'Conexões', 'link', 'configuracoes.google*'),
             $item('Empresa e assinatura', 'configuracoes.empresa', 'admin', $config, 'Empresa', 'building-office'),
             $item('Anexos e retenção', 'configuracoes.retencao', 'admin', $config, 'Empresa', 'trash'),
+            $item('Backup do banco', 'configuracoes.backups', 'admin', $config, 'Empresa', 'circle-stack', 'configuracoes.backups*'),
         ];
     }
 

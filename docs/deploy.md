@@ -160,9 +160,15 @@ O beta vive na rede Docker `dimetal-beta` (recriado em 05/11; o anterior foi apa
 ### Mídia no RustFS (beta)
 
 `MEDIA_DISK=s3` mais `AWS_ENDPOINT`, `AWS_BUCKET=dimetal-beta-media`, `AWS_USE_PATH_STYLE_ENDPOINT=true` e as chaves do bucket, só nas
-variáveis do app, do worker e do scheduler. O pós-deploy do app roda `php artisan app:prepare-media`, que cria o bucket se faltar.
+variáveis do app, do worker e do scheduler. O pós-deploy do app roda `php artisan app:prepare-media`, que cria o bucket se faltar. O mesmo comando prepara o bucket dos backups do banco (`BACKUP_BUCKET`, ver `config/backup.php`).
 O job `ResolveMessageMediaJob` copia a mídia recebida do WAHA para o bucket por um stream temporário rebobinável (o SDK do S3 rebobina
 o corpo para assinar o envio); a falha de gravação leva o motivo do driver para o log.
+
+### Backup do banco
+
+`BACKUP_BUCKET` (por exemplo `dimetal-beta-backups`, no mesmo RustFS das chaves `AWS_*`) no app, no worker e no scheduler. O comando
+`app:backup-database` roda no scheduler às 02:15 (horário de exibição) e o cliente `pg_dump` 18 vem nos estágios `worker` e `scheduler`
+do `docker/Dockerfile`. Operação, tela e restauração: `docs/backup-e-restauracao.md`.
 
 ### Filas (dentro do `worker-beta`)
 
