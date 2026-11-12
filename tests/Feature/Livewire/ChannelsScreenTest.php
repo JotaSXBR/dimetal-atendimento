@@ -199,6 +199,15 @@ class ChannelsScreenTest extends TestCase
         $this->assertSame(5, $channel->fresh()->backfill_days);
     }
 
+    public function test_campo_de_dias_e_a_palavra_dias_quebram_de_linha_juntos(): void
+    {
+        $html = Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => Channel::factory()->create(['waha_session' => 'main'])])->html();
+
+        $this->assertSame(1, preg_match('/data-testid="backfill-days"[^>]*>(.*?)<\/span>\s*<\/div>/s', $html, $m), 'grupo ausente');
+        $this->assertStringContainsString('Quantos dias importar', $m[1]);
+        $this->assertStringContainsString('>dias<', $m[0]);
+    }
+
     public function test_importacao_de_historico_aceita_no_maximo_30_dias(): void
     {
         Http::fake(['*/api/sessions*' => Http::response(['status' => 'STARTING'], 200)]);

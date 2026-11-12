@@ -54,6 +54,13 @@ class InboxQueueCardTest extends TestCase
         return $m[1];
     }
 
+    public function test_lista_da_fila_e_relative_para_o_sr_only_nao_escapar_do_corte(): void
+    {
+        $this->ticket();
+
+        $this->assertStringContainsString('relative min-h-0 flex-1 overflow-y-auto', $this->html());
+    }
+
     public function test_card_mostra_atendente_pelo_primeiro_nome(): void
     {
         $this->ticket(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id]);

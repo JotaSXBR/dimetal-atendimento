@@ -1,4 +1,4 @@
-<section class="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 p-6 lg:grid-cols-[1fr_22rem]">
+<section class="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
     <div>
         <x-page-header title="Contatos" subtitle="Quem fala com a Dimetal. Edite o nome e os dados; contatos editados vão para o Google Contacts.">
             <flux:button variant="primary" icon="plus" wire:click="$toggle('showNew')">Novo contato</flux:button>

@@ -21,6 +21,16 @@ class SidebarTest extends TestCase
         return (string) $this->actingAs(User::factory()->create(['role' => $role]))->get($url)->assertOk()->getContent();
     }
 
+    public function test_telas_de_altura_fixa_descontam_o_cabecalho_mobile_para_a_pagina_nao_rolar(): void
+    {
+        foreach (['/inbox', '/historico'] as $url) {
+            $html = $this->page(UserRole::ADMIN, $url);
+
+            $this->assertStringContainsString('h-[calc(100dvh-3.5rem)]', $html, $url);
+            $this->assertStringContainsString('lg:h-dvh', $html, $url);
+        }
+    }
+
     private function xpath(string $html): \DOMXPath
     {
         $dom = new \DOMDocument;
