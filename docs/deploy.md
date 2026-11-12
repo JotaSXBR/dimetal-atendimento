@@ -164,6 +164,12 @@ variáveis do app, do worker e do scheduler. O pós-deploy do app roda `php arti
 O job `ResolveMessageMediaJob` copia a mídia recebida do WAHA para o bucket por um stream temporário rebobinável (o SDK do S3 rebobina
 o corpo para assinar o envio); a falha de gravação leva o motivo do driver para o log.
 
+### Backup do banco
+
+`BACKUP_BUCKET` (por exemplo `dimetal-beta-backups`, no mesmo RustFS das chaves `AWS_*`) no app, no worker e no scheduler. O comando
+`app:backup-database` roda no scheduler às 02:15 (horário de exibição) e o cliente `pg_dump` 18 vem nos estágios `worker` e `scheduler`
+do `docker/Dockerfile`. Operação, tela e restauração: `docs/backup-e-restauracao.md`.
+
 ### Filas (dentro do `worker-beta`)
 
 O estágio `worker` roda `docker/worker.sh`, que inicia **seis** processos de fila no mesmo container, um por tipo de
