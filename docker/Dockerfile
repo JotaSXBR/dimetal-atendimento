@@ -73,21 +73,9 @@ COPY docker/nginx/static-security-headers.conf /etc/nginx/static-security-header
 RUN sed -i '/add_header Cache-Control "public, max-age=31536000, immutable";/i\    include /etc/nginx/static-security-headers.conf;' /etc/nginx/server-opts.d/performance.conf \
     && test "$(grep -c 'include /etc/nginx/static-security-headers.conf' /etc/nginx/server-opts.d/performance.conf)" = 2
 
-USER www-data
-
-EXPOSE 8080
-
-
-# No Coolify, build por Dockerfile ignora o campo "start_command": o comando do container é o CMD da
-# imagem. Por isso worker e scheduler são estágios próprios, escolhidos em "dockerfile_target_build".
-
-# Cliente PostgreSQL 18 (pg_dump/pg_restore) só para worker e scheduler, que rodam o backup do banco. O Debian da base traz o
-# cliente 15 e o pg_dump recusa servidor de versão maior, então vem do repositório oficial PGDG. Sobe junto com o servidor:
-# se o Postgres virar 19, trocar para postgresql-client-19.
-FROM runtime AS dbtools
-
-USER root
-
+# Cliente PostgreSQL 18 (pg_dump/pg_restore) em todos os estágios: o backup roda no worker e no scheduler e a restauração pela tela
+# lê o arquivo no app. O Debian da base traz o cliente 15 e o pg_dump recusa servidor de versão maior, então vem do repositório
+# oficial PGDG. Sobe junto com o servidor: se o Postgres virar 19, trocar para postgresql-client-19.
 RUN apt-get update -qq \
     && apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg \
@@ -98,8 +86,13 @@ RUN apt-get update -qq \
 
 USER www-data
 
+EXPOSE 8080
 
-FROM dbtools AS worker
+
+# No Coolify, build por Dockerfile ignora o campo "start_command": o comando do container é o CMD da
+# imagem. Por isso worker e scheduler são estágios próprios, escolhidos em "dockerfile_target_build".
+
+FROM runtime AS worker
 
 STOPSIGNAL SIGTERM
 
@@ -120,7 +113,7 @@ STOPSIGNAL SIGTERM
 CMD ["php", "/var/www/html/artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
 
 
-FROM dbtools AS scheduler
+FROM runtime AS scheduler
 
 STOPSIGNAL SIGTERM
 

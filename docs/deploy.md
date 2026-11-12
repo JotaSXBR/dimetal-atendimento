@@ -170,6 +170,8 @@ o corpo para assinar o envio); a falha de gravação leva o motivo do driver par
 `app:backup-database` roda no scheduler às 02:15 (horário de exibição) e o cliente `pg_dump` 18 vem nos estágios `worker` e `scheduler`
 do `docker/Dockerfile`. Operação, tela e restauração: `docs/backup-e-restauracao.md`.
 
+A restauração pela tela põe o sistema em manutenção por alguns segundos e exige o modo de manutenção compartilhado: `APP_MAINTENANCE_DRIVER=cache` e `APP_MAINTENANCE_STORE=redis` no app, no worker e no scheduler (sem isso a tela recusa restaurar). O cliente `pg_dump`/`pg_restore` 18 vai em todos os estágios da imagem.
+
 ### Filas (dentro do `worker-beta`)
 
 O estágio `worker` roda `docker/worker.sh`, que inicia **seis** processos de fila no mesmo container, um por tipo de
