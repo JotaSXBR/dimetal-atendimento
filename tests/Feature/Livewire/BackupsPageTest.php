@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire;
 use App\Enums\UserRole;
 use App\Livewire\Settings\Backups;
 use App\Models\User;
+use App\Services\Backup\ManualBackupState;
 use App\Settings\BackupStatus;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Console\QueuedCommand;
@@ -82,7 +83,7 @@ class BackupsPageTest extends TestCase
     {
         Queue::fake();
 
-        Livewire::actingAs($this->admin())->test(Backups::class)->call('runNow')->assertSee('Backup iniciado');
+        Livewire::actingAs($this->admin())->test(Backups::class)->call('runNow')->assertSee('Backup em andamento');
 
         // Fila `history`: o worker dela tem timeout de 900 s; na `default` (120 s) um dump longo mataria o worker inteiro.
         Queue::assertPushed(QueuedCommand::class, fn (QueuedCommand $job): bool => $job->queue === 'history');
@@ -109,5 +110,47 @@ class BackupsPageTest extends TestCase
         Livewire::actingAs($supervisor)->test(Backups::class)->assertForbidden();
 
         Queue::assertNothingPushed();
+    }
+
+    public function test_fazer_agora_marca_em_andamento_e_a_tela_faz_polling(): void
+    {
+        Queue::fake();
+
+        Livewire::actingAs($this->admin())->test(Backups::class)->call('runNow')
+            ->assertSee('Backup em andamento')
+            ->assertSeeHtml('wire:poll.3s');
+
+        $this->assertTrue((new ManualBackupState)->isRunning());
+    }
+
+    public function test_clicar_de_novo_com_um_em_andamento_nao_enfileira_outro(): void
+    {
+        Queue::fake();
+        (new ManualBackupState)->markStarted();
+
+        Livewire::actingAs($this->admin())->test(Backups::class)->call('runNow')->assertSee('Já há um backup em andamento');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_tela_sem_backup_em_andamento_nao_faz_polling(): void
+    {
+        Livewire::actingAs($this->admin())->test(Backups::class)->assertDontSeeHtml('wire:poll');
+    }
+
+    public function test_mostra_o_backup_concluido_e_para_de_consultar(): void
+    {
+        (new ManualBackupState)->markFinished('dimetal-2026-11-12-1000-manual.dump', null);
+
+        Livewire::actingAs($this->admin())->test(Backups::class)
+            ->assertSee('Backup concluído: dimetal-2026-11-12-1000-manual.dump')
+            ->assertDontSeeHtml('wire:poll');
+    }
+
+    public function test_mostra_a_falha_do_backup_manual(): void
+    {
+        (new ManualBackupState)->markFinished(null, 'pg_dump falhou (código 1).');
+
+        Livewire::actingAs($this->admin())->test(Backups::class)->assertSee('O backup manual falhou')->assertSee('pg_dump falhou (código 1).');
     }
 }

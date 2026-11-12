@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use App\Jobs\RestoreDatabaseJob;
 use App\Services\Backup\BackupCatalog;
 use App\Services\Backup\BackupFile;
+use App\Services\Backup\ManualBackupState;
 use App\Services\Backup\Restore\AdminDatabase;
 use App\Services\Backup\Restore\DumpInfo;
 use App\Services\Backup\Restore\DumpInspector;
@@ -31,8 +32,6 @@ class Backups extends Component
 {
     use WithFileUploads;
 
-    public string $result = '';
-
     /** O arquivo enviado do computador (upload temporário do Livewire). */
     public mixed $upload = null;
 
@@ -58,13 +57,21 @@ class Backups extends Component
     }
 
     /** Enfileira o mesmo backup da rotina diária, como manual (um dump pode levar minutos: não roda no request). */
-    public function runNow(): void
+    public function runNow(ManualBackupState $state): void
     {
         $this->authorize('admin');
 
+        if ($state->isRunning()) {
+            $this->problem = 'Já há um backup em andamento.';
+
+            return;
+        }
+
+        $this->problem = null;
+        $state->markStarted();
+
         // Fila `history`: o worker dela aguenta até 900 s; na `default` (120 s) um dump longo mataria o worker e as outras filas.
         Artisan::queue('app:backup-database', ['--manual' => true])->onQueue('history');
-        $this->result = 'Backup iniciado. Ele aparece na lista quando terminar; recarregue em instantes.';
     }
 
     /** Abre a conferência de um backup da lista. */
@@ -187,6 +194,7 @@ class Backups extends Component
             'keep' => config('backup.keep'),
             'hour' => config()->string('backup.hour'),
             'stored' => $this->storedDatabases(),
+            'manual' => app(ManualBackupState::class)->get(),
             'restoring' => $restoring,
             'lastRestore' => $lastRestore === null ? null : [...$lastRestore, 'at' => $lastRestore['at']->setTimezone($timezone)],
             'confirmWord' => config()->string('backup.restore.confirm_word'),
