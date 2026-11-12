@@ -15,22 +15,22 @@ class SecurityHeadersTest extends TestCase
         $response->assertHeader('Cross-Origin-Resource-Policy', 'same-origin');
     }
 
-    public function test_csp_comeca_em_modo_somente_relatorio_sem_bloquear(): void
+    public function test_csp_vem_em_enforce_por_padrao(): void
     {
-        $response = $this->get('/login');
-
-        $response->assertHeader('Content-Security-Policy-Report-Only');
-        $response->assertHeaderMissing('Content-Security-Policy');
-    }
-
-    public function test_csp_enforce_usa_o_cabecalho_que_bloqueia(): void
-    {
-        config(['security.csp_mode' => 'enforce']);
-
         $response = $this->get('/login');
 
         $response->assertHeader('Content-Security-Policy');
         $response->assertHeaderMissing('Content-Security-Policy-Report-Only');
+    }
+
+    public function test_csp_somente_relatorio_usa_o_cabecalho_que_nao_bloqueia(): void
+    {
+        config(['security.csp_mode' => 'report-only']);
+
+        $response = $this->get('/login');
+
+        $response->assertHeader('Content-Security-Policy-Report-Only');
+        $response->assertHeaderMissing('Content-Security-Policy');
     }
 
     public function test_csp_desligada_nao_envia_o_cabecalho(): void
@@ -45,7 +45,7 @@ class SecurityHeadersTest extends TestCase
 
     public function test_a_politica_so_aceita_o_proprio_dominio_e_proibe_objetos_e_frames_externos(): void
     {
-        $policy = (string) $this->get('/login')->headers->get('Content-Security-Policy-Report-Only');
+        $policy = (string) $this->get('/login')->headers->get('Content-Security-Policy');
 
         $this->assertStringContainsString("default-src 'self'", $policy);
         $this->assertStringContainsString("script-src 'self'", $policy);
@@ -70,12 +70,12 @@ class SecurityHeadersTest extends TestCase
         $this->assertSame(1, preg_match_all('/<script(?![^>]*\ssrc=)[^>]*>(.*?)<\/script>/s', (string) $response->getContent(), $m));
         $hash = 'sha256-'.base64_encode(hash('sha256', $m[1][0], true));
 
-        $this->assertStringContainsString("'{$hash}'", $this->scriptSrc((string) $response->headers->get('Content-Security-Policy-Report-Only')));
+        $this->assertStringContainsString("'{$hash}'", $this->scriptSrc((string) $response->headers->get('Content-Security-Policy')));
     }
 
     public function test_politica_libera_blob_so_para_midia_e_nao_libera_inline_em_script(): void
     {
-        $policy = (string) $this->get('/login')->headers->get('Content-Security-Policy-Report-Only');
+        $policy = (string) $this->get('/login')->headers->get('Content-Security-Policy');
         $scriptSrc = $this->scriptSrc($policy);
 
         $this->assertStringContainsString("media-src 'self' blob:", $policy);
@@ -90,13 +90,13 @@ class SecurityHeadersTest extends TestCase
 
         $response->assertHeader('Permissions-Policy');
         $response->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
-        $response->assertHeader('Content-Security-Policy-Report-Only');
+        $response->assertHeader('Content-Security-Policy');
     }
 
     public function test_upgrade_insecure_requests_so_em_https(): void
     {
-        $this->assertStringNotContainsString('upgrade-insecure-requests', (string) $this->get('http://localhost/login')->headers->get('Content-Security-Policy-Report-Only'));
-        $this->assertStringContainsString('upgrade-insecure-requests', (string) $this->get('https://localhost/login')->headers->get('Content-Security-Policy-Report-Only'));
+        $this->assertStringNotContainsString('upgrade-insecure-requests', (string) $this->get('http://localhost/login')->headers->get('Content-Security-Policy'));
+        $this->assertStringContainsString('upgrade-insecure-requests', (string) $this->get('https://localhost/login')->headers->get('Content-Security-Policy'));
     }
 
     public function test_websocket_do_reverb_e_o_mesmo_dominio_e_segue_o_protocolo_da_pagina(): void
@@ -104,15 +104,15 @@ class SecurityHeadersTest extends TestCase
         // O .env de desenvolvimento define a URL pública do Reverb; sem ela, vale o domínio da própria página.
         config(['broadcasting.connections.reverb.public_url' => null]);
 
-        $this->assertStringContainsString("connect-src 'self' ws://localhost", (string) $this->get('http://localhost/login')->headers->get('Content-Security-Policy-Report-Only'));
-        $this->assertStringContainsString("connect-src 'self' wss://app.example.com", (string) $this->get('https://app.example.com/login')->headers->get('Content-Security-Policy-Report-Only'));
+        $this->assertStringContainsString("connect-src 'self' ws://localhost", (string) $this->get('http://localhost/login')->headers->get('Content-Security-Policy'));
+        $this->assertStringContainsString("connect-src 'self' wss://app.example.com", (string) $this->get('https://app.example.com/login')->headers->get('Content-Security-Policy'));
     }
 
     public function test_websocket_de_desenvolvimento_vem_da_url_publica_do_reverb(): void
     {
         config(['broadcasting.connections.reverb.public_url' => 'http://localhost:8080']);
 
-        $policy = (string) $this->get('/login')->headers->get('Content-Security-Policy-Report-Only');
+        $policy = (string) $this->get('/login')->headers->get('Content-Security-Policy');
 
         $this->assertStringContainsString("connect-src 'self' ws://localhost:8080", $policy);
     }
