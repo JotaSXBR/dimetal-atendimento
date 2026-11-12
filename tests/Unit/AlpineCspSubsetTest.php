@@ -59,8 +59,10 @@ class AlpineCspSubsetTest extends TestCase
             'ok: wire:click com método delete (o Livewire prefixa $wire.)' => ['<button wire:click="delete(1)">', []],
             'delete solto fora do wire:' => ['<button x-on:click="delete(1)">', ['palavra-chave']],
             'ok: prop Blade em componente' => ['<flux:input :value="$a ?? null" :label="__(\'x\')" />', []],
-            'ok: eco Blade e @js' => ['<div x-data="{ name: @js($n), id: {{ $id }} }">', []],
+            'ok: eco Blade e @js' => ['<div x-data="{ name: @js($sector->name), id: {{ $id }} }">', []],
             'ok: wire:model é caminho de propriedade' => ['<input wire:model="days.{{ $d }}.opens">', []],
+            '@js de array vira JSON.parse' => ['<div x-data="flowEditor($wire, @js($config))">', ['@js não escalar']],
+            'ok: @js de string conhecida' => ['<div x-data="{ name: @js($sector->name) }">', []],
             'ok: wire:confirm é texto' => ['<button wire:confirm="Apagar? Não há volta; ok.">', []],
         ];
     }
@@ -137,11 +139,45 @@ class AlpineCspSubsetTest extends TestCase
     /** Atributos cujo valor o Alpine não avalia como JS (texto, nome de ref, classes, seletor). */
     private const SEM_EXPRESSAO = '/^(?:x-ref|x-cloak|x-ignore|x-teleport|x-transition)/';
 
+    /**
+     * `@js($x)` com array ou objeto vira `JSON.parse('...')`, e `JSON` não existe no parser CSP; com string, número ou booleano é um
+     * literal e vale. O tipo não se vê no Blade, então só passa o que está nesta lista de usos escalares conhecidos: um `@js` novo
+     * dentro de atributo exige decidir (escalar entra aqui; array ou objeto vai por `data-*`, ver `flowEditor`).
+     */
+    private const JS_ESCALARES = [
+        '$model',
+        '$action',
+        '$sector->name',
+        '$message->body',
+        '$qrValue',
+        '\App\Settings\CompanySettings::logoUrl()',
+    ];
+
+    /** @return list<array{linha: int, atributo: string, regra: string}> */
+    private static function jsNaoEscalares(string $blade): array
+    {
+        $achados = [];
+
+        preg_match_all('/(?<![\w:@.\-])((?:x-[\w:.\-]+)|(?:@[\w:.\-]+)|(?::[\w:.\-]+)|(?:wire:(?:click|show|text|submit|keydown|keyup|change)[\w:.\-]*))\s*=\s*"([^"]*)"/', $blade, $atributos, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+
+        foreach ($atributos as $a) {
+            preg_match_all('/@js\(((?:[^()]|\([^()]*\))*)\)/', $a[2][0], $usos);
+
+            foreach ($usos[1] as $argumento) {
+                if (! in_array(trim($argumento), self::JS_ESCALARES, true)) {
+                    $achados[] = ['linha' => substr_count($blade, "\n", 0, $a[1][1]) + 1, 'atributo' => $a[1][0], 'regra' => '@js não escalar'];
+                }
+            }
+        }
+
+        return $achados;
+    }
+
     /** @return list<array{linha: int, atributo: string, regra: string}> */
     private static function violacoes(string $blade): array
     {
+        $achados = self::jsNaoEscalares($blade);
         $blade = self::semBlade($blade);
-        $achados = [];
 
         preg_match_all(
             '/(?<![\w:@.\-])((?:x-[\w:.\-]+)|(?:@[\w:.\-]+)|(?::[\w:.\-]+)|(?:wire:(?:click|show|text|submit|keydown|keyup|change)[\w:.\-]*))\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/',
