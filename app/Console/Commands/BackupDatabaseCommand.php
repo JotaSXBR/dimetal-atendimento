@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
 use App\Services\Backup\ManualBackupState;
+use App\Services\Backup\Restore\RestoreProgress;
 use App\Services\Backup\RunBackup;
 use Illuminate\Console\Command;
 
@@ -17,6 +18,14 @@ class BackupDatabaseCommand extends Command
     public function handle(RunBackup $backup, ManualBackupState $state): int
     {
         $manual = (bool) $this->option('manual');
+
+        // Um backup durante a restauração pegaria o `pg_terminate_backend` da troca e falharia.
+        if (app(RestoreProgress::class)->isRunning()) {
+            $manual && $state->markFinished(null, 'Há uma restauração em andamento; tente de novo quando ela terminar.');
+            $this->warn('Há uma restauração em andamento; o backup espera.');
+
+            return self::SUCCESS;
+        }
 
         try {
             $file = $backup($manual ? BackupKind::Manual : BackupKind::Diario);

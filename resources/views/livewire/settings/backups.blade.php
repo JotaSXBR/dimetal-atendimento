@@ -129,15 +129,18 @@
         @endforelse
     </div>
 
+    @if ($allowUpload)
     <div class="rounded-[14px] border border-line bg-surface p-4">
         <p class="text-sm font-semibold text-ink">Restaurar de um arquivo do seu computador</p>
         <p class="mt-1 text-xs text-ink-3">Um backup deste sistema (`.dump`, até {{ $uploadMaxMb }} MB), por exemplo vindo da cópia da empresa. O arquivo é conferido antes de qualquer coisa.</p>
+        <p class="mt-1 text-xs font-medium text-warn">Só envie arquivos de origem confiável: ao restaurar, o PostgreSQL executa o conteúdo do arquivo, e a conferência não protege contra um arquivo forjado de propósito.</p>
         <input type="file" wire:model="upload" accept=".dump" aria-label="Arquivo de backup (.dump)" class="mt-3 block w-full text-sm text-ink-2 file:mr-3 file:rounded-lg file:border-0 file:bg-canvas file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink">
         <p wire:loading wire:target="upload" class="mt-2 text-xs text-ink-3" role="status">Enviando e conferindo o arquivo…</p>
         @error('upload')
             <p class="mt-2 text-xs text-danger" role="alert">{{ $message }}</p>
         @enderror
     </div>
+    @endif
 
     @if ($stored !== [])
         <div class="rounded-[14px] border border-line bg-surface">

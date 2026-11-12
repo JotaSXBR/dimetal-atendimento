@@ -76,8 +76,12 @@ Junto vai a correção pedida: depois de "Fazer backup agora" a tela hoje não a
 2. **Conferência do arquivo (síncrona, antes de confirmar):** baixa o arquivo para uma pasta temporária, roda
    `pg_restore --list` e mostra data, banco de origem, versão do servidor e do `pg_dump`, compressão e tamanho. **Lista de
    permissão da TOC:** só os tipos listados em "Restrições"; qualquer outro (função, gatilho, regra, visão, extensão que não
-   seja `plpgsql`, publicação...) recusa o arquivo com a mensagem "este arquivo não é um backup deste sistema". É a defesa
-   contra dump malicioso, porque o `pg_restore` executa o SQL do arquivo. Vale igual para o arquivo da lista e para o enviado.
+   seja `pg_trgm`, publicação...) recusa o arquivo com a mensagem "este arquivo não é um backup deste sistema". Depois de
+   restaurar no banco novo, o catálogo também é conferido (nada de função, gatilho, regra, visão ou extensão que o sistema não usa).
+   **Limitação conhecida (achada na revisão):** isso pega arquivo errado ou honesto com objetos estranhos, **não um arquivo forjado de
+   propósito**: a TOC mostra só rótulos, e o `pg_restore` executa o SQL do corpo de cada entrada (e uma expressão de `DEFAULT` pode chamar
+   funções do servidor). O envio de arquivo é só para origem confiável e pode ser desligado com `BACKUP_RESTORE_UPLOAD=false`; endurecer
+   de verdade pede um usuário de banco que não seja superusuário.
 3. **Pré-requisitos do ambiente (mostrados na conferência; sem eles o botão não habilita):** `APP_MAINTENANCE_DRIVER=cache`
    com store compartilhado; o usuário do banco pode criar/renomear bancos e conectar em `postgres`; cliente `pg_restore`
    com versão igual ou maior que a do dump; nenhum backup ou restauração em andamento (locks `backup-database` e

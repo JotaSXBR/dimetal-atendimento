@@ -64,6 +64,23 @@ class RestoreSource
         return ['path' => $path, 'name' => $name];
     }
 
+    /** Apaga do bucket os arquivos enviados e abandonados há mais de um dia (a restauração e o cancelar já apagam os seus). */
+    public function sweepUploads(): int
+    {
+        $disk = $this->catalog->disk();
+        $limit = now()->subHours(self::ORPHAN_AGE_HOURS)->getTimestamp();
+        $deleted = 0;
+
+        foreach ($disk->files('restauracao') as $path) {
+            if ($disk->lastModified($path) < $limit) {
+                $disk->delete($path);
+                $deleted++;
+            }
+        }
+
+        return $deleted;
+    }
+
     /** Apaga só a cópia temporária local (o arquivo enviado continua no bucket para a restauração). */
     public function discardTemporary(string $path): void
     {

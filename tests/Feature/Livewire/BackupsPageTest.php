@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Livewire\Settings\Backups;
 use App\Models\User;
 use App\Services\Backup\ManualBackupState;
+use App\Services\Backup\Restore\RestoreProgress;
 use App\Settings\BackupStatus;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Console\QueuedCommand;
@@ -152,5 +153,16 @@ class BackupsPageTest extends TestCase
         (new ManualBackupState)->markFinished(null, 'pg_dump falhou (código 1).');
 
         Livewire::actingAs($this->admin())->test(Backups::class)->assertSee('O backup manual falhou')->assertSee('pg_dump falhou (código 1).');
+    }
+
+    public function test_fazer_agora_e_recusado_durante_uma_restauracao(): void
+    {
+        Queue::fake();
+        app(RestoreProgress::class)->begin('Restaurando o banco', ['inspect']);
+
+        Livewire::actingAs($this->admin())->test(Backups::class)->call('runNow')->assertSee('restauração em andamento');
+
+        Queue::assertNothingPushed();
+        $this->assertFalse((new ManualBackupState)->isRunning());
     }
 }

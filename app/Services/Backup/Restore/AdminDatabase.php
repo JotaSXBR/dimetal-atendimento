@@ -156,21 +156,32 @@ class AdminDatabase
      */
     public function stored(): array
     {
+        return $this->named('antes');
+    }
+
+    /**
+     * Os bancos de restauração (`<db>_restaurando_...`): só existem enquanto uma restauração roda; os que sobram são órfãos de um
+     * processo morto no meio.
+     *
+     * @return list<StoredDatabase>
+     */
+    public function staging(): array
+    {
+        return $this->named('restaurando');
+    }
+
+    /** @return list<StoredDatabase> */
+    private function named(string $kind): array
+    {
         $active = $this->active();
         $zone = config()->string('app.display_timezone');
         $found = [];
 
-        foreach ($this->rows('select datname, pg_database_size(datname) as bytes from pg_database where datname like ?', [str_replace('_', '\_', $active).'\_antes\_%']) as $row) {
-            $name = is_string($row['datname'] ?? null) ? $row['datname'] : '';
+        foreach ($this->rows('select datname, pg_database_size(datname) as bytes from pg_database where datname like ?', [str_replace('_', '\\_', $active).'\\_'.$kind.'\\_%']) as $row) {
+            $database = StoredDatabase::fromRow($row, $active, $kind, $zone);
 
-            if (preg_match('/^'.preg_quote($active, '/').'_antes_(\d{12})$/', $name, $m) !== 1) {
-                continue;
-            }
-
-            $at = CarbonImmutable::createFromFormat('YmdHi', $m[1], $zone);
-
-            if ($at !== null) {
-                $found[] = new StoredDatabase($name, $at, is_numeric($row['bytes'] ?? null) ? (int) $row['bytes'] : 0);
+            if ($database !== null) {
+                $found[] = $database;
             }
         }
 

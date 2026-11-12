@@ -16,6 +16,7 @@ use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use InvalidArgumentException;
 use Throwable;
 
 /**
@@ -70,6 +71,12 @@ class RestoreDatabase
     private function restore(RestoreRun $run): void
     {
         $this->progress->begin('Restaurando o banco', self::RESTORE_STEPS);
+        $this->assertReady();
+        $now = CarbonImmutable::now();
+        $run->active = $this->admin->active();
+        $run->incoming = AdminDatabase::stagingName($run->active, $now);
+        $run->archive = $this->freeArchiveName($run->active, $now, $run->incoming);
+        $this->assertNames($run);
 
         $this->step('inspect', function () use ($run): void {
             $fetched = $this->sources->fetch($run->request->source);
@@ -84,11 +91,6 @@ class RestoreDatabase
                 throw new RestoreRejected('Há um backup em andamento. Tente de novo em instantes.');
             }
         });
-
-        $now = CarbonImmutable::now();
-        $run->active = $this->admin->active();
-        $run->incoming = AdminDatabase::stagingName($run->active, $now);
-        $run->archive = $this->freeArchiveName($run->active, $now, $run->incoming);
 
         $this->step('restore', function () use ($run): void {
             $run->staging = $run->incoming;
@@ -105,6 +107,7 @@ class RestoreDatabase
     private function switchBack(RestoreRun $run): void
     {
         $this->progress->begin('Voltando para o banco guardado', self::SWITCH_STEPS);
+        $this->assertReady();
 
         $stored = collect($this->admin->stored())->firstWhere('name', $run->request->source);
 
@@ -118,6 +121,7 @@ class RestoreDatabase
         $run->archive = $this->freeArchiveName($run->active, $now, $run->incoming);
         $run->label = $stored->name;
         $run->from = $stored->createdAt;
+        $this->assertNames($run);
 
         $this->cutover($run);
     }
@@ -141,6 +145,8 @@ class RestoreDatabase
     /** @throws Throwable */
     private function cutover(RestoreRun $run): void
     {
+        $this->assertWithinDeadline($run);
+
         $this->step('swap', function () use ($run): void {
             $this->maintenance->enter();
             $run->inMaintenance = true;
@@ -154,9 +160,14 @@ class RestoreDatabase
             $this->maintenance->restartWorkers();
             $this->maintenance->leave();
             $run->inMaintenance = false;
+            // Daqui o sistema grava no banco novo: uma falha nos passos seguintes não pode desfazer a troca.
+            $run->swapped = false;
+            $run->committed = true;
         });
 
-        $this->step('recover', fn () => $this->recoverMessages($run->from ?? CarbonImmutable::now()));
+        $this->step('recover', function () use ($run): void {
+            $this->bestEffort($run, 'A recuperação das mensagens do WhatsApp falhou; use a recuperação manual em cada canal.', fn () => $this->recoverMessages($run->from ?? CarbonImmutable::now()));
+        });
     }
 
     /** Um `RecoverMessagesJob` por canal ativo e conectado, do backup (no máximo `recover_hours` atrás) até agora. */
@@ -172,31 +183,100 @@ class RestoreDatabase
 
     private function succeed(RestoreRun $run): void
     {
-        BackupStatus::recordRestore($run->label, $run->request->actor);
-        Notification::send($this->recipients->admins(), new BackupRestored);
+        $this->bestEffort($run, 'O registro da restauração ou o aviso aos administradores não pôde ser gravado.', function () use ($run): void {
+            BackupStatus::recordRestore($run->label, $run->request->actor);
+            Notification::send($this->recipients->admins(), new BackupRestored);
+        });
 
         $message = $run->request->mode === 'switch'
             ? 'O banco guardado voltou a ser o ativo. O banco que estava ativo ficou guardado.'
             : 'Restauração concluída. O banco anterior ficou guardado por '.config()->integer('backup.restore.keep_old_days').' dias.';
+        if ($run->warnings !== []) {
+            $message .= ' Atenção: '.implode(' ', $run->warnings);
+        }
+
         $this->progress->finish($message);
         $this->log($run, 'ok', $message);
     }
 
     private function fail(RestoreRun $run, Throwable $e): void
     {
-        $safe = $e instanceof InvalidDump || $e instanceof RestoreRejected || $e instanceof SwapFailed || $e instanceof DumpFailed;
-        $message = $safe ? $e->getMessage() : 'Erro inesperado na restauração ('.class_basename($e).'). Veja o log do app.';
-        $safe || report($e);
+        $message = $this->publicMessage($e);
 
         try {
             $message = $this->undo($run, $message);
         } catch (Throwable $undoFailure) {
             report($undoFailure);
-            $message .= ' Atenção: não foi possível desfazer a troca; confira o banco ativo.';
+            // Sem volta: o sistema fica em manutenção (ninguém grava num banco meio migrado) até o admin conferir.
+            $run->keepDown = true;
+            $message .= ' Atenção: não foi possível desfazer a troca; o sistema foi deixado em manutenção. Confira o banco ativo e rode `php artisan up` quando estiver certo.';
         }
 
         $this->progress->fail($message);
         $this->log($run, 'falhou', $message);
+    }
+
+    /**
+     * O texto que a página de andamento (pública) mostra. Mensagens de processo (`pg_dump`, `pg_restore`) podem trazer host, usuário ou
+     * linhas de tabela no stderr: ficam só no log.
+     */
+    private function publicMessage(Throwable $e): string
+    {
+        if ($e instanceof DumpFailed) {
+            report($e);
+
+            return 'O backup de segurança falhou, então nada foi trocado. O detalhe está no log do app.';
+        }
+
+        if ($e instanceof InvalidDump || $e instanceof RestoreRejected || $e instanceof SwapFailed) {
+            return $e->getMessage();
+        }
+
+        report($e);
+
+        return 'Erro inesperado na restauração ('.class_basename($e).'). Veja o log do app.';
+    }
+
+    /** @throws RestoreRejected */
+    private function assertReady(): void
+    {
+        $problem = $this->maintenance->problem();
+
+        if ($problem !== null) {
+            throw new RestoreRejected($problem);
+        }
+    }
+
+    /** Os nomes dos bancos novos cabem nas regras (senão o erro só apareceria depois do download e do backup de segurança). */
+    private function assertNames(RestoreRun $run): void
+    {
+        try {
+            AdminDatabase::assertName($run->incoming);
+            AdminDatabase::assertName($run->archive);
+        } catch (InvalidArgumentException) {
+            throw new RestoreRejected('O nome do banco ativo não permite criar o banco de restauração (só letras minúsculas, números e _, até 38 caracteres).');
+        }
+    }
+
+    /** @throws RestoreRejected */
+    private function assertWithinDeadline(RestoreRun $run): void
+    {
+        $elapsed = CarbonImmutable::now()->getTimestamp() - $run->startedAt->getTimestamp();
+
+        if ($elapsed > config()->integer('backup.restore.cutover_deadline')) {
+            throw new RestoreRejected('A restauração passou do tempo seguro antes da troca e foi cancelada; o banco atual continua ativo. Tente de novo ou use o roteiro manual para bancos muito grandes.');
+        }
+    }
+
+    /** Passo que roda depois de a restauração já ter dado certo: se falhar vira aviso, não desfaz a troca. */
+    private function bestEffort(RestoreRun $run, string $warning, callable $work): void
+    {
+        try {
+            $work();
+        } catch (Throwable $e) {
+            report($e);
+            $run->warnings[] = $warning;
+        }
     }
 
     /** Depois da troca, volta ao banco anterior; apaga o banco novo criado para esta restauração. */
@@ -218,7 +298,7 @@ class RestoreDatabase
     private function release(RestoreRun $run, Lock $lock): void
     {
         try {
-            $run->inMaintenance && $this->maintenance->leave();
+            $run->inMaintenance && ! $run->keepDown && $this->maintenance->leave();
         } catch (Throwable $e) {
             report($e);
         }

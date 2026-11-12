@@ -61,6 +61,12 @@ class Backups extends Component
     {
         $this->authorize('admin');
 
+        if (app(RestoreProgress::class)->isRunning()) {
+            $this->problem = 'Há uma restauração em andamento; espere ela terminar para fazer um backup.';
+
+            return;
+        }
+
         if ($state->isRunning()) {
             $this->problem = 'Já há um backup em andamento.';
 
@@ -85,6 +91,13 @@ class Backups extends Component
     public function updatedUpload(): void
     {
         $this->authorize('admin');
+
+        if (! config()->boolean('backup.restore.allow_upload')) {
+            $this->upload = null;
+            $this->problem = 'O envio de arquivo está desligado neste ambiente (BACKUP_RESTORE_UPLOAD=false).';
+
+            return;
+        }
 
         $this->validate([
             'upload' => ['required', 'file', 'extensions:dump', 'max:'.(config()->integer('backup.restore.upload_max_mb') * 1024)],
@@ -199,6 +212,7 @@ class Backups extends Component
             'lastRestore' => $lastRestore === null ? null : [...$lastRestore, 'at' => $lastRestore['at']->setTimezone($timezone)],
             'confirmWord' => config()->string('backup.restore.confirm_word'),
             'uploadMaxMb' => config()->integer('backup.restore.upload_max_mb'),
+            'allowUpload' => config()->boolean('backup.restore.allow_upload'),
         ]);
     }
 
@@ -253,8 +267,10 @@ class Backups extends Component
             return 'Já há uma restauração em andamento.';
         }
 
-        if (! app(Maintenance::class)->ready()) {
-            return 'A restauração pela tela precisa do modo de manutenção compartilhado: defina APP_MAINTENANCE_DRIVER=cache e APP_MAINTENANCE_STORE=redis no app, no worker e no scheduler.';
+        $environment = app(Maintenance::class)->problem();
+
+        if ($environment !== null) {
+            return $environment;
         }
 
         try {

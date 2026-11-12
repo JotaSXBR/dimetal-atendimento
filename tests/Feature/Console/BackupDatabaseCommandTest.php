@@ -6,6 +6,7 @@ use App\Services\Backup\BackupFile;
 use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
 use App\Services\Backup\ManualBackupState;
+use App\Services\Backup\Restore\RestoreProgress;
 use App\Services\Backup\RunBackup;
 use Carbon\CarbonImmutable;
 use Tests\TestCase;
@@ -86,5 +87,25 @@ class BackupDatabaseCommandTest extends TestCase
         $this->artisan('app:backup-database')->assertSuccessful();
 
         $this->assertSame('running', $state->get()['status']);
+    }
+
+    public function test_manual_durante_uma_restauracao_nao_faz_backup(): void
+    {
+        app(RestoreProgress::class)->begin('Restaurando o banco', ['inspect']);
+        $this->mock(RunBackup::class)->shouldNotReceive('__invoke');
+        (new ManualBackupState)->markStarted();
+
+        $this->artisan('app:backup-database --manual')->assertSuccessful();
+
+        $this->assertSame('failed', (new ManualBackupState)->get()['status']);
+        $this->assertStringContainsString('restauração em andamento', (string) (new ManualBackupState)->get()['error']);
+    }
+
+    public function test_diario_durante_uma_restauracao_espera_o_proximo_dia(): void
+    {
+        app(RestoreProgress::class)->begin('Restaurando o banco', ['inspect']);
+        $this->mock(RunBackup::class)->shouldNotReceive('__invoke');
+
+        $this->artisan('app:backup-database')->expectsOutputToContain('restauração em andamento')->assertSuccessful();
     }
 }

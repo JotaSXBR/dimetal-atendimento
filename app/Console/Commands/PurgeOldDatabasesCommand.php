@@ -3,15 +3,19 @@
 namespace App\Console\Commands;
 
 use App\Services\Backup\Restore\AdminDatabase;
+use App\Services\Backup\Restore\RestoreSource;
 use Illuminate\Console\Command;
 
 class PurgeOldDatabasesCommand extends Command
 {
     protected $signature = 'app:purge-old-databases';
 
-    protected $description = 'Apaga os bancos guardados por uma restauração (<db>_antes_...) com mais de 7 dias';
+    protected $description = 'Apaga os bancos guardados por uma restauração (<db>_antes_...) com mais de 7 dias, bancos de restauração órfãos e arquivos enviados abandonados';
 
-    public function handle(AdminDatabase $admin): int
+    /** Um banco `_restaurando_` com mais que isto é de um job morto no meio (a restauração inteira cabe em 15 minutos). */
+    private const ORPHAN_HOURS = 24;
+
+    public function handle(AdminDatabase $admin, RestoreSource $sources): int
     {
         $limit = now()->subDays(config()->integer('backup.restore.keep_old_days'));
         $dropped = 0;
@@ -25,6 +29,18 @@ class PurgeOldDatabasesCommand extends Command
         }
 
         $this->info("Bancos guardados apagados: {$dropped}");
+
+        $orphans = 0;
+
+        foreach ($admin->staging() as $database) {
+            if ($database->createdAt->lessThan(now()->subHours(self::ORPHAN_HOURS))) {
+                $admin->drop($database->name);
+                $orphans++;
+            }
+        }
+
+        $this->info("Bancos de restauração órfãos apagados: {$orphans}");
+        $this->info('Arquivos enviados abandonados apagados: '.$sources->sweepUploads());
 
         return self::SUCCESS;
     }

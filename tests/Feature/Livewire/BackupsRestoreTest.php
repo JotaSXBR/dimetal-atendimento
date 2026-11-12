@@ -43,7 +43,13 @@ class BackupsRestoreTest extends TestCase
         Storage::fake('backups');
         Storage::fake('local');
         Queue::fake();
-        config(['app.display_timezone' => 'America/Sao_Paulo', 'app.maintenance.driver' => 'cache']);
+        config([
+            'app.display_timezone' => 'America/Sao_Paulo',
+            'app.maintenance.driver' => 'cache',
+            'app.maintenance.store' => 'array',
+            'session.driver' => 'array',
+            'cache.default' => 'array',
+        ]);
         Storage::disk('backups')->put(self::NAME, 'conteudo');
 
         $this->admin = $this->mock(AdminDatabase::class);
@@ -132,6 +138,31 @@ class BackupsRestoreTest extends TestCase
         $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'RESTAURAR')->call('restore')->assertSee('APP_MAINTENANCE_DRIVER=cache');
 
         Queue::assertNothingPushed();
+    }
+
+    public function test_recusa_com_sessao_no_banco(): void
+    {
+        config(['session.driver' => 'database']);
+
+        $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'RESTAURAR')->call('restore')->assertSee('SESSION_DRIVER=redis');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_aviso_de_origem_confiavel_no_envio_de_arquivo(): void
+    {
+        $this->page()->assertSee('origem confiável');
+    }
+
+    public function test_envio_pode_ser_desligado_por_configuracao(): void
+    {
+        config(['backup.restore.allow_upload' => false]);
+
+        $this->page()->assertDontSee('Restaurar de um arquivo do seu computador')
+            ->set('upload', UploadedFile::fake()->create('meu-backup.dump', 10))
+            ->assertSee('envio de arquivo está desligado');
+
+        $this->assertSame([], Storage::disk('backups')->allFiles('restauracao'));
     }
 
     public function test_recusa_sem_permissao_de_criar_banco(): void

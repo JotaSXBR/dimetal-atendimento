@@ -10,7 +10,9 @@ use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Process\FakeProcessResult;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyTimeout;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Tests\TestCase;
@@ -119,6 +121,25 @@ class SideDatabaseTest extends TestCase
         }
     }
 
+    public function test_mensagem_publica_do_erro_nao_leva_o_stderr_que_pode_ter_dado_de_cliente(): void
+    {
+        Log::spy();
+        $stderr = 'pg_restore: error: COPY failed for table "users": ERROR: x CONTEXT: COPY users, line 1: "joao@cliente.com 5511999990000"';
+        Process::fake(fn (PendingProcess $process) => Process::result('', $stderr, 1));
+
+        try {
+            $this->side->restore($this->database, '/tmp/arquivo.dump');
+            $this->fail('devia lançar RestoreRejected');
+        } catch (RestoreRejected $e) {
+            $this->assertStringNotContainsString('joao@cliente.com', $e->getMessage());
+            $this->assertStringContainsString('código 1', $e->getMessage());
+            $this->assertStringContainsString('log', $e->getMessage());
+        }
+
+        // O detalhe vai para o log (que só quem opera o servidor lê).
+        Log::shouldHaveReceived('warning')->withArgs(fn (string $message, array $context): bool => str_contains((string) ($context['stderr'] ?? ''), 'COPY users'))->once();
+    }
+
     public function test_restore_com_timeout_vira_rejected(): void
     {
         Process::fake(function (PendingProcess $process) {
@@ -160,6 +181,43 @@ class SideDatabaseTest extends TestCase
 
         $row = $this->admin->connection()->selectOne('select count(*) as total from pg_stat_activity where datname = ?', [$this->database]);
         $this->assertSame(0, (int) $row->total);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function objetosEstranhos(): array
+    {
+        return [
+            'função' => ['create function pwn() returns int language sql as \'select 1\''],
+            'gatilho' => ['create function trg() returns trigger language plpgsql as \'begin return new; end\'; create trigger t before insert on settings for each row execute function trg()'],
+            'visão' => ['create view v as select 1 as x'],
+            'regra' => ['create rule r as on insert to settings do also select 1'],
+            'extensão que o sistema não usa' => ['create extension pgcrypto'],
+        ];
+    }
+
+    #[DataProvider('objetosEstranhos')]
+    public function test_verify_recusa_objeto_que_o_sistema_nao_usa(string $sql): void
+    {
+        // A TOC só mostra rótulos; o catálogo do banco restaurado mostra o que de fato foi criado.
+        $this->schema();
+        $this->admin->connectionTo($this->database, 'pgsql_side')->unprepared($sql);
+
+        try {
+            $this->side->verify($this->database);
+            $this->fail('devia lançar RestoreRejected');
+        } catch (RestoreRejected $e) {
+            $this->assertStringContainsString('objetos que este sistema não usa', $e->getMessage());
+        }
+    }
+
+    public function test_verify_aceita_a_extensao_pg_trgm_do_sistema(): void
+    {
+        $this->schema();
+        $this->admin->connectionTo($this->database, 'pgsql_side')->unprepared('create extension pg_trgm');
+
+        $this->side->verify($this->database);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_verify_recusa_sem_admin_ativo(): void

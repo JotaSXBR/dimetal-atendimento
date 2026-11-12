@@ -33,7 +33,11 @@ return [
     | `confirm_word`: o que o admin digita para confirmar; `upload_max_mb`: tamanho máximo do arquivo enviado;
     | `keep_old_days`: por quantos dias o banco anterior (`<db>_antes_...`) fica guardado para desfazer;
     | `recover_hours`: até quantas horas para trás se recuperam mensagens do WhatsApp depois da troca;
-    | `staging_timeout`: limite em segundos do `pg_restore` no banco novo (o job todo cabe nos 900 s do worker `history`).
+    | `staging_timeout`: limite em segundos do `pg_restore` no banco novo (o job todo cabe nos 900 s do worker `history`);
+    | `allow_upload`: aceita enviar um `.dump` do computador (`BACKUP_RESTORE_UPLOAD=false` desliga; o `pg_restore` executa o SQL do
+    |   arquivo, então envie só arquivos de origem confiável);
+    | `cutover_deadline`: segundos desde o início depois dos quais a troca não começa mais (sobra tempo para a troca e o `migrate`
+    |   dentro dos 840 s do job, e o job nunca é morto pelo worker no meio da manutenção).
     */
     'restore' => [
         'confirm_word' => 'RESTAURAR',
@@ -41,6 +45,8 @@ return [
         'keep_old_days' => 7,
         'recover_hours' => 72,
         'staging_timeout' => 600,
+        'allow_upload' => (bool) env('BACKUP_RESTORE_UPLOAD', true),
+        'cutover_deadline' => 660,
     ],
 
 ];

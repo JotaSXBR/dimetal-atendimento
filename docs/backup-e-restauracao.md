@@ -30,7 +30,15 @@ Os anexos ficam fora: já estão no RustFS e a empresa os puxa por rclone. Desen
 **Pré-requisitos do ambiente** (a tela recusa e diz o que falta):
 - `APP_MAINTENANCE_DRIVER=cache` e `APP_MAINTENANCE_STORE=redis` no app, no worker e no scheduler: a troca põe o sistema em manutenção
   por alguns segundos e só o modo compartilhado pausa os três containers.
+- `SESSION_DRIVER=redis` e `CACHE_STORE=redis`: o banco troca no meio, e a página de andamento, o lock e o andamento têm de ficar fora dele.
 - O usuário do banco (`DB_USERNAME`) precisa poder criar e renomear bancos (superusuário ou `CREATEDB`) e conectar no banco `postgres`.
+
+**Segurança do arquivo enviado (leia antes de ligar em produção):** o `pg_restore` executa o conteúdo do arquivo com o usuário do banco
+(no beta, superusuário). A tela confere os rótulos da TOC e, depois de restaurar no banco novo, o catálogo (nenhuma função, gatilho, visão,
+regra ou extensão que o sistema não usa), mas isso **não protege contra um arquivo forjado de propósito** (o corpo de uma entrada pode
+trazer SQL que o rótulo não mostra, e uma expressão de `DEFAULT` pode chamar funções do servidor). Por isso: envie só arquivos de origem
+confiável (os que o próprio sistema gerou, ou a cópia da empresa), e em produção prefira `BACKUP_RESTORE_UPLOAD=false` (só restaura backups
+do bucket) e um usuário de banco que não seja superusuário.
 
 **Passo a passo:**
 1. Configuração > Backup do banco. Na linha do backup, **Restaurar**; ou **Enviar arquivo** (um `.dump` deste sistema, até ~100 MB).
@@ -56,8 +64,14 @@ o tamanho do banco: confira o disco da VPS.
   pedidas desde a data do backup.
 - Tickets, notas e configurações feitos depois do backup não voltam (só as mensagens do WhatsApp, pela recuperação).
 - Se a tela der erro no meio, a mensagem fica na página de andamento e no log (`Restauração do banco`, com usuário, arquivo e resultado).
-- Se o processo morrer no meio (deploy, queda), o estado "em andamento" expira em 1 hora, e o modo de manutenção é compartilhado: se o
-  sistema ficar preso em manutenção, `php artisan up` em qualquer container do app libera.
+- Se o processo morrer no meio (deploy, queda), o estado "em andamento" expira em 1 hora. Um banco `<db>_restaurando_...` que sobrar é
+  apagado pela limpeza diária (03:00) depois de 1 dia, e o mesmo vale para arquivos enviados e abandonados.
+- Se o sistema ficar preso em manutenção (o desfazer da troca falhou, ou o processo morreu entre entrar e sair): confira qual banco está
+  ativo, `php artisan up` em qualquer container do app libera a manutenção e, se o banco ativo tiver ficado com as conexões bloqueadas,
+  `ALTER DATABASE <db> WITH ALLOW_CONNECTIONS true;` no banco `postgres`.
+- A troca só começa até ~11 minutos depois do início (`backup.restore.cutover_deadline`); depois disso a restauração é cancelada com o banco
+  atual intacto. Para bancos que não cabem nisso use o plano B abaixo.
+- Não dá para fazer backup (manual ou agendado) durante uma restauração: ele espera.
 
 ## Primeiro backup no beta e teste de restauração (para o dono)
 

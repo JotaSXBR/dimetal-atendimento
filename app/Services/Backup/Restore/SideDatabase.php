@@ -2,7 +2,9 @@
 
 namespace App\Services\Backup\Restore;
 
+use Illuminate\Database\Connection;
 use Illuminate\Process\Exceptions\ProcessTimedOutException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
@@ -41,7 +43,11 @@ class SideDatabase
             $error = trim($result->errorOutput());
             $error = $settings['password'] === '' ? $error : str_replace($settings['password'], '***', $error);
 
-            throw new RestoreRejected(sprintf('O pg_restore falhou (código %d)%s', (int) $result->exitCode(), $error === '' ? '.' : ': '.Str::limit($error, self::ERROR_LIMIT)));
+            // O stderr do pg_restore pode trazer linhas das tabelas (CONTEXT: COPY ...) e a página de andamento é pública: o detalhe
+            // fica só no log, a mensagem mostrada leva o código.
+            Log::warning('pg_restore falhou na restauração do banco', ['exit' => (int) $result->exitCode(), 'stderr' => Str::limit($error, self::ERROR_LIMIT)]);
+
+            throw new RestoreRejected(sprintf('O pg_restore falhou (código %d). O detalhe está no log do app.', (int) $result->exitCode()));
         }
     }
 
@@ -63,6 +69,36 @@ class SideDatabase
         }
     }
 
+    /**
+     * A TOC de um dump só mostra rótulos; o catálogo do banco restaurado mostra o que de fato foi criado. Função, gatilho, regra, visão,
+     * evento, linguagem ou extensão que o sistema não usa nunca ficam em um banco que vai assumir o lugar do ativo (o app roda como o
+     * dono do banco e executaria esses objetos). Não cobre expressões de DEFAULT/CHECK nem o que o `pg_restore` executa durante a
+     * restauração: por isso o envio de arquivo é só para origem confiável (ver o spec e o roteiro).
+     *
+     * @throws RestoreRejected
+     */
+    private function assertOnlyOurObjects(Connection $db): void
+    {
+        $row = $this->admin->query($db, <<<'SQL'
+            select (
+                (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                  where n.nspname not in ('pg_catalog', 'information_schema')
+                    and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e'))
+              + (select count(*) from pg_trigger where not tgisinternal)
+              + (select count(*) from pg_rewrite r join pg_class c on c.oid = r.ev_class where c.relnamespace = 'public'::regnamespace and c.relkind = 'r')
+              + (select count(*) from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('v', 'm', 'f'))
+              + (select count(*) from pg_event_trigger)
+              + (select count(*) from pg_language where lanispl and lanname <> 'plpgsql')
+              + (select count(*) from pg_extension where extname not in ('plpgsql', 'pg_trgm'))
+            ) as total
+            SQL)[0]['total'] ?? 0;
+        $found = is_numeric($row) ? (int) $row : 0;
+
+        if ($found > 0) {
+            throw new RestoreRejected('O banco restaurado contém objetos que este sistema não usa (funções, gatilhos, visões ou extensões).');
+        }
+    }
+
     /** @throws RestoreRejected */
     private function check(string $database): void
     {
@@ -74,6 +110,8 @@ class SideDatabase
         if ($missing !== []) {
             throw new RestoreRejected('O banco restaurado não tem as tabelas esperadas: '.implode(', ', $missing).'.');
         }
+
+        $this->assertOnlyOurObjects($db);
 
         $admins = $this->admin->query($db, "select count(*) as total from users where role = 'admin' and active = true")[0]['total'] ?? 0;
 

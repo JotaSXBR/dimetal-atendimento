@@ -28,5 +28,19 @@ final class RestoreRun
 
     public bool $swapped = false;
 
-    public function __construct(public readonly RestoreRequest $request) {}
+    /** O ponto sem volta: o sistema já saiu da manutenção e grava no banco novo; falha depois daqui não desfaz a troca. */
+    public bool $committed = false;
+
+    /** O desfazer da troca falhou: o sistema fica em manutenção para ninguém gravar num banco meio migrado. */
+    public bool $keepDown = false;
+
+    /** @var list<string> avisos de passos de melhor esforço que falharam depois de a restauração já ter dado certo */
+    public array $warnings = [];
+
+    public readonly CarbonImmutable $startedAt;
+
+    public function __construct(public readonly RestoreRequest $request)
+    {
+        $this->startedAt = CarbonImmutable::now();
+    }
 }

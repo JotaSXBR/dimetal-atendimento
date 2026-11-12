@@ -116,6 +116,7 @@ class RestoreDatabaseTest extends TestCase
         $this->side->shouldReceive('verify')->andReturnUsing(fn (string $db) => $this->calls[] = 'verify:'.$db)->byDefault();
 
         $this->maintenance = $this->mock(Maintenance::class);
+        $this->maintenance->shouldReceive('problem')->andReturn(null)->byDefault();
         $this->maintenance->shouldReceive('enter')->andReturnUsing($note('enter'))->byDefault();
         $this->maintenance->shouldReceive('leave')->andReturnUsing($note('leave'))->byDefault();
         $this->maintenance->shouldReceive('migrate')->andReturnUsing($note('migrate'))->byDefault();
@@ -344,6 +345,103 @@ class RestoreDatabaseTest extends TestCase
         $this->assertSame([], $this->calls);
         $this->assertSame('failed', $this->state()['status']);
         $this->assertStringContainsString('não existe mais', $this->state()['message']);
+    }
+
+    public function test_ambiente_sem_manutencao_compartilhada_no_worker_aborta_antes_de_tudo(): void
+    {
+        $this->maintenance->shouldReceive('problem')->andReturn('APP_MAINTENANCE_DRIVER=cache é obrigatório.');
+
+        $this->run_();
+
+        $this->assertSame(['discard'], $this->calls);
+        $this->assertSame('failed', $this->state()['status']);
+        $this->assertStringContainsString('APP_MAINTENANCE_DRIVER=cache', $this->state()['message']);
+    }
+
+    public function test_nome_de_banco_que_nao_cabe_nas_regras_aborta_antes_das_etapas_caras(): void
+    {
+        $this->admin->shouldReceive('active')->andReturn('Dimetal-Prod');
+
+        $this->run_();
+
+        $this->assertNotContains('fetch', $this->calls);
+        $this->assertNotContains('backup:antes', $this->calls);
+        $this->assertSame('failed', $this->state()['status']);
+        $this->assertStringContainsString('nome do banco', $this->state()['message']);
+    }
+
+    public function test_falha_depois_de_voltar_ao_ar_nao_desfaz_a_restauracao(): void
+    {
+        // Achado da revisão: uma falha no fim (aviso aos admins) chamava o `undo` com o sistema já no ar e gravando no banco novo.
+        Notification::shouldReceive('send')->andThrow(new RuntimeException('fila fora do ar'));
+
+        $this->run_();
+
+        $swaps = array_values(array_filter($this->calls, fn (string $call): bool => str_starts_with($call, 'swap:')));
+        $this->assertCount(1, $swaps, 'a troca não foi desfeita');
+        $this->assertSame(1, count(array_keys($this->calls, 'leave', true)));
+        $this->assertSame('done', $this->state()['status']);
+        $this->assertStringContainsString('aviso aos administradores', $this->state()['message']);
+    }
+
+    public function test_falha_na_recuperacao_de_mensagens_nao_desfaz_a_restauracao(): void
+    {
+        Channel::factory()->connected()->create(['waha_session' => 'a']);
+        Channel::retrieved(function (): void {
+            throw new RuntimeException('canal indisponível');
+        });
+
+        $this->run_();
+
+        $swaps = array_values(array_filter($this->calls, fn (string $call): bool => str_starts_with($call, 'swap:')));
+        $this->assertCount(1, $swaps);
+        $this->assertSame('done', $this->state()['status']);
+        $this->assertStringContainsString('recuperação das mensagens', $this->state()['message']);
+    }
+
+    public function test_falha_do_backup_de_seguranca_mostra_mensagem_publica_sem_o_stderr(): void
+    {
+        $this->backup->shouldReceive('__invoke')->andThrow(new DumpFailed('pg_dump falhou (código 1): connection to server at "10.0.0.5" failed'));
+
+        $this->run_();
+
+        $this->assertStringNotContainsString('10.0.0.5', $this->state()['message']);
+        $this->assertStringContainsString('backup de segurança', $this->state()['message']);
+    }
+
+    public function test_passou_do_tempo_seguro_antes_da_troca_aborta_sem_entrar_em_manutencao(): void
+    {
+        $this->admin->shouldReceive('create')->andReturnUsing(function (string $name) {
+            $this->calls[] = 'create:'.$name;
+            $this->travel(12)->minutes();
+        });
+        $this->admin->shouldReceive('exists')->with(self::STAGING)->andReturn(true);
+
+        $this->run_();
+
+        $this->assertNotContains('enter', $this->calls);
+        $this->assertContains('drop:'.self::STAGING, $this->calls);
+        $this->assertSame('failed', $this->state()['status']);
+        $this->assertStringContainsString('tempo', $this->state()['message']);
+    }
+
+    public function test_se_nao_da_para_desfazer_a_troca_o_sistema_fica_em_manutencao(): void
+    {
+        $this->maintenance->shouldReceive('migrate')->andThrow(new RestoreRejected('As migrações do esquema falharam.'));
+        $calls = 0;
+        $this->admin->shouldReceive('swap')->andReturnUsing(function (string $active, string $incoming, string $archive) use (&$calls) {
+            $this->calls[] = "swap:$active,$incoming,$archive";
+
+            if (++$calls === 2) {
+                throw new SwapFailed('não foi possível voltar');
+            }
+        });
+
+        $this->run_();
+
+        $this->assertNotContains('leave', $this->calls, 'preso em manutenção de propósito: o banco pode estar meio migrado');
+        $this->assertSame('failed', $this->state()['status']);
+        $this->assertStringContainsString('manutenção', $this->state()['message']);
     }
 
     public function test_log_e_aviso_aos_admins_no_fim(): void
