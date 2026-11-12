@@ -26,6 +26,6 @@
     </span>
 
     @if (($kind === 'image' || $kind === 'sticker') && is_int($media['message_id'] ?? null))
-        <img src="{{ route('midia', $media['message_id']) }}" alt="" loading="lazy" x-on:error="$el.style.display = 'none'" class="size-14 shrink-0 rounded object-cover">
+        <img src="{{ route('midia', $media['message_id']) }}" alt="" loading="lazy" x-data="brokenImage" x-on:error="hide()" class="size-14 shrink-0 rounded object-cover">
     @endif
 </span>

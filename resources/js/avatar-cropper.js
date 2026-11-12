@@ -4,6 +4,8 @@
 // recorte (nunca o original) sobe pelo Livewire; o servidor revalida e converte (App\Services\Media\AvatarImage).
 // A imagem nasce cobrindo o quadrado, centralizada: sem mexer em nada, o resultado já é o recorte central.
 
+import { shown } from './shown.js';
+
 const OUTPUT = 512;
 const ZOOM_STEP = 0.1;
 const NUDGE_PX = 12;
@@ -42,6 +44,7 @@ document.addEventListener('alpine:init', () => {
             this.url = URL.createObjectURL(file);
             this.open = true;
             await this.$nextTick();
+            await shown(this.$refs.stage);
 
             this.$refs.stage.innerHTML = `
                 <cropper-canvas style="width: 100%; height: 100%;">

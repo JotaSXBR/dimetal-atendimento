@@ -296,7 +296,7 @@ class InboxTranscriptTest extends TestCase
 
         $html = $this->menuHtml($me, $ticket);
         $this->assertStringContainsString('Adicionar texto às notas', $html);
-        $this->assertStringContainsString('note-from-message', $html);
+        $this->assertStringContainsString('noteFrom(', $html);
 
         // Quem não pode responder o ticket não tem o campo de nota, então o item não aparece.
         $outro = User::factory()->create(['role' => UserRole::ATENDENTE]);

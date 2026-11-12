@@ -40,9 +40,10 @@ class SecurityHeaders
     {
         return implode('; ', array_filter([
             "default-src 'self'",
-            // O hash libera só o script de aparência do Flux (evita o piscar de tema). `unsafe-eval` é do Alpine, que avalia as
-            // expressões dos atributos com `new Function`; sair dele exige o build CSP (`livewire.csp_safe`) e reescrever as expressões.
-            "script-src 'self' '".FluxAppearanceHash::value()."' 'unsafe-eval'",
+            // O hash libera só o script de aparência do Flux (evita o piscar de tema). `unsafe-eval` é do Alpine normal, que avalia as
+            // expressões dos atributos com `new Function`; com `livewire.csp_safe` (LIVEWIRE_CSP_SAFE) o Livewire serve o build CSP do
+            // Alpine, que não avalia strings, e a política deixa de liberá-lo.
+            "script-src 'self' '".FluxAppearanceHash::value()."'".(config('livewire.csp_safe') ? '' : " 'unsafe-eval'"),
             // Flux e Livewire usam estilos inline (atributo `style`); o risco de XSS por estilo é bem menor que o de script.
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",

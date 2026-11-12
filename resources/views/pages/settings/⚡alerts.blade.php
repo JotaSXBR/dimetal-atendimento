@@ -92,7 +92,7 @@ new #[Title('Meus alertas')] class extends Component {
                 <p class="font-mono text-[11px] font-semibold tracking-wider text-ink-3 uppercase">Repetição e balão</p>
                 <flux:switch wire:model="repeat" label="Repetir até resolver" description="Só SLA estourado e WhatsApp caído repetem." />
                 <div
-                    x-data="{ async ask() { await $nextTick(); if (! $wire.desktop) return; if (! ('Notification' in window)) { $wire.desktop = false; return; } if (Notification.permission !== 'granted' && await Notification.requestPermission() !== 'granted') { $wire.desktop = false; } } }"
+                    x-data="desktopAlerts"
                     x-on:click="ask()">
                     <flux:switch wire:model="desktop" label="Balão do navegador" description="Só WhatsApp caído e SLA estourado, sem texto do cliente. O navegador pede permissão." />
                 </div>
@@ -123,7 +123,7 @@ new #[Title('Meus alertas')] class extends Component {
                 <p class="font-mono text-[11px] font-semibold tracking-wider text-ink-3 uppercase">Prévia dos sons</p>
                 <div class="flex flex-wrap gap-2">
                     @foreach (['comum' => 'Comum', 'sla' => 'SLA', 'critico' => 'Crítico'] as $kind => $label)
-                        <flux:button type="button" icon="speaker-wave" size="sm" x-on:click="window.dispatchEvent(new CustomEvent('alerts-preview', { detail: { kind: '{{ $kind }}' } }))">{{ $label }}</flux:button>
+                        <flux:button type="button" icon="speaker-wave" size="sm" x-on:click="$dispatch('alerts-preview', { kind: '{{ $kind }}' })">{{ $label }}</flux:button>
                     @endforeach
                 </div>
             </div>

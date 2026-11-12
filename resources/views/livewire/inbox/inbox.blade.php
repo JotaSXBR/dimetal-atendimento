@@ -5,9 +5,10 @@
 <div
     data-open-ticket="{{ $ticketId }}"
     class="grid min-h-0 flex-1 grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]"
-    x-data="{ details: localStorage.getItem('ticketDetailsOpen') !== '0', sheet: false, toggle() { this.details = ! this.details; localStorage.setItem('ticketDetailsOpen', this.details ? '1' : '0') } }"
+    x-data="ticketDetails"
     x-bind:style="details ? '' : '--details-w: 0px'"
-    x-init="$store.clientPresence.seed(@js($clientPresence), {{ config('presence.state_ttl_seconds') }})"
+    data-client-presence="{{ json_encode($clientPresence, JSON_THROW_ON_ERROR) }}"
+    data-presence-ttl="{{ config('presence.state_ttl_seconds') }}"
 >
     {{-- Lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
@@ -316,7 +317,7 @@
                     x-on:keydown.alt.p.window.prevent="toggle()"
                     x-on:note-from-message.window="addToNote($event.detail)"
                     x-on:emoji-insert="insert($event.detail)"
-                    x-on:composer-focus="field()?.focus()"
+                    x-on:composer-focus="focusField()"
                     x-bind:class="mode === 'note' ? 'border-warn/30 bg-warn/10' : 'border-line bg-surface'"
                 @endif
                 class="border-t p-3 {{ $canReply ? '' : 'border-line bg-surface' }}"
@@ -389,7 +390,7 @@
                             <p class="mb-2 text-xs text-danger" role="alert">{{ $message }}</p>
                         @enderror
 
-                        <form data-testid="composer-form" x-on:submit.prevent="uploading === 0 && submit()" x-on:input="remember($event); sync()" class="flex flex-col gap-2" x-show="!voiceBusy">
+                        <form data-testid="composer-form" x-on:submit.prevent="uploading === 0 && submit()" x-on:input="onInput($event)" class="flex flex-col gap-2" x-show="!voiceBusy">
                             <input
                                 type="file"
                                 multiple
@@ -397,7 +398,7 @@
                                 x-ref="picker"
                                 aria-label="Escolher arquivos"
                                 accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.mp3,.ogg,.m4a,.mp4"
-                                x-on:change="addFiles($event.target.files); $event.target.value = ''"
+                                x-on:change="pickFiles($event)"
                             >
                             {{-- Linha 1: abas Responder/Nota. Linha 2: ferramentas, campo e mic (vira Enviar com texto ou arquivo). --}}
                             <div data-testid="composer-modes">
@@ -415,7 +416,7 @@
                             </div>
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" title="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
 
-                            <div class="relative" x-on:keydown.escape.window="if ($wire.showQuickReplies) { $wire.set('showQuickReplies', false); $dispatch('composer-focus') }" x-on:click.outside="$wire.showQuickReplies && $wire.set('showQuickReplies', false)">
+                            <div class="relative" x-on:keydown.escape.window="closeQuickReplies()" x-on:click.outside="$wire.showQuickReplies && $wire.set('showQuickReplies', false)">
                                 {{-- Coluna muito estreita (celular): o gatilho vira "+", e a lista é a mesma. --}}
                                 <flux:button type="button" variant="subtle" icon="bolt" class="@max-sm:hidden" aria-label="Respostas rápidas" title="Respostas rápidas" aria-haspopup="true" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
                                 <flux:button type="button" variant="subtle" icon="plus" class="@sm:hidden" aria-label="Mais ações do compositor" title="Mais ações: respostas rápidas" aria-haspopup="true" aria-expanded="{{ $showQuickReplies ? 'true' : 'false' }}" wire:click="toggleQuickReplies" />
@@ -423,7 +424,7 @@
                                     <div data-testid="quick-replies-popover" class="absolute bottom-full start-0 z-20 mb-2 w-72 max-w-[80vw] overflow-hidden rounded-lg border border-line bg-surface text-sm shadow-lg">
                                         <p class="border-b border-line px-3 py-2 text-xs font-semibold text-ink-2">Respostas rápidas</p>
                                         @forelse ($this->allQuickReplies() as $reply)
-                                            <button type="button" data-body="{{ $reply->body }}" class="flex w-full gap-2 px-3 py-2 text-start hover:bg-surface-2 focus-visible:bg-surface-2" wire:key="qr-all-{{ $reply->id }}" x-on:click="insert($el.dataset.body); $wire.set('showQuickReplies', false)">
+                                            <button type="button" data-body="{{ $reply->body }}" class="flex w-full gap-2 px-3 py-2 text-start hover:bg-surface-2 focus-visible:bg-surface-2" wire:key="qr-all-{{ $reply->id }}" x-on:click="insertQuickReply($el.dataset.body)">
                                                 <code class="shrink-0 font-semibold">/{{ $reply->shortcut }}</code>
                                                 <span class="truncate text-ink-2">{{ $reply->body }}</span>
                                             </button>
@@ -434,7 +435,7 @@
                                 @endif
                             </div>
 
-                            <div class="min-w-0 flex-1 order-first basis-full @md:order-none @md:basis-0" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="if ($event.detail === 'note') stop()">
+                            <div class="min-w-0 flex-1 order-first basis-full @md:order-none @md:basis-0" x-data="typingPresence($wire, {{ $ticket->id }})" x-on:composer-mode.window="$event.detail === 'note' && stop()">
                                 @if (str_starts_with($draft, '/') && ($suggestions = $this->quickReplies())->isNotEmpty())
                                     <ul class="mb-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface text-sm" role="listbox" aria-label="Respostas rápidas">
                                         @foreach ($suggestions as $suggestion)
@@ -447,7 +448,7 @@
                                         @endforeach
                                     </ul>
                                 @endif
-                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" x-bind:placeholder="mode === 'note' ? 'Nota privada: só a equipe vê' : 'Escreva uma resposta'" aria-label="Mensagem" x-on:input="$event.isTrusted && mode === 'reply' && input($event.target.value)" x-on:blur="stop()" x-on:input.debounce.250ms="if ($event.target.value.startsWith('/')) { $wire.$set('draft', $event.target.value) }" x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); if (uploading === 0) { submit() } }" />
+                                <flux:textarea wire:model="draft" rows="auto" placeholder="Escreva uma resposta" x-bind:placeholder="mode === 'note' ? 'Nota privada: só a equipe vê' : 'Escreva uma resposta'" aria-label="Mensagem" x-on:input="$event.isTrusted && mode === 'reply' && input($event.target.value)" x-on:blur="stop()" x-on:input.debounce.250ms="$event.target.value.startsWith('/') && $wire.$set('draft', $event.target.value)" x-on:keydown.enter="enter($event, uploading)" />
                                 @error('draft')
                                     <p class="mt-1 text-xs text-danger">{{ $message }}</p>
                                 @enderror

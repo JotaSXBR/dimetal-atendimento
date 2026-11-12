@@ -46,7 +46,7 @@ class InboxClientPresenceTest extends TestCase
 
         $html = Livewire::actingAs($this->me)->test(Inbox::class)->html();
 
-        $this->assertStringContainsString('clientPresence.seed', $html);
+        $this->assertStringContainsString('data-client-presence=', $html);
         $this->assertStringContainsString('digitando', $html);
     }
 
@@ -56,7 +56,7 @@ class InboxClientPresenceTest extends TestCase
 
         $html = Livewire::actingAs($this->me)->test(Inbox::class)->html();
 
-        $this->assertStringContainsString('clientPresence.seed', $html);
+        $this->assertStringContainsString('data-client-presence=', $html);
         $this->assertStringNotContainsString('digitando', $html);
         $this->assertStringNotContainsString('gravando', $html);
     }

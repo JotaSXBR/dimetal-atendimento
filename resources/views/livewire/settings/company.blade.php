@@ -24,16 +24,7 @@
                 <flux:switch wire:model.live="signatureEnabled" aria-label="Assinatura ligada" />
             </div>
 
-            <div x-data="{
-                wrap(mark) {
-                    const el = this.$refs.template.querySelector('textarea')
-                    const start = el.selectionStart
-                    const end = el.selectionEnd
-                    el.setRangeText(mark + el.value.slice(start, end) + mark, start, end, 'select')
-                    el.dispatchEvent(new Event('input', { bubbles: true }))
-                    el.focus()
-                },
-            }">
+            <div x-data="signatureToolbar">
                 <div class="mb-1 flex gap-1" role="toolbar" aria-label="Formatação">
                     <flux:button type="button" size="sm" variant="subtle" x-on:click="wrap('*')" aria-label="Negrito"><span class="font-bold">B</span></flux:button>
                     <flux:button type="button" size="sm" variant="subtle" x-on:click="wrap('_')" aria-label="Itálico"><span class="italic">I</span></flux:button>
