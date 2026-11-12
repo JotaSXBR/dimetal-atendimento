@@ -3,6 +3,7 @@
 namespace Tests\Feature\Backup\Restore;
 
 use App\Services\Backup\Restore\RestoreProgress;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class RestoreProgressTest extends TestCase
@@ -61,14 +62,30 @@ class RestoreProgressTest extends TestCase
         $this->assertFalse($progress->isRunning());
     }
 
-    public function test_um_estado_que_ficou_para_tras_expira_sozinho(): void
+    public function test_o_estado_em_andamento_expira_em_1_hora_e_o_final_em_1_dia(): void
     {
+        // O TTL é conferido na gravação: expirar de verdade com `travel()` só funciona no cache em memória, não no Redis do CI.
+        Cache::spy();
         $progress = new RestoreProgress;
+
         $progress->begin('Restaurando o banco', ['inspect']);
+        $progress->finish('Restauração concluída.');
 
-        $this->travel(61)->minutes();
+        Cache::shouldHaveReceived('put')->withArgs(fn (string $key, array $state, \DateTimeInterface $until): bool => $key === 'restore:state'
+            && $state['status'] === 'running'
+            && $until >= now()->addMinutes(59) && $until <= now()->addMinutes(61))->once();
+        Cache::shouldHaveReceived('put')->withArgs(fn (string $key, array $state, \DateTimeInterface $until): bool => $key === 'restore:state'
+            && $state['status'] === 'done'
+            && $until >= now()->addHours(23) && $until <= now()->addHours(25))->once();
+    }
 
-        $this->assertFalse($progress->isRunning());
-        $this->assertSame('idle', $progress->get()['status']);
+    public function test_um_estado_que_expirou_no_cache_volta_a_idle(): void
+    {
+        (new RestoreProgress)->begin('Restaurando o banco', ['inspect']);
+
+        Cache::forget('restore:state');
+
+        $this->assertFalse((new RestoreProgress)->isRunning());
+        $this->assertSame('idle', (new RestoreProgress)->get()['status']);
     }
 }

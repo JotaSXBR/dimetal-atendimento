@@ -3,6 +3,7 @@
 namespace Tests\Feature\Backup;
 
 use App\Services\Backup\ManualBackupState;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class ManualBackupStateTest extends TestCase
@@ -25,24 +26,31 @@ class ManualBackupStateTest extends TestCase
         $this->assertSame(['status' => 'failed', 'file' => null, 'error' => 'pg_dump falhou (código 1).'], $state->get());
     }
 
-    public function test_um_em_andamento_que_ficou_para_tras_expira_sozinho(): void
+    public function test_o_em_andamento_expira_em_20_minutos_e_o_resultado_em_10(): void
+    {
+        // O TTL é conferido na gravação: expirar de verdade com `travel()` só funciona no cache em memória, não no Redis do CI.
+        Cache::spy();
+        $state = new ManualBackupState;
+
+        $state->markStarted();
+        $state->markFinished('x.dump', null);
+
+        Cache::shouldHaveReceived('put')->withArgs(fn (string $key, array $value, \DateTimeInterface $until): bool => $key === 'backup:manual'
+            && $value['status'] === 'running'
+            && $until >= now()->addMinutes(19) && $until <= now()->addMinutes(21))->once();
+        Cache::shouldHaveReceived('put')->withArgs(fn (string $key, array $value, \DateTimeInterface $until): bool => $key === 'backup:manual'
+            && $value['status'] === 'done'
+            && $until >= now()->addMinutes(9) && $until <= now()->addMinutes(11))->once();
+    }
+
+    public function test_um_estado_que_expirou_no_cache_volta_a_idle(): void
     {
         $state = new ManualBackupState;
         $state->markStarted();
 
-        $this->travel(21)->minutes();
+        Cache::forget('backup:manual');
 
         $this->assertFalse($state->isRunning());
-        $this->assertSame('idle', $state->get()['status']);
-    }
-
-    public function test_o_resultado_some_depois_de_10_minutos(): void
-    {
-        $state = new ManualBackupState;
-        $state->markFinished('x.dump', null);
-
-        $this->travel(11)->minutes();
-
         $this->assertSame('idle', $state->get()['status']);
     }
 }
