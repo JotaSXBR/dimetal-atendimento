@@ -84,6 +84,15 @@ class SecurityHeadersTest extends TestCase
         $this->assertStringNotContainsString('blob:', $scriptSrc);
     }
 
+    public function test_resposta_404_leva_os_mesmos_cabecalhos_de_seguranca(): void
+    {
+        $response = $this->get('/rota-que-nao-existe')->assertNotFound();
+
+        $response->assertHeader('Permissions-Policy');
+        $response->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->assertHeader('Content-Security-Policy-Report-Only');
+    }
+
     public function test_upgrade_insecure_requests_so_em_https(): void
     {
         $this->assertStringNotContainsString('upgrade-insecure-requests', (string) $this->get('http://localhost/login')->headers->get('Content-Security-Policy-Report-Only'));

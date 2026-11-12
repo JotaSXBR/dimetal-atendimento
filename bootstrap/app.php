@@ -21,7 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Literal aqui porque a configuração ainda não existe quando este callback roda.
         $middleware->trustProxies(at: ['127.0.0.1', '::1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7']);
 
-        $middleware->web(append: [SecurityHeaders::class]);
+        // Global (não só `web`): as respostas de erro e as rotas fora do grupo `web` também levam os cabeçalhos.
+        $middleware->append(SecurityHeaders::class);
 
         $middleware->validateCsrfTokens(except: [
             'webhooks/waha',
