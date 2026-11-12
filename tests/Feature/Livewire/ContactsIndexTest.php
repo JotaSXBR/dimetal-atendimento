@@ -58,6 +58,13 @@ class ContactsIndexTest extends TestCase
         $this->page()->assertSee('Cliente 25')->assertDontSee('Cliente 26');
     }
 
+    public function test_grade_da_lista_usa_minmax_para_nome_longo_nao_empurrar_o_painel(): void
+    {
+        Contact::factory()->create(['name' => str_repeat('Distribuidora', 7)]);
+
+        $this->page()->assertSeeHtml('lg:grid-cols-[minmax(0,1fr)_22rem]');
+    }
+
     public function test_novo_contato_cria_e_abre_a_ficha(): void
     {
         $page = $this->page()->set('newPhone', '(16) 99752-4950')->set('newName', 'Ana Paula')->call('createContact')->assertHasNoErrors();
