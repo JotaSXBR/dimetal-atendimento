@@ -68,3 +68,9 @@ test('balão só para os graves, com permissão, ligado e sem SLA desligado', ()
     s.desktop_notifications = false;
     assert.equal(wantsBalloon('connection_down', s, 'granted'), false);
 });
+
+test('alerta de backup não toca, não repete e não vira balão', () => {
+    assert.equal(soundFor('backup', base()), null);
+    assert.equal(repeatMs('backup', base()), null);
+    assert.equal(wantsBalloon('backup', { ...base(), desktop_notifications: true }, 'granted'), false);
+});

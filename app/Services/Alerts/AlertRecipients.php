@@ -17,6 +17,12 @@ final class AlertRecipients
         return $this->active()->get();
     }
 
+    /** @return Collection<int, User> */
+    public function admins(): Collection
+    {
+        return $this->active()->where('role', UserRole::ADMIN->value)->get();
+    }
+
     /**
      * Quem vê a fila do ticket: o mesmo critério de {@see User::canHandleSector()}, numa consulta só.
      *
