@@ -17,6 +17,7 @@ import './alerts';
 import './alert-ui';
 import './ticket-details';
 import './message-menu';
+import './settings-ui';
 import './relative-time';
 import './channel-qr';
 import './avatar-cropper';

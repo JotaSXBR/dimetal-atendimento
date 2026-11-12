@@ -1,6 +1,8 @@
 // Balão da conversa: edição inline e menu de ações da mensagem (resources/views/livewire/inbox/transcript.blade.php).
 // A lógica fica aqui, e não em `x-data` inline, porque o build CSP do Alpine não aceita método dentro do atributo.
 
+import { shown } from './shown.js';
+
 const MARGIN = 8;
 const GAP = 4;
 
@@ -34,7 +36,10 @@ document.addEventListener('alpine:init', () => {
 
             if (this.open) {
                 this.style = 'top:0;left:0;visibility:hidden';
-                this.$nextTick(() => this.place());
+                this.$nextTick(async () => {
+                    await shown(this.$refs.menu);
+                    this.place();
+                });
             }
         },
 

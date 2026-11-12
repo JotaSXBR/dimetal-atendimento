@@ -4,6 +4,8 @@
 // public/vendor/emoji/pt.json: nada é pedido a CDN nem a terceiros. O emoji escolhido sobe como o evento `emoji-insert`, que o
 // `composerMode` trata inserindo no cursor do campo; fechar com Esc devolve o foco ao campo (`composer-focus`).
 
+import { shown } from './shown.js';
+
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('emojiPicker', () => ({
         open: false,
@@ -33,7 +35,9 @@ document.addEventListener('alpine:init', () => {
             this.picker.classList.add(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
 
             this.open = true;
-            this.$nextTick(() => this.picker.shadowRoot?.querySelector('input[type="search"]')?.focus());
+            await this.$nextTick();
+            await shown(this.$refs.panel);
+            this.picker.shadowRoot?.querySelector('input[type="search"]')?.focus();
         },
 
         pick(unicode) {

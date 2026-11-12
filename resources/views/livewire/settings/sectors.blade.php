@@ -18,16 +18,16 @@
                         <flux:button size="xs" variant="subtle" icon="chevron-down" wire:click="move({{ $sector->id }}, 'down')" aria-label="Descer {{ $sector->name }}" />
                     </div>
 
-                    <div class="min-w-36 flex-1" x-data="{ editing: false, name: @js($sector->name) }">
+                    <div class="min-w-36 flex-1" x-data="sectorRow(@js($sector->name))">
                         <p x-show="! editing" class="flex items-center gap-1 text-sm font-semibold text-ink">
                             <span class="me-1 font-mono text-xs text-ink-3">{{ $loop->iteration }}</span>
                             <span class="truncate">{{ $sector->name }}</span>
-                            <flux:button size="xs" variant="subtle" icon="pencil-square" x-on:click="editing = true; $nextTick(() => $refs.field.focus())" aria-label="Renomear {{ $sector->name }}" />
+                            <flux:button size="xs" variant="subtle" icon="pencil-square" x-on:click="start()" aria-label="Renomear {{ $sector->name }}" />
                         </p>
-                        <form x-show="editing" x-cloak class="flex items-center gap-1" x-on:submit.prevent="$wire.rename({{ $sector->id }}, name).then(() => editing = false)" x-on:keydown.escape="editing = false; name = @js($sector->name)">
+                        <form x-show="editing" x-cloak class="flex items-center gap-1" x-on:submit.prevent="save({{ $sector->id }})" x-on:keydown.escape="cancel(@js($sector->name))">
                             <input x-ref="field" x-model="name" maxlength="60" aria-label="Novo nome de {{ $sector->name }}" class="min-w-0 flex-1 rounded-lg border border-line bg-surface px-2 py-1 text-sm text-ink">
                             <flux:button type="submit" size="xs" variant="primary">Salvar</flux:button>
-                            <flux:button type="button" size="xs" variant="subtle" x-on:click="editing = false; name = @js($sector->name)">Cancelar</flux:button>
+                            <flux:button type="button" size="xs" variant="subtle" x-on:click="cancel(@js($sector->name))">Cancelar</flux:button>
                         </form>
                     </div>
 

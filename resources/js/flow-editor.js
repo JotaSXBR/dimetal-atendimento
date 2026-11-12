@@ -4,6 +4,7 @@
 import { CATEGORIES, categoryOf, clampToViewport, errorNodeIds } from './flow-editor/appearance.js';
 import { BLOCKS, PALETTE_SHORTCUTS } from './flow-editor/nodes.js';
 import { messagesOf, withMessages } from './flow-editor/serialize.js';
+import { shown } from './shown.js';
 
 document.addEventListener('alpine:init', () => {
     // Os dados da página (grafo, setores, etiquetas...) chegam em `data-config` (JSON) e não por argumento: o build CSP do Alpine não
@@ -58,7 +59,10 @@ document.addEventListener('alpine:init', () => {
                         onHistory: (state) => Object.assign(this, state),
                         onContextMenu: (info) => {
                             this.menu = info;
-                            this.$nextTick(() => this.fitMenu());
+                            this.$nextTick(async () => {
+                                await shown(this.$refs.menu);
+                                this.fitMenu();
+                            });
                         },
                         lookups: { sectors: config.sectors, tags: config.tags, users: config.users },
                     });
