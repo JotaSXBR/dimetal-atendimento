@@ -21,8 +21,8 @@ visual de Contatos, Fila (com e sem conversa), Setores e Relatórios em claro e 
    Causa: a lista é `overflow-y-auto` mas não `relative` (`inbox.blade.php:57`); os `span.sr-only` (position absolute) dos
    cartões têm como bloco de contenção a janela e escapam do corte. Correção: `relative` na lista. Cobre também os 3 elementos
    fora da tela que o script apontou no Inbox em 360 px.
-3. **21 px de rolagem vertical em 720p** em Configuração, Automação e Relatórios (documento 741 px, janela 720). Causa a
-   investigar na execução (suspeita: `flux:main h-dvh` + faixa do aviso de som somados ao cabeçalho da sidebar).
+3. ~~21 px de rolagem vertical em 720p~~ **Não é defeito** (investigado em 12/11): é conteúdo real. A navegação do hub de
+   Configuração (11 itens de 44 px) mais o `p-8` da página somam 741 px; telas de página rolável rolam. Sem ação.
 4. **Tema claro:** sem defeito nas telas inspecionadas; contraste dos tokens já coberto por `ThemeTokensTest`.
 5. **2K:** a Fila preenche bem; sem defeito de alinhamento. Texto das mensagens fica à esquerda numa coluna larga: é o layout
    atual, não defeito (o dono refaz o layout final).
