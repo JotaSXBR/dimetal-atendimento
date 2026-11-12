@@ -36,7 +36,7 @@ class DatabaseDumper
         $password = $config['password'];
         $env = ['PGPASSWORD' => $password, 'PGSSLMODE' => $config['sslmode'] ?: 'prefer'];
 
-        $directory = storage_path('app/tmp');
+        $directory = config()->string('backup.tmp_path');
         File::ensureDirectoryExists($directory);
         $this->sweepOrphans($directory);
         $path = $directory.'/backup-'.Str::lower((string) Str::ulid()).'.dump';

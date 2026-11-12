@@ -23,6 +23,7 @@ class DatabaseDumperTest extends TestCase
     {
         parent::setUp();
 
+        $this->isolateTemporaryDumps();
         config([
             'database.connections.pgsql.host' => 'pg-beta',
             'database.connections.pgsql.port' => '5432',
@@ -121,7 +122,7 @@ class DatabaseDumperTest extends TestCase
     public function test_apaga_dumps_temporarios_orfaos_com_mais_de_um_dia(): void
     {
         $this->fakePgDump();
-        $directory = storage_path('app/tmp');
+        $directory = config()->string('backup.tmp_path');
         is_dir($directory) || mkdir($directory, 0777, true);
         $old = $directory.'/backup-orfao-velho.dump';
         $fresh = $directory.'/backup-orfao-novo.dump';

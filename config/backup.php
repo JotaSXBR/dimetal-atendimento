@@ -12,6 +12,7 @@ return [
     | `compress`: método do `pg_dump --compress` (cliente 18).
     | `hour`: horário do backup diário (antes da purga de mídia das 03:30).
     | `stale_hours`: sem backup bom há mais que isso, os admins são avisados.
+    | `tmp_path`: onde o dump é gerado antes de subir (os testes usam uma pasta própria por teste: rodam em paralelo).
     |
     */
 
@@ -24,5 +25,7 @@ return [
     'hour' => '02:15',
 
     'stale_hours' => 26,
+
+    'tmp_path' => storage_path('app/tmp'),
 
 ];

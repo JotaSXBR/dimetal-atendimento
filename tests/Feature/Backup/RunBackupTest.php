@@ -29,6 +29,7 @@ class RunBackupTest extends TestCase
     {
         parent::setUp();
 
+        $this->isolateTemporaryDumps();
         Storage::fake('backups');
         Notification::fake();
         config(['app.display_timezone' => 'America/Sao_Paulo']);
