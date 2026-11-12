@@ -6,9 +6,12 @@ import { BLOCKS, PALETTE_SHORTCUTS } from './flow-editor/nodes.js';
 import { messagesOf, withMessages } from './flow-editor/serialize.js';
 
 document.addEventListener('alpine:init', () => {
-    window.Alpine.data('flowEditor', ($wire, config) => {
+    // Os dados da página (grafo, setores, etiquetas...) chegam em `data-config` (JSON) e não por argumento: o build CSP do Alpine não
+    // tem `JSON.parse` nas expressões de atributo (ver tests/Unit/AlpineCspSubsetTest.php).
+    window.Alpine.data('flowEditor', ($wire) => {
         // Fora do objeto reativo do Alpine: o canvas é grande e não deve virar proxy.
         let api = null;
+        let config = null;
 
         return {
             palette: [
@@ -19,12 +22,12 @@ document.addEventListener('alpine:init', () => {
             ]
                 .map((item) => ({ ...item, category: categoryOf(item.type), group: CATEGORIES[categoryOf(item.type)].label }))
                 .sort((a, b) => Object.keys(CATEGORIES).indexOf(a.category) - Object.keys(CATEGORIES).indexOf(b.category)),
-            sectors: config.sectors,
-            tags: config.tags,
-            users: config.users,
-            versions: config.versions,
-            catalog: config.messages,
-            messages: messagesOf(config.graph),
+            sectors: [],
+            tags: [],
+            users: [],
+            versions: [],
+            catalog: [],
+            messages: {},
             selected: null,
             errors: [],
             status: '',
@@ -38,6 +41,14 @@ document.addEventListener('alpine:init', () => {
             clock: 'real', // `real`, `aberto` ou `fechado`: o "agora" do teste
 
             async init() {
+                config = JSON.parse(this.$el.dataset.config);
+                this.sectors = config.sectors;
+                this.tags = config.tags;
+                this.users = config.users;
+                this.versions = config.versions;
+                this.catalog = config.messages;
+                this.messages = messagesOf(config.graph);
+
                 try {
                     const { createEditor } = await import('./flow-editor/editor.js');
 
@@ -59,6 +70,56 @@ document.addEventListener('alpine:init', () => {
 
             destroy() {
                 api?.destroy();
+            },
+
+            // O que as telas leem do simulador (`$wire.sim`, nulo antes de começar): getters, porque o build CSP do Alpine não tem `?.` nem `??`.
+            get hasSimErrors() {
+                return ($wire.simErrors?.length ?? 0) > 0;
+            },
+
+            get simLog() {
+                return $wire.sim?.log ?? [];
+            },
+
+            get simTrail() {
+                return $wire.sim?.trail ?? [];
+            },
+
+            get simSession() {
+                return $wire.sim?.session;
+            },
+
+            get simOutcome() {
+                return $wire.sim?.outcome;
+            },
+
+            get simOutcomeText() {
+                return this.simOutcome === 'fila' ? 'Desfecho: foi para a fila de atendimento.' : 'Desfecho: conversa encerrada pelo bot.';
+            },
+
+            // Menu de clique direito: posição (já puxada para dentro da tela por `fitMenu`).
+            get menuStyle() {
+                return this.menu ? `left:${this.menu.x}px;top:${this.menu.y}px` : '';
+            },
+
+            /** "Voltar ao padrão" só aparece se o workflow trocou o texto (e o rodapé escondido tem o próprio controle). */
+            canResetMessage(key) {
+                return key in this.messages && !(key === 'rodape_sair' && this.exitHintHidden());
+            },
+
+            messageText(key) {
+                return this.messages[key] ?? '';
+            },
+
+            // Caixa de seleção: o `x-model` grava o valor primeiro, depois o bloco é atualizado.
+            applyLater() {
+                this.$nextTick(() => this.apply());
+            },
+
+            restoreVersion(id) {
+                if (window.confirm('Copiar esta versão para o rascunho? O rascunho atual será substituído.')) {
+                    this.restore(id);
+                }
             },
 
             fields() {

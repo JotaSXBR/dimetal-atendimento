@@ -2,7 +2,8 @@
     class="flex h-[calc(100dvh-4rem)] min-h-[32rem] flex-col"
     {{-- O x-data carrega o grafo da carga da página; sem isto o Livewire reescreve o atributo a cada gravação e o Alpine recria o editor (perde a seleção). --}}
     wire:ignore.self
-    x-data="flowEditor($wire, @js($config))"
+    x-data="flowEditor($wire)"
+    data-config="{{ json_encode($config, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) }}"
     x-on:keydown.window="shortcut($event)"
 >
     <header class="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-4 py-3">
@@ -61,7 +62,7 @@
             {{-- Menu do clique direito: no fundo adiciona bloco; num bloco duplica ou apaga (o Início não). --}}
             <div x-show="menu" x-cloak x-on:click.outside="menu = null" x-on:keydown.escape.window="menu = null" x-ref="menu" role="menu" aria-label="Ações do canvas"
                  class="fixed z-50 flex max-h-[calc(100dvh-1rem)] w-52 flex-col gap-0.5 overflow-y-auto rounded-md border border-line bg-surface p-1 shadow-lg"
-                 x-bind:style="menu ? `left:${menu.x}px;top:${menu.y}px` : ''">
+                 x-bind:style="menuStyle">
                 <template x-if="menu && menu.nodeId">
                     <div class="flex flex-col gap-0.5">
                         <template x-if="menu.type === 'inicio'"><p class="px-2 py-1 text-xs text-ink-3">O Início não se duplica nem se apaga.</p></template>
@@ -106,7 +107,7 @@
                 <flux:button size="xs" x-on:click="testSilence()" x-bind:disabled="busy || !testWaiting()">Simular silêncio</flux:button>
             </div>
 
-            <div x-show="$wire.simErrors?.length > 0" class="rounded-md border border-warn/30 bg-warn/10 p-2 text-xs text-warn" role="alert">
+            <div x-show="hasSimErrors" class="rounded-md border border-warn/30 bg-warn/10 p-2 text-xs text-warn" role="alert">
                 <p class="font-semibold">Corrija o fluxo antes de testar:</p>
                 <ul class="mt-1 list-disc ps-4">
                     <template x-for="error in $wire.simErrors" x-bind:key="error">
@@ -116,7 +117,7 @@
             </div>
 
             <div class="space-y-2" role="log" aria-live="polite" aria-label="Conversa de teste">
-                <template x-for="(line, index) in ($wire.sim?.log ?? [])" x-bind:key="index">
+                <template x-for="(line, index) in simLog" x-bind:key="index">
                     <p
                         class="whitespace-pre-wrap text-sm"
                         x-bind:class="{
@@ -130,23 +131,23 @@
                 </template>
             </div>
 
-            <p x-show="$wire.sim?.outcome" class="rounded-md border border-line bg-canvas p-2 text-xs font-semibold text-ink" x-text="$wire.sim?.outcome === 'fila' ? 'Desfecho: foi para a fila de atendimento.' : 'Desfecho: conversa encerrada pelo bot.'"></p>
+            <p x-show="simOutcome" class="rounded-md border border-line bg-canvas p-2 text-xs font-semibold text-ink" x-text="simOutcomeText"></p>
 
-            <form x-show="$wire.sim?.session" class="space-y-1" x-on:submit.prevent="testReply()">
+            <form x-show="simSession" class="space-y-1" x-on:submit.prevent="testReply()">
                 <label class="block text-xs text-ink-2" for="sim-text">Resposta do cliente</label>
                 <div class="flex gap-2">
-                    <input id="sim-text" type="text" maxlength="1000" autocomplete="off" wire:model="simText" x-bind:disabled="busy || $wire.sim?.outcome" class="min-w-0 flex-1 rounded-md border border-line bg-surface p-2 text-sm text-ink">
-                    <flux:button size="sm" type="submit" x-bind:disabled="busy || $wire.sim?.outcome">Enviar</flux:button>
+                    <input id="sim-text" type="text" maxlength="1000" autocomplete="off" wire:model="simText" x-bind:disabled="busy || simOutcome" class="min-w-0 flex-1 rounded-md border border-line bg-surface p-2 text-sm text-ink">
+                    <flux:button size="sm" type="submit" x-bind:disabled="busy || simOutcome">Enviar</flux:button>
                 </div>
                 @error('simText')
                     <p class="text-xs text-danger" role="alert">{{ $message }}</p>
                 @enderror
             </form>
 
-            <div x-show="($wire.sim?.trail ?? []).length > 0">
+            <div x-show="simTrail.length > 0">
                 <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Blocos percorridos</p>
                 <ol class="mt-1 list-decimal space-y-0.5 ps-5 text-xs text-ink-2">
-                    <template x-for="(id, index) in ($wire.sim?.trail ?? [])" x-bind:key="index + id">
+                    <template x-for="(id, index) in simTrail" x-bind:key="index + id">
                         <li x-bind:class="id === testCurrent() && 'font-semibold text-ink'" x-text="testLabel(id)"></li>
                     </template>
                 </ol>
@@ -200,7 +201,7 @@
                                 </select>
                             </template>
                             <template x-if="field.kind === 'flag'">
-                                <input type="checkbox" class="mt-1 block size-4" x-model="selected.data[field.key]" x-on:change="$nextTick(() => apply())">
+                                <input type="checkbox" class="mt-1 block size-4" x-model="selected.data[field.key]" x-on:change="applyLater()">
                             </template>
                             <template x-if="field.kind === 'user'">
                                 <select class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model.number="selected.data[field.key]" x-on:change="apply()">
@@ -241,7 +242,7 @@
                         <div class="text-xs text-ink-2">
                             <label>
                                 <span x-text="item.label"></span>
-                                <textarea rows="3" class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-bind:placeholder="item.default" x-bind:disabled="item.key === 'rodape_sair' && exitHintHidden()" x-bind:value="messages[item.key] ?? ''" x-on:input="setMessage(item.key, $event.target.value)"></textarea>
+                                <textarea rows="3" class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-bind:placeholder="item.default" x-bind:disabled="item.key === 'rodape_sair' && exitHintHidden()" x-bind:value="messageText(item.key)" x-on:input="setMessage(item.key, $event.target.value)"></textarea>
                             </label>
                             <template x-if="item.key === 'rodape_sair'">
                                 <label class="mt-1 flex items-center gap-2">
@@ -249,7 +250,7 @@
                                     <span>Não mostrar a dica (o #sair continua valendo)</span>
                                 </label>
                             </template>
-                            <flux:button type="button" size="xs" variant="subtle" class="mt-1" x-show="item.key in messages && ! (item.key === 'rodape_sair' && exitHintHidden())" x-on:click="resetMessage(item.key)">Usar o padrão</flux:button>
+                            <flux:button type="button" size="xs" variant="subtle" class="mt-1" x-show="canResetMessage(item.key)" x-on:click="resetMessage(item.key)">Usar o padrão</flux:button>
                         </div>
                     </template>
 
@@ -268,7 +269,7 @@
                         <li class="text-xs">
                             <p class="font-semibold text-ink" x-text="'Versão ' + version.number"></p>
                             <p class="text-ink-3" x-text="version.at + ' · ' + version.by"></p>
-                            <flux:button type="button" size="xs" variant="subtle" class="mt-1" x-on:click="if (confirm('Copiar esta versão para o rascunho? O rascunho atual será substituído.')) restore(version.id)">Restaurar no rascunho</flux:button>
+                            <flux:button type="button" size="xs" variant="subtle" class="mt-1" x-on:click="restoreVersion(version.id)">Restaurar no rascunho</flux:button>
                         </li>
                     </template>
                 </ul>

@@ -20,7 +20,6 @@ class AlpineCspSubsetTest extends TestCase
     private const PENDENTES = [
         'components/passkey-registration.blade.php',
         'components/passkey-verify.blade.php',
-        'livewire/automation/editor.blade.php',
         'livewire/settings/company.blade.php',
         'livewire/settings/sectors.blade.php',
         'pages/auth/two-factor-challenge.blade.php',
@@ -49,6 +48,7 @@ class AlpineCspSubsetTest extends TestCase
             'ok: atribuição a objeto comum e índice' => ['<input x-model="selected.data[field.key]" x-on:click="open = !open">', []],
             'ok: crase dentro de string' => ['<button x-on:click="wrap(\'```\')">', []],
             'ok: ponto e vírgula final' => ['<button x-on:click="go();">', []],
+            'operador in fora do x-for' => ['<div x-show="item.key in messages">', ['in']],
             'ok: x-for com in' => ['<template x-for="(line, index) in lines">', []],
             'ok: método chamado delete' => ['<button x-on:click="$wire.delete(1)">', []],
             'ok: wire:click com método delete (o Livewire prefixa $wire.)' => ['<button wire:click="delete(1)">', []],
@@ -120,6 +120,7 @@ class AlpineCspSubsetTest extends TestCase
     /** Regras do parser instalado (`vendor/livewire/livewire/dist/livewire.csp.js`): o que ele não tokeniza, não parseia ou proíbe. */
     private const REGRAS = [
         'seta' => '/=>/',
+        'in' => '/(?<![\w$.])in(?![\w$])/',
         'crase' => '/`/',
         'spread' => '/\.\.\./',
         '?.' => '/\?\./',
@@ -198,6 +199,11 @@ class AlpineCspSubsetTest extends TestCase
             }
 
             $semTexto = (string) preg_replace('/\'(?:[^\'\\\\]|\\\\.)*\'|"(?:[^"\\\\]|\\\\.)*"/s', "''", $valor);
+            if ($nome === 'x-for') {
+                // `(item, i) in lista`: a declaração do laço é do Alpine; só a expressão da lista passa pelo parser.
+                $semTexto = (string) preg_replace('/^\s*(?:\([^)]*\)|[\w$]+)\s+in\s+/', '', $semTexto);
+            }
+
             if (str_starts_with($nome, 'wire:')) {
                 // O Livewire prefixa identificadores soltos com `$wire.` antes do Alpine: `delete(1)` vira `$wire.delete(1)` (membro, vale).
                 $semTexto = (string) preg_replace('/(?<![\w$.])delete(?=\()/', '$wire.delete', $semTexto);
