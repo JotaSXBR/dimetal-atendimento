@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\FluxAppearanceHash;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,19 +38,24 @@ class SecurityHeaders
 
     private function policy(Request $request): string
     {
-        return implode('; ', [
+        return implode('; ', array_filter([
             "default-src 'self'",
-            "script-src 'self'",
+            // O hash libera só o script de aparência do Flux (evita o piscar de tema). `unsafe-eval` é do Alpine, que avalia as
+            // expressões dos atributos com `new Function`; sair dele exige o build CSP (`livewire.csp_safe`) e reescrever as expressões.
+            "script-src 'self' '".FluxAppearanceHash::value()."' 'unsafe-eval'",
             // Flux e Livewire usam estilos inline (atributo `style`); o risco de XSS por estilo é bem menor que o de script.
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
+            // Sem `media-src` valeria o `default-src` e o áudio por `blob:` (player e prévia da gravação) ficaria mudo.
+            "media-src 'self' blob:",
             "font-src 'self' data:",
             'connect-src '.implode(' ', ["'self'", ...$this->websocketOrigins($request)]),
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",
             "frame-ancestors 'self'",
-        ]);
+            $request->isSecure() ? 'upgrade-insecure-requests' : null,
+        ]));
     }
 
     /**
