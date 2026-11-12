@@ -24,6 +24,11 @@ use Throwable;
  */
 class RestoreDatabase
 {
+    /** Os passos de cada modo, na ordem: a tela usa os mesmos para mostrar o andamento antes de o job começar. */
+    public const RESTORE_STEPS = ['inspect', 'safety', 'restore', 'verify', 'swap', 'migrate', 'resume', 'recover'];
+
+    public const SWITCH_STEPS = ['swap', 'migrate', 'resume', 'recover'];
+
     public function __construct(
         private readonly DumpInspector $inspector,
         private readonly RestoreSource $sources,
@@ -64,7 +69,7 @@ class RestoreDatabase
     /** @throws Throwable */
     private function restore(RestoreRun $run): void
     {
-        $this->progress->begin('Restaurando o banco', ['inspect', 'safety', 'restore', 'verify', 'swap', 'migrate', 'resume', 'recover']);
+        $this->progress->begin('Restaurando o banco', self::RESTORE_STEPS);
 
         $this->step('inspect', function () use ($run): void {
             $fetched = $this->sources->fetch($run->request->source);
@@ -99,7 +104,7 @@ class RestoreDatabase
     /** @throws Throwable */
     private function switchBack(RestoreRun $run): void
     {
-        $this->progress->begin('Voltando para o banco guardado', ['swap', 'migrate', 'resume', 'recover']);
+        $this->progress->begin('Voltando para o banco guardado', self::SWITCH_STEPS);
 
         $stored = collect($this->admin->stored())->firstWhere('name', $run->request->source);
 

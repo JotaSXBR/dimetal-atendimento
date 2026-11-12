@@ -64,10 +64,16 @@ class RestoreSource
         return ['path' => $path, 'name' => $name];
     }
 
+    /** Apaga só a cópia temporária local (o arquivo enviado continua no bucket para a restauração). */
+    public function discardTemporary(string $path): void
+    {
+        File::delete($path);
+    }
+
     /** Apaga a cópia temporária e, se for um envio, o arquivo no bucket. Nunca falha: é limpeza. */
     public function discard(string $source, ?string $path = null): void
     {
-        $path === null || File::delete($path);
+        $path === null || $this->discardTemporary($path);
 
         if (str_starts_with($source, 'upload:') && preg_match(self::UPLOAD_ID, substr($source, 7)) === 1) {
             $this->catalog->disk()->delete($this->uploadKey(substr($source, 7)));
