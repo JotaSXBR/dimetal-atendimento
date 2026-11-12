@@ -46,6 +46,13 @@ class AdminDatabase
         return $this->connections[$alias] = DB::connection($alias);
     }
 
+    /** Fecha e esquece uma conexão aberta por {@see self::connectionTo()} (sessão aberta num banco impede renomeá-lo). */
+    public function forget(string $alias): void
+    {
+        DB::purge($alias);
+        unset($this->connections[$alias]);
+    }
+
     /**
      * As credenciais da conexão ativa para os processos `pg_*` (a senha vai só no ambiente do processo).
      *
@@ -129,10 +136,13 @@ class AdminDatabase
             $admin->statement('ALTER DATABASE "'.$active.'" WITH ALLOW_CONNECTIONS false');
             $this->rename($active, $archive, terminate: true);
             $renamedActive = true;
-            $this->rename($incoming, $active);
+            // O banco novo também é derrubado de sessões abertas (por exemplo a de uma verificação): o Postgres não renomeia banco em uso.
+            $this->rename($incoming, $active, terminate: true);
             $renamedIncoming = true;
             $admin->statement('ALTER DATABASE "'.$active.'" WITH ALLOW_CONNECTIONS true');
         } catch (Throwable $e) {
+            // A mensagem da tela é genérica; a causa real (erro do Postgres) fica no log.
+            report($e);
             $this->undo($active, $incoming, $archive, $renamedActive, $renamedIncoming);
 
             throw new SwapFailed('Não foi possível trocar o banco; o banco anterior continua ativo.', 0, $e);

@@ -151,6 +151,17 @@ class SideDatabaseTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    public function test_verify_nao_deixa_conexao_aberta_no_banco_novo(): void
+    {
+        // Achado na prova real: a conexão aberta impedia o renome do banco novo na troca.
+        $this->schema();
+
+        $this->side->verify($this->database);
+
+        $row = $this->admin->connection()->selectOne('select count(*) as total from pg_stat_activity where datname = ?', [$this->database]);
+        $this->assertSame(0, (int) $row->total);
+    }
+
     public function test_verify_recusa_sem_admin_ativo(): void
     {
         $this->schema(admin: false);

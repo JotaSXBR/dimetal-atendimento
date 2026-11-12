@@ -54,6 +54,18 @@ class SideDatabase
     public function verify(string $database): void
     {
         AdminDatabase::assertName($database);
+
+        try {
+            $this->check($database);
+        } finally {
+            // Sessão aberta no banco novo impediria a troca por renomeação.
+            $this->admin->forget('pgsql_side');
+        }
+    }
+
+    /** @throws RestoreRejected */
+    private function check(string $database): void
+    {
         $db = $this->admin->connectionTo($database, 'pgsql_side');
 
         $tables = array_column($this->admin->query($db, "select table_name from information_schema.tables where table_schema = 'public'"), 'table_name');

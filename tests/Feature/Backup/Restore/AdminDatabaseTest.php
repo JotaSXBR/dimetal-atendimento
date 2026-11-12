@@ -5,7 +5,9 @@ namespace Tests\Feature\Backup\Restore;
 use App\Services\Backup\Restore\AdminDatabase;
 use App\Services\Backup\Restore\SwapFailed;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDO;
@@ -134,12 +136,37 @@ class AdminDatabaseTest extends TestCase
         }
     }
 
+    public function test_swap_derruba_tambem_as_conexoes_abertas_no_banco_novo(): void
+    {
+        // Achado na prova real: a conexão que o `verify` deixa aberta no banco novo impedia o renome dele.
+        $a = $this->make($this->admin->active().'_t'.$this->suffix());
+        $b = $this->make($this->admin->active().'_t'.$this->suffix());
+        $archive = AdminDatabase::archiveName($a, CarbonImmutable::now());
+        $this->created[] = $archive;
+        $oidB = $this->oid($b);
+
+        $openOnNew = $this->openPdo($b);
+
+        $this->admin->swap($a, $b, $archive);
+
+        $this->assertSame($oidB, $this->oid($a));
+
+        try {
+            $openOnNew->query('select 1');
+            $this->fail('a conexão aberta no banco novo devia ter sido derrubada');
+        } catch (PDOException) {
+            $this->addToAssertionCount(1);
+        }
+    }
+
     public function test_swap_que_falha_no_primeiro_renome_nao_muda_nada(): void
     {
         $a = $this->make($this->admin->active().'_t'.$this->suffix());
         $b = $this->make($this->admin->active().'_t'.$this->suffix());
         $archive = $this->make($this->admin->active().'_t'.$this->suffix()); // o nome de arquivo já existe
         [$oidA, $oidB] = [$this->oid($a), $this->oid($b)];
+
+        Exceptions::fake();
 
         try {
             $this->admin->swap($a, $b, $archive);
@@ -148,6 +175,8 @@ class AdminDatabaseTest extends TestCase
             $this->addToAssertionCount(1);
         }
 
+        // A causa real (erro do Postgres) vai para o log: a mensagem da tela é genérica.
+        Exceptions::assertReported(QueryException::class);
         $this->assertSame($oidA, $this->oid($a));
         $this->assertSame($oidB, $this->oid($b));
         $this->assertTrue((bool) $this->admin->connection()->selectOne('select datallowconn from pg_database where datname = ?', [$a])->datallowconn);
