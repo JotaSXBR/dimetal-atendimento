@@ -62,7 +62,7 @@ RustFS e a empresa a puxa por rclone (ver `rustfs-backup-decisao-e-poc`).
 2. **Semanal:** na rodada de domingo, depois do diário gravado, copia-se o próprio arquivo (cópia no servidor S3) com sufixo
    `-semanal`. Guardam-se os 2 últimos semanais. **Manual:** guardam-se os 3 últimos, fora da conta dos diários.
 3. **Bucket separado** `backups` (disco `backups` em `config/filesystems.php`, mesmas credenciais do RustFS, bucket em
-   `BACKUP_BUCKET`), para a purga da mídia nunca tocar nos backups. O bucket é criado uma vez à mão; o app dá erro claro se não existir.
+   `BACKUP_BUCKET`), para a purga da mídia nunca tocar nos backups. O bucket é criado sozinho pelo `app:prepare-media` (pós-deploy do app, já existente, estendido a este disco); sem `BACKUP_BUCKET` o disco é local (dev/testes).
 4. **Execução:** `Process` com `pg_dump -Fc -h -p -U -d` lendo `config('database.connections.pgsql')`; senha em `PGPASSWORD` no
    ambiente do processo (nunca na linha de comando). Saída para arquivo temporário em `storage/app/tmp` (não em memória),
    conferência com `pg_restore --list` e tamanho > 0, envio em stream (`writeStream`) para o nome final, apaga o temporário.

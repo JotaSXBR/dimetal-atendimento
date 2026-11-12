@@ -16,7 +16,7 @@
 - Dump: `pg_dump -Fc --compress=zstd:3`, cliente 18; senha só em `PGPASSWORD` no ambiente do processo (nunca na linha de comando, nunca em log, erro gravado ou UI).
 - Retenção: 7 diários, 2 semanais, 3 manuais; rotação só depois de um backup novo gravado e conferido (`pg_restore --list` e tamanho > 0).
 - Nomes: `dimetal-AAAA-MM-DD-HHMM-diario|semanal|manual.dump`, no fuso `app.display_timezone`. Diário às 02:15; semanal = cópia do diário de domingo.
-- Disco `backups` (bucket `BACKUP_BUCKET`, mesmas credenciais `AWS_*`), separado do disco de mídia. O bucket é criado uma vez à mão (runbook).
+- Disco `backups` (bucket `BACKUP_BUCKET`, mesmas credenciais `AWS_*`), separado do disco de mídia. O bucket é criado sozinho pelo `app:prepare-media` (pós-deploy do app, já configurado no Coolify), que passa a preparar também o disco `backups`; ninguém cria bucket à mão. Sem `BACKUP_BUCKET` (dev, testes) o disco `backups` é local em `storage/app/backups`.
 - Só admin (`can:admin`); download repassado em stream pelo app, com `Log::notice` (usuário e arquivo). Sem URL pública.
 - Alertas só para admins ativos, no sino, sem som próprio. Atraso: > 26 h sem backup bom, no máximo um aviso a cada 24 h.
 - Textos de tela em português, no padrão de `Retention`; tokens de cor existentes (`warn`, `danger`, `ok`), sem cor nova.
@@ -48,8 +48,8 @@
 
 **Files:**
 - Create: `config/backup.php`, `app/Services/Backup/BackupKind.php`, `app/Services/Backup/BackupFile.php`, `app/Services/Backup/BackupCatalog.php`
-- Modify: `config/filesystems.php` (disco `backups`), `.env.example` (`BACKUP_BUCKET=`)
-- Test: `tests/Feature/Backup/BackupCatalogTest.php`
+- Modify: `config/filesystems.php` (disco `backups`), `.env.example` (`BACKUP_BUCKET=`), `app/Console/Commands/PrepareMediaCommand.php` (prepara também o bucket do disco `backups`; mesmo comando, para o pós-deploy do Coolify não mudar), `docs/deploy.md:163` (citar o bucket de backup)
+- Test: `tests/Feature/Backup/BackupCatalogTest.php`, `tests/Feature/Console/PrepareMediaCommandTest.php`
 
 **Interfaces:**
 - Produces:
@@ -58,9 +58,9 @@
   - `final readonly class BackupFile(string $name, BackupKind $kind, CarbonImmutable $createdAt, int $size)`.
   - `BackupCatalog`: `disk(): Filesystem`, `name(BackupKind $kind, CarbonImmutable $at): string`, `all(): list<BackupFile>` (mais novo primeiro; ignora o que não casa com o padrão do nome), `find(string $name): ?BackupFile`, `totalBytes(): int`, `prune(): int` (apaga além do `keep` por tipo; devolve quantos apagou).
 
-- [ ] **Step 1: Testes (RED)** com `Storage::fake('backups')`: `test_nome_usa_o_fuso_de_exibicao` (`2026-11-13 05:15 UTC` vira `dimetal-2026-11-13-0215-diario.dump` com display `America/Sao_Paulo`); `test_lista_do_mais_novo_ao_mais_velho_e_ignora_arquivo_estranho` (arquivo `lixo.txt` e `dimetal-x.dump` fora); `test_find_so_acha_nome_da_lista` (`../x` e nome inexistente → `null`); `test_prune_mantem_7_diarios_2_semanais_3_manuais` (cria 9/4/5, sobram 7/2/3 e os mais novos); `test_prune_com_poucos_nao_apaga_nada` (3 diários, 0 apagados); `test_manual_nao_conta_nos_diarios`.
-- [ ] **Step 2: Rodar e ver falhar.** Run: `php artisan test tests/Feature/Backup/BackupCatalogTest.php`. Expected: FAIL (classes não existem).
-- [ ] **Step 3: Implementar** os arquivos da lista. O tipo e a data saem do nome (regex `^dimetal-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual)\.dump$`, data no fuso de exibição); o tamanho vem de `size()`. Disco `backups` em `config/filesystems.php`: driver `s3` com as chaves `AWS_*` e `bucket => env('BACKUP_BUCKET')`, `throw => false`, `report => false`, como o `s3`.
+- [ ] **Step 1: Testes (RED)** com `Storage::fake('backups')`: `test_nome_usa_o_fuso_de_exibicao` (`2026-11-13 05:15 UTC` vira `dimetal-2026-11-13-0215-diario.dump` com display `America/Sao_Paulo`); `test_lista_do_mais_novo_ao_mais_velho_e_ignora_arquivo_estranho` (arquivo `lixo.txt` e `dimetal-x.dump` fora); `test_find_so_acha_nome_da_lista` (`../x` e nome inexistente → `null`); `test_prune_mantem_7_diarios_2_semanais_3_manuais` (cria 9/4/5, sobram 7/2/3 e os mais novos); `test_prune_com_poucos_nao_apaga_nada` (3 diários, 0 apagados); `test_manual_nao_conta_nos_diarios`. No `PrepareMediaCommandTest` (ver como ele já fakeia o cliente S3): `test_cria_tambem_o_bucket_de_backup_quando_falta`, `test_bucket_de_backup_que_ja_existe_nao_e_recriado`, `test_sem_bucket_de_backup_configurado_o_disco_e_local_e_nada_a_preparar` (o comando continua com sucesso e a mensagem dos testes atuais de mídia segue valendo).
+- [ ] **Step 2: Rodar e ver falhar.** Run: `php artisan test tests/Feature/Backup/BackupCatalogTest.php tests/Feature/Console/PrepareMediaCommandTest.php`. Expected: FAIL.
+- [ ] **Step 3: Implementar** os arquivos da lista. O tipo e a data saem do nome (regex `^dimetal-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual)\.dump$`, data no fuso de exibição); o tamanho vem de `size()`. Disco `backups` em `config/filesystems.php`: com `BACKUP_BUCKET` definido, driver `s3` com as chaves `AWS_*` e esse bucket (`throw => false`, `report => false`, como o `s3`); sem ele, driver `local` com raiz `storage_path('app/backups')`. `PrepareMediaCommand` percorre os dois discos (mídia e `backups`) com a mesma lógica de hoje, extraída para um método privado `prepare(Filesystem $disk, string $label): bool`; disco não S3 não faz nada.
 - [ ] **Step 4: Rodar e ver passar.** Run: mesmo comando. Expected: PASS.
 - [ ] **Step 5: Commit** `feat: catálogo de backups (nomes, listagem e rotação 7+2+3)`.
 
@@ -148,8 +148,9 @@
 - Consumes: Tasks 1 a 6 prontos.
 
 - [ ] **Step 1: Prova real do dump e da restauração, local.** Com o `pg-test` de pé e o banco `dimetal_test` migrado, rodar com o cliente 18 do contêiner `postgres:18-alpine`: `pg_dump -Fc --compress=zstd:3` do banco, `createdb` descartável, `pg_restore --no-owner -d <descartável>` e comparar a contagem de linhas de 3 tabelas (ex.: `users`, `tickets`, `messages`). Anotar tamanho do arquivo e tempo de cada etapa. Remover o banco descartável e o arquivo.
-- [ ] **Step 2: Escrever o roteiro** (`docs/operacao/backup-e-restauracao.md`): o que existe (horários, retenção, nomes), como criar o bucket `backups` uma vez (tinker no terminal do app no Coolify: `app('filesystem')->disk('backups')->getClient()->createBucket(['Bucket' => env('BACKUP_BUCKET')])`), variável `BACKUP_BUCKET` no app, worker e scheduler, como baixar pela UI, como restaurar (`pg_restore` 16+ em banco novo, `--no-owner`, parar worker/scheduler antes, conferência), e que restaurar traz de volta dado apagado depois do backup (LGPD: reaplicar exclusões). Incluir os números medidos no passo 1.
-- [ ] **Step 3: Relatório** `docs/superpowers/reports/2026-11-12-backup-banco.md` com a prova, os números e o que ficou para o beta (criar o bucket, setar `BACKUP_BUCKET` pelo Coolify, rodar o primeiro "Fazer agora", baixar e restaurar um arquivo real, medir tamanho; avaliar `--exclude-table-data` de `waha_events` e o nível do zstd).
+- [ ] **Step 2: Escrever o roteiro** (`docs/operacao/backup-e-restauracao.md`), passo a passo para o **dono executar no beta**: o que existe (horários, retenção, nomes); que o bucket é criado sozinho no deploy; como rodar o primeiro "Fazer agora" e baixar o arquivo; como restaurar num banco descartável (cliente 18 e `pg_restore` 16+, `createdb`, `--no-owner`, conferência das contagens de `users`, `tickets`, `messages`, e como apagar o descartável) **sem tocar no banco do beta**; e o aviso de que restaurar traz de volta dado apagado depois do backup (LGPD: reaplicar exclusões). Incluir os números medidos no passo 1.
+- [ ] **Step 3: Relatório** `docs/superpowers/reports/2026-11-12-backup-banco.md` com a prova local, os números e o que fica com o dono no beta (primeiro backup, download, restauração real, medir tamanho; avaliar `--exclude-table-data` de `waha_events` e o nível do zstd).
+- [ ] **Step 4: Variáveis no beta (eu faço, pela API do Coolify, só no beta).** Gravar `BACKUP_BUCKET=dimetal-beta-backups` no app, no worker e no scheduler do beta e ler de volta para conferir (token lido em Python, nunca impresso; ver `coolify-beta-referencia`). Só depois de a branch estar pronta; o bucket nasce no primeiro deploy, quando o dono mergear. Sem restart agora.
 - [ ] **Step 4: Commit** `docs: roteiro de restauração do banco e relatório da prova`.
 
 ---
@@ -158,4 +159,4 @@
 
 - **Cobertura do spec:** cliente 18 (T1); disco, retenção 7+2+3, nomes (T2); alertas e estado (T3); dump zstd, semanal, rotação, lock, manual (T4); 02:15 e atraso 26 h (T5); tela, download, auditoria em log, só admin (T6); roteiro testado (T7). Sem restaurar pela UI, sem criptografia, sem agendar pela UI: nenhuma tarefa os toca.
 - **Consistência:** `BackupCatalog`, `BackupKind`, `BackupFile`, `BackupStatus`, `DumpFailed` (exceção) e `BackupFailed`/`BackupStale` (notificações) têm um nome só; `RunBackup` é chamado só pelo comando.
-- **Beta (depois do merge, com o dono):** bucket `backups`, `BACKUP_BUCKET` em app/worker/scheduler pelo Coolify, primeiro backup manual e restauração real. Nada disso é feito antes do merge nem na produção.
+- **Beta:** `BACKUP_BUCKET` eu gravo pelo Coolify (Task 7, passo 4); o bucket nasce sozinho no primeiro deploy depois do merge do dono; primeiro backup, download e restauração real ficam com o dono, pelo roteiro. Nada na produção.
