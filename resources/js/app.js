@@ -16,6 +16,7 @@ import './quote-jump';
 import './alerts';
 import './alert-ui';
 import './ticket-details';
+import './message-menu';
 import './relative-time';
 import './channel-qr';
 import './avatar-cropper';

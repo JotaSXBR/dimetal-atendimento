@@ -78,9 +78,9 @@ class InboxEditRevokeTest extends TestCase
         $html = $this->inbox()->html();
 
         $this->assertStringContainsString('$parent.revoke('.$this->mine->id.')', $html);
-        $this->assertStringContainsString('$wire.$parent.editMessage('.$this->mine->id.',', $html);
+        $this->assertStringContainsString('saveEdit('.$this->mine->id.')', $html);
         $this->assertStringNotContainsString('$parent.revoke('.$this->client->id.')', $html);
-        $this->assertStringNotContainsString('editMessage('.$this->client->id.',', $html);
+        $this->assertStringNotContainsString('saveEdit('.$this->client->id.')', $html);
     }
 
     public function test_item_editar_some_depois_de_15_min_mas_apagar_continua(): void
@@ -89,7 +89,7 @@ class InboxEditRevokeTest extends TestCase
 
         $html = $this->inbox()->html();
 
-        $this->assertStringNotContainsString('editMessage('.$this->mine->id.',', $html);
+        $this->assertStringNotContainsString('saveEdit('.$this->mine->id.')', $html);
         $this->assertStringContainsString('$parent.revoke('.$this->mine->id.')', $html);
     }
 

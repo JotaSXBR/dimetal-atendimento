@@ -21,7 +21,6 @@ class AlpineCspSubsetTest extends TestCase
         'components/passkey-registration.blade.php',
         'components/passkey-verify.blade.php',
         'livewire/automation/editor.blade.php',
-        'livewire/inbox/transcript.blade.php',
         'livewire/settings/company.blade.php',
         'livewire/settings/sectors.blade.php',
         'pages/auth/two-factor-challenge.blade.php',

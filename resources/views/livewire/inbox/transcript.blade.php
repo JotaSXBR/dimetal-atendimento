@@ -46,7 +46,7 @@
     @endphp
 
     <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }} {{ $message->reactions->isNotEmpty() ? 'mb-3' : '' }}">
-        <div x-data="{ editing: false, text: '' }" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
+        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
                 <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
             @endif
@@ -77,7 +77,7 @@
                             <textarea x-model="text" rows="3" maxlength="4096" class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm" aria-label="Novo texto da mensagem"></textarea>
                             <div class="flex justify-end gap-2 text-xs">
                                 <flux:button type="button" size="xs" variant="subtle" x-on:click="editing = false">Cancelar</flux:button>
-                                <flux:button type="button" size="xs" variant="primary" x-on:click="$wire.$parent.editMessage({{ $message->id }}, text); editing = false">Salvar</flux:button>
+                                <flux:button type="button" size="xs" variant="primary" x-on:click="saveEdit({{ $message->id }})">Salvar</flux:button>
                             </div>
                         </div>
                     @endcan
@@ -122,35 +122,7 @@
                     {{-- O menu é `fixed`: dentro da área rolável da conversa ele seria cortado pelo `overflow` e passaria por baixo do campo de resposta.
                          A posição vem do botão: abaixo dele, ou acima se não couber, e sempre dentro da tela. --}}
                     <div
-                        x-data="{
-                            open: false,
-                            info: false,
-                            style: '',
-                            toggle() {
-                                this.open = ! this.open;
-                                this.info = false;
-
-                                if (this.open) {
-                                    this.style = 'top:0;left:0;visibility:hidden';
-                                    this.$nextTick(() => this.place());
-                                }
-                            },
-                            place() {
-                                const button = this.$refs.button.getBoundingClientRect();
-                                const menu = this.$refs.menu;
-                                const margin = 8;
-                                // O limite é a área da conversa (acima do campo de resposta), não a tela inteira.
-                                const area = this.$el.closest('.overflow-y-auto')?.getBoundingClientRect();
-                                const floor = Math.min(area?.bottom ?? window.innerHeight, window.innerHeight) - margin;
-                                const ceiling = Math.max(area?.top ?? 0, 0) + margin;
-                                const below = button.bottom + 4;
-                                const wanted = below + menu.offsetHeight > floor ? button.top - menu.offsetHeight - 4 : below;
-                                const top = Math.max(Math.min(wanted, floor - menu.offsetHeight), ceiling);
-                                const left = Math.min(Math.max(button.right - menu.offsetWidth, margin), window.innerWidth - menu.offsetWidth - margin);
-
-                                this.style = `top:${top}px;left:${left}px`;
-                            },
-                        }"
+                        x-data="messageMenu"
                         x-on:scroll.window.capture="open = false"
                         x-on:resize.window="open = false"
                         class="absolute end-1 top-1"
@@ -168,11 +140,11 @@
                             @endcan
                             <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="mt-1 flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.7 3.3a.75.75 0 0 1 0 1.06L4.86 7.2H11a5 5 0 0 1 5 5v2.05a.75.75 0 0 1-1.5 0V12.2a3.5 3.5 0 0 0-3.5-3.5H4.86L7.7 11.54a.75.75 0 1 1-1.06 1.06l-4.12-4.12a.75.75 0 0 1 0-1.06l4.12-4.12a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/></svg>Responder</button>
                             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                                <button type="button" role="menuitem" x-on:click="navigator.clipboard.writeText(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h6A1.5 1.5 0 0 1 16 3.5v8a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 7 11.5v-8Z"/><path d="M4 6a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 17h6a1.5 1.5 0 0 0 1.5-1.5V15H8.5A3.5 3.5 0 0 1 5 11.5V6H4Z"/></svg>Copiar</button>
+                                <button type="button" role="menuitem" x-on:click="copy(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h6A1.5 1.5 0 0 1 16 3.5v8a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 7 11.5v-8Z"/><path d="M4 6a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 17h6a1.5 1.5 0 0 0 1.5-1.5V15H8.5A3.5 3.5 0 0 1 5 11.5V6H4Z"/></svg>Copiar</button>
                             @endif
                             @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
                                 @can('reply', $message->ticket)
-                                    <button type="button" role="menuitem" x-on:click="$dispatch('note-from-message', @js($message->body)); open = false" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 0-2 2v9.5a.5.5 0 0 0 .8.4L5.67 11H16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm2 3.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 5.25Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd"/></svg>Adicionar texto às notas</button>
+                                    <button type="button" role="menuitem" x-on:click="noteFrom(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 0-2 2v9.5a.5.5 0 0 0 .8.4L5.67 11H16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm2 3.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 5.25Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd"/></svg>Adicionar texto às notas</button>
                                 @endcan
                             @endif
                             <button type="button" role="menuitem" x-on:click.stop="info = ! info" x-bind:aria-expanded="info" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.25v3.25a.75.75 0 0 0 1.5 0V9.75A.75.75 0 0 0 10 9H9Z" clip-rule="evenodd"/></svg>Dados da mensagem</button>
@@ -190,7 +162,7 @@
                                 @endif
                             </dl>
                             @can('edit', $message)
-                                <button type="button" role="menuitem" x-on:click="editing = true; text = @js($message->body)" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m13.9 3.6 2.5 2.5a1 1 0 0 1 0 1.4l-8.2 8.2-3.6.9a.5.5 0 0 1-.6-.6l.9-3.6 8.2-8.2a1 1 0 0 1 1.4 0Z"/></svg>Editar</button>
+                                <button type="button" role="menuitem" x-on:click="startEdit(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m13.9 3.6 2.5 2.5a1 1 0 0 1 0 1.4l-8.2 8.2-3.6.9a.5.5 0 0 1-.6-.6l.9-3.6 8.2-8.2a1 1 0 0 1 1.4 0Z"/></svg>Editar</button>
                             @endcan
                             @can('revoke', $message)
                                 <button type="button" role="menuitem" wire:click="$parent.revoke({{ $message->id }})" wire:confirm="Apagar esta mensagem para todos? O cliente deixa de vê-la; o painel guarda o original." class="mt-1 flex w-full items-center gap-2 rounded border-t border-line px-2 py-1 pt-1.5 text-start text-danger hover:bg-canvas"><svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 2a1 1 0 0 0-1 1v1H4.5a.75.75 0 0 0 0 1.5h.4l.7 10a2 2 0 0 0 2 1.9h4.8a2 2 0 0 0 2-1.9l.7-10h.4a.75.75 0 0 0 0-1.5H13V3a1 1 0 0 0-1-1H8Zm1 2V3.5h2V4H9Z" clip-rule="evenodd"/></svg>Apagar para todos</button>
