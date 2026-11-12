@@ -2,12 +2,12 @@
 
 namespace App\Support;
 
-use Flux\AssetManager;
+use Illuminate\Support\Facades\Blade;
 use RuntimeException;
 
 /**
- * Hash (CSP) do script inline que o `@fluxAppearance` imprime no `<head>`. Calculado da fonte do Flux, nunca do HTML da
- * resposta: hashear o que a página já traz liberaria qualquer script injetado. Se uma atualização do Flux mudar o script, o
+ * Hash (CSP) do script inline que o `@fluxAppearance` imprime no `<head>`. Calculado da diretiva do Flux (o que a página imprime), nunca do HTML
+ * da resposta: hashear o que a página já traz liberaria qualquer script injetado. Se uma atualização do Flux mudar o script, o
  * hash acompanha sozinho (e `SecurityHeadersTest` confere que ele bate com o que a página renderiza).
  */
 final class FluxAppearanceHash
@@ -21,7 +21,7 @@ final class FluxAppearanceHash
 
     private static function compute(): string
     {
-        if (preg_match('/<script[^>]*>(.*?)<\/script>/s', AssetManager::fluxAppearance(), $m) !== 1) {
+        if (preg_match('/<script[^>]*>(.*?)<\/script>/s', Blade::render('@fluxAppearance'), $m) !== 1) {
             throw new RuntimeException('O Flux não imprime mais um script inline em @fluxAppearance; revisar a CSP.');
         }
 

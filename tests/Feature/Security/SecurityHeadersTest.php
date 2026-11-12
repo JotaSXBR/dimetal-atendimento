@@ -57,7 +57,7 @@ class SecurityHeadersTest extends TestCase
 
     private function scriptSrc(string $policy): string
     {
-        $this->assertSame(1, preg_match("/script-src ([^;]*)/", $policy, $m));
+        $this->assertSame(1, preg_match('/script-src ([^;]*)/', $policy, $m));
 
         return $m[1];
     }
