@@ -18,10 +18,6 @@ class AlpineCspSubsetTest extends TestCase
      * @var list<string>
      */
     private const PENDENTES = [
-        'components/passkey-registration.blade.php',
-        'components/passkey-verify.blade.php',
-        'pages/auth/two-factor-challenge.blade.php',
-        'pages/settings/⚡two-factor-setup-modal.blade.php',
     ];
 
     /** @return array<string, array{string, list<string>}> */
@@ -144,6 +140,7 @@ class AlpineCspSubsetTest extends TestCase
         '$message->body',
         '$qrValue',
         '\App\Settings\CompanySettings::logoUrl()',
+        "\$errors->has('recovery_code')",
     ];
 
     /** @return list<array{linha: int, atributo: string, regra: string}> */

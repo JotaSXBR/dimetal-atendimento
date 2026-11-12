@@ -11,38 +11,7 @@
 @endassets
 
 <div
-    x-data="{
-        supported: false,
-        loading: false,
-        error: null,
-        updateSupport() {
-            this.supported = Boolean(window.Passkeys?.isSupported());
-        },
-        init() {
-            this.updateSupport();
-
-            window.addEventListener('passkeys:ready', () => this.updateSupport(), { once: true });
-        },
-        async verify() {
-            this.loading = true;
-            this.error = null;
-            try {
-                const response = await window.Passkeys.verify({
-                    routes: {
-                        options: '{{ route($optionsRoute) }}',
-                        submit: '{{ route($submitRoute) }}',
-                    },
-                });
-                Livewire.navigate(response.redirect || '/inbox');
-            } catch (e) {
-                if (e.constructor?.name !== 'UserCancelledError') {
-                    this.error = e.message;
-                }
-            } finally {
-                this.loading = false;
-            }
-        },
-    }"
+    x-data="passkeyVerify('{{ route($optionsRoute) }}', '{{ route($submitRoute) }}')"
 >
     <template x-if="supported">
         <div>
