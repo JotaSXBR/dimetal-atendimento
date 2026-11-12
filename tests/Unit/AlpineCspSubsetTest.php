@@ -20,8 +20,6 @@ class AlpineCspSubsetTest extends TestCase
     private const PENDENTES = [
         'components/passkey-registration.blade.php',
         'components/passkey-verify.blade.php',
-        'livewire/alerts/banner.blade.php',
-        'livewire/alerts/bell.blade.php',
         'livewire/automation/editor.blade.php',
         'livewire/history/index.blade.php',
         'livewire/inbox/audio-player.blade.php',

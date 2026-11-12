@@ -14,6 +14,7 @@ import './emoji-picker';
 import './client-presence';
 import './quote-jump';
 import './alerts';
+import './alert-ui';
 import './relative-time';
 import './channel-qr';
 import './avatar-cropper';

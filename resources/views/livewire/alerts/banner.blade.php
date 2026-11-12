@@ -26,7 +26,7 @@
     <div role="status" aria-live="polite">
         @if ($recovered !== '')
             <div class="{{ $edge }} flex items-center gap-3 max-sm:flex-wrap bg-ok/10 px-5 py-1.5 text-xs text-ok" data-alert="connection-up"
-                x-data x-init="setTimeout(() => $wire.dismissRecovered(), 10000)">
+                x-data="recoveryBanner">
                 <flux:icon.check-circle variant="mini" class="size-4 shrink-0" />
                 <p class="min-w-0 flex-1 sm:truncate" title="WhatsApp voltou · {{ $recoveredRest }}"><strong>WhatsApp voltou</strong> · {{ $recoveredRest }}</p>
                 <span class="text-xs">some em 10 s</span>
