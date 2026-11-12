@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Facades\Blade;
+use Flux\AssetManager;
 use RuntimeException;
 
 /**
@@ -21,7 +21,9 @@ final class FluxAppearanceHash
 
     private static function compute(): string
     {
-        if (preg_match('/<script[^>]*>(.*?)<\/script>/s', Blade::render('@fluxAppearance'), $m) !== 1) {
+        $html = AssetManager::fluxAppearance(); // a mesma string que `@fluxAppearance` imprime; sem Blade::render (grava arquivo a cada chamada)
+
+        if (! is_string($html) || preg_match('/<script[^>]*>(.*?)<\/script>/s', $html, $m) !== 1) {
             throw new RuntimeException('O Flux não imprime mais um script inline em @fluxAppearance; revisar a CSP.');
         }
 
