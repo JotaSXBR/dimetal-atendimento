@@ -260,7 +260,7 @@ return [
     |
     */
 
-    'csp_safe' => (bool) env('LIVEWIRE_CSP_SAFE', false),
+    'csp_safe' => (bool) env('LIVEWIRE_CSP_SAFE', true),
 
     /*
     |---------------------------------------------------------------------------

@@ -30,6 +30,11 @@ Lida em `vendor/livewire/livewire/dist/livewire.csp.js`:
   no navegador, apagando uma etiqueta). `wire:model="a.b.c"` não é expressão JS.
 - Só os manipuladores `x-on:*` são interpretados **no evento**: por isso o guarda é estático, e o spike de carregamento subestima.
 
+## Estado (12/11/2026)
+
+- PR #105 mergeado (`0f0c080`) com a chave desligada; no mesmo dia `LIVEWIRE_CSP_SAFE=true` foi gravada no app do beta pelo Coolify (variável `gmr1nwzrhcfqrewmbu0zx4zy`, antes ausente; 16:49 UTC) e o app reiniciado. Beta verificado (ver abaixo).
+- Depois da validação, o padrão do código virou `true` (PR seguinte): `config/livewire.php`, `.env.example` e `phpunit.xml`. A variável do Coolify fica redundante e serve de botão de rollback: `LIVEWIRE_CSP_SAFE=false` + reiniciar volta ao Alpine normal com `unsafe-eval`.
+
 ## Como ligar no beta e como voltar
 
 Ligar (como foi feito com `CSP_MODE`, ver `2026-11-12-csp-enforce.md`): variável `LIVEWIRE_CSP_SAFE=true` no app do beta (Coolify, API
