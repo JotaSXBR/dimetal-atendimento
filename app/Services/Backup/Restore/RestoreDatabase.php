@@ -88,7 +88,7 @@ class RestoreDatabase
         $now = CarbonImmutable::now();
         $run->active = $this->admin->active();
         $run->incoming = AdminDatabase::stagingName($run->active, $now);
-        $run->archive = AdminDatabase::archiveName($run->active, $now);
+        $run->archive = $this->freeArchiveName($run->active, $now, $run->incoming);
 
         $this->step('restore', function () use ($run): void {
             $run->staging = $run->incoming;
@@ -115,11 +115,27 @@ class RestoreDatabase
         $now = CarbonImmutable::now();
         $run->active = $this->admin->active();
         $run->incoming = $stored->name;
-        $run->archive = AdminDatabase::archiveName($run->active, $now);
+        $run->archive = $this->freeArchiveName($run->active, $now, $run->incoming);
         $run->label = $stored->name;
         $run->from = $stored->createdAt;
 
         $this->cutover($run);
+    }
+
+    /**
+     * O nome do banco guardado leva o minuto da troca; se já existe (duas restaurações no mesmo minuto, ou voltar logo depois de
+     * restaurar, quando o banco a que se volta tem justamente o nome deste minuto), avança um minuto.
+     */
+    private function freeArchiveName(string $active, CarbonImmutable $at, string $incoming): string
+    {
+        $name = AdminDatabase::archiveName($active, $at);
+
+        for ($tries = 0; $tries < 60 && ($name === $incoming || $this->admin->exists($name)); $tries++) {
+            $at = $at->addMinute();
+            $name = AdminDatabase::archiveName($active, $at);
+        }
+
+        return $name;
     }
 
     /** @throws Throwable */

@@ -312,6 +312,29 @@ class RestoreDatabaseTest extends TestCase
         Queue::assertPushed(RecoverMessagesJob::class, fn (RecoverMessagesJob $job): bool => $job->from->equalTo($stored->createdAt));
     }
 
+    public function test_nome_do_banco_guardado_que_ja_existe_avanca_um_minuto(): void
+    {
+        // Achado na prova real: restaurar duas vezes no mesmo minuto repetia o nome do banco guardado.
+        $this->admin->shouldReceive('exists')->with(self::ARCHIVE)->andReturn(true);
+
+        $this->run_();
+
+        $this->assertContains('swap:dimetal,'.self::STAGING.',dimetal_antes_202611121501', $this->calls);
+        $this->assertSame('done', $this->state()['status']);
+    }
+
+    public function test_voltar_logo_depois_de_restaurar_nao_repete_o_nome_do_proprio_banco_guardado(): void
+    {
+        // Achado na prova real: o banco guardado tem o nome do minuto da restauração; voltar a ele no mesmo minuto colidia.
+        $stored = new StoredDatabase(self::ARCHIVE, CarbonImmutable::parse('2026-11-12 15:00:00', 'America/Sao_Paulo'), 1000);
+        $this->admin->shouldReceive('stored')->andReturn([$stored]);
+
+        $this->run_($this->request('switch', self::ARCHIVE));
+
+        $this->assertContains('swap:dimetal,'.self::ARCHIVE.',dimetal_antes_202611121501', $this->calls);
+        $this->assertSame('done', $this->state()['status']);
+    }
+
     public function test_switch_com_nome_forjado_e_recusado(): void
     {
         $this->admin->shouldReceive('stored')->andReturn([new StoredDatabase('dimetal_antes_202611110900', CarbonImmutable::now(), 1)]);
