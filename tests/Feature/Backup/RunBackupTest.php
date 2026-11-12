@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class RunBackupTest extends TestCase
@@ -136,6 +137,20 @@ class RunBackupTest extends TestCase
         Notification::assertSentTo($admin, BackupFailed::class);
         Notification::assertNotSentTo($supervisor, BackupFailed::class);
         $this->assertSame([], $this->leftoverDumps());
+    }
+
+    public function test_falha_ao_registrar_a_falha_nao_esconde_o_erro_do_dump(): void
+    {
+        // Banco fora do ar: o estado e o aviso também não gravam, mas quem chama precisa ver o motivo do dump.
+        $this->fakePgDump(dumpExit: 1, dumpStderr: 'pg_dump: erro: conexão recusada');
+        Notification::shouldReceive('send')->andThrow(new RuntimeException('banco fora do ar'));
+
+        try {
+            $this->run_();
+            $this->fail('devia lançar DumpFailed');
+        } catch (DumpFailed $e) {
+            $this->assertStringContainsString('conexão recusada', $e->getMessage());
+        }
     }
 
     public function test_segunda_execucao_com_o_lock_ocupado_nao_faz_nada(): void

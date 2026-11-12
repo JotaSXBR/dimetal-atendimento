@@ -44,13 +44,23 @@ class RunBackup
             return $this->catalog->find($name);
         } catch (Throwable $e) {
             $failure = $e instanceof DumpFailed ? $e : new DumpFailed('Falha ao gravar o backup no bucket ('.class_basename($e).').', 0, $e);
-            BackupStatus::recordFailure($failure->getMessage());
-            Notification::send($this->recipients->admins(), new BackupFailed);
+            $this->reportFailure($failure);
 
             throw $failure;
         } finally {
             $temporary === null || File::delete($temporary);
             $lock->release();
+        }
+    }
+
+    /** Grava o erro e avisa os admins; com o banco fora do ar nada disso grava, e o motivo do dump não pode se perder por isso. */
+    private function reportFailure(DumpFailed $failure): void
+    {
+        try {
+            BackupStatus::recordFailure($failure->getMessage());
+            Notification::send($this->recipients->admins(), new BackupFailed);
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 
