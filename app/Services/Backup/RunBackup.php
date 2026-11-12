@@ -27,7 +27,7 @@ class RunBackup
      */
     public function __invoke(BackupKind $kind): ?BackupFile
     {
-        $lock = Cache::lock('backup-database', 3600);
+        $lock = Cache::lock('backup-database', 1800);
 
         if (! $lock->get()) {
             return null;
@@ -37,11 +37,11 @@ class RunBackup
 
         try {
             $temporary = $this->dumper->dump();
-            $name = $this->store($temporary, $kind, CarbonImmutable::now());
+            $file = $this->store($temporary, $kind, CarbonImmutable::now());
             BackupStatus::recordSuccess();
             $this->prune();
 
-            return $this->catalog->find($name);
+            return $file;
         } catch (Throwable $e) {
             $failure = $e instanceof DumpFailed ? $e : new DumpFailed('Falha ao gravar o backup no bucket ('.class_basename($e).').', 0, $e);
             $this->reportFailure($failure);
@@ -64,8 +64,8 @@ class RunBackup
         }
     }
 
-    /** Envia o dump em stream; no domingo (fuso de exibição) o diário ganha também uma cópia semanal. */
-    private function store(string $temporary, BackupKind $kind, CarbonImmutable $at): string
+    /** Envia o dump em stream; no domingo (fuso de exibição) o diário ganha também uma cópia semanal. O arquivo devolvido é montado aqui, sem reler o bucket. */
+    private function store(string $temporary, BackupKind $kind, CarbonImmutable $at): BackupFile
     {
         $disk = $this->catalog->disk();
         $name = $this->catalog->name($kind, $at);
@@ -79,11 +79,14 @@ class RunBackup
             is_resource($stream) && fclose($stream);
         }
 
-        if ($kind === BackupKind::Diario && $at->setTimezone(config()->string('app.display_timezone'))->isSunday()) {
-            $disk->copy($name, $this->catalog->name(BackupKind::Semanal, $at));
+        $local = $at->setTimezone(config()->string('app.display_timezone'));
+
+        // A cópia semanal que falha não derruba o diário, que já está gravado: só aparece no log.
+        if ($kind === BackupKind::Diario && $local->isSunday() && ! $disk->copy($name, $this->catalog->name(BackupKind::Semanal, $at))) {
+            report(new DumpFailed('A cópia semanal não foi gravada; o backup diário está salvo.'));
         }
 
-        return $name;
+        return new BackupFile($name, $kind, $local->startOfMinute(), (int) filesize($temporary));
     }
 
     /** A rotação não derruba um backup que já foi gravado: se falhar, só vai para o log. */

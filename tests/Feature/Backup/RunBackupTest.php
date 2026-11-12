@@ -13,9 +13,11 @@ use App\Settings\BackupStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -151,6 +153,46 @@ class RunBackupTest extends TestCase
         } catch (DumpFailed $e) {
             $this->assertStringContainsString('conexão recusada', $e->getMessage());
         }
+    }
+
+    public function test_copia_semanal_que_falha_nao_derruba_o_diario(): void
+    {
+        $this->travelTo('2026-11-16 01:30:00'); // domingo em São Paulo
+        $this->fakePgDump();
+        $partial = Mockery::mock(Storage::disk('backups'))->makePartial();
+        $partial->shouldReceive('copy')->andReturn(false);
+        Storage::set('backups', $partial);
+        Exceptions::fake();
+
+        $file = $this->run_();
+
+        Exceptions::assertReported(fn (DumpFailed $e): bool => str_contains($e->getMessage(), 'semanal'));
+
+        $this->assertSame('dimetal-2026-11-15-2230-diario.dump', $file?->name);
+        $this->assertSame(['dimetal-2026-11-15-2230-diario.dump'], $this->names());
+        $this->assertNull(BackupStatus::lastError());
+        $this->assertNotNull(BackupStatus::lastSuccessAt());
+        Notification::assertNothingSent();
+    }
+
+    public function test_listagem_que_falha_depois_do_envio_nao_vira_falha_do_backup(): void
+    {
+        $this->travelTo('2026-11-12 05:15:00');
+        $this->fakePgDump();
+        $partial = Mockery::mock(Storage::disk('backups'))->makePartial();
+        $partial->shouldReceive('files')->andThrow(new RuntimeException('listagem recusada'));
+        Storage::set('backups', $partial);
+        Exceptions::fake();
+
+        $file = $this->run_();
+
+        Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'listagem recusada');
+
+        $this->assertSame('dimetal-2026-11-12-0215-diario.dump', $file?->name);
+        $this->assertSame(10, $file?->size);
+        $this->assertNull(BackupStatus::lastError());
+        $this->assertNotNull(BackupStatus::lastSuccessAt());
+        Notification::assertNothingSent();
     }
 
     public function test_segunda_execucao_com_o_lock_ocupado_nao_faz_nada(): void

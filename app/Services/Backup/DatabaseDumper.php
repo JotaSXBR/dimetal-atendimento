@@ -3,6 +3,7 @@
 namespace App\Services\Backup;
 
 use Illuminate\Contracts\Process\ProcessResult;
+use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -14,7 +15,13 @@ use Illuminate\Support\Str;
  */
 class DatabaseDumper
 {
-    private const TIMEOUT_SECONDS = 1800;
+    /** O dump roda na fila `history` (worker com timeout de 900 s) ou no scheduler: 600 s + 120 s da conferência cabem nos 900 s. */
+    private const DUMP_TIMEOUT_SECONDS = 600;
+
+    private const LIST_TIMEOUT_SECONDS = 120;
+
+    /** Dump temporário com mais que isto sobrou de um processo morto no meio (deploy, kill): é apagado na próxima rodada. */
+    private const ORPHAN_AGE_HOURS = 24;
 
     private const ERROR_LIMIT = 500;
 
@@ -31,16 +38,16 @@ class DatabaseDumper
 
         $directory = storage_path('app/tmp');
         File::ensureDirectoryExists($directory);
+        $this->sweepOrphans($directory);
         $path = $directory.'/backup-'.Str::lower((string) Str::ulid()).'.dump';
 
-        $result = Process::env($env)->timeout(self::TIMEOUT_SECONDS)->run([
-            'pg_dump', '-Fc', '--compress='.config()->string('backup.compress'),
-            '-h', $config['host'], '-p', $config['port'],
-            '-U', $config['username'], '-d', $config['database'],
-            '-f', $path,
-        ]);
-
         try {
+            $result = $this->run([
+                'pg_dump', '-Fc', '--compress='.config()->string('backup.compress'),
+                '-h', $config['host'], '-p', $config['port'],
+                '-U', $config['username'], '-d', $config['database'],
+                '-f', $path,
+            ], self::DUMP_TIMEOUT_SECONDS, 'pg_dump', $env);
             $this->assertDumped($result, $path, $password);
             $this->assertReadable($path, $password);
         } catch (DumpFailed $e) {
@@ -69,6 +76,32 @@ class DatabaseDumper
         ];
     }
 
+    /**
+     * @param  list<string>  $command
+     * @param  array<string, string>  $env
+     *
+     * @throws DumpFailed no timeout, com mensagem própria (o arquivo parcial é apagado por quem chama)
+     */
+    private function run(array $command, int $timeout, string $what, array $env = []): ProcessResult
+    {
+        try {
+            return Process::env($env)->timeout($timeout)->run($command);
+        } catch (ProcessTimedOutException) {
+            throw new DumpFailed(sprintf('%s passou de %d minutos e foi interrompido.', $what, intdiv($timeout, 60)));
+        }
+    }
+
+    private function sweepOrphans(string $directory): void
+    {
+        $limit = now()->subHours(self::ORPHAN_AGE_HOURS)->getTimestamp();
+
+        foreach (glob($directory.'/backup-*.dump') ?: [] as $orphan) {
+            if ((filemtime($orphan) ?: $limit) < $limit) {
+                File::delete($orphan);
+            }
+        }
+    }
+
     private function assertDumped(ProcessResult $result, string $path, string $password): void
     {
         if ($result->failed()) {
@@ -82,7 +115,7 @@ class DatabaseDumper
 
     private function assertReadable(string $path, string $password): void
     {
-        $result = Process::timeout(self::TIMEOUT_SECONDS)->run(['pg_restore', '--list', $path]);
+        $result = $this->run(['pg_restore', '--list', $path], self::LIST_TIMEOUT_SECONDS, 'A conferência do pg_restore');
 
         if ($result->failed()) {
             throw new DumpFailed($this->message('O dump gerado não passou na conferência do pg_restore', $result, $password));

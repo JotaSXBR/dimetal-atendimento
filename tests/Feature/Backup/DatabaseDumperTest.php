@@ -4,9 +4,13 @@ namespace Tests\Feature\Backup;
 
 use App\Services\Backup\DatabaseDumper;
 use App\Services\Backup\DumpFailed;
+use Illuminate\Process\Exceptions\ProcessTimedOutException;
+use Illuminate\Process\FakeProcessResult;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
+use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyTimeout;
+use Symfony\Component\Process\Process as SymfonyProcess;
 use Tests\TestCase;
 
 class DatabaseDumperTest extends TestCase
@@ -92,6 +96,46 @@ class DatabaseDumperTest extends TestCase
         } finally {
             $this->assertSame([], $this->leftoverDumps());
         }
+    }
+
+    public function test_timeout_do_pg_dump_vira_dump_failed_e_apaga_o_parcial(): void
+    {
+        Process::fake(function (PendingProcess $process) {
+            $command = (array) $process->command;
+            file_put_contents($command[array_search('-f', $command, true) + 1], 'parcial');
+
+            throw new ProcessTimedOutException(new SymfonyTimeout(new SymfonyProcess($command), SymfonyTimeout::TYPE_GENERAL), new FakeProcessResult);
+        });
+
+        try {
+            (new DatabaseDumper)->dump();
+            $this->fail('devia lançar DumpFailed');
+        } catch (DumpFailed $e) {
+            $this->assertStringContainsString('passou de', $e->getMessage());
+            $this->assertStringNotContainsString('pg_dump -Fc', $e->getMessage());
+        }
+
+        $this->assertSame([], $this->leftoverDumps());
+    }
+
+    public function test_apaga_dumps_temporarios_orfaos_com_mais_de_um_dia(): void
+    {
+        $this->fakePgDump();
+        $directory = storage_path('app/tmp');
+        is_dir($directory) || mkdir($directory, 0777, true);
+        $old = $directory.'/backup-orfao-velho.dump';
+        $fresh = $directory.'/backup-orfao-novo.dump';
+        file_put_contents($old, 'x');
+        file_put_contents($fresh, 'x');
+        touch($old, time() - 2 * 86400);
+
+        $path = (new DatabaseDumper)->dump();
+
+        $this->assertFileDoesNotExist($old);
+        $this->assertFileExists($fresh);
+
+        unlink($fresh);
+        unlink($path);
     }
 
     public function test_mensagem_de_erro_nao_tem_a_senha(): void

@@ -37,6 +37,17 @@ final class BackupStatus
         return self::instant('backup.stale_alerted_at');
     }
 
+    /** O primeiro dia em que a checagem de atraso rodou: sem backup nenhum ainda, a carência de 26 h conta daqui. */
+    public static function firstCheckAt(): ?CarbonImmutable
+    {
+        return self::instant('backup.first_check_at');
+    }
+
+    public static function markFirstCheck(): void
+    {
+        Setting::put('backup.first_check_at', now()->utc()->toIso8601String());
+    }
+
     public static function markStaleAlerted(): void
     {
         Setting::put('backup.stale_alerted_at', now()->utc()->toIso8601String());

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Notifications\BackupStale;
 use App\Services\Alerts\AlertRecipients;
 use App\Settings\BackupStatus;
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Notification;
 
@@ -19,9 +20,11 @@ class CheckBackupHealthCommand extends Command
 
     public function handle(AlertRecipients $recipients): int
     {
-        $last = BackupStatus::lastSuccessAt();
+        // Nunca houve backup bom (primeiro deploy): a carência de 26 h conta da primeira checagem, para o aviso não
+        // disparar antes de o primeiro diário ter a chance de rodar.
+        $reference = BackupStatus::lastSuccessAt() ?? $this->firstCheck();
 
-        if ($last !== null && $last->gt(now()->subHours(config()->integer('backup.stale_hours')))) {
+        if ($reference->gt(now()->subHours(config()->integer('backup.stale_hours')))) {
             return self::SUCCESS;
         }
 
@@ -36,5 +39,18 @@ class CheckBackupHealthCommand extends Command
         $this->warn('Backup atrasado: os admins foram avisados.');
 
         return self::SUCCESS;
+    }
+
+    private function firstCheck(): CarbonImmutable
+    {
+        $first = BackupStatus::firstCheckAt();
+
+        if ($first === null) {
+            BackupStatus::markFirstCheck();
+
+            return now()->toImmutable();
+        }
+
+        return $first;
     }
 }

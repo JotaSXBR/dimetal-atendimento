@@ -48,22 +48,31 @@ class CheckBackupHealthCommandTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_nunca_rodou_conta_como_atrasado(): void
+    public function test_primeiro_deploy_sem_backup_da_uma_carencia_de_26h(): void
     {
         $this->artisan('app:check-backup-health')->assertSuccessful();
+        Notification::assertNothingSent();
 
+        $this->travelTo('2026-11-14 10:00:00'); // 22 h depois da primeira checagem: o diário das 02:15 ainda não rodou
+        $this->artisan('app:check-backup-health')->assertSuccessful();
+        Notification::assertNothingSent();
+
+        $this->travelTo('2026-11-14 15:00:00'); // 27 h depois e nunca rodou
+        $this->artisan('app:check-backup-health')->assertSuccessful();
         Notification::assertSentTo($this->admin, BackupStale::class);
     }
 
     public function test_nao_repete_o_aviso_em_24h(): void
     {
+        $this->artisan('app:check-backup-health')->assertSuccessful(); // marca a primeira checagem
+        $this->travelTo('2026-11-14 15:00:00'); // 27 h: primeiro aviso
         $this->artisan('app:check-backup-health')->assertSuccessful();
-        $this->travelTo('2026-11-13 20:00:00');
+        $this->travelTo('2026-11-15 05:00:00'); // 14 h depois do aviso
         $this->artisan('app:check-backup-health')->assertSuccessful();
 
         Notification::assertSentToTimes($this->admin, BackupStale::class, 1);
 
-        $this->travelTo('2026-11-14 13:00:00'); // 25 h depois do primeiro aviso
+        $this->travelTo('2026-11-15 16:00:00'); // 25 h depois do primeiro aviso
         $this->artisan('app:check-backup-health')->assertSuccessful();
 
         Notification::assertSentToTimes($this->admin, BackupStale::class, 2);

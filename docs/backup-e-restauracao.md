@@ -15,6 +15,7 @@ RustFS e a empresa os puxa por rclone (ver `docs/superpowers/specs/2026-11-12-ba
 - **Tela:** Configuração > Backup do banco (só admin): lista, **Baixar**, **Fazer backup agora**, último sucesso e último erro.
 - **Alertas (sino dos admins):** "Backup do banco falhou" a cada falha; "Backup do banco atrasado" quando passa de 26 h sem backup bom
   (no máximo um aviso a cada 24 h).
+- **Tempo limite:** o dump é interrompido aos 10 minutos e a conferência aos 2 (o botão **Fazer backup agora** roda na fila `history`, cujo worker tem timeout de 15 minutos). Se o banco crescer a ponto de passar disso, a tela e o sino mostram "pg_dump passou de 10 minutos"; suba o limite em `DatabaseDumper` junto com o do worker (`docker/worker.sh`).
 - **Restaurar abre com** `pg_restore` 16 ou mais novo (o arquivo é zstd). O cliente 18 das imagens e o `postgres:18` servem.
 
 ## Primeiro backup no beta e teste de restauração (para o dono)

@@ -6,11 +6,14 @@ use App\Enums\UserRole;
 use App\Livewire\Settings\Backups;
 use App\Models\User;
 use App\Settings\BackupStatus;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Console\QueuedCommand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class BackupsPageTest extends TestCase
@@ -81,8 +84,21 @@ class BackupsPageTest extends TestCase
 
         Livewire::actingAs($this->admin())->test(Backups::class)->call('runNow')->assertSee('Backup iniciado');
 
-        Queue::assertPushed(QueuedCommand::class);
+        // Fila `history`: o worker dela tem timeout de 900 s; na `default` (120 s) um dump longo mataria o worker inteiro.
+        Queue::assertPushed(QueuedCommand::class, fn (QueuedCommand $job): bool => $job->queue === 'history');
         $this->assertSame([], Storage::disk('backups')->files());
+    }
+
+    public function test_bucket_ilegivel_mostra_aviso_em_vez_de_erro_500(): void
+    {
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('files')->andThrow(new RuntimeException('credencial recusada'));
+        Storage::set('backups', $disk);
+
+        Livewire::actingAs($this->admin())->test(Backups::class)
+            ->assertOk()
+            ->assertSee('Não foi possível ler o bucket de backups')
+            ->assertDontSee('credencial recusada');
     }
 
     public function test_quem_nao_e_admin_nao_executa(): void

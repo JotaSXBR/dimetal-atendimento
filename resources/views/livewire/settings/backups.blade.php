@@ -29,11 +29,18 @@
     <div class="rounded-[14px] border border-line bg-surface p-4">
         <p class="text-sm font-semibold text-ink">Fazer um backup agora</p>
         <p class="mt-1 text-xs text-ink-3">Guarda os {{ $keep['manual'] }} últimos manuais, à parte dos diários e semanais.</p>
-        <flux:button class="mt-3" variant="primary" wire:click="runNow">Fazer backup agora</flux:button>
+        <flux:button class="mt-3" variant="primary" wire:click="runNow" wire:loading.attr="disabled" wire:target="runNow">Fazer backup agora</flux:button>
         @if ($result !== '')
             <p class="mt-3 text-sm text-ink-2" role="status">{{ $result }}</p>
         @endif
     </div>
+
+    @if ($unreadable)
+        <div role="alert" class="rounded-[14px] border border-line bg-surface p-4">
+            <x-status-badge tone="warn">Bucket ilegível</x-status-badge>
+            <p class="mt-2 text-sm text-ink-2">Não foi possível ler o bucket de backups. Confira `BACKUP_BUCKET` e as chaves do RustFS; o motivo está no log do app.</p>
+        </div>
+    @endif
 
     <div class="rounded-[14px] border border-line bg-surface">
         @forelse ($files as $file)
@@ -47,7 +54,9 @@
                 <flux:button size="sm" icon="arrow-down-tray" href="{{ route('configuracoes.backups.baixar', $file->name) }}" download>Baixar</flux:button>
             </div>
         @empty
-            <x-empty-state icon="circle-stack" title="Nenhum backup ainda." description="O primeiro sai no horário automático, ou use Fazer backup agora." />
+            @unless ($unreadable)
+                <x-empty-state icon="circle-stack" title="Nenhum backup ainda." description="O primeiro sai no horário automático, ou use Fazer backup agora." />
+            @endunless
         @endforelse
     </div>
 </div>
