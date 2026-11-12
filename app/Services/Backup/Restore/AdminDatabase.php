@@ -1,0 +1,245 @@
+<?php
+
+namespace App\Services\Backup\Restore;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Connection;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use Throwable;
+
+/**
+ * Operações de banco inteiro (criar, apagar, trocar por renomeação, listar os guardados) pela conexão administrativa, que
+ * conecta no banco `postgres` com o mesmo usuário do app (precisa poder criar bancos). Todo nome de banco é validado por
+ * regex e citado; nada que vem da tela vira identificador sem passar por aqui.
+ */
+class AdminDatabase
+{
+    private const NAME = '/^[a-z][a-z0-9_]{0,62}$/';
+
+    private const RENAME_ATTEMPTS = 5;
+
+    private ?Connection $connection = null;
+
+    /** A conexão ao banco `postgres`, montada da conexão ativa (já com `DB_URL` resolvido). */
+    public function connection(): Connection
+    {
+        if ($this->connection !== null) {
+            return $this->connection;
+        }
+
+        $config = DB::connection()->getConfig();
+        $config = is_array($config) ? $config : [];
+        $config['database'] = 'postgres';
+        $config['url'] = null;
+        config(['database.connections.pgsql_admin' => $config]);
+        DB::purge('pgsql_admin');
+
+        return $this->connection = DB::connection('pgsql_admin');
+    }
+
+    /** O nome do banco que o app está usando agora. */
+    public function active(): string
+    {
+        return DB::connection()->getDatabaseName();
+    }
+
+    /** O usuário pode criar e renomear bancos (superusuário ou `CREATEDB`). */
+    public function canCreate(): bool
+    {
+        $row = $this->first('select (rolcreatedb or rolsuper) as ok from pg_roles where rolname = current_user');
+
+        return $row !== null && (bool) $row['ok'];
+    }
+
+    public function exists(string $name): bool
+    {
+        return $this->first('select 1 as found from pg_database where datname = ?', [$name]) !== null;
+    }
+
+    /** Banco novo e vazio, com a mesma codificação e localidade do ativo. */
+    public function create(string $name): void
+    {
+        self::assertName($name);
+        $admin = $this->connection();
+        $source = $this->first('select pg_encoding_to_char(encoding) as enc, datcollate, datctype from pg_database where datname = ?', [$this->active()]) ?? [];
+        $pdo = $admin->getPdo();
+        $options = ' TEMPLATE template0 ENCODING '.$pdo->quote(is_string($source['enc'] ?? null) ? $source['enc'] : 'UTF8');
+
+        if (is_string($source['datcollate'] ?? null) && is_string($source['datctype'] ?? null)) {
+            $options .= ' LC_COLLATE '.$pdo->quote($source['datcollate']).' LC_CTYPE '.$pdo->quote($source['datctype']);
+        }
+
+        $admin->statement('CREATE DATABASE "'.$name.'"'.$options);
+    }
+
+    /** Só apaga banco `<qualquer>_antes_|_restaurando_AAAAMMDDHHMM` deste sistema, nunca o ativo. */
+    public function drop(string $name): void
+    {
+        self::assertName($name);
+
+        if ($name === $this->active()
+            || ! str_starts_with($name, $this->active().'_')
+            || preg_match('/_(antes|restaurando)_\d{12}$/', $name) !== 1) {
+            throw new InvalidArgumentException('Só é permitido apagar bancos guardados ou em restauração deste sistema.');
+        }
+
+        $this->connection()->statement('DROP DATABASE IF EXISTS "'.$name.'" WITH (FORCE)');
+    }
+
+    /**
+     * Troca por renomeação: `$active` vira `$archive` e `$incoming` assume o nome `$active`. Derruba as conexões ao ativo e
+     * bloqueia novas durante a troca. Se algo falhar, desfaz o que já fez e lança {@see SwapFailed}.
+     *
+     * @throws SwapFailed
+     */
+    public function swap(string $active, string $incoming, string $archive): void
+    {
+        foreach ([$active, $incoming, $archive] as $name) {
+            self::assertName($name);
+        }
+
+        $admin = $this->connection();
+        $renamedActive = false;
+        $renamedIncoming = false;
+
+        try {
+            $admin->statement('ALTER DATABASE "'.$active.'" WITH ALLOW_CONNECTIONS false');
+            $this->rename($active, $archive, terminate: true);
+            $renamedActive = true;
+            $this->rename($incoming, $active);
+            $renamedIncoming = true;
+            $admin->statement('ALTER DATABASE "'.$active.'" WITH ALLOW_CONNECTIONS true');
+        } catch (Throwable $e) {
+            $this->undo($active, $incoming, $archive, $renamedActive, $renamedIncoming);
+
+            throw new SwapFailed('Não foi possível trocar o banco; o banco anterior continua ativo.', 0, $e);
+        }
+    }
+
+    /**
+     * Os bancos guardados do banco ativo, do mais novo ao mais velho.
+     *
+     * @return list<StoredDatabase>
+     */
+    public function stored(): array
+    {
+        $active = $this->active();
+        $zone = config()->string('app.display_timezone');
+        $found = [];
+
+        foreach ($this->rows('select datname, pg_database_size(datname) as bytes from pg_database where datname like ?', [str_replace('_', '\_', $active).'\_antes\_%']) as $row) {
+            $name = is_string($row['datname'] ?? null) ? $row['datname'] : '';
+
+            if (preg_match('/^'.preg_quote($active, '/').'_antes_(\d{12})$/', $name, $m) !== 1) {
+                continue;
+            }
+
+            $at = CarbonImmutable::createFromFormat('YmdHi', $m[1], $zone);
+
+            if ($at !== null) {
+                $found[] = new StoredDatabase($name, $at, is_numeric($row['bytes'] ?? null) ? (int) $row['bytes'] : 0);
+            }
+        }
+
+        usort($found, fn (StoredDatabase $a, StoredDatabase $b): int => $b->createdAt <=> $a->createdAt);
+
+        return $found;
+    }
+
+    /** @throws InvalidArgumentException */
+    public static function assertName(string $name): void
+    {
+        if (preg_match(self::NAME, $name) !== 1) {
+            throw new InvalidArgumentException('Nome de banco inválido.');
+        }
+    }
+
+    public static function archiveName(string $active, CarbonImmutable $at): string
+    {
+        return $active.'_antes_'.$at->setTimezone(config()->string('app.display_timezone'))->format('YmdHi');
+    }
+
+    public static function stagingName(string $active, CarbonImmutable $at): string
+    {
+        return $active.'_restaurando_'.$at->setTimezone(config()->string('app.display_timezone'))->format('YmdHi');
+    }
+
+    /**
+     * @param  array<int, mixed>  $bindings
+     * @return list<array<string, mixed>>
+     */
+    private function rows(string $sql, array $bindings = []): array
+    {
+        $rows = [];
+
+        foreach ($this->connection()->select($sql, $bindings) as $row) {
+            $values = [];
+
+            foreach (get_object_vars((object) $row) as $column => $value) {
+                $values[(string) $column] = $value;
+            }
+
+            $rows[] = $values;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<int, mixed>  $bindings
+     * @return array<string, mixed>|null
+     */
+    private function first(string $sql, array $bindings = []): ?array
+    {
+        return $this->rows($sql, $bindings)[0] ?? null;
+    }
+
+    /** Renomeia, repetindo se o Postgres ainda achar uma sessão no banco (por exemplo uma tarefa do autovacuum). */
+    private function rename(string $from, string $to, bool $terminate = false): void
+    {
+        for ($attempt = 1; ; $attempt++) {
+            if ($terminate) {
+                $this->connection()->select('select pg_terminate_backend(pid) from pg_stat_activity where datname = ? and pid <> pg_backend_pid()', [$from]);
+            }
+
+            try {
+                $this->connection()->statement('ALTER DATABASE "'.$from.'" RENAME TO "'.$to.'"');
+
+                return;
+            } catch (QueryException $e) {
+                if ($attempt >= self::RENAME_ATTEMPTS || ! str_contains($e->getMessage(), 'being accessed by other users')) {
+                    throw $e;
+                }
+
+                usleep(500_000);
+            }
+        }
+    }
+
+    /** Desfaz a troca pela ordem inversa; cada passo é tentado mesmo se o anterior falhar. */
+    private function undo(string $active, string $incoming, string $archive, bool $renamedActive, bool $renamedIncoming): void
+    {
+        $admin = $this->connection();
+        $steps = [];
+
+        if ($renamedIncoming) {
+            $steps[] = 'ALTER DATABASE "'.$active.'" RENAME TO "'.$incoming.'"';
+        }
+
+        if ($renamedActive) {
+            $steps[] = 'ALTER DATABASE "'.$archive.'" RENAME TO "'.$active.'"';
+        }
+
+        $steps[] = 'ALTER DATABASE "'.$active.'" WITH ALLOW_CONNECTIONS true';
+
+        foreach ($steps as $sql) {
+            try {
+                $admin->statement($sql);
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+    }
+}
