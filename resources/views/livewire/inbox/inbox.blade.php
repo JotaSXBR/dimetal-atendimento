@@ -54,7 +54,7 @@
             @endif
         </header>
 
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="relative min-h-0 flex-1 overflow-y-auto">
             @if ($tab === 'encerrados')
                 @foreach ($closed as $item)
                     <button
