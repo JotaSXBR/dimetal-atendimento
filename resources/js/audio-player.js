@@ -123,6 +123,15 @@ document.addEventListener('alpine:init', () => {
             return this.duration > 0 ? Math.min(1, this.current / this.duration) : 0;
         },
 
+        get progressPercent() {
+            return Math.round(this.progress * 100);
+        },
+
+        // Altura da barra da onda (0..1 do pico) em porcentagem.
+        barStyle(bar) {
+            return `height:${Math.round(bar * 100)}%`;
+        },
+
         get timeLabel() {
             return this.playing || this.current > 0 ? formatTime(this.current) : formatTime(this.duration);
         },

@@ -35,6 +35,12 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        // Seletor de arquivos: sobe o que foi escolhido e limpa o campo, para escolher o mesmo arquivo de novo.
+        pickFiles(event) {
+            this.addFiles(event.target.files);
+            event.target.value = '';
+        },
+
         paste(event) {
             const files = event.clipboardData?.files;
 

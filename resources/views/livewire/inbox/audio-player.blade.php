@@ -21,7 +21,7 @@
             aria-label="Posição do áudio"
             aria-valuemin="0"
             aria-valuemax="100"
-            x-bind:aria-valuenow="Math.round(progress * 100)"
+            x-bind:aria-valuenow="progressPercent"
             x-bind:aria-valuetext="timeLabel"
             x-on:pointerdown="seekStart($event)"
             x-on:pointermove="seekMove($event)"
@@ -33,7 +33,7 @@
                     aria-hidden="true"
                     class="min-w-0.5 flex-1 rounded-full bg-current"
                     x-bind:class="index / bars.length < progress ? 'opacity-100' : 'opacity-30'"
-                    x-bind:style="'height:' + Math.round(bar * 100) + '%'"
+                    x-bind:style="barStyle(bar)"
                 ></span>
             </template>
         </div>

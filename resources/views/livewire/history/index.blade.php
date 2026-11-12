@@ -4,7 +4,7 @@
 
 <div
     class="grid h-dvh grid-cols-1 bg-surface {{ $ticket ? 'lg:grid-cols-[360px_minmax(0,1fr)_var(--details-w,280px)]' : 'lg:grid-cols-[360px_minmax(0,1fr)]' }}"
-    x-data="{ details: localStorage.getItem('ticketDetailsOpen') !== '0', sheet: false, toggle() { this.details = ! this.details; localStorage.setItem('ticketDetailsOpen', this.details ? '1' : '0') } }"
+    x-data="ticketDetails"
     x-bind:style="details ? '' : '--details-w: 0px'"
 >
     {{-- Busca e lista --}}

@@ -75,6 +75,42 @@ document.addEventListener('alpine:init', () => {
             field.focus();
         },
 
+        // Digitar no formulário: guarda o rascunho e atualiza se há texto (o mic vira Enviar).
+        onInput(event) {
+            this.remember(event);
+            this.sync();
+        },
+
+        focusField() {
+            this.field()?.focus();
+        },
+
+        // Enter envia (Shift+Enter quebra a linha); não envia enquanto há arquivo subindo.
+        enter(event, uploading) {
+            if (event.shiftKey) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (uploading === 0) {
+                this.submit();
+            }
+        },
+
+        // Esc fecha a lista de respostas rápidas e devolve o foco ao campo.
+        closeQuickReplies() {
+            if ($wire.showQuickReplies) {
+                $wire.set('showQuickReplies', false);
+                this.$dispatch('composer-focus');
+            }
+        },
+
+        insertQuickReply(body) {
+            this.insert(body);
+            $wire.set('showQuickReplies', false);
+        },
+
         remember(event) {
             if (event.isTrusted && event.target.tagName === 'TEXTAREA') {
                 this.save(this.mode, event.target.value);

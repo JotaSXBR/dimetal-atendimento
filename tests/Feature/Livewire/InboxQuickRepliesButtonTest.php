@@ -104,9 +104,9 @@ class InboxQuickRepliesButtonTest extends TestCase
     {
         $html = $this->inbox()->html();
 
-        // O rodapé escuta `composer-focus` e foca o campo; a lista e o seletor de emoji disparam esse evento ao fechar com Esc.
-        $this->assertStringContainsString('x-on:composer-focus="field()?.focus()"', $html);
-        $this->assertMatchesRegularExpression('/x-on:keydown\.escape\.window="[^"]*composer-focus[^"]*"/', $html);
+        // O rodapé escuta `composer-focus` e foca o campo; ao fechar com Esc a lista dispara esse evento (resources/js/composer-mode.js).
+        $this->assertStringContainsString('x-on:composer-focus="focusField()"', $html);
+        $this->assertStringContainsString('x-on:keydown.escape.window="closeQuickReplies()"', $html);
         $this->assertStringNotContainsString('emoji-closed', $html);
     }
 
