@@ -79,7 +79,7 @@ class SecurityHeadersTest extends TestCase
         $scriptSrc = $this->scriptSrc($policy);
 
         $this->assertStringContainsString("media-src 'self' blob:", $policy);
-        $this->assertStringContainsString("'unsafe-eval'", $scriptSrc); // Alpine avalia expressões com `new Function`
+        $this->assertStringNotContainsString("'unsafe-eval'", $scriptSrc); // o build CSP do Alpine não avalia strings
         $this->assertStringNotContainsString("'unsafe-inline'", $scriptSrc);
         $this->assertStringNotContainsString('blob:', $scriptSrc);
     }
@@ -93,26 +93,26 @@ class SecurityHeadersTest extends TestCase
         $response->assertHeader('Content-Security-Policy');
     }
 
-    public function test_unsafe_eval_so_com_o_build_alpine_normal(): void
+    public function test_sem_unsafe_eval_por_padrao_e_so_com_o_build_alpine_normal(): void
     {
-        $this->assertStringContainsString("'unsafe-eval'", $this->scriptSrc((string) $this->get('/login')->headers->get('Content-Security-Policy')));
-
-        config(['livewire.csp_safe' => true]);
-
         $this->assertStringNotContainsString("'unsafe-eval'", $this->scriptSrc((string) $this->get('/login')->headers->get('Content-Security-Policy')));
+
+        config(['livewire.csp_safe' => false]);
+
+        $this->assertStringContainsString("'unsafe-eval'", $this->scriptSrc((string) $this->get('/login')->headers->get('Content-Security-Policy')));
     }
 
     // O Livewire imprime o <script> uma vez por processo (flag estática): um teste por estado.
-    public function test_livewire_serve_o_build_normal_por_padrao(): void
+    public function test_livewire_serve_o_build_csp_por_padrao(): void
     {
-        $this->assertDoesNotMatchRegularExpression('/livewire\.js\?id=[^"]*-csp/', (string) $this->get('/login')->getContent());
+        $this->assertMatchesRegularExpression('/livewire\.js\?id=[^"]*-csp/', (string) $this->get('/login')->getContent());
     }
 
-    public function test_livewire_serve_o_build_csp_quando_a_chave_esta_ligada(): void
+    public function test_livewire_serve_o_build_normal_quando_a_chave_esta_desligada(): void
     {
-        config(['livewire.csp_safe' => true]);
+        config(['livewire.csp_safe' => false]);
 
-        $this->assertMatchesRegularExpression('/livewire\.js\?id=[^"]*-csp/', (string) $this->get('/login')->getContent());
+        $this->assertDoesNotMatchRegularExpression('/livewire\.js\?id=[^"]*-csp/', (string) $this->get('/login')->getContent());
     }
 
     public function test_upgrade_insecure_requests_so_em_https(): void
