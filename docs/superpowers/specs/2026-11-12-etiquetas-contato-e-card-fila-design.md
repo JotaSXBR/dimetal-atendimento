@@ -21,6 +21,7 @@ como o Helena) não podem ficar presos ao WhatsApp no card.
 ## Metas
 
 - Etiquetas do **contato** (catálogo com escopo), aplicáveis na ficha do contato, com filtro em Contatos e na Fila.
+- **Etiqueta do contato também** no Histórico (lista e painel), na lista de Contatos e em Nova conversa.
 - **Card novo da Fila** estilo Helena: avatar com ícone do canal, nome, chips (contato primeiro), prévia, e coluna da direita com selo
   do setor, tempo relativo e contador de não lidas.
 - **Tipo de canal** (`whatsapp` por enquanto) lido pelo card, para outro canal entrar depois sem refazer o card.
@@ -57,6 +58,10 @@ como o Helena) não podem ficar presos ao WhatsApp no card.
 4. **Na coluna da direita e no avatar:** contador de não lidas, selo do setor, ícone do canal, tempo relativo ("há 3 min").
 5. **Não lidas calculadas:** `tickets.agent_seen_at`; não lidas = mensagens do cliente depois dele (subconsulta como a da prévia).
 6. **Entra tudo numa spec só:** etiquetas do contato (ficha e Contatos), card novo, tipo de canal e automação.
+7. **Selo do setor só com mais de um setor recebendo tickets** (a regra de hoje fica).
+8. **Quem edita o contato** aplica e remove etiqueta de contato; o catálogo continua do supervisor para cima.
+9. **Cor por paleta fixa, "que não contraste com as cores do app":** acaba a cor livre (#RRGGBB). A paleta é de cores que não se confundam com as cores de estado do app (amarelo da marca, verde de ok, âmbar de aviso, vermelho de perigo) nem briguem com os temas claro e escuro, todas com texto legível (AA). *Interpretação minha, conferir:* "não contrasta" = combina e não colide com as cores do app, e não "tem contraste baixo".
+10. **A etiqueta do contato aparece também** no Histórico (lista e painel), na lista de Contatos (chips na linha, além do filtro) e em Nova conversa (escolher contato).
 
 ## Minhas decisões (conferir)
 
@@ -69,7 +74,7 @@ como o Helena) não podem ficar presos ao WhatsApp no card.
 7. **Não lidas:** `agent_seen_at` é preenchido quando alguém abre o ticket (junto do agendamento do `MarkTicketSeenJob`) e quando um atendente responde; ticket sem valor conta todas as mensagens do cliente. Ao mudar, dispara `TicketUpdated` para a Fila de todos se atualizar. Sem contador gravado para dessincronizar.
 8. **Tipo de canal:** `channels.kind` (`whatsapp` padrão) com enum `ChannelKind` (`label()`, ícone); o ícone vai sobre o avatar em todo card. A regra "selo do número só com mais de um número" continua; **setor** continua só com mais de um setor recebendo (regra atual), salvo o dono pedir que apareça sempre.
 9. **Tempo relativo** recalculado no navegador a partir do instante ISO (como o sino), sem congelar entre as releituras do servidor; ponto de SLA continua.
-10. **Cor dos chips:** a cor da etiqueta é o fundo (sólido) ou a borda (contorno); o texto do chip sólido é claro ou escuro conforme a luminância da cor (AA); teste de contraste para o catálogo.
+10. **Cor dos chips:** a cor da etiqueta (da paleta fixa) é o fundo (sólido) ou a borda (contorno); cada cor da paleta define o seu texto e o teste confere o contraste AA nos dois temas. A paleta (uns 12 tons, sem amarelo, verde, âmbar nem vermelho de estado) é desenhada na execução e as etiquetas atuais viram o tom mais próximo; `tags.color` passa a guardar o nome do tom.
 
 ## Abordagens consideradas
 
@@ -83,7 +88,7 @@ como o Helena) não podem ficar presos ao WhatsApp no card.
 - Migração (`tags.scope`, `contact_tag`, `tickets.agent_seen_at`, `channels.kind`) e o que ela faz com dados existentes; índice para a subconsulta de não lidas.
 - Como a ficha escolhe a etiqueta (menu com busca) e o limite de etiquetas por contato.
 - Impacto nos testes existentes do card (`InboxQueueCardTest`) e do `MergeLidContact`.
-- Se o selo do setor deve aparecer sempre (pergunta aberta ao dono).
+- A paleta concreta (nomes e valores dos tons, claro e escuro) e a migração das cores atuais para o tom mais próximo.
 
 ## Pendente
 
