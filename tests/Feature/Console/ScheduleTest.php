@@ -31,6 +31,7 @@ class ScheduleTest extends TestCase
         $event = $this->event('app:backup-database');
 
         $this->assertSame('15 2 * * *', $event->expression);
+        $this->assertSame('America/Sao_Paulo', (string) $event->timezone);
         $this->assertTrue($event->withoutOverlapping);
         $this->assertSame(60, $event->expiresAt);
     }
