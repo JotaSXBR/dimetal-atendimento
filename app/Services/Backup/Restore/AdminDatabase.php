@@ -20,23 +20,44 @@ class AdminDatabase
 
     private const RENAME_ATTEMPTS = 5;
 
-    private ?Connection $connection = null;
+    /** @var array<string, Connection> */
+    private array $connections = [];
 
     /** A conexão ao banco `postgres`, montada da conexão ativa (já com `DB_URL` resolvido). */
     public function connection(): Connection
     {
-        if ($this->connection !== null) {
-            return $this->connection;
+        return $this->connectionTo('postgres', 'pgsql_admin');
+    }
+
+    /** Uma conexão ao banco `$database`, com as credenciais da conexão ativa, registrada com o apelido `$alias`. */
+    public function connectionTo(string $database, string $alias): Connection
+    {
+        if (isset($this->connections[$alias])) {
+            return $this->connections[$alias];
         }
 
         $config = DB::connection()->getConfig();
         $config = is_array($config) ? $config : [];
-        $config['database'] = 'postgres';
+        $config['database'] = $database;
         $config['url'] = null;
-        config(['database.connections.pgsql_admin' => $config]);
-        DB::purge('pgsql_admin');
+        config(['database.connections.'.$alias => $config]);
+        DB::purge($alias);
 
-        return $this->connection = DB::connection('pgsql_admin');
+        return $this->connections[$alias] = DB::connection($alias);
+    }
+
+    /**
+     * As credenciais da conexão ativa para os processos `pg_*` (a senha vai só no ambiente do processo).
+     *
+     * @return array{host: string, port: string, username: string, password: string, sslmode: string}
+     */
+    public function settings(): array
+    {
+        $raw = DB::connection()->getConfig();
+        $raw = is_array($raw) ? $raw : [];
+        $value = fn (string $key): string => is_scalar($raw[$key] ?? null) ? (string) $raw[$key] : '';
+
+        return ['host' => $value('host'), 'port' => $value('port'), 'username' => $value('username'), 'password' => $value('password'), 'sslmode' => $value('sslmode')];
     }
 
     /** O nome do banco que o app está usando agora. */
@@ -172,9 +193,20 @@ class AdminDatabase
      */
     private function rows(string $sql, array $bindings = []): array
     {
+        return $this->query($this->connection(), $sql, $bindings);
+    }
+
+    /**
+     * Linhas como arrays tipados (a API do Laravel devolve `mixed`).
+     *
+     * @param  array<int, mixed>  $bindings
+     * @return list<array<string, mixed>>
+     */
+    public function query(Connection $db, string $sql, array $bindings = []): array
+    {
         $rows = [];
 
-        foreach ($this->connection()->select($sql, $bindings) as $row) {
+        foreach ($db->select($sql, $bindings) as $row) {
             $values = [];
 
             foreach (get_object_vars((object) $row) as $column => $value) {
