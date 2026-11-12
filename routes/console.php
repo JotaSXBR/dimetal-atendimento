@@ -15,6 +15,9 @@ Schedule::command('app:close-inactive-tickets')->everyTenMinutes()->withoutOverl
 Schedule::command('app:expire-bot-sessions')->everyMinute()->withoutOverlapping(10);
 Schedule::command('app:drain-outbox')->everyMinute()->withoutOverlapping(10);
 Schedule::command('app:sync-google-contacts')->everyTenMinutes()->withoutOverlapping(10);
+// O backup roda antes da purga de mídia; a checagem avisa os admins se passar de 26 h sem backup bom (ver config/backup.php).
+Schedule::command('app:backup-database')->dailyAt(config()->string('backup.hour'))->withoutOverlapping(60);
+Schedule::command('app:check-backup-health')->hourly()->withoutOverlapping(10);
 Schedule::command('app:purge-media')->dailyAt('03:30')->withoutOverlapping(10);
 Schedule::command('app:purge-notifications')->dailyAt('03:45')->withoutOverlapping(10);
 Schedule::command('app:recover-messages')->dailyAt('04:15')->withoutOverlapping(10);
