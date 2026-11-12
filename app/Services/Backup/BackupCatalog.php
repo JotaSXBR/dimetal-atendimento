@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 /** O que há no bucket de backup: nomes, listagem e rotação. Só arquivos com o nome do padrão existem para o catálogo. */
 class BackupCatalog
 {
-    private const PATTERN = '/^dimetal-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual)\.dump$/';
+    private const PATTERN = '/^dimetal-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual|antes)\.dump$/';
 
     public function disk(): Filesystem
     {

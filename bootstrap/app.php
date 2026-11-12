@@ -27,6 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'webhooks/waha',
         ]);
+
+        // A restauração do banco põe o sistema em manutenção por alguns segundos; a página de andamento e o JSON do estado
+        // continuam no ar para o admin acompanhar (ver `RestorePageController`).
+        $middleware->preventRequestsDuringMaintenance(except: ['restauracao', 'restauracao/estado']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

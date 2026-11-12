@@ -88,7 +88,11 @@ class Bell extends Component
                 'number_changed' => ['arrow-path', 'warn', 'Número do WhatsApp mudou', $channel],
                 default => ['check-circle', 'accent', 'WhatsApp voltou', $channel],
             },
-            'backup' => ['circle-stack', 'danger', $state === 'stale' ? 'Backup do banco atrasado' : 'Backup do banco falhou', 'Veja Configuração > Backup do banco'],
+            'backup' => match ($state) {
+                'restored' => ['arrow-path', 'accent', 'Banco restaurado', 'Veja Configuração > Backup do banco'],
+                'stale' => ['circle-stack', 'danger', 'Backup do banco atrasado', 'Veja Configuração > Backup do banco'],
+                default => ['circle-stack', 'danger', 'Backup do banco falhou', 'Veja Configuração > Backup do banco'],
+            },
             'recovery' => ['inbox-arrow-down', 'accent', ($data['state'] ?? '') === 'imported' ? 'Histórico importado' : 'Mensagens recuperadas', $this->recoveryDetail($data, $channel)],
             default => ['bell', 'accent', 'Alerta', $detail],
         };

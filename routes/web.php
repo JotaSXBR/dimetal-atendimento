@@ -5,6 +5,8 @@ use App\Http\Controllers\BackupDownloadController;
 use App\Http\Controllers\GoogleConnectionController;
 use App\Http\Controllers\LogoController;
 use App\Http\Controllers\MessageMediaController;
+use App\Http\Controllers\RestorePageController;
+use App\Http\Controllers\RestoreStatusController;
 use App\Http\Controllers\Webhooks\WahaWebhookController;
 use App\Livewire\Audit\Index as AuditIndex;
 use App\Livewire\Automation\Editor as AutomationEditor;
@@ -29,6 +31,10 @@ Route::redirect('/', '/inbox')->name('home');
 
 Route::post('webhooks/waha', WahaWebhookController::class)->middleware('throttle:webhook')->name('webhooks.waha');
 Route::get('marca/logo', LogoController::class)->name('logo');
+
+// Fora de `auth` e da manutenção de propósito: o admin acompanha a restauração mesmo com o sistema em manutenção.
+Route::get('restauracao', RestorePageController::class)->name('restauracao');
+Route::get('restauracao/estado', RestoreStatusController::class)->name('restauracao.estado');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('inbox', Inbox::class)->name('inbox');

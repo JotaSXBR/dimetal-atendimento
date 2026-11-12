@@ -43,4 +43,13 @@ class ScheduleTest extends TestCase
         $this->assertSame('0 * * * *', $event->expression);
         $this->assertTrue($event->withoutOverlapping);
     }
+
+    public function test_limpeza_de_bancos_guardados_diaria(): void
+    {
+        $event = $this->event('app:purge-old-databases');
+
+        $this->assertSame('0 3 * * *', $event->expression);
+        $this->assertSame('America/Sao_Paulo', (string) $event->timezone);
+        $this->assertTrue($event->withoutOverlapping);
+    }
 }

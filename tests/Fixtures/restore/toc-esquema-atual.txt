@@ -1,0 +1,280 @@
+;
+; Archive created at 2026-11-12 19:07:11 UTC
+;     dbname: dimetal_test
+;     TOC Entries: 269
+;     Compression: zstd
+;     Dump Version: 1.16-0
+;     Format: CUSTOM
+;     Integer: 4 bytes
+;     Offset: 8 bytes
+;     Dumped from database version: 18.6
+;     Dumped by pg_dump version: 18.6
+;
+;
+; Selected TOC Entries:
+;
+2; 3079 16812 EXTENSION - pg_trgm 
+3929; 0 0 COMMENT - EXTENSION pg_trgm 
+267; 1259 449097 TABLE public bot_sessions dimetal
+266; 1259 449096 SEQUENCE public bot_sessions_id_seq dimetal
+3930; 0 0 SEQUENCE OWNED BY public bot_sessions_id_seq dimetal
+254; 1259 448969 TABLE public business_hours dimetal
+253; 1259 448968 SEQUENCE public business_hours_id_seq dimetal
+3931; 0 0 SEQUENCE OWNED BY public business_hours_id_seq dimetal
+226; 1259 448650 TABLE public cache dimetal
+227; 1259 448661 TABLE public cache_locks dimetal
+241; 1259 448799 TABLE public channels dimetal
+240; 1259 448798 SEQUENCE public channels_id_seq dimetal
+3932; 0 0 SEQUENCE OWNED BY public channels_id_seq dimetal
+245; 1259 448841 TABLE public contacts dimetal
+244; 1259 448840 SEQUENCE public contacts_id_seq dimetal
+3933; 0 0 SEQUENCE OWNED BY public contacts_id_seq dimetal
+232; 1259 448703 TABLE public failed_jobs dimetal
+231; 1259 448702 SEQUENCE public failed_jobs_id_seq dimetal
+3934; 0 0 SEQUENCE OWNED BY public failed_jobs_id_seq dimetal
+258; 1259 448995 TABLE public google_connections dimetal
+257; 1259 448994 SEQUENCE public google_connections_id_seq dimetal
+3935; 0 0 SEQUENCE OWNED BY public google_connections_id_seq dimetal
+256; 1259 448981 TABLE public holidays dimetal
+255; 1259 448980 SEQUENCE public holidays_id_seq dimetal
+3936; 0 0 SEQUENCE OWNED BY public holidays_id_seq dimetal
+230; 1259 448688 TABLE public job_batches dimetal
+229; 1259 448673 TABLE public jobs dimetal
+228; 1259 448672 SEQUENCE public jobs_id_seq dimetal
+3937; 0 0 SEQUENCE OWNED BY public jobs_id_seq dimetal
+274; 1259 449176 TABLE public message_edits dimetal
+273; 1259 449175 SEQUENCE public message_edits_id_seq dimetal
+3938; 0 0 SEQUENCE OWNED BY public message_edits_id_seq dimetal
+272; 1259 449157 TABLE public message_reactions dimetal
+271; 1259 449156 SEQUENCE public message_reactions_id_seq dimetal
+3939; 0 0 SEQUENCE OWNED BY public message_reactions_id_seq dimetal
+249; 1259 448890 TABLE public messages dimetal
+248; 1259 448889 SEQUENCE public messages_id_seq dimetal
+3940; 0 0 SEQUENCE OWNED BY public messages_id_seq dimetal
+221; 1259 448605 TABLE public migrations dimetal
+220; 1259 448604 SEQUENCE public migrations_id_seq dimetal
+3941; 0 0 SEQUENCE OWNED BY public migrations_id_seq dimetal
+261; 1259 449035 TABLE public notifications dimetal
+234; 1259 448723 TABLE public passkeys dimetal
+233; 1259 448722 SEQUENCE public passkeys_id_seq dimetal
+3942; 0 0 SEQUENCE OWNED BY public passkeys_id_seq dimetal
+224; 1259 448629 TABLE public password_reset_tokens dimetal
+260; 1259 449011 TABLE public quick_replies dimetal
+259; 1259 449010 SEQUENCE public quick_replies_id_seq dimetal
+3943; 0 0 SEQUENCE OWNED BY public quick_replies_id_seq dimetal
+237; 1259 448766 TABLE public sector_user dimetal
+236; 1259 448750 TABLE public sectors dimetal
+235; 1259 448749 SEQUENCE public sectors_id_seq dimetal
+3944; 0 0 SEQUENCE OWNED BY public sectors_id_seq dimetal
+225; 1259 448638 TABLE public sessions dimetal
+239; 1259 448784 TABLE public settings dimetal
+238; 1259 448783 SEQUENCE public settings_id_seq dimetal
+3945; 0 0 SEQUENCE OWNED BY public settings_id_seq dimetal
+269; 1259 449127 TABLE public tags dimetal
+268; 1259 449126 SEQUENCE public tags_id_seq dimetal
+3946; 0 0 SEQUENCE OWNED BY public tags_id_seq dimetal
+251; 1259 448933 TABLE public ticket_events dimetal
+250; 1259 448932 SEQUENCE public ticket_events_id_seq dimetal
+3947; 0 0 SEQUENCE OWNED BY public ticket_events_id_seq dimetal
+276; 1259 449197 TABLE public ticket_notes dimetal
+275; 1259 449196 SEQUENCE public ticket_notes_id_seq dimetal
+3948; 0 0 SEQUENCE OWNED BY public ticket_notes_id_seq dimetal
+252; 1259 448957 TABLE public ticket_sequences dimetal
+270; 1259 449139 TABLE public ticket_tag dimetal
+247; 1259 448855 TABLE public tickets dimetal
+246; 1259 448854 SEQUENCE public tickets_id_seq dimetal
+3949; 0 0 SEQUENCE OWNED BY public tickets_id_seq dimetal
+223; 1259 448615 TABLE public users dimetal
+222; 1259 448614 SEQUENCE public users_id_seq dimetal
+3950; 0 0 SEQUENCE OWNED BY public users_id_seq dimetal
+243; 1259 448819 TABLE public waha_events dimetal
+242; 1259 448818 SEQUENCE public waha_events_id_seq dimetal
+3951; 0 0 SEQUENCE OWNED BY public waha_events_id_seq dimetal
+265; 1259 449066 TABLE public workflow_versions dimetal
+264; 1259 449065 SEQUENCE public workflow_versions_id_seq dimetal
+3952; 0 0 SEQUENCE OWNED BY public workflow_versions_id_seq dimetal
+263; 1259 449049 TABLE public workflows dimetal
+262; 1259 449048 SEQUENCE public workflows_id_seq dimetal
+3953; 0 0 SEQUENCE OWNED BY public workflows_id_seq dimetal
+3557; 2604 449100 DEFAULT public bot_sessions id dimetal
+3550; 2604 448972 DEFAULT public business_hours id dimetal
+3537; 2604 448802 DEFAULT public channels id dimetal
+3542; 2604 448844 DEFAULT public contacts id dimetal
+3529; 2604 448706 DEFAULT public failed_jobs id dimetal
+3552; 2604 448998 DEFAULT public google_connections id dimetal
+3551; 2604 448984 DEFAULT public holidays id dimetal
+3528; 2604 448676 DEFAULT public jobs id dimetal
+3563; 2604 449179 DEFAULT public message_edits id dimetal
+3562; 2604 449160 DEFAULT public message_reactions id dimetal
+3545; 2604 448893 DEFAULT public messages id dimetal
+3522; 2604 448608 DEFAULT public migrations id dimetal
+3531; 2604 448726 DEFAULT public passkeys id dimetal
+3554; 2604 449014 DEFAULT public quick_replies id dimetal
+3532; 2604 448753 DEFAULT public sectors id dimetal
+3535; 2604 448787 DEFAULT public settings id dimetal
+3560; 2604 449130 DEFAULT public tags id dimetal
+3548; 2604 448936 DEFAULT public ticket_events id dimetal
+3564; 2604 449200 DEFAULT public ticket_notes id dimetal
+3543; 2604 448858 DEFAULT public tickets id dimetal
+3523; 2604 448618 DEFAULT public users id dimetal
+3541; 2604 448822 DEFAULT public waha_events id dimetal
+3556; 2604 449069 DEFAULT public workflow_versions id dimetal
+3555; 2604 449052 DEFAULT public workflows id dimetal
+3913; 0 449097 TABLE DATA public bot_sessions dimetal
+3900; 0 448969 TABLE DATA public business_hours dimetal
+3872; 0 448650 TABLE DATA public cache dimetal
+3873; 0 448661 TABLE DATA public cache_locks dimetal
+3887; 0 448799 TABLE DATA public channels dimetal
+3891; 0 448841 TABLE DATA public contacts dimetal
+3878; 0 448703 TABLE DATA public failed_jobs dimetal
+3904; 0 448995 TABLE DATA public google_connections dimetal
+3902; 0 448981 TABLE DATA public holidays dimetal
+3876; 0 448688 TABLE DATA public job_batches dimetal
+3875; 0 448673 TABLE DATA public jobs dimetal
+3920; 0 449176 TABLE DATA public message_edits dimetal
+3918; 0 449157 TABLE DATA public message_reactions dimetal
+3895; 0 448890 TABLE DATA public messages dimetal
+3867; 0 448605 TABLE DATA public migrations dimetal
+3907; 0 449035 TABLE DATA public notifications dimetal
+3880; 0 448723 TABLE DATA public passkeys dimetal
+3870; 0 448629 TABLE DATA public password_reset_tokens dimetal
+3906; 0 449011 TABLE DATA public quick_replies dimetal
+3883; 0 448766 TABLE DATA public sector_user dimetal
+3882; 0 448750 TABLE DATA public sectors dimetal
+3871; 0 448638 TABLE DATA public sessions dimetal
+3885; 0 448784 TABLE DATA public settings dimetal
+3915; 0 449127 TABLE DATA public tags dimetal
+3897; 0 448933 TABLE DATA public ticket_events dimetal
+3922; 0 449197 TABLE DATA public ticket_notes dimetal
+3898; 0 448957 TABLE DATA public ticket_sequences dimetal
+3916; 0 449139 TABLE DATA public ticket_tag dimetal
+3893; 0 448855 TABLE DATA public tickets dimetal
+3869; 0 448615 TABLE DATA public users dimetal
+3889; 0 448819 TABLE DATA public waha_events dimetal
+3911; 0 449066 TABLE DATA public workflow_versions dimetal
+3909; 0 449049 TABLE DATA public workflows dimetal
+3954; 0 0 SEQUENCE SET public bot_sessions_id_seq dimetal
+3955; 0 0 SEQUENCE SET public business_hours_id_seq dimetal
+3956; 0 0 SEQUENCE SET public channels_id_seq dimetal
+3957; 0 0 SEQUENCE SET public contacts_id_seq dimetal
+3958; 0 0 SEQUENCE SET public failed_jobs_id_seq dimetal
+3959; 0 0 SEQUENCE SET public google_connections_id_seq dimetal
+3960; 0 0 SEQUENCE SET public holidays_id_seq dimetal
+3961; 0 0 SEQUENCE SET public jobs_id_seq dimetal
+3962; 0 0 SEQUENCE SET public message_edits_id_seq dimetal
+3963; 0 0 SEQUENCE SET public message_reactions_id_seq dimetal
+3964; 0 0 SEQUENCE SET public messages_id_seq dimetal
+3965; 0 0 SEQUENCE SET public migrations_id_seq dimetal
+3966; 0 0 SEQUENCE SET public passkeys_id_seq dimetal
+3967; 0 0 SEQUENCE SET public quick_replies_id_seq dimetal
+3968; 0 0 SEQUENCE SET public sectors_id_seq dimetal
+3969; 0 0 SEQUENCE SET public settings_id_seq dimetal
+3970; 0 0 SEQUENCE SET public tags_id_seq dimetal
+3971; 0 0 SEQUENCE SET public ticket_events_id_seq dimetal
+3972; 0 0 SEQUENCE SET public ticket_notes_id_seq dimetal
+3973; 0 0 SEQUENCE SET public tickets_id_seq dimetal
+3974; 0 0 SEQUENCE SET public users_id_seq dimetal
+3975; 0 0 SEQUENCE SET public waha_events_id_seq dimetal
+3976; 0 0 SEQUENCE SET public workflow_versions_id_seq dimetal
+3977; 0 0 SEQUENCE SET public workflows_id_seq dimetal
+3671; 2606 449112 CONSTRAINT public bot_sessions bot_sessions_pkey dimetal
+3673; 2606 449124 CONSTRAINT public bot_sessions bot_sessions_ticket_id_unique dimetal
+3648; 2606 448978 CONSTRAINT public business_hours business_hours_pkey dimetal
+3585; 2606 448670 CONSTRAINT public cache_locks cache_locks_pkey dimetal
+3582; 2606 448659 CONSTRAINT public cache cache_pkey dimetal
+3611; 2606 448815 CONSTRAINT public channels channels_pkey dimetal
+3613; 2606 448817 CONSTRAINT public channels channels_waha_session_unique dimetal
+3620; 2606 448993 CONSTRAINT public contacts contacts_google_resource_name_unique dimetal
+3622; 2606 448853 CONSTRAINT public contacts contacts_lid_unique dimetal
+3624; 2606 448849 CONSTRAINT public contacts contacts_pkey dimetal
+3626; 2606 448851 CONSTRAINT public contacts contacts_wa_id_unique dimetal
+3593; 2606 448718 CONSTRAINT public failed_jobs failed_jobs_pkey dimetal
+3595; 2606 448721 CONSTRAINT public failed_jobs failed_jobs_uuid_unique dimetal
+3655; 2606 449007 CONSTRAINT public google_connections google_connections_pkey dimetal
+3651; 2606 448991 CONSTRAINT public holidays holidays_date_unique dimetal
+3653; 2606 448989 CONSTRAINT public holidays holidays_pkey dimetal
+3590; 2606 448701 CONSTRAINT public job_batches job_batches_pkey dimetal
+3587; 2606 448686 CONSTRAINT public jobs jobs_pkey dimetal
+3685; 2606 449195 CONSTRAINT public message_edits message_edits_action_id_unique dimetal
+3688; 2606 449187 CONSTRAINT public message_edits message_edits_pkey dimetal
+3681; 2606 449174 CONSTRAINT public message_reactions message_reactions_message_id_by_unique dimetal
+3683; 2606 449167 CONSTRAINT public message_reactions message_reactions_pkey dimetal
+3638; 2606 448930 CONSTRAINT public messages messages_channel_id_wa_message_id_unique dimetal
+3640; 2606 448908 CONSTRAINT public messages messages_pkey dimetal
+3568; 2606 448613 CONSTRAINT public migrations migrations_pkey dimetal
+3662; 2606 449047 CONSTRAINT public notifications notifications_pkey dimetal
+3597; 2606 448743 CONSTRAINT public passkeys passkeys_credential_id_unique dimetal
+3599; 2606 448735 CONSTRAINT public passkeys passkeys_pkey dimetal
+3575; 2606 448637 CONSTRAINT public password_reset_tokens password_reset_tokens_pkey dimetal
+3657; 2606 449021 CONSTRAINT public quick_replies quick_replies_pkey dimetal
+3659; 2606 449028 CONSTRAINT public quick_replies quick_replies_shortcut_unique dimetal
+3605; 2606 448782 CONSTRAINT public sector_user sector_user_sector_id_user_id_unique dimetal
+3603; 2606 448763 CONSTRAINT public sectors sectors_pkey dimetal
+3578; 2606 448647 CONSTRAINT public sessions sessions_pkey dimetal
+3607; 2606 448797 CONSTRAINT public settings settings_key_unique dimetal
+3609; 2606 448795 CONSTRAINT public settings settings_pkey dimetal
+3675; 2606 449138 CONSTRAINT public tags tags_name_unique dimetal
+3677; 2606 449136 CONSTRAINT public tags tags_pkey dimetal
+3643; 2606 448945 CONSTRAINT public ticket_events ticket_events_pkey dimetal
+3690; 2606 449210 CONSTRAINT public ticket_notes ticket_notes_pkey dimetal
+3646; 2606 448963 CONSTRAINT public ticket_sequences ticket_sequences_pkey dimetal
+3679; 2606 449155 CONSTRAINT public ticket_tag ticket_tag_pkey dimetal
+3632; 2606 448866 CONSTRAINT public tickets tickets_pkey dimetal
+3634; 2606 448965 CONSTRAINT public tickets tickets_protocol_unique dimetal
+3570; 2606 448628 CONSTRAINT public users users_email_unique dimetal
+3572; 2606 448626 CONSTRAINT public users users_pkey dimetal
+3616; 2606 448831 CONSTRAINT public waha_events waha_events_pkey dimetal
+3618; 2606 448839 CONSTRAINT public waha_events waha_events_waha_event_id_unique dimetal
+3666; 2606 449078 CONSTRAINT public workflow_versions workflow_versions_pkey dimetal
+3668; 2606 449090 CONSTRAINT public workflow_versions workflow_versions_workflow_id_number_unique dimetal
+3664; 2606 449059 CONSTRAINT public workflows workflows_pkey dimetal
+3669; 1259 449125 INDEX public bot_sessions_active_expires dimetal
+3649; 1259 448979 INDEX public business_hours_weekday_opens_at_index dimetal
+3580; 1259 448660 INDEX public cache_expiration_index dimetal
+3583; 1259 448671 INDEX public cache_locks_expiration_index dimetal
+3591; 1259 448719 INDEX public failed_jobs_connection_queue_failed_at_index dimetal
+3588; 1259 448687 INDEX public jobs_queue_index dimetal
+3686; 1259 449193 INDEX public message_edits_message_id_index dimetal
+3636; 1259 449031 INDEX public messages_body_trgm dimetal
+3641; 1259 448931 INDEX public messages_ticket_id_sent_at_index dimetal
+3660; 1259 449045 INDEX public notifications_notifiable_type_notifiable_id_index dimetal
+3600; 1259 448741 INDEX public passkeys_user_id_index dimetal
+3601; 1259 449222 INDEX public sectors_name_active_unique dimetal
+3576; 1259 448649 INDEX public sessions_last_activity_index dimetal
+3579; 1259 448648 INDEX public sessions_user_id_index dimetal
+3644; 1259 448956 INDEX public ticket_events_ticket_id_created_at_index dimetal
+3691; 1259 449221 INDEX public ticket_notes_ticket_id_created_at_index dimetal
+3627; 1259 449034 INDEX public tickets_closed_at dimetal
+3628; 1259 448888 INDEX public tickets_one_open_per_contact_channel dimetal
+3629; 1259 449032 INDEX public tickets_open_id dimetal
+3630; 1259 449033 INDEX public tickets_open_sla_due dimetal
+3635; 1259 448887 INDEX public tickets_status_opened_at_index dimetal
+3573; 1259 448748 INDEX public users_role_index dimetal
+3614; 1259 448837 INDEX public waha_events_event_received_at_index dimetal
+3711; 2606 449113 FK CONSTRAINT public bot_sessions bot_sessions_ticket_id_foreign dimetal
+3712; 2606 449118 FK CONSTRAINT public bot_sessions bot_sessions_workflow_version_id_foreign dimetal
+3695; 2606 449091 FK CONSTRAINT public channels channels_workflow_id_foreign dimetal
+3716; 2606 449188 FK CONSTRAINT public message_edits message_edits_message_id_foreign dimetal
+3715; 2606 449168 FK CONSTRAINT public message_reactions message_reactions_message_id_foreign dimetal
+3701; 2606 448924 FK CONSTRAINT public messages messages_author_user_id_foreign dimetal
+3702; 2606 448914 FK CONSTRAINT public messages messages_channel_id_foreign dimetal
+3703; 2606 448919 FK CONSTRAINT public messages messages_contact_id_foreign dimetal
+3704; 2606 448909 FK CONSTRAINT public messages messages_ticket_id_foreign dimetal
+3692; 2606 448736 FK CONSTRAINT public passkeys passkeys_user_id_foreign dimetal
+3707; 2606 449022 FK CONSTRAINT public quick_replies quick_replies_sector_id_foreign dimetal
+3693; 2606 448771 FK CONSTRAINT public sector_user sector_user_sector_id_foreign dimetal
+3694; 2606 448776 FK CONSTRAINT public sector_user sector_user_user_id_foreign dimetal
+3705; 2606 448951 FK CONSTRAINT public ticket_events ticket_events_actor_user_id_foreign dimetal
+3706; 2606 448946 FK CONSTRAINT public ticket_events ticket_events_ticket_id_foreign dimetal
+3717; 2606 449211 FK CONSTRAINT public ticket_notes ticket_notes_ticket_id_foreign dimetal
+3718; 2606 449225 FK CONSTRAINT public ticket_notes ticket_notes_user_id_foreign dimetal
+3713; 2606 449149 FK CONSTRAINT public ticket_tag ticket_tag_tag_id_foreign dimetal
+3714; 2606 449144 FK CONSTRAINT public ticket_tag ticket_tag_ticket_id_foreign dimetal
+3697; 2606 448882 FK CONSTRAINT public tickets tickets_assigned_user_id_foreign dimetal
+3698; 2606 448872 FK CONSTRAINT public tickets tickets_channel_id_foreign dimetal
+3699; 2606 448867 FK CONSTRAINT public tickets tickets_contact_id_foreign dimetal
+3700; 2606 448877 FK CONSTRAINT public tickets tickets_sector_id_foreign dimetal
+3696; 2606 448832 FK CONSTRAINT public waha_events waha_events_channel_id_foreign dimetal
+3709; 2606 449084 FK CONSTRAINT public workflow_versions workflow_versions_published_by_foreign dimetal
+3710; 2606 449079 FK CONSTRAINT public workflow_versions workflow_versions_workflow_id_foreign dimetal
+3708; 2606 449060 FK CONSTRAINT public workflows workflows_updated_by_foreign dimetal

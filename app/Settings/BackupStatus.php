@@ -37,6 +37,25 @@ final class BackupStatus
         return self::instant('backup.stale_alerted_at');
     }
 
+    /** A última restauração (ou desfazer), gravada no banco novo depois da troca. */
+    public static function recordRestore(string $file, string $actor): void
+    {
+        Setting::put('backup.last_restore', ['at' => now()->utc()->toIso8601String(), 'file' => $file, 'actor' => $actor]);
+    }
+
+    /** @return array{at: CarbonImmutable, file: string, actor: string}|null */
+    public static function lastRestore(): ?array
+    {
+        $value = Setting::get('backup.last_restore');
+        $at = is_array($value) ? self::instantFrom($value['at'] ?? null) : null;
+
+        if (! is_array($value) || $at === null) {
+            return null;
+        }
+
+        return ['at' => $at, 'file' => is_string($value['file'] ?? null) ? $value['file'] : '', 'actor' => is_string($value['actor'] ?? null) ? $value['actor'] : ''];
+    }
+
     /** O primeiro dia em que a checagem de atraso rodou: sem backup nenhum ainda, a carência de 26 h conta daqui. */
     public static function firstCheckAt(): ?CarbonImmutable
     {
@@ -55,8 +74,11 @@ final class BackupStatus
 
     private static function instant(string $key): ?CarbonImmutable
     {
-        $value = Setting::get($key);
+        return self::instantFrom(Setting::get($key));
+    }
 
+    private static function instantFrom(mixed $value): ?CarbonImmutable
+    {
         if (! is_string($value) || $value === '') {
             return null;
         }
