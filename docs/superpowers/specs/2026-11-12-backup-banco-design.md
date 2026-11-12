@@ -11,7 +11,7 @@ RustFS e a empresa a puxa por rclone (ver `rustfs-backup-decisao-e-poc`).
 
 ## Metas
 
-- Dump diário às 02:15 (antes da purga das 03:30), formato custom (`-Fc`, já comprimido em gzip), cliente PostgreSQL 18.
+- Dump diário às 02:15 (antes da purga das 03:30), formato custom (`-Fc --compress=zstd:3`), cliente PostgreSQL 18.
 - Retenção: 7 diários, 2 semanais, 3 manuais. Rotação só depois de um backup novo gravado e conferido.
 - Tela de Configuração (admin): lista (nome, data, tipo, tamanho, total), botão baixar, botão "Fazer agora", status do último.
 - Alerta no sino dos admins quando um backup falha ou quando passa de 26 h sem backup bom.
@@ -76,8 +76,9 @@ RustFS e a empresa a puxa por rclone (ver `rustfs-backup-decisao-e-poc`).
 9. **Alerta:** notificação nova (`BackupFailed` e `BackupStale`) só para admins, no sino existente, sem som próprio.
    `BackupStale` por checagem horária barata (`last_success_at` > 26 h).
 10. **Cliente 18:** instalado só nos estágios `worker` e `scheduler` do Dockerfile, com comentário de que sobe junto com o
-    servidor (se o Postgres virar 19, subir o pacote). Compressão padrão (gzip); `--compress=zstd:3` só se o primeiro dump
-    real mostrar tamanho ou tempo ruins.
+    servidor (se o Postgres virar 19, subir o pacote). **Compressão zstd** (`--compress=zstd:3`, decisão do dono: preferir o
+    moderno); o arquivo só abre com `pg_restore` 16+, o que o cliente 18 já garante e o roteiro de restauração documenta.
+    Se o primeiro dump real mostrar tempo ou tamanho ruins, ajustar o nível (ou `lz4`).
 11. **Testes:** `Process::fake`/disco fake nos testes do comando e da tela (sem `pg_dump` real no CI, onde o cliente seria
     outra versão); a prova real (dump + `pg_restore` em banco descartável) é manual, no portão 7, e vai ao relatório.
 
