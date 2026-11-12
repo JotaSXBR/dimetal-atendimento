@@ -13,12 +13,11 @@ use PHPUnit\Framework\TestCase;
 class AlpineCspSubsetTest extends TestCase
 {
     /**
-     * Views ainda não convertidas (cada tarefa do plano esvazia a lista). Ao terminar, fica vazia.
+     * Views ainda não convertidas. Vazia: o guarda cobre todas as views; uma exceção nova precisa de motivo no commit.
      *
      * @var list<string>
      */
-    private const PENDENTES = [
-    ];
+    private const PENDENTES = [];
 
     /** @return array<string, array{string, list<string>}> */
     public static function amostras(): array
@@ -85,6 +84,8 @@ class AlpineCspSubsetTest extends TestCase
 
     public function test_a_lista_de_pendentes_nao_apodrece(): void
     {
+        $this->addToAssertionCount(1); // com a lista vazia (o normal) o laço abaixo não afirma nada
+
         $views = self::views();
 
         foreach (self::PENDENTES as $relativo) {

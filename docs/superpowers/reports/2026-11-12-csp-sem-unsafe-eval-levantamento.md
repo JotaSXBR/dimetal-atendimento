@@ -1,5 +1,7 @@
 # Levantamento: tirar o `unsafe-eval` da CSP (12/11/2026)
 
+> **Correção posterior:** a execução leu o parser instalado e corrigiu a gramática descrita abaixo (`a[b]` e `a.b = ...` em objeto comum funcionam; `;`, `if`, `?.`, `??` e `in` não funcionam; `@js(array)` vira `JSON.parse`). Ver `2026-11-12-csp-sem-unsafe-eval.md`.
+
 Só levantamento, nada foi implementado. Pergunta do dono: cabe em um ciclo completo (spec, plano, execução, revisão, merge)?
 Resposta curta: **sim, cabe em um ciclo**, com o editor de automação como a maior parte do trabalho.
 
