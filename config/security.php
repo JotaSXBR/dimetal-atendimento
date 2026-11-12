@@ -7,12 +7,13 @@ return [
     | Content-Security-Policy
     |--------------------------------------------------------------------------
     |
-    | `report-only` registra as violações no console do navegador sem bloquear nada (usar para validar uma política
-    | nova); `enforce` bloqueia; `off` não envia o cabeçalho.
+    | `enforce` bloqueia (padrão, validado no beta em 12/11/2026); `report-only` só registra as violações no console do
+    | navegador (usar para testar uma política nova, ou em desenvolvimento com o Vite em modo `npm run dev`, que serve
+    | scripts de outra origem); `off` não envia o cabeçalho. Voltar atrás em produção: `CSP_MODE=report-only` e reiniciar.
     |
     */
 
-    'csp_mode' => env('CSP_MODE', 'report-only'),
+    'csp_mode' => env('CSP_MODE', 'enforce'),
 
     /*
     |--------------------------------------------------------------------------
