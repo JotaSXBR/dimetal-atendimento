@@ -1,5 +1,6 @@
 {{-- Horário (e tiques) da bolha, sempre no canto inferior direito. `inline`: flutua no fim do texto e cai para a linha de baixo
-     quando não cabe; `overlay`: sobre foto/vídeo sem legenda; `below`: na base da bolha (áudio, documento, localização). --}}
+     quando não cabe; `overlay`: sobre foto/vídeo sem legenda; `audio`: na linha da duração do áudio;
+     `below`: na base da bolha (documento, localização, figurinha). --}}
 <span data-testid="message-time" data-time-mode="{{ $mode }}" @class([
     // `whitespace-nowrap`: no modo `inline` o trecho está dentro de um `<p class="whitespace-pre-wrap">` e herdaria o `pre-wrap`, que
     // preserva as quebras de linha e os recuos deste arquivo (a hora subia, os tiques ficavam no meio e abria um vão entre os dois).

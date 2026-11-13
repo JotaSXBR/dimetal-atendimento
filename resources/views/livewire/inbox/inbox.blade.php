@@ -160,8 +160,11 @@
                                 @if ($item->assignee)
                                     <span class="inline-flex max-w-24 items-center gap-1 text-[10px] text-ink-2">
                                         <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
-                                        <span class="sr-only">Atendente:</span>
-                                        <span data-testid="card-assignee-name" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ \Illuminate\Support\Str::before(trim($item->assignee->name), ' ') }}</span>
+                                        @php
+                                            $fullName = trim((string) preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', $item->assignee->name));
+                                        @endphp
+                                        <span class="sr-only">Atendente: {{ $fullName }}</span>
+                                        <span data-testid="card-assignee-name" aria-hidden="true" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ preg_split('/[\s\x{00A0}]+/u', $fullName)[0] ?: $fullName }}</span>
                                     </span>
                                 @endif
                                 @if ($unread > 0)

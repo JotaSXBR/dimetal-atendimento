@@ -1,8 +1,8 @@
 {{-- Player de áudio no estilo dos apps de chat: play cheio, onda, tempo e velocidade (o <audio> nativo não tem velocidade). A lógica
      está em resources/js/audio-player.js; wire:ignore impede o Livewire de refazer o player a cada atualização.
-     Grade de duas colunas: o play e a onda dividem a linha 1 (por isso ficam alinhados); o tempo e a velocidade ficam na linha 2,
-     sob a onda. --}}
-<div wire:ignore x-data="audioPlayer" data-audio-player data-src="{{ $url }}" class="grid w-72 max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-ink">
+     Grade de três colunas: play, onda e velocidade dividem a linha 1 (por isso ficam alinhados); a duração fica na linha 2, sob a
+     onda, e a hora da bolha (fora deste `wire:ignore`) à direita da mesma linha. A largura vem da caixa `audio-bubble`. --}}
+<div wire:ignore x-data="audioPlayer" data-audio-player data-src="{{ $url }}" class="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-ink">
     <audio x-ref="audio" preload="none" class="hidden"></audio>
 
     <button

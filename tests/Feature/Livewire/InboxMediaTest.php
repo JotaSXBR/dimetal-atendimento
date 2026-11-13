@@ -69,10 +69,13 @@ class InboxMediaTest extends TestCase
             ['type' => 'text', 'body' => 'Olá', 'direction' => MessageDirection::OUT],
             ['media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg'],
             ['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg'],
+            ['body' => 'Ouça', 'media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg'],
+            ['media_ref' => 'a.mp4', 'media_mime' => 'video/mp4'],
+            ['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf'],
         ] as $attributes) {
             $classes = $this->timeClasses($attributes);
 
-            $this->assertNotSame([], $classes);
+            $this->assertNotSame([], $classes, json_encode($attributes));
             $this->assertStringContainsString('whitespace-nowrap', $classes[array_key_last($classes)]);
         }
     }

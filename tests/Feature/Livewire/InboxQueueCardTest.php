@@ -143,7 +143,16 @@ class InboxQueueCardTest extends TestCase
 
         $label = $this->xpath($this->html())->query('//*[@data-testid="card-assignee-name"]/preceding-sibling::*[contains(@class, "sr-only")]')->item(0);
 
-        $this->assertSame('Atendente:', trim((string) $label?->textContent));
+        $this->assertSame('Atendente: Marina Souza', trim((string) preg_replace('/\s+/u', ' ', (string) $label?->textContent)));
+    }
+
+    public function test_nome_com_espaco_nao_separavel_no_comeco_mostra_o_primeiro_nome(): void
+    {
+        $this->ticket(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => "\u{00A0}Marina Souza"])->id]);
+
+        $node = $this->xpath($this->html())->query('//*[@data-testid="card-assignee-name"]')->item(0);
+
+        $this->assertSame('Marina', preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', (string) $node?->textContent));
     }
 
     public function test_ticket_sem_atendente_nao_tem_o_atendente_na_coluna(): void
