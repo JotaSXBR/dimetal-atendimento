@@ -10,13 +10,16 @@ class PurgeWahaEventsCommand extends Command
     /** O envelope bruto só serve ao job que o lê logo depois de chegar; a mensagem e o ticket já guardam o dado definitivo. */
     public const RETENTION_DAYS = 7;
 
+    /** Teto do lote: o `whereIn` por ids tem um parâmetro por linha e o Postgres aceita no máximo 65535. */
+    private const MAX_BATCH = 20000;
+
     protected $signature = 'app:purge-waha-events {--batch=5000 : Quantos eventos apagar por vez}';
 
     protected $description = 'Apaga os eventos brutos do WAHA (waha_events) com mais de 7 dias, em lotes';
 
     public function handle(): int
     {
-        $batch = max(1, (int) $this->option('batch'));
+        $batch = min(self::MAX_BATCH, max(1, (int) $this->option('batch')));
         $limit = now()->subDays(self::RETENTION_DAYS);
         $deleted = 0;
 

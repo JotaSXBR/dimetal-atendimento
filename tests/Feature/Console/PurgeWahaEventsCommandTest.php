@@ -6,6 +6,8 @@ use App\Models\Channel;
 use App\Models\WahaEvent;
 use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class PurgeWahaEventsCommandTest extends TestCase
@@ -55,6 +57,24 @@ class PurgeWahaEventsCommandTest extends TestCase
         $this->artisan('app:purge-waha-events', ['--batch' => 2])->expectsOutputToContain('Eventos apagados: 5')->assertSuccessful();
 
         $this->assertSame(['evt_novo'], WahaEvent::query()->pluck('waha_event_id')->all());
+    }
+
+    public function test_lote_acima_do_teto_e_limitado(): void
+    {
+        // Um lote enorme viraria um `whereIn` com dezenas de milhares de parâmetros e estouraria o limite do Postgres.
+        $this->event('evt_old', now()->subDays(10));
+        DB::enableQueryLog();
+
+        $this->artisan('app:purge-waha-events', ['--batch' => 999999])->expectsOutputToContain('Eventos apagados: 1')->assertSuccessful();
+
+        $sql = collect(DB::getQueryLog())->pluck('query')->implode("\n");
+        $this->assertStringContainsString('limit 20000', $sql);
+        $this->assertStringNotContainsString('limit 999999', $sql);
+    }
+
+    public function test_o_indice_de_received_at_existe(): void
+    {
+        $this->assertTrue(Schema::hasIndex('waha_events', ['received_at']));
     }
 
     public function test_evento_sem_canal_tambem_e_apagado(): void
