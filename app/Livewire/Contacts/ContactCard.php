@@ -170,6 +170,8 @@ class ContactCard extends Component
 
         $contactTags = Tag::sortedByName($contact->tags()->get());
 
+        $current = $this->currentTicketId === null ? null : Ticket::query()->select(['id', 'channel_id', 'status'])->find($this->currentTicketId);
+
         return view('livewire.contacts.contact-card', [
             'contact' => $contact,
             'contactTags' => $contactTags,
@@ -180,8 +182,8 @@ class ContactCard extends Component
             'hasMore' => $historyTotal > self::HISTORY_LIMIT,
             'openable' => Ticket::query()->readableBy($user)->whereIn('id', $history->modelKeys())->pluck('id')->all(),
             // "Conversar" abre Nova conversa com o contato: em ticket ativo a conversa já está aberta, então só serve em encerrado ou sem ticket.
-            'canChat' => $this->currentTicketId === null || Ticket::query()->whereKey($this->currentTicketId)->where('status', TicketStatus::ENCERRADO->value)->exists(),
-            'currentChannelId' => $this->currentTicketId === null ? null : Ticket::query()->whereKey($this->currentTicketId)->value('channel_id'),
+            'canChat' => $current === null || $current->status === TicketStatus::ENCERRADO,
+            'currentChannelId' => $current?->channel_id,
         ]);
     }
 }

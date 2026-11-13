@@ -5,6 +5,8 @@ namespace Tests\Feature\Livewire;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Events\TicketUpdated;
+use App\Livewire\History\Index;
+use App\Livewire\Inbox\Inbox;
 use App\Livewire\Inbox\TicketTags;
 use App\Models\Channel;
 use App\Models\Contact;
@@ -142,6 +144,79 @@ class TicketTagsTest extends TestCase
         $this->assertStringContainsString('Livre</option>', $html);
         $this->assertStringNotContainsString('Aplicada</option>', $html);
         $this->assertStringNotContainsString('DoContato', $html);
+    }
+
+    /** Duas pessoas (ou dois cliques) no mesmo instante: a pivô tem chave única, então a segunda não pode estourar nem duplicar a auditoria. */
+    public function test_aplicar_o_que_outra_pessoa_acabou_de_aplicar_nao_estoura_nem_duplica_evento(): void
+    {
+        $tag = Tag::factory()->create();
+        $screen = $this->block();
+        $this->ticket->tags()->attach($tag);
+
+        $screen->call('addTag', $tag->id)->assertHasNoErrors();
+
+        $this->assertSame(1, $this->ticket->tags()->count());
+        $this->assertSame(0, TicketEvent::query()->where('type', 'tag_added')->count());
+    }
+
+    public function test_remover_o_que_outra_pessoa_acabou_de_remover_nao_grava_segundo_evento(): void
+    {
+        $tag = Tag::factory()->create();
+        $this->ticket->tags()->attach($tag);
+        $screen = $this->block();
+        $this->block()->call('removeTag', $tag->id);
+
+        $screen->call('removeTag', $tag->id);
+
+        $this->assertSame(1, TicketEvent::query()->where('type', 'tag_removed')->count());
+    }
+
+    public function test_a_tela_se_atualiza_quando_outra_pessoa_muda_as_etiquetas(): void
+    {
+        $screen = $this->block();
+        $this->ticket->tags()->attach(Tag::factory()->create(['name' => 'DeOutraPessoa']));
+
+        $screen->assertDontSee('DeOutraPessoa')->call('refresh')->assertSee('DeOutraPessoa');
+    }
+
+    public function test_remover_tambem_avisa_a_fila(): void
+    {
+        Event::fake([TicketUpdated::class]);
+        $tag = Tag::factory()->create();
+        $this->ticket->tags()->attach($tag);
+
+        $this->block()->call('removeTag', $tag->id);
+
+        Event::assertDispatched(TicketUpdated::class);
+    }
+
+    /** Decisão do dono: quem vê o ticket aberto etiqueta, não só o responsável. */
+    public function test_atendente_que_ve_o_ticket_de_outro_responsavel_tambem_etiqueta(): void
+    {
+        $sector = Sector::factory()->create();
+        $mate = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $mate->sectors()->attach($sector);
+        $this->ticket->forceFill(['sector_id' => $sector->id, 'assigned_user_id' => $this->user->id])->save();
+        $tag = Tag::factory()->create();
+
+        $this->block(as: $mate)->call('addTag', $tag->id);
+
+        $this->assertSame(1, $this->ticket->tags()->count());
+    }
+
+    public function test_o_painel_do_inbox_e_o_do_historico_montam_o_bloco_com_o_modo_certo(): void
+    {
+        $tag = Tag::factory()->create(['name' => 'Aplicada']);
+        $this->ticket->tags()->attach($tag);
+        Tag::factory()->create(['name' => 'Livre']);
+
+        $open = Livewire::actingAs($this->user)->test(Inbox::class)->call('select', $this->ticket->id)->html();
+        $this->assertStringContainsString('Adicionar etiqueta à conversa', $open);
+
+        $this->ticket->forceFill(['status' => TicketStatus::ENCERRADO, 'closed_at' => now()])->save();
+        $history = Livewire::actingAs($this->user)->test(Index::class)->call('select', $this->ticket->id)->html();
+        $this->assertStringContainsString('Aplicada', $history);
+        $this->assertStringNotContainsString('Adicionar etiqueta à conversa', $history);
     }
 
     public function test_a_linha_do_tempo_diz_quem_e_qual_etiqueta(): void
