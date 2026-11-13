@@ -70,9 +70,14 @@ class Transcript extends Component
     private function markSeenByAgent(): void
     {
         $user = auth()->user();
-        $ticket = $user instanceof User ? Ticket::query()->readableBy($user)->find($this->ticketId) : null;
 
-        if ($ticket !== null && $user instanceof User) {
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $ticket = Ticket::query()->readableBy($user)->find($this->ticketId);
+
+        if ($ticket !== null) {
             app(MarkTicketSeenByAgent::class)($ticket, $user);
         }
     }
