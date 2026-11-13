@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Settings;
 
+use App\Enums\TagColor;
+use App\Enums\TagScope;
 use App\Models\Tag;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
@@ -17,18 +19,21 @@ class Tags extends Component
 
     public string $name = '';
 
-    public string $color = '#2F855A';
+    public string $scope = 'conversa';
+
+    public string $color = 'ardosia';
 
     public function mount(): void
     {
         $this->authorize('supervisor');
     }
 
-    public function newTag(): void
+    public function newTag(?string $scope = null): void
     {
         $this->authorize('supervisor');
 
         $this->resetForm();
+        $this->scope = TagScope::tryFrom((string) $scope)?->value ?? TagScope::CONVERSA->value;
         $this->showForm = true;
     }
 
@@ -41,7 +46,8 @@ class Tags extends Component
         $this->showForm = true;
         $this->editingId = $tag->id;
         $this->name = $tag->name;
-        $this->color = $tag->color;
+        $this->scope = $tag->scope->value;
+        $this->color = $tag->color->value;
     }
 
     public function save(): void
@@ -52,16 +58,26 @@ class Tags extends Component
 
         $this->validate([
             'name' => ['required', 'string', 'max:40', Rule::unique('tags', 'name')->ignore($this->editingId)],
-            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'scope' => ['required', Rule::enum(TagScope::class)],
+            'color' => ['required', Rule::enum(TagColor::class)],
         ], [
             'name.required' => 'Informe o nome da etiqueta.',
             'name.max' => 'O nome pode ter até 40 caracteres.',
             'name.unique' => 'Já existe uma etiqueta com esse nome.',
-            'color.regex' => 'Use uma cor no formato #RRGGBB.',
+            'scope.enum' => 'Escolha se a etiqueta é do contato ou da conversa.',
+            'color.enum' => 'Escolha uma das cores da lista.',
         ]);
 
-        $tag = $this->editingId === null ? new Tag : Tag::query()->findOrFail($this->editingId);
-        $tag->fill(['name' => $this->name, 'color' => $this->color])->save();
+        $tag = $this->editingId === null ? new Tag : Tag::query()->withCount(['tickets', 'contacts'])->findOrFail($this->editingId);
+
+        // Mudar o escopo de uma etiqueta já aplicada deixaria vínculos no lugar errado.
+        if ($tag->exists && $tag->scope->value !== $this->scope && $this->usage($tag) > 0) {
+            $this->addError('scope', 'O escopo não muda enquanto a etiqueta está em uso.');
+
+            return;
+        }
+
+        $tag->fill(['name' => $this->name, 'scope' => $this->scope, 'color' => $this->color])->save();
 
         $this->resetForm();
     }
@@ -78,15 +94,25 @@ class Tags extends Component
         $this->resetForm();
     }
 
+    private function usage(Tag $tag): int
+    {
+        return (int) $tag->getAttribute('tickets_count') + (int) $tag->getAttribute('contacts_count');
+    }
+
     private function resetForm(): void
     {
-        $this->reset('showForm', 'editingId', 'name');
-        $this->color = '#2F855A';
+        $this->reset('showForm', 'editingId', 'name', 'scope', 'color');
         $this->resetErrorBag();
     }
 
     public function render(): View
     {
-        return view('livewire.settings.tags', ['tags' => Tag::sortedByName(Tag::query()->withCount('tickets')->get())]);
+        $tags = Tag::sortedByName(Tag::query()->withCount(['tickets', 'contacts'])->get());
+
+        return view('livewire.settings.tags', [
+            'contactTags' => $tags->where('scope', TagScope::CONTATO)->values(),
+            'ticketTags' => $tags->where('scope', TagScope::CONVERSA)->values(),
+            'palette' => TagColor::cases(),
+        ]);
     }
 }
