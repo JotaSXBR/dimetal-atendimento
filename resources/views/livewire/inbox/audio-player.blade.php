@@ -1,8 +1,8 @@
 {{-- Player de áudio no estilo dos apps de chat: play cheio, onda, tempo e velocidade (o <audio> nativo não tem velocidade). A lógica
      está em resources/js/audio-player.js; wire:ignore impede o Livewire de refazer o player a cada atualização.
-     Grade de duas colunas: o play e a onda dividem a linha 1 (por isso ficam alinhados); o tempo e a velocidade ficam na linha 2,
-     sob a onda. --}}
-<div wire:ignore x-data="audioPlayer" data-audio-player data-src="{{ $url }}" class="grid w-72 max-w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 text-ink">
+     Grade de três colunas: play, onda e velocidade dividem a linha 1 (por isso ficam alinhados); a duração fica na linha 2, sob a
+     onda, e a hora da bolha (fora deste `wire:ignore`) à direita da mesma linha. A largura vem da caixa `audio-bubble`. --}}
+<div wire:ignore x-data="audioPlayer" data-audio-player data-src="{{ $url }}" class="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-ink">
     <audio x-ref="audio" preload="none" class="hidden"></audio>
 
     <button
@@ -40,15 +40,18 @@
         </template>
     </div>
 
-    <div data-testid="audio-meta" class="col-start-2 flex items-center justify-between gap-2">
-        <span class="font-mono text-[11px] text-ink-2 tabular-nums" x-text="timeLabel">0:00</span>
+    {{-- A velocidade vem depois da onda, na linha do play (como no WhatsApp). --}}
+    <button
+        type="button"
+        x-on:click="cycleSpeed()"
+        aria-label="Velocidade de reprodução"
+        class="col-start-3 row-start-1 inline-flex min-h-6 shrink-0 items-center self-center rounded-full px-2 py-0.5 text-[11px] font-semibold text-ink-2 tabular-nums ring-1 ring-ink/20 transition-colors hover:bg-ink/5 hover:text-ink"
+        x-text="speed + '×'"
+    >1×</button>
 
-        <button
-            type="button"
-            x-on:click="cycleSpeed()"
-            aria-label="Velocidade de reprodução"
-            class="inline-flex min-h-6 shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold text-ink-2 tabular-nums ring-1 ring-ink/20 transition-colors hover:bg-ink/5 hover:text-ink"
-            x-text="speed + '×'"
-        >1×</button>
+    {{-- A duração fica à esquerda; a hora e os tiques da bolha ficam à direita da mesma linha (`message-time`, modo `audio`, que o
+         `media.blade.php` põe fora deste `wire:ignore` para os tiques seguirem atualizando). --}}
+    <div data-testid="audio-meta" class="col-start-2 flex items-center">
+        <span class="font-mono text-[11px] leading-4 text-ink-2 tabular-nums" x-text="timeLabel">0:00</span>
     </div>
 </div>

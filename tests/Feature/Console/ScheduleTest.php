@@ -52,6 +52,14 @@ class ScheduleTest extends TestCase
         $this->assertTrue($event->withoutOverlapping);
     }
 
+    public function test_limpeza_da_auditoria_do_sistema_diaria(): void
+    {
+        $event = $this->event('app:purge-audit-logs');
+
+        $this->assertSame('55 3 * * *', $event->expression);
+        $this->assertTrue($event->withoutOverlapping);
+    }
+
     public function test_limpeza_de_bancos_guardados_diaria(): void
     {
         $event = $this->event('app:purge-old-databases');

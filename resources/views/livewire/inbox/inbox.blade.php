@@ -109,9 +109,10 @@
                             @php
                                 $sla = $item->slaState();
                                 $chips = \App\Models\Tag::sortedByName($item->contact->tags)->concat(\App\Models\Tag::sortedByName($item->tags))->values();
-                                $chipsShown = $chips->take(3);
-                                $chipsRest = $chips->slice(3);
-                                $hasMeta = $item->assignee !== null || $showChannel;
+                                $maxChips = 6;
+                                $chipsShown = $chips->take($maxChips);
+                                $chipsRest = $chips->slice($maxChips);
+                                $hasMeta = $showChannel;
                                 $at = $item->waiting_since ?? $item->last_inbound_at ?? $item->opened_at;
                                 $unread = (int) $item->getAttribute('unread');
                             @endphp
@@ -144,12 +145,6 @@
                                 </span>
                                 @if ($hasMeta)
                                     <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-ink-3">
-                                        @if ($item->assignee)
-                                            <span class="inline-flex shrink-0 items-center gap-1 text-ink-2">
-                                                <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
-                                                <span data-testid="card-assignee-name">{{ \Illuminate\Support\Str::before($item->assignee->name, ' ') }}</span>
-                                            </span>
-                                        @endif
                                         @if ($showChannel)
                                             <span class="truncate font-mono text-[10px]">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
                                         @endif
@@ -161,6 +156,16 @@
                                 <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="font-mono text-[10px] text-ink-3">{{ \App\Support\WaitLabel::narrow($at, now()) }}</span>
                                 @if ($showSector && $item->sector)
                                     <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-[10px] text-ink-2">{{ $item->sector->name }}</span>
+                                @endif
+                                @if ($item->assignee)
+                                    <span class="inline-flex max-w-24 items-center gap-1 text-[10px] text-ink-2">
+                                        <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
+                                        @php
+                                            $fullName = trim((string) preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', $item->assignee->name));
+                                        @endphp
+                                        <span class="sr-only">Atendente: {{ $fullName }}</span>
+                                        <span data-testid="card-assignee-name" aria-hidden="true" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ preg_split('/[\s\x{00A0}]+/u', $fullName)[0] ?: $fullName }}</span>
+                                    </span>
                                 @endif
                                 @if ($unread > 0)
                                     <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-[10px] font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>

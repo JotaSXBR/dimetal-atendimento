@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire;
 use App\Enums\UserRole;
 use App\Jobs\RestoreDatabaseJob;
 use App\Livewire\Settings\Backups;
+use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\Backup\BackupCatalog;
 use App\Services\Backup\Restore\AdminDatabase;
@@ -119,6 +120,30 @@ class BackupsRestoreTest extends TestCase
             && $job->request->source === 'bucket:'.self::NAME
             && $job->request->actor === 'Jessé <jotasx@example.com>');
         $this->assertTrue(app(RestoreProgress::class)->isRunning());
+    }
+
+    public function test_pedir_a_restauracao_grava_a_auditoria_so_quando_despacha(): void
+    {
+        $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'errada')->call('restore');
+        $this->assertSame(0, AuditLog::query()->count());
+
+        $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'RESTAURAR')->call('restore');
+
+        $log = AuditLog::query()->sole();
+        $this->assertSame('restore.requested', $log->action);
+        $this->assertSame(self::NAME, $log->subject);
+        $this->assertSame($this->user->id, $log->actor_user_id);
+    }
+
+    public function test_voltar_ao_banco_guardado_grava_restore_switched(): void
+    {
+        $this->admin->shouldReceive('stored')->andReturn([$this->stored()]);
+
+        $this->page()->call('chooseStored', 'dimetal_antes_202611131000')->set('confirm', 'RESTAURAR')->call('switchBack');
+
+        $log = AuditLog::query()->sole();
+        $this->assertSame('restore.switched', $log->action);
+        $this->assertSame('dimetal_antes_202611131000', $log->subject);
     }
 
     public function test_recusa_com_restauracao_em_andamento(): void

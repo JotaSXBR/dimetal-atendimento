@@ -46,7 +46,13 @@
         </div>
     @endif
 @elseif (str_starts_with($mime, 'audio/'))
-    @include('livewire.inbox.audio-player', ['url' => $url])
+    {{-- A hora e os tiques ficam na linha da duração, dentro desta caixa e fora do `wire:ignore` do player. --}}
+    <div data-testid="audio-bubble" class="relative w-72 max-w-full">
+        @include('livewire.inbox.audio-player', ['url' => $url])
+        @if (($timeMode ?? null) === 'audio')
+            @include('livewire.inbox.message-time', ['mode' => 'audio'])
+        @endif
+    </div>
 @elseif (str_starts_with($mime, 'video/'))
     <div class="relative w-fit">
         <video controls preload="metadata" src="{{ $url }}" class="max-h-72 max-w-full rounded-lg"></video>

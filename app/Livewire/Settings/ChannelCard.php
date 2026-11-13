@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Settings;
 
+use App\Enums\AuditAction;
 use App\Enums\ChannelStatus;
 use App\Enums\TicketStatus;
 use App\Livewire\Settings\Concerns\RecoversHistory;
 use App\Livewire\Settings\Concerns\SendsTestMessage;
 use App\Models\Channel;
 use App\Models\Ticket;
+use App\Services\Audit\Auditor;
 use App\Services\Waha\ChannelPhone;
 use App\Services\Waha\WahaClient;
 use App\Services\Waha\WahaQr;
@@ -193,6 +195,7 @@ class ChannelCard extends Component
         }
 
         $this->channel->delete();
+        Auditor::record(AuditAction::ChannelDeleted, auth()->user(), $this->channel->name);
         $this->dispatch('channel-deleted');
     }
 

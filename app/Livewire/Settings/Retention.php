@@ -3,7 +3,9 @@
 namespace App\Livewire\Settings;
 
 use App\Console\Commands\PurgeMediaCommand;
+use App\Enums\AuditAction;
 use App\Models\Message;
+use App\Services\Audit\Auditor;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Artisan;
 use Livewire\Attributes\Title;
@@ -25,6 +27,7 @@ class Retention extends Component
         $this->authorize('admin');
 
         Artisan::queue('app:purge-media');
+        Auditor::record(AuditAction::RetentionPurgeRequested, auth()->user());
         $this->result = 'Expurgo iniciado. Os números desta tela atualizam quando ele terminar; recarregue em instantes.';
     }
 

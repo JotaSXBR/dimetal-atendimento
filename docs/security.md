@@ -13,7 +13,7 @@ Linha de base de segurança do app, o que está decidido e como mudar cada contr
 | CSRF | Laravel e Livewire | só o webhook do WAHA é isento, e ele exige HMAC |
 | Webhook do WAHA | HMAC SHA-512 (`hash_equals`), dedupe por id | 401 sem assinatura válida |
 | Autorização | `TicketPolicy` e escopo `visibleTo` | toda ação do Livewire chama `authorize` |
-| Login | Fortify, 5 tentativas por minuto por e-mail e IP, só usuário ativo | cadastro público fechado |
+| Login | Fortify, 5 tentativas por minuto por e-mail e IP e 20 por hora por e-mail, só usuário ativo | cadastro público fechado; quem sabe um e-mail pode travar o login dele por até 1 h |
 | Senha | mínimo de 12, maiúscula, número, símbolo e checagem de vazamento em produção | |
 | Canais privados (Reverb) | `routes/channels.php`, origens permitidas | só usuário ativo |
 | Segredos | `.env*` ignorados pelo git; nenhum no repositório | rotacionar antes de purgar, se vazar |
@@ -55,11 +55,14 @@ limite de tentativas do login. A lista é literal porque a configuração ainda 
 
 | Alvo | Limite | Onde |
 |---|---|---|
-| Login | 5 por minuto por e-mail e IP | `FortifyServiceProvider` |
-| Webhook do WAHA | 300 por minuto por IP | `AppServiceProvider`, `config/security.php` |
+| Login | 5 por minuto por e-mail e IP, e 20 por hora por e-mail de qualquer IP (`SECURITY_LOGIN_PER_HOUR`) | `FortifyServiceProvider`, `config/security.php` |
+| Webhook do WAHA | 60 por minuto por IP, **só para assinatura inválida**; assinatura válida nunca é limitada | `AppServiceProvider`, `WebhookSignature`, `config/security.php` |
 | Envio de mensagem pelo painel | 30 por minuto por usuário | `Inbox::send`, `config/security.php` |
 
-Todo o tráfego do WAHA chega do mesmo IP interno, então o teto do webhook é um freio contra inundação. O envio conta
+Todo o tráfego do WAHA chega do mesmo IP interno e vem em rajada (importação, recuperação, presença): um teto por IP dava
+429 em evento legítimo, então o webhook só limita a assinatura inválida (o HMAC válido nunca recebe 429; custo: um WAHA
+descontrolado não tem freio, a fila absorve). O HMAC é calculado uma vez por requisição e custa em proporção ao corpo, que fica
+limitado pelo `client_max_body_size` do nginx e pelo `post_max_size` do PHP (conferir os valores da imagem base). O envio conta
 só mensagens: o indicador "digitando" e a gravação de áudio, quando existirem, terão limite próprio e mais folgado
 (ver `docs/superpowers/notes/2026-10-28-waha-presenca-e-midia.md`).
 
@@ -76,6 +79,26 @@ vídeo, PDF); o resto baixa como `application/octet-stream` com `Content-Disposi
 - **2FA obrigatório** para admin e supervisor: o recurso (2FA e passkey) existe e está disponível, mas **não é exigido**
   (decisão do dono, 28/10/2026). Recomendação para antes de subir a produção: exigir de admin e supervisor.
 - **Enforce da CSP**: depende do teste do build compatível com CSP descrito acima.
+
+## Auditoria do sistema
+
+Tabela `audit_logs`, só para o admin, em `/auditoria/sistema` (aba "Sistema" da Auditoria; a aba "Tickets" é a trilha de cada
+atendimento). Grava, com quem fez, o IP e o que mudou:
+
+| Grupo | Eventos |
+|---|---|
+| Acesso | login, login recusado (com o e-mail digitado, nunca a senha) e saída |
+| Usuários | criar, alterar (campos), mudar o papel (de e para), definir senha (nunca a senha), desativar e reativar |
+| Backup | baixar, backup manual, pedir a restauração, voltar ao banco guardado, e o resultado da restauração |
+| Configurações | conectar e desconectar o Google (a conta, nunca o token), criar e apagar canal, expurgo manual de anexos |
+
+- Os registros ficam **365 dias** (`app:purge-audit-logs`) porque guardam IP e e-mail digitado.
+- Gravar nunca derruba a ação: se a gravação falhar, só o log recebe um aviso (`Auditoria: registro não gravado`) e o login, o
+  backup ou a restauração seguem.
+- A restauração troca o banco: o **pedido** fica no banco de antes da troca (guardado por 7 dias) e o **resultado** (`restore.succeeded`
+  ou `restore.failed`) fica no banco que estiver ativo depois dela. Para reconstituir a história inteira, olhe os dois.
+- O teto de 20 logins por hora por e-mail tem um custo: quem sabe o e-mail de alguém consegue travar o login dele por até uma hora.
+  Ajuste em `SECURITY_LOGIN_PER_HOUR`.
 
 ## Variáveis de produção
 
@@ -94,6 +117,7 @@ Conferir no Coolify antes de subir a produção (o beta é ambiente de desenvolv
 | Dado | Prazo | Rotina |
 |---|---|---|
 | Evento bruto do webhook (`waha_events`, com o texto e os telefones do payload) | 7 dias | `app:purge-waha-events`, 03:50 |
+| Auditoria do sistema (`audit_logs`: IP e e-mail digitado nas falhas de login) | 365 dias | `app:purge-audit-logs`, 03:55 |
 | Anexos (arquivo; o texto e os eventos ficam) | 90 dias | `app:purge-media`, 03:30 |
 | Alertas do sino | 7 dias | `app:purge-notifications`, 03:45 |
 

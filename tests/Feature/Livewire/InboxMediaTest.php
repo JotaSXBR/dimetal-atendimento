@@ -51,6 +51,35 @@ class InboxMediaTest extends TestCase
         return $m[1];
     }
 
+    /** @return list<string> As classes do trecho da hora, uma por bolha. */
+    private function timeClasses(array $attributes): array
+    {
+        preg_match_all('/<span data-testid="message-time"[^>]*class="([^"]*)"/', $this->screen($attributes)->html(), $m);
+
+        return $m[1];
+    }
+
+    /**
+     * No modo `inline` a hora vive dentro de um `<p class="whitespace-pre-wrap">`: sem `whitespace-nowrap` ela herda o `pre-wrap` e as
+     * quebras de linha e os recuos do Blade viram espaço de verdade (a hora sobe, os tiques ficam no meio e aparece um vão entre os dois).
+     */
+    public function test_a_hora_nao_herda_o_pre_wrap_do_texto_em_nenhum_modo(): void
+    {
+        foreach ([
+            ['type' => 'text', 'body' => 'Olá', 'direction' => MessageDirection::OUT],
+            ['media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg'],
+            ['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg'],
+            ['body' => 'Ouça', 'media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg'],
+            ['media_ref' => 'a.mp4', 'media_mime' => 'video/mp4'],
+            ['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf'],
+        ] as $attributes) {
+            $classes = $this->timeClasses($attributes);
+
+            $this->assertNotSame([], $classes, json_encode($attributes));
+            $this->assertStringContainsString('whitespace-nowrap', $classes[array_key_last($classes)]);
+        }
+    }
+
     public function test_texto_tem_hora_inline(): void
     {
         $this->assertSame(['inline'], $this->timeModes(['type' => 'text', 'body' => 'Olá']));
@@ -71,11 +100,23 @@ class InboxMediaTest extends TestCase
         $this->assertSame(['overlay'], $this->timeModes(['media_ref' => 'a.mp4', 'media_mime' => 'video/mp4']));
     }
 
-    public function test_audio_e_documento_tem_hora_abaixo(): void
+    public function test_audio_tem_a_hora_na_linha_da_duracao_e_documento_abaixo(): void
     {
-        $this->assertSame(['below'], $this->timeModes(['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg']));
+        $this->assertSame(['audio'], $this->timeModes(['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg']));
         // A segunda chamada soma uma bolha à mesma conversa: áudio e documento.
-        $this->assertSame(['below', 'below'], $this->timeModes(['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf']));
+        $this->assertSame(['audio', 'below'], $this->timeModes(['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf']));
+    }
+
+    public function test_a_hora_do_audio_existe_uma_vez_e_dentro_da_bolha_do_audio(): void
+    {
+        $html = $this->screen(['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg', 'direction' => MessageDirection::OUT])->html();
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+
+        $this->assertSame(1, $xpath->query('//*[@data-testid="message-time"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@data-testid="audio-bubble"]//*[@data-testid="message-time"]')->length);
     }
 
     public function test_visualizacao_unica_com_mime_de_imagem_ainda_mostra_a_hora(): void

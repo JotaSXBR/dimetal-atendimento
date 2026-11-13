@@ -40,7 +40,10 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureAuthentication(): void
     {
         Fortify::authenticateUsing(function (Request $request): ?User {
-            $email = $request->string(Fortify::username())->toString();
+            // Campo que não é texto (um array forjado) não derruba o login com 500: conta como credencial inválida.
+            $typedEmail = $request->input(Fortify::username());
+            $typedPassword = $request->input('password');
+            $email = is_string($typedEmail) ? $typedEmail : '';
 
             /** @var User|null $user */
             $user = User::query()->where(Fortify::username(), $email)->first();
@@ -49,7 +52,7 @@ class FortifyServiceProvider extends ServiceProvider
                 return null;
             }
 
-            return Hash::check($request->string('password')->toString(), $user->password) ? $user : null;
+            return Hash::check(is_string($typedPassword) ? $typedPassword : '', $user->password) ? $user : null;
         });
     }
 
@@ -85,9 +88,19 @@ class FortifyServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate($request->string(Fortify::username())->lower()->toString().'|'.$request->ip());
+            $typed = $request->input(Fortify::username());
+            $email = is_string($typed) ? Str::transliterate(trim(Str::lower($typed))) : '';
 
-            return Limit::perMinute(5)->by($throttleKey);
+            $limits = [Limit::perMinute(5)->by($email.'|'.$request->ip())];
+
+            // Por e-mail, de qualquer IP: sem isto, 100 IPs diferentes testam senhas de uma conta sem freio. Custo: quem sabe o e-mail
+            // de alguém consegue travar o login dele por até 1 hora errando senhas. Sem e-mail não há conta a proteger (e todos os
+            // pedidos sem e-mail dividiriam a mesma chave).
+            if ($email !== '') {
+                $limits[] = Limit::perHour(config()->integer('security.login_per_hour_per_email'))->by('login-email:'.$email);
+            }
+
+            return $limits;
         });
 
         RateLimiter::for('passkeys', function (Request $request) {

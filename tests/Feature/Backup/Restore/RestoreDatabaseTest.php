@@ -6,6 +6,7 @@ use App\Enums\ChannelStatus;
 use App\Enums\UserRole;
 use App\Jobs\RecoverMessagesJob;
 use App\Jobs\RestoreDatabaseJob;
+use App\Models\AuditLog;
 use App\Models\Channel;
 use App\Models\User;
 use App\Notifications\BackupRestored;
@@ -156,6 +157,54 @@ class RestoreDatabaseTest extends TestCase
         $this->assertSame(['inspect', 'safety', 'restore', 'verify', 'swap', 'migrate', 'resume', 'recover'], array_column($state['steps'], 'key'));
         $this->assertSame('dimetal-2026-11-12-1000-manual.dump', BackupStatus::lastRestore()['file'] ?? null);
         $this->assertSame('Jessé <jotasx@example.com>', BackupStatus::lastRestore()['actor'] ?? null);
+    }
+
+    public function test_sucesso_grava_restore_succeeded_na_auditoria(): void
+    {
+        $this->run_();
+
+        $log = AuditLog::query()->sole();
+        $this->assertSame('restore.succeeded', $log->action);
+        $this->assertSame('dimetal-2026-11-12-1000-manual.dump', $log->subject);
+        $this->assertSame('Jessé <jotasx@example.com>', $log->actor_label);
+        $this->assertSame('restore', $log->detail['mode'] ?? null);
+        $this->assertStringContainsString('Restauração concluída', (string) ($log->detail['message'] ?? ''));
+    }
+
+    public function test_voltar_ao_banco_guardado_grava_o_modo_switch(): void
+    {
+        $stored = new StoredDatabase('dimetal_antes_202611110900', CarbonImmutable::parse('2026-11-11 09:00:00', 'America/Sao_Paulo'), 1000);
+        $this->admin->shouldReceive('stored')->andReturn([$stored]);
+
+        $this->run_($this->request('switch', 'dimetal_antes_202611110900'));
+
+        $log = AuditLog::query()->sole();
+        $this->assertSame('restore.succeeded', $log->action);
+        $this->assertSame('switch', $log->detail['mode'] ?? null);
+    }
+
+    public function test_falha_grava_restore_failed_sem_a_saida_bruta_do_erro(): void
+    {
+        $this->maintenance->shouldReceive('migrate')->andThrow(new RuntimeException('falha com a senha S3nh@Secreta'));
+        $this->admin->shouldReceive('exists')->with(self::STAGING)->andReturn(true);
+
+        $this->run_();
+
+        $log = AuditLog::query()->sole();
+        $this->assertSame('restore.failed', $log->action);
+        $this->assertSame('Jessé <jotasx@example.com>', $log->actor_label);
+        $this->assertStringNotContainsString('S3nh@Secreta', (string) json_encode(AuditLog::query()->get()->toArray()));
+    }
+
+    public function test_recusa_antes_de_ler_o_arquivo_tambem_grava_a_falha_com_a_origem(): void
+    {
+        $this->inspector->shouldReceive('inspect')->andThrow(new InvalidDump('Este arquivo não é um backup deste sistema.'));
+
+        $this->run_();
+
+        $log = AuditLog::query()->sole();
+        $this->assertSame('restore.failed', $log->action);
+        $this->assertSame('bucket:dimetal-2026-11-12-1000-manual.dump', $log->subject);
     }
 
     public function test_arquivo_recusado_nao_cria_banco_nem_entra_em_manutencao(): void
