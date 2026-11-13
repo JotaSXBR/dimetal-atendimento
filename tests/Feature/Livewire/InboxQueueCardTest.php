@@ -99,17 +99,50 @@ class InboxQueueCardTest extends TestCase
         $this->assertStringContainsString('Vendas', $this->part($this->html(), 'card-sector'));
     }
 
-    public function test_mostra_ate_tres_chips_com_o_do_contato_primeiro_e_mais_n(): void
+    /** @return list<string> */
+    private function names(int $count): array
+    {
+        return array_slice(['Alfa', 'Beta', 'Cama', 'Delta', 'Eta', 'Fox', 'Gama', 'Hotel'], 0, $count);
+    }
+
+    private function conversationTags(Ticket $ticket, int $count): void
+    {
+        $ticket->tags()->attach(Tag::factory()->count($count)->sequence(...array_map(fn (string $name): array => ['name' => $name], $this->names($count)))->create());
+    }
+
+    public function test_com_exatamente_seis_etiquetas_nao_aparece_o_mais_n(): void
     {
         $ticket = $this->ticket();
-        $ticket->contact->tags()->attach(Tag::factory()->contato()->create(['name' => 'Revenda']));
-        $ticket->tags()->attach(Tag::factory()->count(5)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Cama'], ['name' => 'Delta'], ['name' => 'Eta'])->create());
+        $this->conversationTags($ticket, 6);
 
         $html = $this->html();
 
-        $this->assertStringContainsString('+3', $this->part($html, 'card-tags-more'));
+        $this->assertSame(6, substr_count($html, 'data-testid="card-chip-ticket"'));
+        $this->assertStringNotContainsString('data-testid="card-tags-more"', $html);
+    }
+
+    public function test_com_sete_etiquetas_aparece_mais_1(): void
+    {
+        $ticket = $this->ticket();
+        $this->conversationTags($ticket, 7);
+
+        $html = $this->html();
+
+        $this->assertSame(6, substr_count($html, 'data-testid="card-chip-ticket"'));
+        $this->assertStringContainsString('+1', $this->part($html, 'card-tags-more'));
+    }
+
+    public function test_mostra_ate_seis_chips_com_o_do_contato_primeiro_e_mais_n(): void
+    {
+        $ticket = $this->ticket();
+        $ticket->contact->tags()->attach(Tag::factory()->contato()->create(['name' => 'Revenda']));
+        $this->conversationTags($ticket, 7);
+
+        $html = $this->html();
+
+        $this->assertStringContainsString('+2', $this->part($html, 'card-tags-more'));
         $this->assertSame(1, substr_count($html, 'data-testid="card-chip-contact"'));
-        $this->assertSame(2, substr_count($html, 'data-testid="card-chip-ticket"'));
+        $this->assertSame(5, substr_count($html, 'data-testid="card-chip-ticket"'));
         $this->assertLessThan(strpos($html, 'data-testid="card-chip-ticket"'), strpos($html, 'data-testid="card-chip-contact"'), 'o chip do contato vem primeiro');
         $this->assertMatchesRegularExpression('/<span[^>]*data-testid="card-chip-contact"[^>]*>/', $html);
         $this->assertStringContainsString('bg-[var(--tag-bg)]', $this->part($html, 'card-chip-contact', true));
@@ -171,22 +204,22 @@ class InboxQueueCardTest extends TestCase
     public function test_mais_n_diz_os_nomes_das_etiquetas_escondidas_a_quem_nao_ve_o_title(): void
     {
         $ticket = $this->ticket();
-        $ticket->tags()->attach(Tag::factory()->count(5)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Cama'], ['name' => 'Delta'], ['name' => 'Eta'])->create());
+        $this->conversationTags($ticket, 8);
 
-        $this->assertMatchesRegularExpression('/class="sr-only">[^<]*Delta, Eta/', $this->html());
+        $this->assertMatchesRegularExpression('/class="sr-only">[^<]*Gama, Hotel/', $this->html());
     }
 
     public function test_title_do_mais_n_fica_no_trecho_visual_e_nao_duplica_o_texto_do_leitor_de_tela(): void
     {
         $ticket = $this->ticket();
-        $ticket->tags()->attach(Tag::factory()->count(5)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Cama'], ['name' => 'Delta'], ['name' => 'Eta'])->create());
+        $this->conversationTags($ticket, 8);
 
         $dom = new \DOMDocument;
         @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->html(), LIBXML_NOERROR | LIBXML_NOWARNING);
         $xpath = new \DOMXPath($dom);
 
         $this->assertSame('', $xpath->query('//*[@data-testid="card-tags-more"]')->item(0)?->getAttribute('title'));
-        $this->assertSame('Delta, Eta', $xpath->query('//*[@data-testid="card-tags-more"]/*[@aria-hidden="true"]')->item(0)?->getAttribute('title'));
+        $this->assertSame('Gama, Hotel', $xpath->query('//*[@data-testid="card-tags-more"]/*[@aria-hidden="true"]')->item(0)?->getAttribute('title'));
     }
 
     public function test_tempo_relativo_vem_da_espera_e_e_recalculado_no_navegador(): void

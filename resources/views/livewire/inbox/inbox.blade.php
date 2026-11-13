@@ -109,8 +109,9 @@
                             @php
                                 $sla = $item->slaState();
                                 $chips = \App\Models\Tag::sortedByName($item->contact->tags)->concat(\App\Models\Tag::sortedByName($item->tags))->values();
-                                $chipsShown = $chips->take(3);
-                                $chipsRest = $chips->slice(3);
+                                $maxChips = 6;
+                                $chipsShown = $chips->take($maxChips);
+                                $chipsRest = $chips->slice($maxChips);
                                 $hasMeta = $item->assignee !== null || $showChannel;
                                 $at = $item->waiting_since ?? $item->last_inbound_at ?? $item->opened_at;
                                 $unread = (int) $item->getAttribute('unread');
