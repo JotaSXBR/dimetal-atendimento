@@ -79,6 +79,26 @@ vídeo, PDF); o resto baixa como `application/octet-stream` com `Content-Disposi
   (decisão do dono, 28/10/2026). Recomendação para antes de subir a produção: exigir de admin e supervisor.
 - **Enforce da CSP**: depende do teste do build compatível com CSP descrito acima.
 
+## Auditoria do sistema
+
+Tabela `audit_logs`, só para o admin, em `/auditoria/sistema` (aba "Sistema" da Auditoria; a aba "Tickets" é a trilha de cada
+atendimento). Grava, com quem fez, o IP e o que mudou:
+
+| Grupo | Eventos |
+|---|---|
+| Acesso | login, login recusado (com o e-mail digitado, nunca a senha) e saída |
+| Usuários | criar, alterar (campos), mudar o papel (de e para), definir senha (nunca a senha), desativar e reativar |
+| Backup | baixar, backup manual, pedir a restauração, voltar ao banco guardado, e o resultado da restauração |
+| Configurações | conectar e desconectar o Google (a conta, nunca o token), criar e apagar canal, expurgo manual de anexos |
+
+- Os registros ficam **365 dias** (`app:purge-audit-logs`) porque guardam IP e e-mail digitado.
+- Gravar nunca derruba a ação: se a gravação falhar, só o log recebe um aviso (`Auditoria: registro não gravado`) e o login, o
+  backup ou a restauração seguem.
+- A restauração troca o banco: o **pedido** fica no banco de antes da troca (guardado por 7 dias) e o **resultado** (`restore.succeeded`
+  ou `restore.failed`) fica no banco que estiver ativo depois dela. Para reconstituir a história inteira, olhe os dois.
+- O teto de 20 logins por hora por e-mail tem um custo: quem sabe o e-mail de alguém consegue travar o login dele por até uma hora.
+  Ajuste em `SECURITY_LOGIN_PER_HOUR`.
+
 ## Variáveis de produção
 
 Conferir no Coolify antes de subir a produção (o beta é ambiente de desenvolvimento e segue com `LOG_LEVEL=debug`):
