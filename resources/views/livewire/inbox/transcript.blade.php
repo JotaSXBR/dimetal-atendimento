@@ -41,9 +41,12 @@
         // Hora e tiques sempre no canto inferior direito: no fim do texto (inline), sobre foto/vídeo sem legenda (overlay) ou na base (below).
         $visual = $message->hasMedia() && ($message->media_ref !== null || $message->media_path !== null)
             && ((str_starts_with((string) $message->media_mime, 'image/') && $message->media_mime !== 'image/webp') || str_starts_with((string) $message->media_mime, 'video/'));
+        // Áudio com arquivo: a hora vai para a linha da duração, dentro da caixa do player (ver `media.blade.php`).
+        $audio = $message->hasMedia() && ($message->media_ref !== null || $message->media_path !== null) && str_starts_with((string) $message->media_mime, 'audio/');
         $timeMode = match (true) {
             $message->body !== '' && ! in_array($message->type, ['location', 'contact', 'view_once'], true) => 'inline',
             $visual && $message->body === '' => 'overlay',
+            $audio => 'audio',
             default => 'below',
         };
         $resend = $out && ! $readonly && $message->delivery_status === \App\Enums\DeliveryStatus::FAILED

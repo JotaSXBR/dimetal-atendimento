@@ -6,6 +6,7 @@
     'items-center gap-1 font-mono text-[10px] whitespace-nowrap',
     'float-right ms-3 mt-2 inline-flex text-ink-2' => $mode === 'inline',
     'mt-1 flex justify-end text-ink-2' => $mode === 'below',
+    'absolute end-0 bottom-0 inline-flex leading-4 text-ink-2' => $mode === 'audio',
     'pointer-events-none absolute end-1.5 bottom-1.5 inline-flex rounded bg-black/55 px-1.5 py-0.5 text-white' => $mode === 'overlay',
 ])>
     @if ($message->edited_at)

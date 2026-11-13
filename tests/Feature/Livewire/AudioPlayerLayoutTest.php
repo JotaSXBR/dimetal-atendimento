@@ -39,7 +39,7 @@ class AudioPlayerLayoutTest extends TestCase
     {
         $html = $this->html();
 
-        $this->assertStringContainsString('grid-cols-[auto_minmax(0,1fr)]', $this->classesOf($html, 'data-audio-player'));
+        $this->assertStringContainsString('grid-cols-[auto_minmax(0,1fr)_auto]', $this->classesOf($html, 'data-audio-player'));
         $this->assertStringContainsString('row-start-1', $this->classesOf($html, 'aria-label="Reproduzir áudio"'));
         $this->assertStringContainsString('row-start-1', $this->classesOf($html, 'role="slider"'));
     }
@@ -56,15 +56,29 @@ class AudioPlayerLayoutTest extends TestCase
         $this->assertMatchesRegularExpression('/aria-label="Reproduzir áudio".*?<svg[^>]*fill="currentColor"/s', $html, 'ícone de play cheio, não de contorno');
     }
 
-    public function test_tempo_e_velocidade_ficam_na_linha_de_baixo_sob_a_onda(): void
+    public function test_a_duracao_fica_na_linha_de_baixo_sob_a_onda(): void
     {
         $html = $this->html();
 
         $meta = $this->classesOf($html, 'data-testid="audio-meta"');
         $this->assertStringContainsString('col-start-2', $meta);
-        $this->assertStringContainsString('justify-between', $meta);
+        $this->assertStringNotContainsString('justify-between', $meta, 'só a duração: a velocidade subiu para a linha da onda');
+    }
+
+    /** Como no WhatsApp: o controle de velocidade vem depois da onda, na mesma linha do play. */
+    public function test_a_velocidade_fica_na_linha_da_onda_depois_dela(): void
+    {
+        $html = $this->html();
+
         $speed = $this->classesOf($html, 'aria-label="Velocidade de reprodução"');
-        $this->assertStringContainsString('ring-1', $speed);
-        $this->assertStringContainsString('min-h-6', $speed, 'alvo de toque de 24 px (WCAG 2.5.8)');
+        foreach (['row-start-1', 'col-start-3', 'ring-1', 'min-h-6'] as $class) {
+            $this->assertStringContainsString($class, $speed, 'min-h-6 é o alvo de toque de 24 px (WCAG 2.5.8)');
+        }
+
+        $this->assertLessThan(strpos($html, 'aria-label="Velocidade de reprodução"'), strpos($html, 'role="slider"'), 'a velocidade vem depois da onda');
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+        $this->assertSame(0, (new \DOMXPath($dom))->query('//*[@data-testid="audio-meta"]//*[@aria-label="Velocidade de reprodução"]')->length);
     }
 }

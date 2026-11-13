@@ -97,11 +97,23 @@ class InboxMediaTest extends TestCase
         $this->assertSame(['overlay'], $this->timeModes(['media_ref' => 'a.mp4', 'media_mime' => 'video/mp4']));
     }
 
-    public function test_audio_e_documento_tem_hora_abaixo(): void
+    public function test_audio_tem_a_hora_na_linha_da_duracao_e_documento_abaixo(): void
     {
-        $this->assertSame(['below'], $this->timeModes(['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg']));
+        $this->assertSame(['audio'], $this->timeModes(['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg']));
         // A segunda chamada soma uma bolha à mesma conversa: áudio e documento.
-        $this->assertSame(['below', 'below'], $this->timeModes(['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf']));
+        $this->assertSame(['audio', 'below'], $this->timeModes(['media_ref' => 'a.pdf', 'media_mime' => 'application/pdf', 'media_name' => 'a.pdf']));
+    }
+
+    public function test_a_hora_do_audio_existe_uma_vez_e_dentro_da_bolha_do_audio(): void
+    {
+        $html = $this->screen(['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg', 'direction' => MessageDirection::OUT])->html();
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+
+        $this->assertSame(1, $xpath->query('//*[@data-testid="message-time"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@data-testid="audio-bubble"]//*[@data-testid="message-time"]')->length);
     }
 
     public function test_visualizacao_unica_com_mime_de_imagem_ainda_mostra_a_hora(): void
