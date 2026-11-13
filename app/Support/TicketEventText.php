@@ -30,6 +30,9 @@ final class TicketEventText
         'tag_added' => 'Etiqueta adicionada',
         'tag_removed' => 'Etiqueta removida',
         'opened_by_agent' => 'Conversa iniciada pela equipe',
+        'bot_started' => 'Bot iniciou o atendimento',
+        'bot_abandoned' => 'Equipe respondeu pelo celular; a triagem do bot acabou',
+        'bot_handoff' => 'Bot encaminhou',
     ];
 
     public static function label(string $type): string
@@ -37,7 +40,7 @@ final class TicketEventText
         return self::TYPES[$type] ?? $type;
     }
 
-    /** O que aconteceu, em texto: motivo e resumo do encerramento; nos demais, o conteúdo bruto do evento. */
+    /** O que aconteceu, em texto: motivo e resumo do encerramento e a espera do SLA; os demais não têm detalhe. */
     public static function detail(TicketEvent $event): string
     {
         $payload = $event->payload ?? [];
@@ -54,7 +57,8 @@ final class TicketEventText
             return self::slaDetail($payload);
         }
 
-        return $payload === [] ? '' : (string) json_encode($payload, JSON_UNESCAPED_UNICODE);
+        // O payload dos demais tipos é dado interno: nunca vira texto na tela.
+        return '';
     }
 
     /**

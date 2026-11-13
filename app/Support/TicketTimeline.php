@@ -36,6 +36,14 @@ final class TicketTimeline
         'opened_by_agent' => 'iniciou a conversa',
     ];
 
+    /** Por que o bot passou o ticket para a equipe. `fluxo` (o bloco Transferir) e motivo desconhecido não levam sufixo. */
+    private const HANDOFF_REASONS = [
+        'sair' => 'cliente pediu atendente',
+        'erros' => 'respostas inválidas',
+        'timeout' => 'sem resposta do cliente',
+        'sem_workflow' => 'sem automação ativa',
+    ];
+
     /** @var Collection<int, string> */
     private Collection $sectors;
 
@@ -54,7 +62,7 @@ final class TicketTimeline
                     continue;
                 }
 
-                if ($key === 'from_sector' || $key === 'to_sector') {
+                if ($key === 'from_sector' || $key === 'to_sector' || $key === 'sector_id') {
                     $sectorIds[] = $id;
                 } elseif ($key === 'from_user' || $key === 'to_user') {
                     $userIds[] = $id;
@@ -67,12 +75,14 @@ final class TicketTimeline
     }
 
     /**
+     * O que mudou o ticket, para quem lê o histórico: sem a conversa e sem tipo que ainda não tem texto (a auditoria lista todos).
+     *
      * @param  Collection<int, TicketEvent>  $events
      * @return Collection<int, TicketEvent>
      */
     public static function changes(Collection $events): Collection
     {
-        return $events->reject(fn (TicketEvent $event): bool => in_array($event->type, self::CONVERSATION, true))->values();
+        return $events->reject(fn (TicketEvent $event): bool => in_array($event->type, self::CONVERSATION, true) || ! array_key_exists($event->type, TicketEventText::TYPES))->values();
     }
 
     /** O que aconteceu, sem o nome de quem fez: "de Comercial para Financeiro · nota". */
@@ -91,9 +101,19 @@ final class TicketTimeline
             'sla_breached' => TicketEventText::detail($event),
             'tag_added', 'tag_removed' => is_string($payload['tag'] ?? null) ? $payload['tag'] : '',
             'message_reacted' => is_string($payload['emoji'] ?? null) ? 'com '.$payload['emoji'] : '(reação removida)',
-            // Tipo que esta tela não conhece: a auditoria não esconde o dado, mostra o conteúdo como veio.
-            default => array_key_exists($event->type, TicketEventText::TYPES) || $payload === [] ? '' : (string) json_encode($payload, JSON_UNESCAPED_UNICODE),
+            // Sem formato próprio: o payload é dado interno e nunca vira texto na tela.
+            default => '',
         };
+    }
+
+    /** "Bot encaminhou para Comercial (cliente pediu atendente)". */
+    private function botHandoff(TicketEvent $event): string
+    {
+        $payload = $event->payload ?? [];
+        $reason = is_string($payload['reason'] ?? null) ? (self::HANDOFF_REASONS[$payload['reason']] ?? null) : null;
+        $sentence = 'Bot encaminhou para '.$this->sector($payload['sector_id'] ?? null);
+
+        return $reason === null ? $sentence : $sentence.' ('.$reason.')';
     }
 
     /**
@@ -102,6 +122,10 @@ final class TicketTimeline
      */
     public function sentence(TicketEvent $event): string
     {
+        if ($event->type === 'bot_handoff') {
+            return $this->botHandoff($event);
+        }
+
         $detail = $this->detail($event);
         $actor = $event->actor_user_id === null ? null : $event->actor;
 
