@@ -76,9 +76,14 @@ RUN sed -i '/add_header Cache-Control "public, max-age=31536000, immutable";/i\ 
 # Cliente PostgreSQL 18 (pg_dump/pg_restore) em todos os estágios: o backup roda no worker e no scheduler e a restauração pela tela
 # lê o arquivo no app. O Debian da base traz o cliente 15 e o pg_dump recusa servidor de versão maior, então vem do repositório
 # oficial PGDG. Sobe junto com o servidor: se o Postgres virar 19, trocar para postgresql-client-19.
+# A chave vai para um arquivo (e não direto no `gpg` por um pipe) com `--retry`: o `curl` já caiu no meio do download (HTTP/2 stream
+# não fechada) e o `gpg` recebeu um arquivo vazio, o que derrubou o build do Reverb em 13/11/2026. Num pipe o retry não desfaz o que
+# o `curl` já escreveu; no arquivo ele recomeça do zero.
 RUN apt-get update -qq \
     && apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg \
-    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg \
+    && curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 -o /tmp/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    && gpg --dearmor -o /usr/share/keyrings/pgdg.gpg /tmp/pgdg.asc \
+    && rm /tmp/pgdg.asc \
     && echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update -qq \
     && apt-get install -y -qq --no-install-recommends postgresql-client-18 \
