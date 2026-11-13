@@ -168,6 +168,46 @@ class ThemeTokensTest extends TestCase
         }
     }
 
+    /** @return array<string, array{light: array<string, string>, dark: array<string, string>}> tom → variáveis `--tag-*` */
+    private function tagTones(): array
+    {
+        $css = $this->css();
+        $tones = [];
+
+        foreach (\App\Enums\TagColor::cases() as $tone) {
+            $name = preg_quote($tone->value, '/');
+            $this->assertSame(1, preg_match('/(?<!\.dark )\.tag-'.$name.'\s*\{([^}]*)\}/', $css, $light), "claro: .tag-{$tone->value}");
+            $this->assertSame(1, preg_match('/\.dark \.tag-'.$name.'\s*\{([^}]*)\}/', $css, $dark), "escuro: .tag-{$tone->value}");
+
+            foreach (['light' => $light[1], 'dark' => $dark[1]] as $theme => $block) {
+                preg_match_all('/--tag-(bg|fg|line):\s*(#[0-9a-fA-F]{6})\s*;/', $block, $m, PREG_SET_ORDER);
+                $tones[$tone->value][$theme] = array_column($m, 2, 1);
+            }
+        }
+
+        return $tones;
+    }
+
+    public function test_cada_tom_de_etiqueta_tem_texto_legivel_e_contorno_visivel_nos_dois_temas(): void
+    {
+        $surface = ['light' => $this->themes()['light']['surface'], 'dark' => $this->themes()['dark']['surface']];
+
+        foreach ($this->tagTones() as $tone => $themes) {
+            foreach ($themes as $theme => $v) {
+                $this->assertSame(['bg', 'fg', 'line'], array_keys(array_intersect_key(['bg' => 1, 'fg' => 1, 'line' => 1], $v)), "{$tone}/{$theme}");
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($v['fg'], $v['bg']), "{$theme}: tag-{$tone} fg sobre bg");
+                $this->assertGreaterThanOrEqual(3.0, $this->ratio($v['line'], $surface[$theme]), "{$theme}: tag-{$tone} contorno sobre surface");
+            }
+        }
+    }
+
+    public function test_o_swatch_do_tom_e_o_contorno_do_tema_claro(): void
+    {
+        foreach ($this->tagTones() as $tone => $themes) {
+            $this->assertSame(strtolower(\App\Enums\TagColor::from($tone)->swatch()), strtolower($themes['light']['line']), $tone);
+        }
+    }
+
     private function mix(string $top, string $bottom, float $alpha): string
     {
         $a = array_map('hexdec', str_split(ltrim($top, '#'), 2));
