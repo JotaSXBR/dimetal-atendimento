@@ -70,6 +70,16 @@ class HistoryPageTest extends TestCase
         $this->assertStringContainsString('placeholder="Contato, protocolo ou texto"', $html);
     }
 
+    public function test_a_transcricao_do_historico_nao_manda_o_aviso_de_aba_visivel_do_inbox(): void
+    {
+        // O aviso grava `$wire.visible`, que só existe no componente Transcript do Inbox; no Histórico o parcial roda dentro de
+        // History\Index e a atualização pendente de `visible` derrubava o clique seguinte com 500 (PublicPropertyNotFoundException).
+        $ticket = $this->closed('Maria');
+        Message::factory()->for($ticket)->create(['body' => 'Oi']);
+
+        $this->page()->call('select', $ticket->id)->assertSee('Oi')->assertDontSeeHtml('transcriptVisibility');
+    }
+
     private function page(?User $user = null): Testable
     {
         return Livewire::actingAs($user ?? $this->agent)->test(Index::class);
