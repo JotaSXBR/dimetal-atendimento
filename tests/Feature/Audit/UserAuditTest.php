@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Sector;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -91,14 +92,15 @@ class UserAuditTest extends TestCase
     public function test_definir_a_senha_grava_password_set_e_nunca_a_senha(): void
     {
         $target = $this->as(UserRole::ATENDENTE);
+        $secret = 'Aa1-'.Str::random(20); // gerada na hora: um literal aqui o gitleaks lê como segredo
 
         Livewire::actingAs($this->as(UserRole::ADMIN))->test(Users::class)
-            ->call('edit', $target->id)->set('password', 'outra-senha-segura-456')->call('save')->assertHasNoErrors();
+            ->call('edit', $target->id)->set('password', $secret)->call('save')->assertHasNoErrors();
 
         $log = AuditLog::query()->sole();
         $this->assertSame('user.password_set', $log->action);
         $this->assertNull($log->detail);
-        $this->assertStringNotContainsString('outra-senha-segura-456', (string) json_encode(AuditLog::query()->get()->toArray()));
+        $this->assertStringNotContainsString($secret, (string) json_encode(AuditLog::query()->get()->toArray()));
     }
 
     public function test_mudar_papel_e_nome_juntos_gravam_as_duas_acoes(): void
