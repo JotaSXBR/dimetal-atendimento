@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Enums\TagColor;
 use PHPUnit\Framework\TestCase;
 
 class ThemeTokensTest extends TestCase
@@ -174,7 +175,7 @@ class ThemeTokensTest extends TestCase
         $css = $this->css();
         $tones = [];
 
-        foreach (\App\Enums\TagColor::cases() as $tone) {
+        foreach (TagColor::cases() as $tone) {
             $name = preg_quote($tone->value, '/');
             $this->assertSame(1, preg_match('/(?<!\.dark )\.tag-'.$name.'\s*\{([^}]*)\}/', $css, $light), "claro: .tag-{$tone->value}");
             $this->assertSame(1, preg_match('/\.dark \.tag-'.$name.'\s*\{([^}]*)\}/', $css, $dark), "escuro: .tag-{$tone->value}");
@@ -204,7 +205,7 @@ class ThemeTokensTest extends TestCase
     public function test_o_swatch_do_tom_e_o_contorno_do_tema_claro(): void
     {
         foreach ($this->tagTones() as $tone => $themes) {
-            $this->assertSame(strtolower(\App\Enums\TagColor::from($tone)->swatch()), strtolower($themes['light']['line']), $tone);
+            $this->assertSame(strtolower(TagColor::from($tone)->swatch()), strtolower($themes['light']['line']), $tone);
         }
     }
 

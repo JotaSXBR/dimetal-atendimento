@@ -17,14 +17,14 @@ return new class extends Migration
 
         // A cor livre (#RRGGBB) acaba: cada etiqueta existente vira o tom mais próximo da paleta.
         foreach (DB::table('tags')->get(['id', 'color']) as $tag) {
-            DB::table('tags')->where('id', $tag->id)->update(['color' => TagColor::nearest((string) $tag->color)->value]);
+            DB::table('tags')->where('id', $tag->id)->update(['color' => TagColor::nearest(is_string($tag->color) ? $tag->color : '')->value]);
         }
     }
 
     public function down(): void
     {
         foreach (DB::table('tags')->get(['id', 'color']) as $tag) {
-            DB::table('tags')->where('id', $tag->id)->update(['color' => (TagColor::tryFrom((string) $tag->color) ?? TagColor::default())->swatch()]);
+            DB::table('tags')->where('id', $tag->id)->update(['color' => (TagColor::tryFrom(is_string($tag->color) ? $tag->color : '') ?? TagColor::default())->swatch()]);
         }
 
         Schema::table('tags', function (Blueprint $table) {

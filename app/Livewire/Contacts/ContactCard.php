@@ -172,7 +172,7 @@ class ContactCard extends Component
         return view('livewire.contacts.contact-card', [
             'contact' => $contact,
             'contactTags' => $contactTags,
-            'availableTags' => Tag::sortedByName(Tag::query()->ofContact()->whereNotIn('id', $contactTags->modelKeys())->get()),
+            'availableTags' => Tag::sortedByName(Tag::query()->ofContact()->whereNotIn('id', $contactTags->pluck('id'))->get()),
             'google' => $syncStatus->describe($contact),
             'history' => $history,
             'historyTotal' => $historyTotal,

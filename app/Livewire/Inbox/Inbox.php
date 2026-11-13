@@ -4,15 +4,14 @@ namespace App\Livewire\Inbox;
 
 use App\Actions\Inbox\ClaimTicket;
 use App\Actions\Inbox\CloseTicket;
+use App\Actions\Inbox\MarkTicketSeenByAgent;
 use App\Actions\Inbox\ReassignTicket;
 use App\Actions\Inbox\TakeoverTicket;
 use App\Actions\Inbox\TransferTicket;
 use App\Enums\ClosedReason;
 use App\Enums\CloseOutcome;
 use App\Enums\SectorStatus;
-use App\Enums\TagScope;
 use App\Enums\TicketStatus;
-use App\Actions\Inbox\MarkTicketSeenByAgent;
 use App\Jobs\MarkTicketSeenJob;
 use App\Livewire\Inbox\Concerns\ActsOnMessages;
 use App\Livewire\Inbox\Concerns\ComposesMessages;
@@ -26,6 +25,7 @@ use App\Models\User;
 use App\Services\Inbox\ClientPresence;
 use App\Services\Inbox\ConversationHandoff;
 use App\Services\Inbox\ResendTicketMessage;
+use App\Support\TicketQueue;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -368,22 +368,17 @@ class Inbox extends Component
         $user = $this->user();
         $ticket = $this->find();
 
-        // A etiqueta escolhida decide onde procurar: no contato do ticket (escopo contato) ou no próprio ticket.
-        $filterTag = $this->tagId === null ? null : Tag::query()->find($this->tagId);
-
         $list = Ticket::query()
             ->open()
             ->visibleTo($user)
             ->with(['contact.tags', 'channel', 'tags', 'assignee', 'sector'])
-            ->withUnread()
+            ->tap(TicketQueue::withUnread(...))
             ->addSelect(['preview' => Message::query()
                 ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->orderByDesc('sent_at')->orderByDesc('id')->limit(1)])
             ->when($this->tab === 'pendentes', fn (Builder $q) => $q->where('status', TicketStatus::PENDENTE->value))
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
             ->when($this->tab === 'meus', fn (Builder $q) => $q->where('assigned_user_id', $user->id))
-            ->when($this->tagId !== null, fn (Builder $q) => $filterTag?->scope === TagScope::CONTATO
-                ? $q->whereHas('contact.tags', fn (Builder $t) => $t->whereKey($this->tagId))
-                : $q->whereHas('tags', fn (Builder $t) => $t->whereKey($this->tagId)))
+            ->when($this->tagId !== null, fn (Builder $q) => TicketQueue::withTag($q, (int) $this->tagId))
             ->orderBy('last_inbound_at')
             ->get();
 

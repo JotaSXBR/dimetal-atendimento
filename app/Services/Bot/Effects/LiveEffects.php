@@ -134,7 +134,7 @@ final class LiveEffects implements BotEffects
         return $this->tagOwner($tag)->whereKey($tag->id)->exists();
     }
 
-    /** @return BelongsToMany<Tag, Contact|Ticket> */
+    /** @return BelongsToMany<Tag, Contact>|BelongsToMany<Tag, Ticket> */
     private function tagOwner(Tag $tag): BelongsToMany
     {
         return $tag->scope === TagScope::CONTATO ? $this->ticket->contact()->firstOrFail()->tags() : $this->ticket->tags();

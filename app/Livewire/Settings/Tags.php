@@ -33,7 +33,7 @@ class Tags extends Component
         $this->authorize('supervisor');
 
         $this->resetForm();
-        $this->scope = TagScope::tryFrom((string) $scope)?->value ?? TagScope::CONVERSA->value;
+        $this->scope = TagScope::tryFrom((string) $scope)->value ?? TagScope::CONVERSA->value;
         $this->showForm = true;
     }
 
@@ -68,10 +68,10 @@ class Tags extends Component
             'color.enum' => 'Escolha uma das cores da lista.',
         ]);
 
-        $tag = $this->editingId === null ? new Tag : Tag::query()->withCount(['tickets', 'contacts'])->findOrFail($this->editingId);
+        $tag = $this->editingId === null ? new Tag : Tag::query()->findOrFail($this->editingId);
 
         // Mudar o escopo de uma etiqueta já aplicada deixaria vínculos no lugar errado.
-        if ($tag->exists && $tag->scope->value !== $this->scope && $this->usage($tag) > 0) {
+        if ($tag->exists && $tag->scope->value !== $this->scope && $this->inUse($tag)) {
             $this->addError('scope', 'O escopo não muda enquanto a etiqueta está em uso.');
 
             return;
@@ -94,9 +94,9 @@ class Tags extends Component
         $this->resetForm();
     }
 
-    private function usage(Tag $tag): int
+    private function inUse(Tag $tag): bool
     {
-        return (int) $tag->getAttribute('tickets_count') + (int) $tag->getAttribute('contacts_count');
+        return $tag->tickets()->exists() || $tag->contacts()->exists();
     }
 
     private function resetForm(): void

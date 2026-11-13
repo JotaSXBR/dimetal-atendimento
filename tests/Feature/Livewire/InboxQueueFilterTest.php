@@ -11,6 +11,7 @@ use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -27,7 +28,7 @@ class InboxQueueFilterTest extends TestCase
         ]);
     }
 
-    private function page(): \Livewire\Features\SupportTesting\Testable
+    private function page(): Testable
     {
         return Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class);
     }

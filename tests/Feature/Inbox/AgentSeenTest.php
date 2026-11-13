@@ -3,6 +3,7 @@
 namespace Tests\Feature\Inbox;
 
 use App\Enums\MessageDirection;
+use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Events\TicketUpdated;
@@ -14,6 +15,7 @@ use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Inbox\SendTicketMessage;
+use App\Support\TicketQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
@@ -47,7 +49,7 @@ class AgentSeenTest extends TestCase
 
     private function unread(): int
     {
-        return (int) Ticket::query()->withUnread()->findOrFail($this->ticket->id)->getAttribute('unread');
+        return (int) Ticket::query()->tap(TicketQueue::withUnread(...))->findOrFail($this->ticket->id)->getAttribute('unread');
     }
 
     public function test_o_responsavel_abre_e_a_tela_de_todos_se_atualiza(): void
@@ -107,7 +109,7 @@ class AgentSeenTest extends TestCase
     {
         $this->inbound();
 
-        app(SendTicketMessage::class)->create($this->ticket, null, 'Resposta automática', \App\Enums\MessageOrigin::BOT);
+        app(SendTicketMessage::class)->create($this->ticket, null, 'Resposta automática', MessageOrigin::BOT);
         app(SendTicketMessage::class)->create($this->ticket, User::factory()->create(['role' => UserRole::SUPERVISOR]), 'Posso ajudar?');
 
         $this->assertNull($this->ticket->fresh()?->agent_seen_at);

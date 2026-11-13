@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire;
 
 use App\Enums\UserRole;
 use App\Livewire\Automation\Editor;
+use App\Models\Tag;
 use App\Models\User;
 use App\Models\Workflow;
 use App\Services\Bot\DefaultWorkflow;
@@ -49,8 +50,8 @@ class AutomationEditorTest extends TestCase
 
     public function test_editor_entrega_as_etiquetas_com_o_escopo(): void
     {
-        \App\Models\Tag::factory()->contato()->create(['name' => 'Revenda']);
-        \App\Models\Tag::factory()->create(['name' => 'Orçamento']);
+        Tag::factory()->contato()->create(['name' => 'Revenda']);
+        Tag::factory()->create(['name' => 'Orçamento']);
 
         $html = html_entity_decode(Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html());
 
