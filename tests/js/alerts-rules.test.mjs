@@ -103,3 +103,12 @@ test('quem já liberou o som neste navegador não vê a faixa de novo a cada ref
     assert.equal(audioStripHidden(comSom, null, true), true);
     assert.equal(audioStripHidden(comSom, { state: 'suspended' }, false), false);
 });
+
+test('com alerta crítico ativo e o áudio ainda bloqueado, a faixa volta mesmo para quem já liberou o som antes', () => {
+    const comSom = { sound: { message: true } };
+
+    assert.equal(audioStripHidden(comSom, { state: 'suspended' }, true, true), false);
+    assert.equal(audioStripHidden(comSom, null, true, true), false);
+    assert.equal(audioStripHidden(comSom, { state: 'running' }, true, true), true);
+    assert.equal(audioStripHidden({ sound: {} }, { state: 'suspended' }, true, true), true);
+});

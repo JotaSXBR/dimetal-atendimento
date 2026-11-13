@@ -165,7 +165,7 @@ function start(id) {
         }
 
         if (strip) {
-            strip.hidden = audioStripHidden(settings, audio, remembered());
+            strip.hidden = audioStripHidden(settings, audio, remembered(), STATES.some((state) => state.active()));
         }
     }
 

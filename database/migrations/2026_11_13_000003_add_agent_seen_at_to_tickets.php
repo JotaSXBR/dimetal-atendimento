@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,6 +13,9 @@ return new class extends Migration
         Schema::table('tickets', function (Blueprint $table) {
             $table->timestamp('agent_seen_at')->nullable();
         });
+
+        // Quem já está na Fila não nasce com "todas as mensagens não lidas": os abertos contam como vistos até agora.
+        DB::table('tickets')->where('status', '<>', 'encerrado')->update(['agent_seen_at' => now()]);
     }
 
     public function down(): void
