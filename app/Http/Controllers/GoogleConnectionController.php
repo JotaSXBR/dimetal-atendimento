@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Contacts\SyncPendingContacts;
+use App\Enums\AuditAction;
+use App\Services\Audit\Auditor;
 use App\Services\Google\GoogleAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,6 +43,7 @@ class GoogleConnectionController extends Controller
         }
 
         $account->connect((string) $user->getEmail(), $user->token, $user->refreshToken, $user->expiresIn);
+        Auditor::record(AuditAction::GoogleConnected, auth()->user(), (string) $user->getEmail());
 
         // Contatos editados antes de a conta existir (ou depois de uma reconexão) seguem agora.
         $syncPending();

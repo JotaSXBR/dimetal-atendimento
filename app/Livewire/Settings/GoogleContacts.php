@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Settings;
 
+use App\Enums\AuditAction;
 use App\Models\Contact;
+use App\Services\Audit\Auditor;
 use App\Services\Google\GoogleAccount;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Title;
@@ -20,7 +22,11 @@ class GoogleContacts extends Component
     {
         $this->authorize('admin');
 
+        $email = $account->current()?->account_email;
+
         $account->disconnect();
+
+        Auditor::record(AuditAction::GoogleDisconnected, auth()->user(), $email);
     }
 
     public function render(GoogleAccount $account): View

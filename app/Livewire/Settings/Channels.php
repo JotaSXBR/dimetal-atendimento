@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Settings;
 
+use App\Enums\AuditAction;
 use App\Models\Channel;
 use App\Models\WahaEvent;
+use App\Services\Audit\Auditor;
 use App\Settings\WahaSettings;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
@@ -25,6 +27,7 @@ class Channels extends Component
         ]);
 
         Channel::create(['name' => $this->sessionName, 'waha_session' => $this->sessionName]);
+        Auditor::record(AuditAction::ChannelCreated, auth()->user(), $this->sessionName);
 
         $this->reset('sessionName');
     }
