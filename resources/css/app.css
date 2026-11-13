@@ -12,7 +12,7 @@
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-    /* Tokens claros. Marca amarela (yellow-400); o verde só sobrevive como `ok` (status de sucesso).
+    /* Tokens claros. Marca neutra (stone-800 no claro, branco no escuro); verde, âmbar e vermelho são só estado e alerta (`ok`, `warn`, `danger`).
        Cada um é redefinido em `.dark` abaixo; os pares de texto são medidos em tests/Unit/ThemeTokensTest.php. */
     --color-ink: #101513;
     --color-ink-2: #46514d;
@@ -20,11 +20,11 @@
     --color-line: #e2e0d9;
     --color-canvas: #f5f4f0;
     --color-surface: #ffffff;
-    --color-accent: #facc15; /* yellow-400 */
-    --color-accent-content: #854d0e; /* yellow-800: texto/link de marca */
-    --color-accent-foreground: #422006; /* yellow-950: texto sobre a marca */
-    --color-accent-soft: #fef9c3; /* yellow-100 */
-    --color-warn: #9a3412; /* orange-800: afastado do amarelo da marca e legível sobre warn/10 */
+    --color-accent: #292524; /* stone-800 */
+    --color-accent-content: #292524; /* stone-800: texto/link de marca */
+    --color-accent-foreground: #ffffff; /* texto sobre a marca */
+    --color-accent-soft: #e7e5e4; /* stone-200 */
+    --color-warn: #92400e; /* amber-800: legível sobre warn/10 e warn/20 */
     --color-warn-foreground: #ffffff;
     --color-danger: #b42318;
     --color-danger-foreground: #ffffff;
@@ -89,11 +89,11 @@ select:focus[data-flux-control] {
         --color-line: #44403c; /* stone-700 */
         --color-canvas: #1c1917; /* stone-900 */
         --color-surface: #292524; /* stone-800 */
-        --color-accent: #facc15;
-        --color-accent-content: #facc15;
-        --color-accent-foreground: #422006;
-        --color-accent-soft: #422006;
-        --color-warn: #fb923c; /* orange-400 */
+        --color-accent: #ffffff;
+        --color-accent-content: #ffffff;
+        --color-accent-foreground: #292524; /* stone-800 */
+        --color-accent-soft: #44403c; /* stone-700 */
+        --color-warn: #fbbf24; /* amber-400 */
         --color-warn-foreground: #1c1917;
         --color-danger: #f87171; /* red-400 */
         --color-danger-foreground: #1c1917;

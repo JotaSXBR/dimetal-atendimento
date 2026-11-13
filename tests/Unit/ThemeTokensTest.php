@@ -81,9 +81,19 @@ class ThemeTokensTest extends TestCase
         }
     }
 
-    public function test_a_marca_e_amarela_e_o_verde_antigo_sumiu(): void
+    public function test_a_marca_e_neutra_e_o_aviso_e_ambar(): void
     {
-        $this->assertSame('#facc15', $this->themes()['light']['accent'] ?? null);
+        $themes = $this->themes();
+
+        $this->assertSame('#292524', $themes['light']['accent'] ?? null);
+        $this->assertSame('#292524', $themes['light']['accent-content'] ?? null);
+        $this->assertSame('#ffffff', $themes['light']['accent-foreground'] ?? null);
+        $this->assertSame('#ffffff', $themes['dark']['accent'] ?? null);
+        $this->assertSame('#ffffff', $themes['dark']['accent-content'] ?? null);
+        $this->assertSame('#292524', $themes['dark']['accent-foreground'] ?? null);
+        $this->assertSame('#92400e', $themes['light']['warn'] ?? null);
+        $this->assertSame('#fbbf24', $themes['dark']['warn'] ?? null);
+        $this->assertStringNotContainsString('#facc15', strtolower($this->css()));
         $this->assertStringNotContainsString('#12705a', strtolower($this->css()));
     }
 
@@ -166,7 +176,7 @@ class ThemeTokensTest extends TestCase
         return '#'.implode('', array_map(fn (int $i): string => sprintf('%02x', (int) round($a[$i] * $alpha + $b[$i] * (1 - $alpha))), [0, 1, 2]));
     }
 
-    public function test_marca_amarela_nunca_e_cor_de_texto_nem_o_texto_vira_fundo(): void
+    public function test_bg_accent_content_nao_e_usado_porque_accent_content_e_cor_de_texto(): void
     {
         $offenders = [];
         foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(dirname(__DIR__, 2).'/resources/views')) as $file) {
@@ -174,8 +184,7 @@ class ThemeTokensTest extends TestCase
                 continue;
             }
             foreach (file((string) $file) ?: [] as $n => $line) {
-                // `text-accent` é o amarelo de FUNDO (1,5:1 sobre branco); texto de marca é `text-accent-content`, e `bg-accent-content` é cor de texto.
-                if (preg_match('/(?<![\w-])text-accent(?![\w-])|bg-accent-content/', $line)) {
+                if (str_contains($line, 'bg-accent-content')) {
                     $offenders[] = basename((string) $file).':'.($n + 1);
                 }
             }
