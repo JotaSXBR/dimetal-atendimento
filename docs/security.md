@@ -13,7 +13,7 @@ Linha de base de segurança do app, o que está decidido e como mudar cada contr
 | CSRF | Laravel e Livewire | só o webhook do WAHA é isento, e ele exige HMAC |
 | Webhook do WAHA | HMAC SHA-512 (`hash_equals`), dedupe por id | 401 sem assinatura válida |
 | Autorização | `TicketPolicy` e escopo `visibleTo` | toda ação do Livewire chama `authorize` |
-| Login | Fortify, 5 tentativas por minuto por e-mail e IP, só usuário ativo | cadastro público fechado |
+| Login | Fortify, 5 tentativas por minuto por e-mail e IP e 20 por hora por e-mail, só usuário ativo | cadastro público fechado; quem sabe um e-mail pode travar o login dele por até 1 h |
 | Senha | mínimo de 12, maiúscula, número, símbolo e checagem de vazamento em produção | |
 | Canais privados (Reverb) | `routes/channels.php`, origens permitidas | só usuário ativo |
 | Segredos | `.env*` ignorados pelo git; nenhum no repositório | rotacionar antes de purgar, se vazar |
@@ -55,7 +55,7 @@ limite de tentativas do login. A lista é literal porque a configuração ainda 
 
 | Alvo | Limite | Onde |
 |---|---|---|
-| Login | 5 por minuto por e-mail e IP | `FortifyServiceProvider` |
+| Login | 5 por minuto por e-mail e IP, e 20 por hora por e-mail de qualquer IP (`SECURITY_LOGIN_PER_HOUR`) | `FortifyServiceProvider`, `config/security.php` |
 | Webhook do WAHA | 300 por minuto por IP | `AppServiceProvider`, `config/security.php` |
 | Envio de mensagem pelo painel | 30 por minuto por usuário | `Inbox::send`, `config/security.php` |
 

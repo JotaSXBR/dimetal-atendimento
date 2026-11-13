@@ -85,9 +85,14 @@ class FortifyServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate($request->string(Fortify::username())->lower()->toString().'|'.$request->ip());
+            $email = Str::transliterate(trim($request->string(Fortify::username())->lower()->toString()));
 
-            return Limit::perMinute(5)->by($throttleKey);
+            return [
+                Limit::perMinute(5)->by($email.'|'.$request->ip()),
+                // Por e-mail, de qualquer IP: sem isto, 100 IPs diferentes testam senhas de uma conta sem freio. Custo: quem sabe o
+                // e-mail de alguém consegue travar o login dele por até 1 hora errando senhas.
+                Limit::perHour(config()->integer('security.login_per_hour_per_email'))->by('login-email:'.$email),
+            ];
         });
 
         RateLimiter::for('passkeys', function (Request $request) {
