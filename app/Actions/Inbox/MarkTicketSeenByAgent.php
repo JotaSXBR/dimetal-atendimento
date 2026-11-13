@@ -27,8 +27,10 @@ class MarkTicketSeenByAgent
             return;
         }
 
+        // Grava até onde a pessoa viu (a última mensagem do cliente), não "agora": o que chegar depois deste instante segue não lido.
         // Consulta direta: o visto não é uma edição do ticket (não mexe em `updated_at`).
-        Ticket::query()->whereKey($ticket->id)->update(['agent_seen_at' => now()]);
+        $latest = $ticket->messages()->where('direction', MessageDirection::IN->value)->max('sent_at');
+        Ticket::query()->whereKey($ticket->id)->update(['agent_seen_at' => $latest ?? now()]);
         $ticket->refresh();
 
         TicketUpdated::dispatch($ticket);

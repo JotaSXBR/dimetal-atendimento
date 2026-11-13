@@ -126,6 +126,19 @@ class AgentSeenTest extends TestCase
         Event::assertNotDispatched(TicketUpdated::class);
     }
 
+    /** O visto grava até onde a pessoa viu (a última mensagem do cliente), não "agora": o que chega depois segue não lido. */
+    public function test_visto_grava_a_ultima_mensagem_vista_e_a_que_chega_depois_continua_nao_lida(): void
+    {
+        $seen = $this->inbound(now()->subMinutes(5)->toDateTimeString());
+
+        Livewire::actingAs($this->owner)->test(Inbox::class)->call('select', $this->ticket->id);
+
+        $this->assertEquals($seen->sent_at, $this->ticket->fresh()?->agent_seen_at);
+
+        $this->inbound(now()->subMinute()->toDateTimeString());
+        $this->assertSame(1, $this->unread());
+    }
+
     public function test_contador_conta_so_mensagens_do_cliente_depois_de_visto(): void
     {
         $this->assertSame(0, $this->unread(), 'ticket sem mensagens');

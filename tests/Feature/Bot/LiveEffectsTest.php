@@ -135,6 +135,19 @@ class LiveEffectsTest extends TestCase
         $this->assertEquals($before?->updated_at, $this->contact->fresh()?->updated_at);
     }
 
+    /** Efeito opcional: sem o contato (não acontece, o FK impede) o fluxo do bot não pode quebrar. */
+    public function test_etiqueta_do_contato_sem_contato_nao_lanca_excecao(): void
+    {
+        $tag = Tag::factory()->contato()->create();
+        $ticket = $this->ticket;
+        $ticket->contact_id = 999999;
+        $fx = new LiveEffects($ticket);
+
+        $fx->tag($tag);
+
+        $this->assertFalse($fx->hasTag($tag));
+    }
+
     public function test_has_tag_olha_onde_o_escopo_manda(): void
     {
         $contactTag = Tag::factory()->contato()->create();
