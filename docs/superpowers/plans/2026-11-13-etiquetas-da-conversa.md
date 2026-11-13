@@ -22,3 +22,9 @@
 **Files:** `resources/views/components/ticket-details.blade.php`, `tests/Feature/Livewire/TicketDetailsBlocksTest.php`.
 - [ ] RED: Inbox mostra o seletor; histórico só chips; linha "Etiquetas" do bloco Ticket removida.
 - [ ] GREEN; verificação visual nos dois temas e 360 px.
+
+### Tarefa 3: Botão Conversar só onde serve (pedido do dono, 13/11)
+**Files:** `app/Livewire/Contacts/ContactCard.php` (`canChat` na view), `resources/views/livewire/contacts/contact-card.blade.php`, `tests/Feature/Livewire/ContactCardCompactTest.php`.
+O botão abre "Nova conversa" com o contato. Em ticket ativo é inútil (a conversa já está aberta); em ticket encerrado (aba Encerrados do Inbox) serve para recomeçar; na tela Contatos e na ficha avulsa serve sempre; no Histórico (somente leitura) o rodapé nem existe.
+- [ ] RED: ficha de ticket ativo não tem "Conversar"; de ticket encerrado e sem ticket tem.
+- [ ] GREEN: `canChat = currentTicketId === null || ticket encerrado`, e o rodapé só inclui o botão com `canChat`.

@@ -27,6 +27,8 @@ final class TicketEventText
         'message_edited' => 'Mensagem editada',
         'message_revoked_by_agent' => 'Mensagem apagada para todos',
         'note_deleted' => 'Nota interna apagada',
+        'tag_added' => 'Etiqueta adicionada',
+        'tag_removed' => 'Etiqueta removida',
         'opened_by_agent' => 'Conversa iniciada pela equipe',
     ];
 

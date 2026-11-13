@@ -6,6 +6,7 @@ use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\History\Index as History;
 use App\Livewire\Inbox\Inbox;
+use App\Livewire\Inbox\TicketTags;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Tag;
@@ -72,7 +73,7 @@ class TicketDetailsBlocksTest extends TestCase
 
         Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)
             ->assertSee('Etiquetas')
-            ->assertSee('Alfa, Beta, Gama');
+            ->assertSeeInOrder(['Alfa', 'Beta', 'Gama']);
     }
 
     public function test_painel_do_historico_tambem_mostra_as_etiquetas(): void
@@ -88,7 +89,7 @@ class TicketDetailsBlocksTest extends TestCase
         $ticket = $this->ticket(TicketStatus::AGUARDANDO);
         $ticket->tags()->attach(Tag::factory()->count(3)->sequence(['name' => 'Zeta'], ['name' => 'alfa'], ['name' => 'Árvore'])->create());
 
-        Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)->assertSee('alfa, Árvore, Zeta');
+        Livewire::actingAs($this->admin())->test(TicketTags::class, ['ticketId' => $ticket->id])->assertSeeInOrder(['alfa', 'Árvore', 'Zeta']);
     }
 
     public function test_blocos_do_painel_tem_espacamento_compacto(): void

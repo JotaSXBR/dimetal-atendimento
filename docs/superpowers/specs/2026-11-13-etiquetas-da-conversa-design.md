@@ -19,3 +19,6 @@ Hoje a etiqueta da conversa (`ticket_tag`) só entra pelo nó "Etiquetar" do bot
 ## Decisões minhas (custo se erradas)
 - Qualquer um que veja o ticket etiqueta (custo: mais gente mexe; auditoria registra quem).
 - A linha "Etiquetas" do bloco Ticket sai (duplicaria o novo bloco).
+
+## Extra pedido pelo dono (13/11)
+O botão "Conversar" ao lado de "Editar contato" na ficha do painel é inútil em ticket ativo (abre "Nova conversa" com o contato da conversa já aberta). Verificado: ele só serve em ticket **encerrado** (aba Encerrados do Inbox, para recomeçar), na tela Contatos e na ficha avulsa; no Histórico o rodapé nem aparece. Regra: some só quando a ficha está dentro de um ticket ativo.

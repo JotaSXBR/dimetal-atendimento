@@ -357,6 +357,20 @@ class ContactCardCompactTest extends TestCase
         $this->assertSame(['Conversar', 'Editar contato'], $labels);
     }
 
+    /** "Conversar" abre Nova conversa com o contato: em ticket ativo a conversa já está aberta (inútil); em encerrado serve para recomeçar. */
+    public function test_conversar_so_aparece_em_ticket_encerrado_ou_sem_ticket(): void
+    {
+        $this->contact->update(['wa_id' => '5511999990000@c.us']);
+        $channel = Channel::factory()->create();
+        $active = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::EM_ATENDIMENTO]);
+        $closed = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::ENCERRADO, 'closed_at' => now()]);
+
+        $this->assertStringNotContainsString('Conversar', $this->card(['compact' => true, 'currentTicketId' => $active->id])->html());
+        $this->assertStringContainsString('Editar contato', $this->card(['compact' => true, 'currentTicketId' => $active->id])->html());
+        $this->assertStringContainsString('Conversar', $this->card(['compact' => true, 'currentTicketId' => $closed->id])->html());
+        $this->assertStringContainsString('Conversar', $this->card(['compact' => true])->html());
+    }
+
     public function test_somente_leitura_nao_tem_rodape_de_acoes(): void
     {
         $this->assertSame(0, $this->dom($this->card(['compact' => true, 'readonly' => true])->html())->query('//*[@data-testid="contact-actions"]')->length);

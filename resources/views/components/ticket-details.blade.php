@@ -22,7 +22,6 @@
             'Canal' => $ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : ''),
             'Setor' => $ticket->sector?->name ?? 'Fila geral',
             'Responsável' => $ticket->assignee?->name ?? 'Não atribuído',
-            'Etiquetas' => $ticket->tags->isEmpty() ? null : $ticket->tags->pluck('name')->sortBy(fn (string $name) => \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii($name)))->join(', '),
             'SLA' => $sla,
             'Aberto em' => $ticket->opened_at->timezone($tz)->format('d/m/Y H:i'),
             'Encerrado em' => $ticket->closed_at?->timezone($tz)->format('d/m/Y H:i'),
@@ -39,6 +38,7 @@
         <h2 class="mt-4 font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Resumo do atendimento</h2>
         <p class="mt-1 text-sm break-words whitespace-pre-wrap text-ink">{{ $ticket->close_summary }}</p>
     @endif
+    <livewire:inbox.ticket-tags :ticket-id="$ticket->id" :readonly="$readonly" :key="'ticket-tags-'.$ticket->id" />
     </x-disclosure>
 
     <livewire:contacts.contact-card :contact-id="$ticket->contact_id" :compact="true" :readonly="$readonly" :current-ticket-id="$ticket->id" :key="'contact-'.$ticket->contact_id" />
