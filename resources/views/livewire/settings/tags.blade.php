@@ -46,7 +46,7 @@
             <ul class="divide-y divide-line rounded-[14px] border border-line bg-surface">
                 @forelse ($group['tags'] as $tag)
                     <li class="flex items-center gap-3 px-4 py-3" wire:key="tag-{{ $tag->id }}">
-                        <x-tag-chip :tag="$tag" :outline="$group['scope'] === 'conversa'" :title="$tag->name" />
+                        <x-tag-chip :tag="$tag" :conversation="$group['scope'] === 'conversa'" :title="$tag->name" />
                         <p class="min-w-0 flex-1 text-xs text-ink-3">{{ $tag->{$group['uses']} }} {{ $tag->{$group['uses']} === 1 ? $group['unit'][0] : $group['unit'][1] }}</p>
                         <flux:button size="xs" variant="subtle" icon="pencil-square" wire:click="edit({{ $tag->id }})" aria-label="Editar {{ $tag->name }}" />
                         <flux:button size="xs" variant="subtle" icon="trash" wire:click="delete({{ $tag->id }})" wire:confirm="Apagar a etiqueta {{ $tag->name }}?" aria-label="Apagar {{ $tag->name }}" />

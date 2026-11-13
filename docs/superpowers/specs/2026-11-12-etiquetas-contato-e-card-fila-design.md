@@ -69,6 +69,8 @@ como o Helena) não podem ficar presos ao WhatsApp no card.
 12. **Âmbar volta a ser o aviso (13/11):** `warn` deixa o laranja-escuro (que existia para se afastar do amarelo da marca) e vira âmbar, com os pares de texto medidos no `ThemeTokensTest`.
 13. **Selo do setor (13/11):** opção A, só com mais de um setor recebendo tickets (a regra de hoje), conforme os mockups.
 
+14. **Forma dos chips (13/11, pedido do dono):** etiqueta do contato é **quadrada e cheia**; etiqueta da conversa é **redonda e translúcida** (fundo do tom a 15% e contorno a 50%). Substitui o "cheio contra contorno" da decisão 3; o texto de cada tom é medido sobre o fundo translúcido no `ThemeTokensTest`.
+
 ## Minhas decisões (conferir)
 
 1. **Nome único global** em `tags` (mantém o índice atual): a mesma palavra não existe nos dois escopos, para filtros e chips não confundirem. Coluna nova `tags.scope` (`contato`|`conversa`, padrão `conversa`).

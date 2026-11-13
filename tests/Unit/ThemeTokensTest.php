@@ -202,6 +202,16 @@ class ThemeTokensTest extends TestCase
         }
     }
 
+    public function test_texto_da_etiqueta_da_conversa_e_legivel_sobre_o_fundo_translucido_nos_dois_temas(): void
+    {
+        foreach ($this->tagTones() as $tone => $themes) {
+            foreach ($themes as $theme => $v) {
+                $surface = $this->themes()[$theme]['surface'];
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($v['fg'], $this->mix($v['line'], $surface, 0.15)), "{$theme}: tag-{$tone} fg sobre line/15");
+            }
+        }
+    }
+
     public function test_o_swatch_do_tom_e_o_contorno_do_tema_claro(): void
     {
         foreach ($this->tagTones() as $tone => $themes) {

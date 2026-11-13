@@ -113,7 +113,7 @@ class InboxQueueCardTest extends TestCase
         $this->assertLessThan(strpos($html, 'data-testid="card-chip-ticket"'), strpos($html, 'data-testid="card-chip-contact"'), 'o chip do contato vem primeiro');
         $this->assertMatchesRegularExpression('/<span[^>]*data-testid="card-chip-contact"[^>]*>/', $html);
         $this->assertStringContainsString('bg-[var(--tag-bg)]', $this->part($html, 'card-chip-contact', true));
-        $this->assertStringContainsString('border-[var(--tag-line)]', $this->part($html, 'card-chip-ticket', true));
+        $this->assertStringContainsString('bg-[var(--tag-line)]/15', $this->part($html, 'card-chip-ticket', true));
     }
 
     public function test_icone_do_canal_aparece_sobre_o_avatar(): void

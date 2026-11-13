@@ -131,7 +131,7 @@
                                 @if ($chips->isNotEmpty())
                                     <span class="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
                                         @foreach ($chipsShown as $tag)
-                                            <x-tag-chip :tag="$tag" :outline="$tag->scope === \App\Enums\TagScope::CONVERSA" :data-testid="$tag->scope === \App\Enums\TagScope::CONTATO ? 'card-chip-contact' : 'card-chip-ticket'" />
+                                            <x-tag-chip :tag="$tag" :conversation="$tag->scope === \App\Enums\TagScope::CONVERSA" :data-testid="$tag->scope === \App\Enums\TagScope::CONTATO ? 'card-chip-contact' : 'card-chip-ticket'" />
                                         @endforeach
                                         @if ($chipsRest->isNotEmpty())
                                             <span data-testid="card-tags-more" class="shrink-0 text-[11px] text-ink-3"><span aria-hidden="true" title="{{ $chipsRest->pluck('name')->join(', ') }}">+{{ $chipsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $chipsRest->pluck('name')->join(', ') }}</span></span>
