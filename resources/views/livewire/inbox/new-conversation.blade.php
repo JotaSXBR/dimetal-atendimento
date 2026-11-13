@@ -26,6 +26,7 @@
                             <li wire:key="match-{{ $match->id }}">
                                 <button type="button" wire:click="pick({{ $match->id }})" class="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-canvas">
                                     <span class="truncate text-sm font-medium text-ink">{{ $match->label() }}</span>
+                                    <x-contact-chips :contact="$match" testid="match-chip" :max="2" />
                                     <span class="ms-auto shrink-0 font-mono text-xs text-ink-3">{{ $match->phoneLabel() }}</span>
                                 </button>
                             </li>

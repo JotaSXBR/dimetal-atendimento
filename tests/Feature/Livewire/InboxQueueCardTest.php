@@ -2,16 +2,19 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\MessageDirection;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\Inbox\Inbox;
 use App\Models\Channel;
 use App\Models\Contact;
+use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -47,8 +50,14 @@ class InboxQueueCardTest extends TestCase
     }
 
     /** O trecho de um elemento do card com esse data-testid, até o fechamento da tag. */
-    private function part(string $html, string $testid): string
+    private function part(string $html, string $testid, bool $tag = false): string
     {
+        if ($tag) {
+            $this->assertSame(1, preg_match('/<span[^>]*data-testid="'.$testid.'"[^>]*>/', $html, $m), "{$testid} ausente");
+
+            return $m[0];
+        }
+
         $this->assertSame(1, preg_match('/data-testid="'.$testid.'"[^>]*>(.*?)<\/span>/s', $html, $m), "{$testid} ausente");
 
         return $m[1];
@@ -90,53 +99,103 @@ class InboxQueueCardTest extends TestCase
         $this->assertStringContainsString('Vendas', $this->part($this->html(), 'card-sector'));
     }
 
-    public function test_mostra_duas_etiquetas_e_mais_n(): void
+    public function test_mostra_ate_tres_chips_com_o_do_contato_primeiro_e_mais_n(): void
     {
         $ticket = $this->ticket();
-        $ticket->tags()->attach(Tag::factory()->count(4)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Gama'], ['name' => 'Delta'])->create());
+        $ticket->contact->tags()->attach(Tag::factory()->contato()->create(['name' => 'Revenda']));
+        $ticket->tags()->attach(Tag::factory()->count(5)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Cama'], ['name' => 'Delta'], ['name' => 'Eta'])->create());
 
         $html = $this->html();
 
-        $this->assertStringContainsString('+2', $this->part($html, 'card-tags-more'));
-        $this->assertSame(2, substr_count($html, 'data-testid="card-tag"'));
+        $this->assertStringContainsString('+3', $this->part($html, 'card-tags-more'));
+        $this->assertSame(1, substr_count($html, 'data-testid="card-chip-contact"'));
+        $this->assertSame(2, substr_count($html, 'data-testid="card-chip-ticket"'));
+        $this->assertLessThan(strpos($html, 'data-testid="card-chip-ticket"'), strpos($html, 'data-testid="card-chip-contact"'), 'o chip do contato vem primeiro');
+        $this->assertMatchesRegularExpression('/<span[^>]*data-testid="card-chip-contact"[^>]*>/', $html);
+        $this->assertStringContainsString('bg-[var(--tag-bg)]', $this->part($html, 'card-chip-contact', true));
+        $this->assertStringContainsString('border-[var(--tag-line)]', $this->part($html, 'card-chip-ticket', true));
+    }
+
+    public function test_icone_do_canal_aparece_sobre_o_avatar(): void
+    {
+        $this->ticket();
+
+        $this->assertStringContainsString('data-testid="card-channel-icon"', $this->html());
+    }
+
+    public function test_nao_lidas_contam_as_mensagens_do_cliente_e_somem_depois_do_visto(): void
+    {
+        $ticket = $this->ticket();
+        Message::factory()->for($ticket)->count(2)->create(['direction' => MessageDirection::IN, 'sent_at' => now()->subMinutes(3)]);
+
+        $this->assertStringContainsString('aria-hidden="true">2', $this->part($this->html(), 'card-unread'));
+
+        $ticket->forceFill(['agent_seen_at' => now()])->save();
+
+        $this->assertStringNotContainsString('data-testid="card-unread"', $this->html());
+    }
+
+    public function test_a_lista_nao_faz_consulta_por_ticket_ao_mostrar_chips_e_nao_lidas(): void
+    {
+        $count = function (int $tickets): int {
+            Ticket::query()->delete();
+            foreach (range(1, $tickets) as $i) {
+                $ticket = $this->ticket();
+                $ticket->contact->tags()->attach(Tag::factory()->contato()->create());
+                $ticket->tags()->attach(Tag::factory()->create());
+            }
+            $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            Livewire::actingAs($admin)->test(Inbox::class)->html();
+            $queries = count(DB::getQueryLog());
+            DB::disableQueryLog();
+
+            return $queries;
+        };
+
+        $this->assertSame($count(2), $count(12));
     }
 
     public function test_mais_n_diz_os_nomes_das_etiquetas_escondidas_a_quem_nao_ve_o_title(): void
     {
         $ticket = $this->ticket();
-        $ticket->tags()->attach(Tag::factory()->count(4)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Gama'], ['name' => 'Delta'])->create());
+        $ticket->tags()->attach(Tag::factory()->count(5)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Cama'], ['name' => 'Delta'], ['name' => 'Eta'])->create());
 
-        $this->assertMatchesRegularExpression('/class="sr-only">[^<]*Gama, Delta/', $this->html());
+        $this->assertMatchesRegularExpression('/class="sr-only">[^<]*Delta, Eta/', $this->html());
     }
 
     public function test_title_do_mais_n_fica_no_trecho_visual_e_nao_duplica_o_texto_do_leitor_de_tela(): void
     {
         $ticket = $this->ticket();
-        $ticket->tags()->attach(Tag::factory()->count(4)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Gama'], ['name' => 'Delta'])->create());
+        $ticket->tags()->attach(Tag::factory()->count(5)->sequence(['name' => 'Alfa'], ['name' => 'Beta'], ['name' => 'Cama'], ['name' => 'Delta'], ['name' => 'Eta'])->create());
 
         $dom = new \DOMDocument;
         @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->html(), LIBXML_NOERROR | LIBXML_NOWARNING);
         $xpath = new \DOMXPath($dom);
 
         $this->assertSame('', $xpath->query('//*[@data-testid="card-tags-more"]')->item(0)?->getAttribute('title'));
-        $this->assertSame('Gama, Delta', $xpath->query('//*[@data-testid="card-tags-more"]/*[@aria-hidden="true"]')->item(0)?->getAttribute('title'));
+        $this->assertSame('Delta, Eta', $xpath->query('//*[@data-testid="card-tags-more"]/*[@aria-hidden="true"]')->item(0)?->getAttribute('title'));
     }
 
-    public function test_espera_aparece_com_waiting_since(): void
+    public function test_tempo_relativo_vem_da_espera_e_e_recalculado_no_navegador(): void
     {
         $this->travelTo(now()->startOfMinute());
         $this->ticket(['waiting_since' => now()->subMinutes(12)]);
 
-        $this->assertSame('há 12 min', trim($this->part($this->html(), 'card-wait')));
+        $html = $this->html();
+
+        $this->assertSame('há 12 min', trim($this->part($html, 'card-time')));
+        $this->assertStringContainsString('x-data="relativeTime(', $html);
     }
 
-    public function test_so_a_espera_fica_na_linha_da_previa_sem_criar_linha_3(): void
+    public function test_so_o_tempo_nao_cria_a_linha_de_meta(): void
     {
         $this->ticket(['waiting_since' => now()->subMinutes(5)]);
 
         $html = $this->html();
 
-        $this->assertStringContainsString('data-testid="card-wait"', $html);
+        $this->assertStringContainsString('data-testid="card-time"', $html);
         $this->assertStringNotContainsString('data-testid="card-meta"', $html);
     }
 

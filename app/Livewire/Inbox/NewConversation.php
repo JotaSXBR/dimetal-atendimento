@@ -108,7 +108,7 @@ class NewConversation extends Component
 
         return view('livewire.inbox.new-conversation', [
             'contact' => $this->contactId === null ? null : Contact::query()->find($this->contactId),
-            'matches' => $this->contactId === null && mb_strlen(trim($this->search)) >= 2 ? Contact::query()->search($this->search)->limit(8)->get() : new Collection,
+            'matches' => $this->contactId === null && mb_strlen(trim($this->search)) >= 2 ? Contact::query()->with('tags')->search($this->search)->limit(8)->get() : new Collection,
             'channels' => Channel::query()->where('active', true)->orderBy('name')->get(),
             'sectors' => $this->sectorsFor($user),
         ]);

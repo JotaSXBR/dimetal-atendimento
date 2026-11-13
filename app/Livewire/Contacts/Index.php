@@ -4,6 +4,7 @@ namespace App\Livewire\Contacts;
 
 use App\Actions\Contacts\CreateContact;
 use App\Models\Contact;
+use App\Models\Tag;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Title;
@@ -21,6 +22,10 @@ class Index extends Component
     #[Url(as: 'q')]
     public string $search = '';
 
+    /** Só etiquetas do contato (escopo `contato`). */
+    #[Url(as: 'etiqueta')]
+    public ?int $tagId = null;
+
     public ?int $selectedId = null;
 
     public bool $showNew = false;
@@ -32,6 +37,11 @@ class Index extends Component
     public string $notice = '';
 
     public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingTagId(): void
     {
         $this->resetPage();
     }
@@ -68,8 +78,11 @@ class Index extends Component
     public function render(): View
     {
         return view('livewire.contacts.index', [
+            'tags' => Tag::sortedByName(Tag::query()->ofContact()->get()),
             'contacts' => Contact::query()
+                ->with('tags')
                 ->search($this->search)
+                ->when($this->tagId !== null, fn ($query) => $query->whereHas('tags', fn ($tags) => $tags->whereKey($this->tagId)))
                 ->orderByRaw('lower(name) nulls last')
                 ->orderBy('id')
                 ->paginate(self::PER_PAGE),
