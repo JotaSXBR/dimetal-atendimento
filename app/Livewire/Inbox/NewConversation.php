@@ -46,6 +46,16 @@ class NewConversation extends Component
         $this->contactId = null;
 
         if ($contactId !== null) {
+            $open = Ticket::query()->open()->readableBy($this->user())->where('contact_id', $contactId)->orderByDesc('opened_at')->orderByDesc('id')->first();
+
+            // Já há conversa aberta que o usuário vê: não faz sentido pedir canal, setor e mensagem; leva direto a ela.
+            if ($open !== null) {
+                $this->flashExisting($open, Contact::query()->findOrFail($contactId));
+                $this->redirectRoute('inbox', ['ticket' => $open->id]);
+
+                return;
+            }
+
             $this->pick($contactId);
         } else {
             $this->preselect(null);
@@ -146,9 +156,11 @@ class NewConversation extends Component
     private function flashExisting(Ticket $ticket, Contact $contact): void
     {
         $owner = $ticket->assignee->name ?? 'a fila';
-        $canReply = $this->user()->can('reply', $ticket);
+        $text = trim($this->text);
+        // Sem texto digitado (o desvio do `open` leva direto ao ticket) não há mensagem para levar ao campo.
+        $carriesText = $text !== '' && $this->user()->can('reply', $ticket);
 
-        ConversationHandoff::flash('Já existe uma conversa aberta com '.$contact->label().' (de '.$owner.').'.($canReply ? ' Sua mensagem está no campo de resposta.' : ''), trim($this->text), $canReply);
+        ConversationHandoff::flash('Já existe uma conversa aberta com '.$contact->label().' (de '.$owner.').'.($carriesText ? ' Sua mensagem está no campo de resposta.' : ''), $text, $carriesText);
     }
 
     /** Canal do ticket mais recente do contato (ou o único ativo) e o setor único do atendente já vêm preenchidos. */

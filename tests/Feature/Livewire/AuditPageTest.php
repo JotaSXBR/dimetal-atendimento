@@ -86,13 +86,14 @@ class AuditPageTest extends TestCase
 
     public function test_pagina_de_25_em_25(): void
     {
+        $this->travelTo(CarbonImmutable::parse('2026-10-30 12:00:00', 'UTC'));
         $ticket = Ticket::factory()->for($this->channel ??= Channel::factory()->create())->create();
         foreach (range(1, 30) as $n) {
-            $this->event('tipo-novo', null, ['n' => $n], now()->subMinutes($n), $ticket);
+            $this->event('opened', null, null, now()->subMinutes($n), $ticket);
         }
 
-        // Tipo que a tela não conhece: a auditoria mostra o conteúdo como veio.
-        $this->page()->assertSee('{"n":1}')->assertDontSee('{"n":30}');
+        // Do mais novo ao mais velho, em Brasília: o 1º evento é 11:59 UTC (08:59) e o 30º, 11:30 UTC (08:30), que fica na página 2.
+        $this->page()->assertSee('30/10 08:59')->assertSee('30/10 08:35')->assertDontSee('30/10 08:34')->assertDontSee('30/10 08:30');
     }
 
     public function test_evento_de_sistema_aparece_como_sistema(): void

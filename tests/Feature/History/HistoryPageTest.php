@@ -80,6 +80,26 @@ class HistoryPageTest extends TestCase
         $this->page()->call('select', $ticket->id)->assertSee('Oi')->assertDontSeeHtml('transcriptVisibility');
     }
 
+    public function test_painel_de_detalhes_tem_conversar_e_a_janela_sem_o_editar_contato(): void
+    {
+        $ticket = $this->closed('Maria');
+
+        $this->page()->call('select', $ticket->id)
+            ->assertSeeHtml("\$dispatch('start-conversation', { contactId: {$ticket->contact_id} })")
+            ->assertSeeLivewire('inbox.new-conversation')
+            ->assertDontSee('Editar contato');
+    }
+
+    public function test_painel_de_contato_so_com_lid_mostra_o_conversar_desabilitado(): void
+    {
+        $lid = Contact::factory()->create(['wa_id' => null, 'lid' => '12345@lid']);
+        $ticket = $this->closed('Sem telefone', ['contact_id' => $lid->id]);
+
+        $this->page()->call('select', $ticket->id)
+            ->assertSeeHtml('data-testid="chat-disabled"')
+            ->assertDontSeeHtml("\$dispatch('start-conversation', { contactId: {$lid->id} })");
+    }
+
     private function page(?User $user = null): Testable
     {
         return Livewire::actingAs($user ?? $this->agent)->test(Index::class);

@@ -141,4 +141,7 @@
     @if ($ticket)
         <x-ticket-details :ticket="$ticket" :tz="$tz" :readonly="true" :events="$events" :timeline="$timeline" />
     @endif
+
+    {{-- A janela do "Conversar" do painel de detalhes (a raiz dela sai do fluxo da grade). --}}
+    <livewire:inbox.new-conversation />
 </div>

@@ -371,9 +371,21 @@ class ContactCardCompactTest extends TestCase
         $this->assertStringContainsString('Conversar', $this->card(['compact' => true])->html());
     }
 
-    public function test_somente_leitura_nao_tem_rodape_de_acoes(): void
+    public function test_somente_leitura_so_tem_o_conversar_no_rodape(): void
     {
-        $this->assertSame(0, $this->dom($this->card(['compact' => true, 'readonly' => true])->html())->query('//*[@data-testid="contact-actions"]')->length);
+        $this->contact->update(['wa_id' => '5511999990000@c.us']);
+        $html = $this->card(['compact' => true, 'readonly' => true])->html();
+
+        $this->assertSame(1, $this->dom($html)->query('//*[@data-testid="contact-actions"]')->length);
+        $this->assertStringContainsString('Conversar', $html);
+        $this->assertStringNotContainsString('Editar contato', $html);
+    }
+
+    public function test_somente_leitura_com_ticket_ativo_nao_tem_rodape(): void
+    {
+        $active = Ticket::factory()->create(['channel_id' => Channel::factory()->create()->id, 'contact_id' => $this->contact->id, 'status' => TicketStatus::EM_ATENDIMENTO]);
+
+        $this->assertSame(0, $this->dom($this->card(['compact' => true, 'readonly' => true, 'currentTicketId' => $active->id])->html())->query('//*[@data-testid="contact-actions"]')->length);
     }
 
     /** `contents`: o cartão não gera caixa, e o rodapé `sticky` passa a grudar no fim do `aside` de rolagem (só no modo compacto). */

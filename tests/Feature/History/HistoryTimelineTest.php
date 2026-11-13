@@ -74,6 +74,31 @@ class HistoryTimelineTest extends TestCase
             ->assertDontSee('message_id');
     }
 
+    public function test_historico_mostra_o_bot_em_portugues_e_esconde_tipo_desconhecido(): void
+    {
+        $ticket = $this->closed('Joaquim');
+        TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_started', 'payload' => ['workflow_version_id' => 2]]);
+        TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'algo_novo', 'payload' => ['x' => 1]]);
+
+        Livewire::actingAs($this->agent)->test(Index::class)->call('select', $ticket->id)
+            ->assertSee('Bot iniciou o atendimento')
+            ->assertDontSee('algo_novo')
+            ->assertDontSee('workflow_version_id');
+    }
+
+    public function test_auditoria_mostra_tipo_desconhecido_sem_json(): void
+    {
+        $ticket = $this->closed('Joaquim');
+        TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'algo_novo', 'payload' => ['coisa' => 1]]);
+        TicketEvent::create(['ticket_id' => $ticket->id, 'type' => 'bot_started', 'payload' => ['workflow_version_id' => 2]]);
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(AuditIndex::class)
+            ->assertSee('algo_novo')
+            ->assertSee('Bot iniciou o atendimento')
+            ->assertDontSee('coisa')
+            ->assertDontSee('workflow_version_id');
+    }
+
     public function test_ticket_pela_url_abre_quando_o_usuario_pode_ver(): void
     {
         $ticket = $this->closed('Cliente Da Url');

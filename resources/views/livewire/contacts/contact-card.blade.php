@@ -71,7 +71,7 @@
             </div>
         @endif
 
-        @unless ($readonly)
+        @if ($canChat || ! $readonly)
             {{-- Rodapé fixo do painel: separador e grupo de botões do Flux (as variantes `filled`/`outline` se colam). `-bottom-4 -mx-4 -mb-4` acertam o `p-4` do
                  `aside` (ticket-details); `mt-auto` o leva ao fim do painel quando há pouco conteúdo. --}}
             <div data-testid="contact-actions" class="sticky -bottom-4 -mx-4 -mb-4 mt-auto bg-surface px-4 pt-1 pb-4">
@@ -80,10 +80,12 @@
                     @if ($canChat)
                         @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'flex-1', 'variant' => 'filled', 'size' => 'xs'])
                     @endif
-                    <flux:button size="xs" variant="filled" icon="pencil-square" class="flex-1" wire:click="toggleEdit">Editar contato</flux:button>
+                    @unless ($readonly)
+                        <flux:button size="xs" variant="filled" icon="pencil-square" class="flex-1" wire:click="toggleEdit">Editar contato</flux:button>
+                    @endunless
                 </flux:button.group>
             </div>
-        @endunless
+        @endif
     </div>
 @else
 <form wire:submit="save" class="space-y-3 text-sm">

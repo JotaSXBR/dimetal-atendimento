@@ -129,16 +129,65 @@ class TicketTimelineTest extends TestCase
 
     public function test_todo_tipo_gravado_pelo_app_tem_rotulo(): void
     {
-        foreach (['opened', 'claimed', 'closed', 'transferred', 'reassigned', 'taken_over', 'merged', 'message_out', 'message_in', 'after_hours_reply', 'media_purged', 'sla_breached'] as $type) {
+        foreach (['opened', 'claimed', 'closed', 'transferred', 'reassigned', 'taken_over', 'merged', 'message_out', 'message_in', 'after_hours_reply', 'media_purged', 'sla_breached', 'bot_started', 'bot_abandoned', 'bot_handoff'] as $type) {
             $this->assertArrayHasKey($type, TicketEventText::TYPES);
         }
     }
 
-    public function test_tipo_desconhecido_mostra_o_conteudo_como_veio(): void
+    public function test_tipo_desconhecido_nao_despeja_o_json(): void
     {
         $event = $this->event('tipo-novo', null, ['n' => 1]);
 
-        $this->assertSame('{"n":1}', $this->timeline([$event])->detail($event));
+        $this->assertSame('', $this->timeline([$event])->detail($event));
+        $this->assertSame('', TicketEventText::detail($event));
+        $this->assertSame('tipo-novo', $this->timeline([$event])->sentence($event));
+    }
+
+    public function test_changes_descarta_tipo_sem_rotulo(): void
+    {
+        $events = new Collection([$this->event('opened'), $this->event('tipo-novo', null, ['n' => 1]), $this->event('bot_started', null, ['workflow_version_id' => 2])]);
+
+        $this->assertSame(['opened', 'bot_started'], TicketTimeline::changes($events)->pluck('type')->all());
+    }
+
+    public function test_bot_iniciou_e_equipe_assumiu_pelo_celular_viram_frase_sem_json(): void
+    {
+        $started = $this->event('bot_started', null, ['workflow_version_id' => 2]);
+        $abandoned = $this->event('bot_abandoned');
+        $timeline = $this->timeline([$started, $abandoned]);
+
+        $this->assertSame('Bot iniciou o atendimento', $timeline->sentence($started));
+        $this->assertSame('Equipe respondeu pelo celular; a triagem do bot acabou', $timeline->sentence($abandoned));
+    }
+
+    public function test_bot_encaminhou_diz_o_setor_e_o_motivo(): void
+    {
+        $sector = Sector::factory()->create(['name' => 'Comercial']);
+        $flow = $this->event('bot_handoff', null, ['reason' => 'fluxo', 'sector_id' => $sector->id]);
+        $leave = $this->event('bot_handoff', null, ['reason' => 'sair', 'sector_id' => $sector->id]);
+        $errors = $this->event('bot_handoff', null, ['reason' => 'erros', 'sector_id' => $sector->id]);
+        $timeout = $this->event('bot_handoff', null, ['reason' => 'timeout', 'sector_id' => $sector->id]);
+        $noFlow = $this->event('bot_handoff', null, ['reason' => 'sem_workflow']);
+        $unknown = $this->event('bot_handoff', null, ['reason' => 'motivo-novo', 'sector_id' => $sector->id]);
+        $removed = $this->event('bot_handoff', null, ['reason' => 'fluxo', 'sector_id' => 999_999]);
+        $bare = $this->event('bot_handoff');
+        $timeline = $this->timeline([$flow, $leave, $errors, $timeout, $noFlow, $unknown, $removed, $bare]);
+
+        $this->assertSame('Bot encaminhou para Comercial', $timeline->sentence($flow));
+        $this->assertSame('Bot encaminhou para Comercial (cliente pediu atendente)', $timeline->sentence($leave));
+        $this->assertSame('Bot encaminhou para Comercial (respostas inválidas)', $timeline->sentence($errors));
+        $this->assertSame('Bot encaminhou para Comercial (sem resposta do cliente)', $timeline->sentence($timeout));
+        $this->assertSame('Bot encaminhou para Fila geral (sem automação ativa)', $timeline->sentence($noFlow));
+        $this->assertSame('Bot encaminhou para Comercial', $timeline->sentence($unknown));
+        $this->assertSame('Bot encaminhou para setor removido', $timeline->sentence($removed));
+        $this->assertSame('Bot encaminhou para Fila geral', $timeline->sentence($bare));
+    }
+
+    public function test_bot_encaminhou_com_motivo_que_nao_e_texto_nao_quebra(): void
+    {
+        $event = $this->event('bot_handoff', null, ['reason' => ['x'], 'sector_id' => 'abc']);
+
+        $this->assertSame('Bot encaminhou para Fila geral', $this->timeline([$event])->sentence($event));
     }
 
     public function test_changes_descarta_so_os_eventos_de_conversa(): void
