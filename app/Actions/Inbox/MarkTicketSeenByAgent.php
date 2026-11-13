@@ -28,6 +28,8 @@ class MarkTicketSeenByAgent
         }
 
         // Grava até onde a pessoa viu (a última mensagem do cliente), não "agora": o que chegar depois deste instante segue não lido.
+        // shortcut: `sent_at` tem precisão de segundo e a comparação é `>`; duas mensagens no mesmo segundo (álbum, rajada) com a aba escondida
+        // podem escapar do contador. Marca d'água por id de mensagem resolve, se algum dia incomodar.
         // Consulta direta: o visto não é uma edição do ticket (não mexe em `updated_at`).
         $latest = $ticket->messages()->where('direction', MessageDirection::IN->value)->max('sent_at');
         Ticket::query()->whereKey($ticket->id)->update(['agent_seen_at' => $latest ?? now()]);

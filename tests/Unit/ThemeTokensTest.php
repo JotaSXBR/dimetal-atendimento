@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 class ThemeTokensTest extends TestCase
 {
-    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'warn', 'danger', 'ok', 'bot', 'danger-foreground', 'warn-foreground'];
+    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'warn', 'danger', 'ok', 'bot', 'read', 'danger-foreground', 'warn-foreground'];
 
     public function test_todo_token_tem_algum_uso(): void
     {
@@ -127,6 +127,53 @@ class ThemeTokensTest extends TestCase
 
             $this->assertGreaterThanOrEqual(1.3, $this->ratio($t['warn-line'], $t['warn-soft']), "{$theme}: warn-line sobre warn-soft");
         }
+    }
+
+    /** Os fundos tingidos das bolhas (nossa, bot, aviso) onde o texto secundário e o tique de lido aparecem. */
+    private function bubbleGrounds(array $t): array
+    {
+        return ['accent-soft' => $t['accent-soft'], 'bot/15' => $this->mix($t['bot'], $t['surface'], 0.15), 'warn-soft' => $t['warn-soft'], 'surface' => $t['surface'], 'canvas' => $t['canvas']];
+    }
+
+    /** `ink-3` não chega sobre bolha tingida (3,8:1): o texto secundário dentro delas usa `ink-2`, que passa em todos os fundos. */
+    public function test_texto_secundario_da_bolha_usa_ink_2_e_passa_em_todos_os_fundos_tingidos(): void
+    {
+        foreach ($this->themes() as $theme => $t) {
+            foreach ($this->bubbleGrounds($t) as $ground => $hex) {
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($t['ink-2'], $hex), "{$theme}: ink-2 sobre {$ground}");
+            }
+        }
+    }
+
+    /** O tique "Lida" (azul, como no WhatsApp) é o token `read`, legível em todos os fundos de bolha nos dois temas. */
+    public function test_tique_de_lida_tem_token_proprio_com_contraste_nos_fundos_de_bolha(): void
+    {
+        foreach ($this->themes() as $theme => $t) {
+            $this->assertArrayHasKey('read', $t, "{$theme}: read");
+
+            foreach ($this->bubbleGrounds($t) as $ground => $hex) {
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($t['read'], $hex), "{$theme}: read sobre {$ground}");
+            }
+        }
+    }
+
+    /** Dentro das bolhas tudo está sobre fundo tingido: nada de `text-ink-3` nas views do conteúdo delas. */
+    public function test_conteudo_das_bolhas_nao_usa_ink_3(): void
+    {
+        $root = dirname(__DIR__, 2).'/resources/views/livewire/inbox/';
+        $offenders = [];
+
+        foreach (['media', 'location', 'contact', 'quote-preview', 'audio-player', 'message-time'] as $view) {
+            if (str_contains((string) file_get_contents($root.$view.'.blade.php'), 'text-ink-3')) {
+                $offenders[] = $view;
+            }
+        }
+
+        if (str_contains((string) file_get_contents($root.'transcript.blade.php'), 'border-line pl-2 text-xs text-ink-3')) {
+            $offenders[] = 'transcript (histórico de edição)';
+        }
+
+        $this->assertSame([], $offenders);
     }
 
     /** O âmbar de aviso a 10% sobre claro vira um salmão rosado: o fundo de aviso e de nota é o token `warn-soft`. */
@@ -312,7 +359,7 @@ class ThemeTokensTest extends TestCase
             }
 
             foreach (file((string) $file) ?: [] as $n => $line) {
-                if (preg_match('/(?:bg|text|border|ring|fill|stroke|from|to|via|divide|outline|decoration)-(?:red|green|emerald|amber|yellow|orange|stone)-\d{2,3}/', $line, $m) === 1) {
+                if (preg_match('/(?:bg|text|border|ring|fill|stroke|from|to|via|divide|outline|decoration)-(?:red|green|emerald|amber|yellow|orange|stone|sky|blue|cyan|teal|indigo|violet|purple|fuchsia|pink|rose|lime)-\d{2,3}/', $line, $m) === 1) {
                     $offenders[] = basename((string) $file).':'.($n + 1).' '.$m[0];
                 }
             }

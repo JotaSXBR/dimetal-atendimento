@@ -32,6 +32,7 @@
     --color-danger-foreground: #ffffff;
     --color-ok: #166534; /* green-800 */
     --color-bot: #4338ca; /* indigo-700: quem respondeu foi o bot */
+    --color-read: #0369a1; /* sky-700: tique "Lida" (azul, como no WhatsApp), legível sobre as bolhas */
 
     --duration-base: 200ms;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -91,6 +92,7 @@ select:focus[data-flux-control] {
         --color-danger-foreground: #18181b;
         --color-ok: #4ade80; /* green-400 */
         --color-bot: #a5b4fc; /* indigo-300 */
+        --color-read: #7dd3fc; /* sky-300 */
     }
 }
 

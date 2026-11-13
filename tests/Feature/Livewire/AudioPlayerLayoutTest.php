@@ -63,6 +63,8 @@ class AudioPlayerLayoutTest extends TestCase
         $meta = $this->classesOf($html, 'data-testid="audio-meta"');
         $this->assertStringContainsString('col-start-2', $meta);
         $this->assertStringContainsString('justify-between', $meta);
-        $this->assertStringContainsString('ring-1', $this->classesOf($html, 'aria-label="Velocidade de reprodução"'));
+        $speed = $this->classesOf($html, 'aria-label="Velocidade de reprodução"');
+        $this->assertStringContainsString('ring-1', $speed);
+        $this->assertStringContainsString('min-h-6', $speed, 'alvo de toque de 24 px (WCAG 2.5.8)');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use App\Enums\NoteOrigin;
@@ -92,6 +93,15 @@ class BubbleColorsTest extends TestCase
 
         $this->assertMatchesRegularExpression('/data-testid="message-time"[^>]*class="[^"]*text-ink-2/', $html);
         $this->assertDoesNotMatchRegularExpression('/data-testid="message-time"[^>]*class="[^"]*text-ink-3/', $html);
+    }
+
+    public function test_tique_de_lida_usa_o_token_read_e_nao_uma_cor_crua(): void
+    {
+        Message::factory()->for($this->ticket)->create(['direction' => MessageDirection::OUT, 'origin' => MessageOrigin::PAINEL, 'body' => 'Lida pelo cliente', 'type' => 'text', 'sent_at' => now(), 'delivery_status' => DeliveryStatus::READ]);
+        $html = $this->html($this->ticket->messages()->firstOrFail());
+
+        $this->assertStringContainsString('text-read', $html);
+        $this->assertStringNotContainsString('sky-600', $html);
     }
 
     public function test_enviada_pelo_celular_e_tracejada_e_neutra_sem_ambar(): void

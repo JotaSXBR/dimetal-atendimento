@@ -47,7 +47,7 @@
             type="button"
             x-on:click="cycleSpeed()"
             aria-label="Velocidade de reprodução"
-            class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-ink-2 tabular-nums ring-1 ring-ink/20 transition-colors hover:bg-ink/5 hover:text-ink"
+            class="inline-flex min-h-6 shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold text-ink-2 tabular-nums ring-1 ring-ink/20 transition-colors hover:bg-ink/5 hover:text-ink"
             x-text="speed + '×'"
         >1×</button>
     </div>

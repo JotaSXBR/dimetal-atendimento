@@ -8,8 +8,8 @@
 <div>
     @if ($paginator->hasPages())
         <nav role="navigation" aria-label="{{ __('Pagination Navigation') }}" class="flex justify-between gap-2">
-            <flux:button size="sm" variant="subtle" icon="chevron-left" :disabled="$paginator->onFirstPage()" wire:click="previousPage('{{ $name }}')" x-on:click="{{ $scroll }}">{!! __('pagination.previous') !!}</flux:button>
-            <flux:button size="sm" variant="subtle" icon-trailing="chevron-right" :disabled="! $paginator->hasMorePages()" wire:click="nextPage('{{ $name }}')" x-on:click="{{ $scroll }}">{!! __('pagination.next') !!}</flux:button>
+            <flux:button size="sm" variant="subtle" icon="chevron-left" :disabled="$paginator->onFirstPage()" wire:click="previousPage('{{ $name }}')" x-on:click="{{ $scroll }}" wire:loading.attr="disabled">{!! __('pagination.previous') !!}</flux:button>
+            <flux:button size="sm" variant="subtle" icon-trailing="chevron-right" :disabled="! $paginator->hasMorePages()" wire:click="nextPage('{{ $name }}')" x-on:click="{{ $scroll }}" wire:loading.attr="disabled">{!! __('pagination.next') !!}</flux:button>
         </nav>
     @endif
 </div>

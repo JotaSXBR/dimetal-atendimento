@@ -34,6 +34,21 @@ class PaginationColorsTest extends TestCase
         $this->assertStringContainsString('aria-current="page"', $nav);
     }
 
+    /** Duplo clique não dispara duas requisições: os botões ficam desativados enquanto a página carrega. */
+    public function test_botoes_ficam_desativados_durante_o_carregamento(): void
+    {
+        $this->assertStringContainsString('wire:loading.attr="disabled"', $this->paginationHtml());
+    }
+
+    public function test_proxima_pagina_funciona_pelo_componente(): void
+    {
+        Contact::factory()->count(30)->create();
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+
+        $page = Livewire::actingAs($admin)->test(Index::class)->assertSet('paginators.page', 1)->call('nextPage')->assertSet('paginators.page', 2);
+        $page->call('previousPage')->assertSet('paginators.page', 1)->call('gotoPage', 2)->assertSet('paginators.page', 2);
+    }
+
     public function test_item_desativado_tem_papel_para_aceitar_aria_label(): void
     {
         $this->assertStringNotContainsString('<span aria-disabled="true" aria-label=', $this->paginationHtml());
