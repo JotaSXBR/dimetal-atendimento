@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ChannelKind;
 use App\Enums\ChannelStatus;
 use App\Observers\ChannelObserver;
 use App\Support\PhoneFormat;
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $phone
  * @property string|null $previous_phone
  * @property CarbonImmutable|null $phone_changed_at
+ * @property ChannelKind $kind
  * @property ChannelStatus $status
  * @property CarbonImmutable|null $last_event_at
  * @property int $backfill_days
@@ -45,6 +47,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'down_alerted_at',
     'active',
     'workflow_id',
+    'kind',
 ])]
 #[ObservedBy(ChannelObserver::class)]
 class Channel extends Model
@@ -58,6 +61,7 @@ class Channel extends Model
     protected function casts(): array
     {
         return [
+            'kind' => ChannelKind::class,
             'status' => ChannelStatus::class,
             'last_event_at' => 'datetime',
             'phone_changed_at' => 'datetime',

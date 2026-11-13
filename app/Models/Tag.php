@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\TagColor;
+use App\Enums\TagScope;
 use Database\Factories\TagFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,9 +16,10 @@ use Illuminate\Support\Str;
 /**
  * @property int $id
  * @property string $name
- * @property string $color
+ * @property TagScope $scope
+ * @property TagColor $color
  */
-#[Fillable(['name', 'color'])]
+#[Fillable(['name', 'scope', 'color'])]
 class Tag extends Model
 {
     /** @use HasFactory<TagFactory> */
@@ -31,6 +35,30 @@ class Tag extends Model
     public static function sortedByName(Collection $tags): Collection
     {
         return $tags->sortBy(fn (Tag $tag): string => Str::ascii(mb_strtolower($tag->name)), SORT_STRING)->values();
+    }
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['scope' => TagScope::class, 'color' => TagColor::class];
+    }
+
+    /** @param  Builder<Tag>  $query */
+    public function scopeOfContact(Builder $query): void
+    {
+        $query->where('scope', TagScope::CONTATO->value);
+    }
+
+    /** @param  Builder<Tag>  $query */
+    public function scopeOfTicket(Builder $query): void
+    {
+        $query->where('scope', TagScope::CONVERSA->value);
+    }
+
+    /** @return BelongsToMany<Contact, $this> */
+    public function contacts(): BelongsToMany
+    {
+        return $this->belongsToMany(Contact::class, 'contact_tag');
     }
 
     /** @return BelongsToMany<Ticket, $this> */
