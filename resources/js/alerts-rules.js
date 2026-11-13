@@ -68,7 +68,11 @@ export function openAudio(AudioContextClass) {
     }
 }
 
-/** A faixa "Som desligado neste navegador" some se nada está configurado para tocar ou se o áudio já está liberado. */
-export function audioStripHidden(settings, audio) {
-    return !Object.values(settings.sound ?? {}).some(Boolean) || audio?.state === 'running';
+/**
+ * A faixa "Som desligado neste navegador" some se nada está configurado para tocar, se o áudio já está liberado ou se este navegador
+ * já o liberou antes (`remembered`): depois de um refresh o navegador pede um gesto de novo, mas o primeiro clique em qualquer lugar
+ * da tela o libera, e pedir o clique a cada refresh só incomoda.
+ */
+export function audioStripHidden(settings, audio, remembered = false) {
+    return !Object.values(settings.sound ?? {}).some(Boolean) || audio?.state === 'running' || remembered;
 }

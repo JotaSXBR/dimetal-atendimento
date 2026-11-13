@@ -37,7 +37,7 @@
         </form>
     @endif
 
-    @foreach ([['scope' => 'contato', 'title' => 'Do contato', 'tags' => $contactTags, 'empty' => 'Nenhuma etiqueta do contato.', 'uses' => 'contacts_count', 'unit' => 'contatos'], ['scope' => 'conversa', 'title' => 'Da conversa', 'tags' => $ticketTags, 'empty' => 'Nenhuma etiqueta da conversa.', 'uses' => 'tickets_count', 'unit' => 'tickets']] as $group)
+    @foreach ([['scope' => 'contato', 'title' => 'Do contato', 'tags' => $contactTags, 'empty' => 'Nenhuma etiqueta do contato.', 'uses' => 'contacts_count', 'unit' => ['contato', 'contatos']], ['scope' => 'conversa', 'title' => 'Da conversa', 'tags' => $ticketTags, 'empty' => 'Nenhuma etiqueta da conversa.', 'uses' => 'tickets_count', 'unit' => ['ticket', 'tickets']]] as $group)
         <section class="mt-6" aria-labelledby="tags-{{ $group['scope'] }}">
             <div class="mb-2 flex items-center justify-between">
                 <h2 id="tags-{{ $group['scope'] }}" class="text-sm font-semibold text-ink">{{ $group['title'] }}</h2>
@@ -47,7 +47,7 @@
                 @forelse ($group['tags'] as $tag)
                     <li class="flex items-center gap-3 px-4 py-3" wire:key="tag-{{ $tag->id }}">
                         <x-tag-chip :tag="$tag" :outline="$group['scope'] === 'conversa'" :title="$tag->name" />
-                        <p class="min-w-0 flex-1 text-xs text-ink-3">{{ $tag->{$group['uses']} }} {{ $group['unit'] }}</p>
+                        <p class="min-w-0 flex-1 text-xs text-ink-3">{{ $tag->{$group['uses']} }} {{ $tag->{$group['uses']} === 1 ? $group['unit'][0] : $group['unit'][1] }}</p>
                         <flux:button size="xs" variant="subtle" icon="pencil-square" wire:click="edit({{ $tag->id }})" aria-label="Editar {{ $tag->name }}" />
                         <flux:button size="xs" variant="subtle" icon="trash" wire:click="delete({{ $tag->id }})" wire:confirm="Apagar a etiqueta {{ $tag->name }}?" aria-label="Apagar {{ $tag->name }}" />
                     </li>

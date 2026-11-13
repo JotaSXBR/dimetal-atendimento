@@ -95,3 +95,11 @@ test('a faixa de som só aparece quando há som configurado e o navegador ainda 
     assert.equal(audioStripHidden(comSom, null), false);
     assert.equal(audioStripHidden({ sound: { message: false } }, null), true);
 });
+
+test('quem já liberou o som neste navegador não vê a faixa de novo a cada refresh', () => {
+    const comSom = { sound: { message: true } };
+
+    assert.equal(audioStripHidden(comSom, { state: 'suspended' }, true), true);
+    assert.equal(audioStripHidden(comSom, null, true), true);
+    assert.equal(audioStripHidden(comSom, { state: 'suspended' }, false), false);
+});

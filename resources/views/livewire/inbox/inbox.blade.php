@@ -129,7 +129,7 @@
                             <span class="min-w-0 flex-1">
                                 <span class="block truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
                                 @if ($chips->isNotEmpty())
-                                    <span class="mt-0.5 flex min-w-0 items-center gap-1 overflow-hidden">
+                                    <span class="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
                                         @foreach ($chipsShown as $tag)
                                             <x-tag-chip :tag="$tag" :outline="$tag->scope === \App\Enums\TagScope::CONVERSA" :data-testid="$tag->scope === \App\Enums\TagScope::CONTATO ? 'card-chip-contact' : 'card-chip-ticket'" />
                                         @endforeach

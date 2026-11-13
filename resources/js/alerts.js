@@ -40,6 +40,21 @@ function start(id) {
     };
 
     const context = () => (audio ??= new AudioClass());
+    // O navegador lembra que o som já foi liberado aqui (localStorage pode estar bloqueado: nesse caso a faixa só segue o estado real).
+    const remembered = () => {
+        try {
+            return localStorage.getItem('dimetal-alerts-audio') === '1';
+        } catch {
+            return false;
+        }
+    };
+    const remember = () => {
+        try {
+            localStorage.setItem('dimetal-alerts-audio', '1');
+        } catch {
+            // sem armazenamento: a faixa volta a cada refresh, como antes
+        }
+    };
 
     function play(kind, ignoreLeader = false) {
         const ctx = context();
@@ -70,6 +85,10 @@ function start(id) {
 
         if (ctx.state !== 'running') {
             await ctx.resume().catch(() => {});
+        }
+
+        if (ctx.state === 'running') {
+            remember();
         }
 
         render();
@@ -146,7 +165,7 @@ function start(id) {
         }
 
         if (strip) {
-            strip.hidden = audioStripHidden(settings, audio);
+            strip.hidden = audioStripHidden(settings, audio, remembered());
         }
     }
 
