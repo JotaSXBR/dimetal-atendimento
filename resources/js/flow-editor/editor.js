@@ -84,13 +84,13 @@ const CONNECTION_CSS = `
     .flow-conn { position: absolute; overflow: visible !important; width: 9999px; height: 9999px; pointer-events: none; color: var(--color-ink-3, #78716c); }
     .flow-conn-line { fill: none; stroke: currentColor; stroke-width: max(2.5px, calc(1.6px / var(--flow-zoom, 1))); stroke-linecap: round; transition: stroke 0.12s; }
     .flow-conn-hit { fill: none; stroke: transparent; stroke-width: max(16px, calc(10px / var(--flow-zoom, 1))); pointer-events: stroke; }
-    .flow-conn:hover { color: var(--color-accent-content, #292524); }
+    .flow-conn:hover { color: var(--color-accent-content, #27272a); }
 `;
 
 // A bolinha também vive em shadow DOM (dentro de <rete-socket>): a cor da categoria chega por variável CSS herdada.
 const SOCKET_CSS = `
     .dot { box-sizing: border-box; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--color-surface, #fff); background: var(--flow-cat, #0f766e); box-shadow: 0 0 0 1px var(--flow-cat, #0f766e); cursor: crosshair; transition: transform 0.1s; }
-    .dot:hover { transform: scale(1.35); background: var(--color-accent, #292524); }
+    .dot:hover { transform: scale(1.35); background: var(--color-accent, #27272a); }
 `;
 const socketTemplate = () => html`<style>${SOCKET_CSS}</style><div class="dot"></div>`;
 

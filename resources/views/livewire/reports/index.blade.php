@@ -30,7 +30,7 @@
     </dl>
 
     @if ($schedulerStale)
-        <div class="rounded-[14px] border border-warn/30 bg-warn/10 p-4 text-sm text-warn" role="alert">
+        <div class="rounded-[14px] border border-warn-line bg-warn-soft p-4 text-sm text-warn" role="alert">
             O verificador de SLA não roda há mais de 3 minutos. Os alertas de espera podem estar atrasados.
         </div>
     @endif

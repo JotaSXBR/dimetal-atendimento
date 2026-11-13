@@ -46,13 +46,20 @@
     @endphp
 
     <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }} {{ $message->reactions->isNotEmpty() ? 'mb-3' : '' }}">
-        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $outside ? 'bg-warn/10' : ($out ? 'bg-accent-soft' : 'bg-surface') }}">
+        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ match (true) {
+            // Cada tipo tem a sua cara: cliente (branca com borda), nossa (neutro suave), bot (tom do bot) e enviada pelo celular
+            // (tracejada). O âmbar fica só para nota interna e aviso.
+            $outside => 'border border-dashed border-ink-3 bg-surface',
+            $message->origin === \App\Enums\MessageOrigin::BOT => 'bg-bot/15',
+            $out => 'bg-accent-soft',
+            default => 'border border-line bg-surface',
+        } }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
-                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-ink-3 uppercase">Bot · resposta automática</p>
+                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-bot uppercase">Bot · resposta automática</p>
             @endif
 
             @if ($outside)
-                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-warn uppercase">Celular · fora do painel</p>
+                <p class="mb-0.5 flex items-center gap-1 font-mono text-[10px] tracking-wide text-ink-2 uppercase"><flux:icon.device-phone-mobile class="size-3" />Celular · fora do painel</p>
             @endif
 
             @if ($message->quoted_snapshot)

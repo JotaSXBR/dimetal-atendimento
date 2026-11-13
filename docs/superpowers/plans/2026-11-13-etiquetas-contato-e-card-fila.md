@@ -201,3 +201,21 @@ Entradas e falhas que a spec implica e que mais podem incomodar (cada linha tem 
 - **Divergência encontrada:** a Condição por etiqueta não existia (Tarefa 9 a cria); a spec precisa de uma linha dizendo isso.
 - **Consistência de tipos:** `TagScope`, `TagColor`, `ChannelKind`, `unread`, `hasTag` e `MarkTicketSeenByAgent` têm o mesmo nome em todas as tarefas.
 - **Proporção:** o plano descreve interfaces e testes; os corpos ficam para a execução.
+
+---
+
+## Adendo de 13/11: paleta do sistema inteiro (Tarefas 11 a 13)
+
+Pedido do dono antes de fechar o PR: pesquisar coloração de sistemas e acertar as demais cores (bolhas, nota interna, estados) para o padrão novo. Decisões 15 a 17 da spec.
+
+### Tarefa 11: Neutros em zinc
+**Files:** `resources/css/app.css` (tokens claro e escuro, remove o remapeamento `zinc` → `stone`, `bot` índigo, categorias do editor), `resources/js/flow-editor/editor.js` (fallbacks), `tests/Unit/ThemeTokensTest.php`.
+- [x] RED: `test_os_neutros_sao_todos_zinc_nos_dois_temas`, `test_o_flux_enxerga_o_zinc_de_verdade_sem_remapear_para_stone` e a marca em #27272a falham. GREEN com os tokens novos (contraste AA medido).
+
+### Tarefa 12: Bolhas, nota e aviso
+**Files:** `resources/views/livewire/inbox/transcript.blade.php`, `note.blade.php`, tokens `warn-soft`/`warn-line` no `app.css`, `bg-warn/10|20` e `border-warn/30` trocados em 10 views, `tests/Feature/Livewire/BubbleColorsTest.php`, `ThemeTokensTest`.
+- [x] RED/GREEN: cliente (borda), nossa (`accent-soft`), bot (`bg-bot/15`), celular (`border-dashed`, ícone, sem âmbar), nota e aviso com `warn-soft` (o âmbar a 10% virava salmão); guarda `test_nenhuma_view_pinta_aviso_com_warn_translucido`.
+
+### Tarefa 13: Cores cruas e minimapa
+**Files:** views com `text-green-*`, `text-red-*`, `stone-*` (autenticação e segurança), `app.css` (minimapa em cinza), `ThemeTokensTest`.
+- [x] RED/GREEN: `test_nenhuma_view_usa_paleta_crua_de_estado_nem_stone` (exceções decorativas: `location`, `media`, `welcome`) e `test_minimapa_do_editor_nao_traz_o_amarelo_padrao_da_biblioteca`.

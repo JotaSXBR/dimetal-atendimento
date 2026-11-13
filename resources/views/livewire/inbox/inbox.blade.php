@@ -317,7 +317,7 @@
             @endif
 
             @if ($notice)
-                <div class="border-b border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="alert">{{ $notice }}</div>
+                <div class="border-b border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">{{ $notice }}</div>
             @endif
 
             <div class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-4 py-4">
@@ -337,7 +337,7 @@
                     x-on:note-from-message.window="addToNote($event.detail)"
                     x-on:emoji-insert="insert($event.detail)"
                     x-on:composer-focus="focusField()"
-                    x-bind:class="mode === 'note' ? 'border-warn/30 bg-warn/10' : 'border-line bg-surface'"
+                    x-bind:class="mode === 'note' ? 'border-warn-line bg-warn-soft' : 'border-line bg-surface'"
                 @endif
                 class="border-t p-3 {{ $canReply ? '' : 'border-line bg-surface' }}"
             >
@@ -351,7 +351,7 @@
                 @endif
 
                 @if ($canReply && $ticket->channel->status !== \App\Enums\ChannelStatus::WORKING)
-                    <p class="mb-1.5 truncate rounded-md bg-warn/10 px-3 py-1.5 text-xs text-warn" role="status" title="O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).">O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).</p>
+                    <p class="mb-1.5 truncate rounded-md bg-warn-soft px-3 py-1.5 text-xs text-warn" role="status" title="O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).">O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).</p>
                 @endif
 
                 @if ($canReply)
@@ -423,7 +423,7 @@
                             <div data-testid="composer-modes">
                                 <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
                                     <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
-                                    <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
+                                    <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn-soft text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
                                 </div>
                             </div>
                             {{-- Coluna larga (@md): uma linha só. Coluna estreita (1280 px com o painel de contato aberto): o campo ocupa a linha de cima e as ferramentas ficam embaixo. --}}

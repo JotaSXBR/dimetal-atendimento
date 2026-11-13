@@ -1,5 +1,5 @@
 @php
-    $tones = ['danger' => 'bg-danger/10 text-danger', 'warn' => 'bg-warn/10 text-warn', 'accent' => 'bg-accent/10 text-accent-content'];
+    $tones = ['danger' => 'bg-danger/10 text-danger', 'warn' => 'bg-warn-soft text-warn', 'accent' => 'bg-accent/10 text-accent-content'];
 @endphp
 
 <div class="relative" x-data="alertBell" @keydown.escape.window="open = false" @click.outside="open = false">

@@ -4,11 +4,11 @@
     </x-slot:actions>
 
     @if ($error)
-        <div class="mt-4 rounded-md border border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="alert">{{ $error }}</div>
+        <div class="mt-4 rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">{{ $error }}</div>
     @endif
 
     @if ($notice)
-        <div class="mt-4 rounded-md border border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="status">{{ $notice }}</div>
+        <div class="mt-4 rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="status">{{ $notice }}</div>
     @endif
 
     @if ($showNew)

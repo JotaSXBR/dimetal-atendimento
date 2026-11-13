@@ -12,24 +12,26 @@
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-    /* Tokens claros. Marca neutra (stone-800 no claro, branco no escuro); verde, âmbar e vermelho são só estado e alerta (`ok`, `warn`, `danger`).
+    /* Tokens claros. Marca neutra (zinc-800 no claro, branco no escuro); verde, âmbar e vermelho são só estado e alerta (`ok`, `warn`, `danger`).
        Cada um é redefinido em `.dark` abaixo; os pares de texto são medidos em tests/Unit/ThemeTokensTest.php. */
-    --color-ink: #101513;
-    --color-ink-2: #46514d;
-    --color-ink-3: #5f6a65;
-    --color-line: #e2e0d9;
-    --color-canvas: #f5f4f0;
+    --color-ink: #18181b; /* zinc-900 */
+    --color-ink-2: #52525b; /* zinc-600 */
+    --color-ink-3: #71717a; /* zinc-500 */
+    --color-line: #e4e4e7; /* zinc-200 */
+    --color-canvas: #fafafa; /* zinc-50 */
     --color-surface: #ffffff;
-    --color-accent: #292524; /* stone-800 */
-    --color-accent-content: #292524; /* stone-800: texto/link de marca */
+    --color-accent: #27272a; /* zinc-800 */
+    --color-accent-content: #27272a; /* zinc-800: texto/link de marca */
     --color-accent-foreground: #ffffff; /* texto sobre a marca */
-    --color-accent-soft: #e7e5e4; /* stone-200 */
+    --color-accent-soft: #e4e4e7; /* zinc-200 */
     --color-warn: #92400e; /* amber-800: legível sobre warn/10 e warn/20 */
     --color-warn-foreground: #ffffff;
+    --color-warn-soft: #fffbeb; /* amber-50: fundo de aviso e de nota interna */
+    --color-warn-line: #fcd34d; /* amber-300 */
     --color-danger: #b42318;
     --color-danger-foreground: #ffffff;
     --color-ok: #166534; /* green-800 */
-    --color-bot: #4a5a66;
+    --color-bot: #4338ca; /* indigo-700: quem respondeu foi o bot */
 
     --duration-base: 200ms;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -37,18 +39,6 @@
     /* O botão `danger` do Flux usa red-500 (claro) e red-600 (escuro) com texto branco: sobem um degrau (red-600 e red-700 do Tailwind) para passar AA. */
     --color-red-500: #dc2626;
     --color-red-600: #b91c1c;
-
-    --color-zinc-50: var(--color-stone-50);
-    --color-zinc-100: var(--color-stone-100);
-    --color-zinc-200: var(--color-stone-200);
-    --color-zinc-300: var(--color-stone-300);
-    --color-zinc-400: var(--color-stone-400);
-    --color-zinc-500: var(--color-stone-500);
-    --color-zinc-600: var(--color-stone-600);
-    --color-zinc-700: var(--color-stone-700);
-    --color-zinc-800: var(--color-stone-800);
-    --color-zinc-900: var(--color-stone-900);
-    --color-zinc-950: var(--color-stone-950);
 }
 
 @layer base {
@@ -83,22 +73,24 @@ select:focus[data-flux-control] {
 
 @layer theme {
     .dark {
-        --color-ink: #fafaf9; /* stone-50 */
-        --color-ink-2: #d6d3d1; /* stone-300 */
-        --color-ink-3: #a8a29e; /* stone-400 */
-        --color-line: #44403c; /* stone-700 */
-        --color-canvas: #1c1917; /* stone-900 */
-        --color-surface: #292524; /* stone-800 */
+        --color-ink: #fafafa; /* zinc-50 */
+        --color-ink-2: #d4d4d8; /* zinc-300 */
+        --color-ink-3: #a1a1aa; /* zinc-400 */
+        --color-line: #3f3f46; /* zinc-700 */
+        --color-canvas: #18181b; /* zinc-900 */
+        --color-surface: #27272a; /* zinc-800 */
         --color-accent: #ffffff;
         --color-accent-content: #ffffff;
-        --color-accent-foreground: #292524; /* stone-800 */
-        --color-accent-soft: #44403c; /* stone-700 */
+        --color-accent-foreground: #27272a; /* zinc-800 */
+        --color-accent-soft: #3f3f46; /* zinc-700 */
         --color-warn: #fbbf24; /* amber-400 */
-        --color-warn-foreground: #1c1917;
+        --color-warn-foreground: #18181b;
+        --color-warn-soft: #3b2f0d; /* amber-400 a ~12% sobre o fundo escuro */
+        --color-warn-line: #78561a;
         --color-danger: #f87171; /* red-400 */
-        --color-danger-foreground: #1c1917;
+        --color-danger-foreground: #18181b;
         --color-ok: #4ade80; /* green-400 */
-        --color-bot: #94a3b8; /* slate-400 */
+        --color-bot: #a5b4fc; /* indigo-300 */
     }
 }
 
@@ -148,24 +140,24 @@ select:focus[data-flux-control] {
 /* Editor de workflows (/automacao/{id}): blocos, bolinhas e linhas desenhados em resources/js/flow-editor/editor.js.
    As cores de categoria são do editor, nos dois temas; o resto usa os tokens do projeto. */
 .flow-canvas {
-    --flow-cat-inicio: #166534;
+    --flow-cat-inicio: #3f3f46;
     --flow-cat-fala: #1d4ed8;
     --flow-cat-espera: #6d28d9;
-    --flow-cat-logica: #b45309;
+    --flow-cat-logica: #a21caf;
     --flow-cat-acao: #0f766e;
-    --flow-cat-fim: #4a5a66;
+    --flow-cat-fim: #71717a;
     background-image: radial-gradient(circle, var(--color-line) 1px, transparent 1.5px);
     background-size: 24px 24px;
     touch-action: none;
 }
 
 .dark .flow-canvas {
-    --flow-cat-inicio: #4ade80;
+    --flow-cat-inicio: #d4d4d8;
     --flow-cat-fala: #93c5fd;
     --flow-cat-espera: #c4b5fd;
-    --flow-cat-logica: #fdba74;
+    --flow-cat-logica: #f0abfc;
     --flow-cat-acao: #5eead4;
-    --flow-cat-fim: #94a3b8;
+    --flow-cat-fim: #a1a1aa;
 }
 
 flow-node { display: block; }
@@ -219,5 +211,5 @@ flow-node { display: block; }
 /* O minimapa do editor só aparece com largura para não cobrir o canvas nem o painel de propriedades. */
 .flow-canvas rete-minimap { display: none; }
 @media (min-width: 1100px) {
-    .flow-canvas rete-minimap { display: block; }
+    .flow-canvas rete-minimap { display: block; filter: grayscale(1); }
 }

@@ -122,7 +122,7 @@
             </div>
 
             @if ($hasMore)
-                <div class="border-b border-warn/30 bg-warn/10 px-4 py-2 text-xs text-warn" role="status">
+                <div class="border-b border-warn-line bg-warn-soft px-4 py-2 text-xs text-warn" role="status">
                     Mostrando as últimas {{ $limit }} mensagens desta conversa.
                 </div>
             @endif

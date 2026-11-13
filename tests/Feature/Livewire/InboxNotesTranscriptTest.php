@@ -51,7 +51,7 @@ class InboxNotesTranscriptTest extends TestCase
             ->assertDontSeeHtml('data-testid="message-time"')
             ->html();
 
-        $this->assertStringContainsString('border-warn/30', $html);
+        $this->assertStringContainsString('border-warn-line', $html);
     }
 
     public function test_nota_do_bot_mostra_o_rotulo_da_origem_e_nao_tem_apagar(): void

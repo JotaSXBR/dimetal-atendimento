@@ -71,6 +71,10 @@ como o Helena) não podem ficar presos ao WhatsApp no card.
 
 14. **Forma dos chips (13/11, pedido do dono):** etiqueta do contato é **quadrada e cheia**; etiqueta da conversa é **redonda e translúcida** (fundo do tom a 15% e contorno a 50%). Substitui o "cheio contra contorno" da decisão 3; o texto de cada tom é medido sobre o fundo translúcido no `ThemeTokensTest`.
 
+15. **Neutros em zinc no sistema inteiro (13/11, pedido do dono):** texto, fundo e linhas passam a ser da família zinc (a do Flux, tema que o dono mandou): claro `ink` #18181b, `ink-2` #52525b, `ink-3` #71717a, `line` #e4e4e7, `canvas` #fafafa; escuro `ink` #fafafa, `line` #3f3f46, `canvas` #18181b, `surface` #27272a. Acaba o remapeamento `zinc` → `stone` e o verde-acinzentado da marca antiga no texto.
+16. **Bolhas da conversa (13/11):** cliente branca com borda fina; nossa em neutro suave (`accent-soft`); bot no tom do bot a 15% com o rótulo no mesmo tom; enviada pelo celular tracejada, neutra e com ícone de celular (sai do âmbar); nota interna e avisos num amarelo próprio (`warn-soft`/`warn-line`), com cadeado e rótulo "Nota interna". O âmbar fica reservado para nota e aviso. A pesquisa (Intercom, Zendesk e Jira) mostrou que o amarelo sozinho é frágil; por isso ícone e rótulo acompanham a cor.
+17. **Cores de estado e categoria (13/11):** verde (`ok`), âmbar (`warn`) e vermelho (`danger`) seguem só para estado e alerta; o bot passa a índigo; as categorias do editor de automação deixam de usar verde e laranja (que colidiam com ok e aviso); as views não usam mais paleta crua de estado nem `stone` (guarda no `ThemeTokensTest`); o minimapa do editor fica em tons de cinza. Ilustrações e ícones decorativos (mapa, tipos de arquivo) ficam como estão.
+
 ## Minhas decisões (conferir)
 
 1. **Nome único global** em `tags` (mantém o índice atual): a mesma palavra não existe nos dois escopos, para filtros e chips não confundirem. Coluna nova `tags.scope` (`contato`|`conversa`, padrão `conversa`).

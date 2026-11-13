@@ -86,16 +86,78 @@ class ThemeTokensTest extends TestCase
     {
         $themes = $this->themes();
 
-        $this->assertSame('#292524', $themes['light']['accent'] ?? null);
-        $this->assertSame('#292524', $themes['light']['accent-content'] ?? null);
+        $this->assertSame('#27272a', $themes['light']['accent'] ?? null);
+        $this->assertSame('#27272a', $themes['light']['accent-content'] ?? null);
         $this->assertSame('#ffffff', $themes['light']['accent-foreground'] ?? null);
         $this->assertSame('#ffffff', $themes['dark']['accent'] ?? null);
         $this->assertSame('#ffffff', $themes['dark']['accent-content'] ?? null);
-        $this->assertSame('#292524', $themes['dark']['accent-foreground'] ?? null);
+        $this->assertSame('#27272a', $themes['dark']['accent-foreground'] ?? null);
         $this->assertSame('#92400e', $themes['light']['warn'] ?? null);
         $this->assertSame('#fbbf24', $themes['dark']['warn'] ?? null);
         $this->assertStringNotContainsString('#facc15', strtolower($this->css()));
         $this->assertStringNotContainsString('#12705a', strtolower($this->css()));
+    }
+
+    /** Texto, fundo e linhas são da mesma família (zinc, a do Flux): sem o verde da marca antiga nem o stone quente. */
+    public function test_os_neutros_sao_todos_zinc_nos_dois_temas(): void
+    {
+        $themes = $this->themes();
+        $zinc = [
+            'light' => ['ink' => '#18181b', 'ink-2' => '#52525b', 'ink-3' => '#71717a', 'line' => '#e4e4e7', 'canvas' => '#fafafa', 'surface' => '#ffffff', 'accent-soft' => '#e4e4e7'],
+            'dark' => ['ink' => '#fafafa', 'ink-2' => '#d4d4d8', 'ink-3' => '#a1a1aa', 'line' => '#3f3f46', 'canvas' => '#18181b', 'surface' => '#27272a', 'accent-soft' => '#3f3f46'],
+        ];
+
+        foreach ($zinc as $theme => $tokens) {
+            foreach ($tokens as $token => $hex) {
+                $this->assertSame($hex, $themes[$theme][$token] ?? null, "{$theme}: {$token}");
+            }
+        }
+    }
+
+    /** Aviso e nota interna têm fundo amarelo próprio (`warn-soft`): texto, rótulo e cadeado legíveis sobre ele e contorno visível. */
+    public function test_aviso_e_nota_tem_fundo_amarelo_proprio_e_texto_legivel_nos_dois_temas(): void
+    {
+        foreach ($this->themes() as $theme => $t) {
+            $this->assertArrayHasKey('warn-soft', $t, "{$theme}: warn-soft");
+            $this->assertArrayHasKey('warn-line', $t, "{$theme}: warn-line");
+
+            foreach (['ink', 'ink-2', 'warn'] as $text) {
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($t[$text], $t['warn-soft']), "{$theme}: {$text} sobre warn-soft");
+            }
+
+            $this->assertGreaterThanOrEqual(1.3, $this->ratio($t['warn-line'], $t['warn-soft']), "{$theme}: warn-line sobre warn-soft");
+        }
+    }
+
+    /** O âmbar de aviso a 10% sobre claro vira um salmão rosado: o fundo de aviso e de nota é o token `warn-soft`. */
+    public function test_nenhuma_view_pinta_aviso_com_warn_translucido(): void
+    {
+        $offenders = [];
+
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(dirname(__DIR__, 2).'/resources/views')) as $file) {
+            if (! str_ends_with((string) $file, '.blade.php')) {
+                continue;
+            }
+
+            foreach (file((string) $file) ?: [] as $n => $line) {
+                if (preg_match('/(?:bg|border)-warn\/(?:10|20|30)/', $line, $m) === 1) {
+                    $offenders[] = basename((string) $file).':'.($n + 1).' '.$m[0];
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders, 'use bg-warn-soft e border-warn-line');
+    }
+
+    /** O minimapa do editor (rete) traz o retângulo de visão em amarelo fixo, dentro do shadow DOM: ele fica em tons de cinza. */
+    public function test_minimapa_do_editor_nao_traz_o_amarelo_padrao_da_biblioteca(): void
+    {
+        $this->assertMatchesRegularExpression('/rete-minimap\s*\{[^}]*filter:\s*grayscale\(1\)/', $this->css());
+    }
+
+    public function test_o_flux_enxerga_o_zinc_de_verdade_sem_remapear_para_stone(): void
+    {
+        $this->assertDoesNotMatchRegularExpression('/--color-zinc-\d+:\s*var\(--color-stone/', $this->css());
     }
 
     public function test_contraste_minimo_de_texto_nos_dois_temas(): void
@@ -130,7 +192,7 @@ class ThemeTokensTest extends TestCase
         foreach ($this->themes() as $theme => $t) {
             foreach (['canvas', 'surface'] as $ground) {
                 foreach (['warn', 'danger', 'ok', 'bot'] as $tone) {
-                    foreach ($tone === 'warn' ? [0.10, 0.20] : [0.10] as $alpha) { // warn/20 é o realce da aba "Nota privada"
+                    foreach ($tone === 'warn' ? [0.10, 0.20] : ($tone === 'bot' ? [0.10, 0.15] : [0.10]) as $alpha) { // warn/20 é o realce da aba "Nota privada"; bot/15 é a bolha do bot
                         $tint = $this->mix($t[$tone], $t[$ground], $alpha);
                         $this->assertGreaterThanOrEqual(4.5, $this->ratio($t[$tone], $tint), "{$theme}: {$tone} sobre {$tone}/".(int) ($alpha * 100)." em {$ground}");
                     }
@@ -225,6 +287,28 @@ class ThemeTokensTest extends TestCase
         $b = array_map('hexdec', str_split(ltrim($bottom, '#'), 2));
 
         return '#'.implode('', array_map(fn (int $i): string => sprintf('%02x', (int) round($a[$i] * $alpha + $b[$i] * (1 - $alpha))), [0, 1, 2]));
+    }
+
+    /** Cor de estado vem dos tokens (`ok`, `warn`, `danger`), não de paleta crua; e o stone quente não existe mais (os neutros são zinc). */
+    public function test_nenhuma_view_usa_paleta_crua_de_estado_nem_stone(): void
+    {
+        // Ilustrações e ícones decorativos (mapa, tipos de arquivo) ficam de fora de propósito.
+        $decorative = ['location.blade.php', 'media.blade.php', 'welcome.blade.php'];
+        $offenders = [];
+
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(dirname(__DIR__, 2).'/resources/views')) as $file) {
+            if (! str_ends_with((string) $file, '.blade.php') || in_array(basename((string) $file), $decorative, true)) {
+                continue;
+            }
+
+            foreach (file((string) $file) ?: [] as $n => $line) {
+                if (preg_match('/(?:bg|text|border|ring|fill|stroke|from|to|via|divide|outline|decoration)-(?:red|green|emerald|amber|yellow|orange|stone)-\d{2,3}/', $line, $m) === 1) {
+                    $offenders[] = basename((string) $file).':'.($n + 1).' '.$m[0];
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders);
     }
 
     public function test_bg_accent_content_nao_e_usado_porque_accent_content_e_cor_de_texto(): void

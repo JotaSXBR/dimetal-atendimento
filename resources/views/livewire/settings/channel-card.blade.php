@@ -130,7 +130,7 @@
         </div>
 
         @if ($confirmAction)
-            <div class="mt-3 rounded-[10px] border border-warn/30 bg-warn/10 px-3 py-2 text-xs text-warn" role="alert">
+            <div class="mt-3 rounded-[10px] border border-warn-line bg-warn-soft px-3 py-2 text-xs text-warn" role="alert">
                 @if ($confirming === 'delete-channel')
                     Apagar este canal de vez? Ele nunca atendeu ninguém, então nada é perdido. A sessão também sai do WAHA.
                 @elseif ($openTickets > 0)

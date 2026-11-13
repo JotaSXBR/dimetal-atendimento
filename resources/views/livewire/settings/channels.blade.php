@@ -1,7 +1,7 @@
 <x-settings-page route="configuracoes.canais" title="Canais" subtitle="Conexão do WhatsApp" width="5xl">
     <div class="mt-6">
         <div class="space-y-6">
-            <div class="flex gap-3 rounded-[14px] border border-warn/30 bg-warn/10 px-4 py-3 text-warn" role="note">
+            <div class="flex gap-3 rounded-[14px] border border-warn-line bg-warn-soft px-4 py-3 text-warn" role="note">
                 <flux:icon.exclamation-triangle class="mt-0.5 size-5 shrink-0" />
                 <div class="text-xs leading-relaxed">
                     <p class="text-sm font-semibold">Sem failover entre números</p>
