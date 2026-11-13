@@ -47,7 +47,7 @@ class ChatButtonsTest extends TestCase
             ->assertSeeHtml('data-testid="chat-disabled"');
     }
 
-    public function test_ficha_compacta_e_completa_tem_conversar_mas_o_historico_nao(): void
+    public function test_ficha_compacta_completa_e_do_historico_tem_conversar(): void
     {
         $contact = Contact::factory()->create(['wa_id' => '5516999999999@c.us']);
 
@@ -57,7 +57,9 @@ class ChatButtonsTest extends TestCase
         Livewire::actingAs($this->me)->test(ContactCard::class, ['contactId' => $contact->id])
             ->assertSeeHtml($this->dispatchHtml($contact));
 
+        // O Histórico (somente leitura) também conversa com o contato; só não edita.
         Livewire::actingAs($this->me)->test(ContactCard::class, ['contactId' => $contact->id, 'compact' => true, 'readonly' => true])
-            ->assertDontSeeHtml($this->dispatchHtml($contact));
+            ->assertSeeHtml($this->dispatchHtml($contact))
+            ->assertDontSee('Editar contato');
     }
 }
