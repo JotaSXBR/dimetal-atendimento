@@ -2,11 +2,13 @@
 
 namespace App\Livewire\Settings;
 
+use App\Enums\AuditAction;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Livewire\Concerns\ReceivesAvatar;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\Audit\Auditor;
 use App\Services\Media\AvatarImage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -175,10 +177,50 @@ class Users extends Component
             $user->password = $this->password;
         }
 
-        DB::transaction(function () use ($user): void {
+        // O que mudou só se sabe antes de gravar.
+        $dirty = array_keys($user->getDirty());
+        $oldRole = $creating ? null : $user->getOriginal('role');
+        $sectorChanges = [];
+
+        DB::transaction(function () use ($user, &$sectorChanges): void {
             $user->save();
-            $user->sectors()->sync($this->sectorIds);
+            $sectorChanges = $user->sectors()->sync($this->sectorIds);
         });
+
+        $sectorsChanged = ($sectorChanges['attached'] ?? []) !== [] || ($sectorChanges['detached'] ?? []) !== [];
+
+        $this->audit($user, $creating, $dirty, $oldRole, $sectorsChanged);
+    }
+
+    /**
+     * Auditoria do sistema: criar grava só a criação; editar grava os campos alterados, a mudança de papel e a definição de senha
+     * (nunca a senha). Sem mudança nenhuma, não grava.
+     *
+     * @param  list<string>  $dirty
+     */
+    private function audit(User $user, bool $creating, array $dirty, mixed $oldRole, bool $sectorsChanged): void
+    {
+        $actor = $this->user();
+
+        if ($creating) {
+            Auditor::record(AuditAction::UserCreated, $actor, $user->name, ['role' => $user->role->value]);
+
+            return;
+        }
+
+        $fields = [...array_values(array_intersect(['name', 'email', 'can_transfer'], $dirty)), ...($sectorsChanged ? ['sectors'] : [])];
+
+        if ($fields !== []) {
+            Auditor::record(AuditAction::UserUpdated, $actor, $user->name, ['fields' => $fields]);
+        }
+
+        if (in_array('role', $dirty, true) && $oldRole instanceof UserRole) {
+            Auditor::record(AuditAction::UserRoleChanged, $actor, $user->name, ['from' => $oldRole->value, 'to' => $user->role->value]);
+        }
+
+        if (in_array('password', $dirty, true)) {
+            Auditor::record(AuditAction::UserPasswordSet, $actor, $user->name);
+        }
     }
 
     public function toggleActive(int $id): void
@@ -191,12 +233,14 @@ class Users extends Component
 
             // O login já recusa quem está inativo; apagar as sessões derruba quem estava logado agora.
             DB::table('sessions')->where('user_id', $target->id)->delete();
+            Auditor::record(AuditAction::UserDeactivated, $this->user(), $target->name);
 
             return;
         }
 
         $this->authorize('update', $target);
         $target->forceFill(['active' => true])->save();
+        Auditor::record(AuditAction::UserActivated, $this->user(), $target->name);
     }
 
     /**
