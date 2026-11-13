@@ -29,7 +29,7 @@ class Navigation
             $item('Contatos', 'contatos', null, $work, '', 'user-group'),
             $item('Histórico', 'historico', null, $work, '', 'archive-box'),
             $item('Relatórios', 'relatorios', 'supervisor', $follow, '', 'chart-bar'),
-            $item('Auditoria', 'auditoria', 'admin', $follow, '', 'shield-check'),
+            $item('Auditoria', 'auditoria', 'admin', $follow, '', 'shield-check', 'auditoria*'),
             $item('Setores', 'configuracoes.setores', 'admin', $config, 'Atendimento', 'squares-2x2'),
             $item('Horário e SLA', 'configuracoes.horario', 'admin', $config, 'Atendimento', 'clock'),
             $item('Respostas rápidas', 'configuracoes.respostas', 'supervisor', $config, 'Atendimento', 'bolt'),

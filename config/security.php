@@ -21,10 +21,11 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'webhook_per_minute' => 300,
+    /** Webhook do WAHA: só a requisição com assinatura inválida conta (por IP); a assinatura válida nunca é limitada. */
+    'webhook_invalid_per_minute' => 60,
 
-    /** Presença do cliente (`presence.update`) tem teto próprio: chega em rajada e não pode gastar o das mensagens. */
-    'presence_per_minute' => 600,
+    /** Tentativas de login por hora para um mesmo e-mail, de qualquer IP (a regra de 5 por minuto por e-mail e IP segue valendo). */
+    'login_per_hour_per_email' => (int) env('SECURITY_LOGIN_PER_HOUR', 20),
 
     'send_message_per_minute' => 30,
 

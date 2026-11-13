@@ -2,11 +2,13 @@
 
 namespace App\Services\Backup\Restore;
 
+use App\Enums\AuditAction;
 use App\Enums\ChannelStatus;
 use App\Jobs\RecoverMessagesJob;
 use App\Models\Channel;
 use App\Notifications\BackupRestored;
 use App\Services\Alerts\AlertRecipients;
+use App\Services\Audit\Auditor;
 use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
 use App\Services\Backup\RunBackup;
@@ -330,5 +332,9 @@ class RestoreDatabase
             'result' => $result,
             'message' => $message,
         ]);
+
+        // `$message` é o texto público que a página de andamento já mostra (sem a saída bruta do processo).
+        $subject = $run->label !== '' ? $run->label : $run->request->source;
+        Auditor::record($result === 'ok' ? AuditAction::RestoreSucceeded : AuditAction::RestoreFailed, null, $subject, ['mode' => $run->request->mode, 'message' => $message], $run->request->actor);
     }
 }

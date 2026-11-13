@@ -9,6 +9,7 @@ use App\Http\Controllers\RestorePageController;
 use App\Http\Controllers\RestoreStatusController;
 use App\Http\Controllers\Webhooks\WahaWebhookController;
 use App\Livewire\Audit\Index as AuditIndex;
+use App\Livewire\Audit\SystemLog as AuditSystemLog;
 use App\Livewire\Automation\Editor as AutomationEditor;
 use App\Livewire\Automation\Index as AutomationIndex;
 use App\Livewire\Contacts\Index as ContactsIndex;
@@ -55,6 +56,7 @@ Route::middleware(['auth', 'can:supervisor'])->group(function () {
 
 Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('auditoria', AuditIndex::class)->name('auditoria');
+    Route::get('auditoria/sistema', AuditSystemLog::class)->name('auditoria.sistema');
     Route::get('configuracoes/canais', Channels::class)->name('configuracoes.canais');
     Route::get('configuracoes/horario', BusinessHoursPage::class)->name('configuracoes.horario');
     Route::get('configuracoes/empresa', Company::class)->name('configuracoes.empresa');

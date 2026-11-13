@@ -3,6 +3,7 @@
 namespace Tests\Feature\Backup;
 
 use App\Enums\UserRole;
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
@@ -56,6 +57,19 @@ class BackupDownloadTest extends TestCase
         $this->get('/configuracoes/backups/'.self::NAME)->assertRedirect('/login');
         $this->actingAs(User::factory()->create(['role' => UserRole::SUPERVISOR]))
             ->get('/configuracoes/backups/'.self::NAME)->assertForbidden();
+    }
+
+    public function test_download_grava_a_auditoria_e_nome_forjado_nao_grava(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get(route('configuracoes.backups.baixar', self::NAME))->assertOk();
+        $this->actingAs($admin)->get('/configuracoes/backups/lixo.txt')->assertNotFound();
+
+        $log = AuditLog::query()->sole();
+        $this->assertSame('backup.downloaded', $log->action);
+        $this->assertSame(self::NAME, $log->subject);
+        $this->assertSame($admin->id, $log->actor_user_id);
     }
 
     public function test_download_vai_para_o_log_com_usuario_e_arquivo(): void

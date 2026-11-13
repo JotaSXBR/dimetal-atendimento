@@ -42,9 +42,11 @@ class TranslationTest extends TestCase
 
     public function test_login_com_senha_errada_responde_em_portugues(): void
     {
-        User::factory()->create(['email' => 'ana@example.com']);
+        // E-mail novo a cada execução: o teto por hora do login guarda a contagem no cache (Redis persistente no desenvolvimento).
+        $email = 'ana-'.bin2hex(random_bytes(6)).'@example.com';
+        User::factory()->create(['email' => $email]);
 
-        $response = $this->from('/login')->post('/login', ['email' => 'ana@example.com', 'password' => 'senha-errada']);
+        $response = $this->from('/login')->post('/login', ['email' => $email, 'password' => 'senha-errada']);
 
         $response->assertSessionHasErrors('email');
         $message = (string) session('errors')->first('email');
