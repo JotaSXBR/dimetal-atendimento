@@ -17,12 +17,22 @@ class RecordAuthEvents
         Auditor::record(AuditAction::Login, $event->user instanceof User ? $event->user : null);
     }
 
-    /** O evento traz a senha digitada em `credentials`: só o e-mail vai para a auditoria. */
+    /**
+     * O evento traz a senha digitada em `credentials`: só o e-mail vai para a auditoria. E só se for mesmo um e-mail: quem cola a
+     * senha no campo do e-mail não pode deixar a senha gravada por um ano (e à vista do admin).
+     */
     public function handleFailed(Failed $event): void
     {
-        $email = $event->credentials['email'] ?? '';
+        $typed = $event->credentials['email'] ?? '';
+        $email = is_string($typed) ? trim($typed) : '';
 
-        Auditor::record(AuditAction::LoginFailed, null, is_string($email) ? $email : '');
+        $subject = match (true) {
+            $email === '' => '(vazio)',
+            filter_var($email, FILTER_VALIDATE_EMAIL) === false => '(valor que não é e-mail)',
+            default => $email,
+        };
+
+        Auditor::record(AuditAction::LoginFailed, null, $subject);
     }
 
     public function handleLogout(Logout $event): void

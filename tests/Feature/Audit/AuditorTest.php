@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Audit\Auditor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AuditorTest extends TestCase
@@ -47,6 +48,11 @@ class AuditorTest extends TestCase
         $log = AuditLog::query()->sole();
         $this->assertSame(255, mb_strlen((string) $log->subject));
         $this->assertSame(255, mb_strlen((string) $log->actor_label));
+    }
+
+    public function test_a_tabela_tem_o_indice_por_usuario_e_data(): void
+    {
+        $this->assertTrue(Schema::hasIndex('audit_logs', ['actor_user_id', 'created_at']));
     }
 
     public function test_falha_ao_gravar_nao_lanca_e_vira_aviso_no_log(): void

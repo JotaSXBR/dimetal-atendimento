@@ -22,6 +22,8 @@ return new class extends Migration
 
             $table->index('created_at');
             $table->index(['action', 'created_at']);
+            // O filtro por usuário da tela e o `ON DELETE SET NULL` da chave estrangeira.
+            $table->index(['actor_user_id', 'created_at']);
         });
     }
 

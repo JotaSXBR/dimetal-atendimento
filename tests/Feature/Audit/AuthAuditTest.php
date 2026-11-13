@@ -4,6 +4,7 @@ namespace Tests\Feature\Audit;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -51,13 +52,28 @@ class AuthAuditTest extends TestCase
         $this->assertStringNotContainsString('senha-digitada-errada', (string) json_encode(AuditLog::query()->get()->toArray()));
     }
 
-    public function test_e_mail_inexistente_ou_gigante_nao_quebra_e_e_truncado(): void
+    public function test_e_mail_inexistente_ou_gigante_nao_quebra(): void
     {
-        $this->login('naoexiste@dimetal.test', 'qualquer-coisa');
+        $unknown = 'naoexiste-'.bin2hex(random_bytes(6)).'@dimetal.test';
+
+        $this->login($unknown, 'qualquer-coisa');
         $this->login(str_repeat('a', 400).'@dimetal.test', 'qualquer-coisa');
 
         $this->assertSame(2, AuditLog::query()->where('action', 'auth.login_failed')->count());
-        $this->assertSame(255, mb_strlen((string) AuditLog::query()->orderByDesc('id')->firstOrFail()->subject));
+        $this->assertSame($unknown, AuditLog::query()->orderBy('id')->firstOrFail()->subject);
+        // O de 400 caracteres não é um e-mail válido: vira o texto padrão, e o assunto nunca passa de 255.
+        $this->assertLessThanOrEqual(255, mb_strlen((string) AuditLog::query()->orderByDesc('id')->firstOrFail()->subject));
+    }
+
+    public function test_senha_digitada_no_campo_de_e_mail_nao_e_gravada_nem_aparece(): void
+    {
+        $this->login('SenhaForte#123', 'qualquer-coisa');
+        // O login com campo vazio nem chega à autenticação (a validação recusa antes): o evento é disparado direto.
+        event(new Failed('web', null, ['email' => '', 'password' => 'qualquer-coisa']));
+        event(new Failed('web', null, ['email' => ['x'], 'password' => 'qualquer-coisa']));
+
+        $this->assertSame(['(valor que não é e-mail)', '(vazio)', '(vazio)'], AuditLog::query()->orderBy('id')->pluck('subject')->all());
+        $this->assertStringNotContainsString('SenhaForte#123', (string) json_encode(AuditLog::query()->get()->toArray()));
     }
 
     public function test_usuario_inativo_com_a_senha_certa_conta_como_falha(): void

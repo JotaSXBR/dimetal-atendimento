@@ -43,6 +43,17 @@ class WebhookSignatureTest extends TestCase
         $this->assertFalse(WebhookSignature::valid($this->request(headers: ['HTTP_X_WEBHOOK_HMAC' => $this->hmac(), 'HTTP_X_WEBHOOK_HMAC_ALGORITHM' => 'sha256'])));
     }
 
+    public function test_o_resultado_fica_guardado_na_requisicao_e_o_hash_roda_uma_vez(): void
+    {
+        $request = $this->request(headers: ['HTTP_X_WEBHOOK_HMAC' => $this->hmac()]);
+
+        $this->assertTrue(WebhookSignature::valid($request));
+
+        // O limitador e o controller recebem a mesma requisição: a segunda pergunta vem do que ficou guardado, não de novo cálculo.
+        $request->headers->remove('X-Webhook-Hmac');
+        $this->assertTrue(WebhookSignature::valid($request));
+    }
+
     public function test_segredo_vazio_e_invalido(): void
     {
         $this->assertFalse(WebhookSignature::valid($this->request(headers: ['HTTP_X_WEBHOOK_HMAC' => $this->hmac()]), ''));

@@ -61,7 +61,8 @@ limite de tentativas do login. A lista é literal porque a configuração ainda 
 
 Todo o tráfego do WAHA chega do mesmo IP interno e vem em rajada (importação, recuperação, presença): um teto por IP dava
 429 em evento legítimo, então o webhook só limita a assinatura inválida (o HMAC válido nunca recebe 429; custo: um WAHA
-descontrolado não tem freio, a fila absorve). O envio conta
+descontrolado não tem freio, a fila absorve). O HMAC é calculado uma vez por requisição e custa em proporção ao corpo, que fica
+limitado pelo `client_max_body_size` do nginx e pelo `post_max_size` do PHP (conferir os valores da imagem base). O envio conta
 só mensagens: o indicador "digitando" e a gravação de áudio, quando existirem, terão limite próprio e mais folgado
 (ver `docs/superpowers/notes/2026-10-28-waha-presenca-e-midia.md`).
 

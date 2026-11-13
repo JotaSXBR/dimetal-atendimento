@@ -253,13 +253,14 @@ class Backups extends Component
             return;
         }
 
+        // O pedido fica no banco de agora; o resultado (`RestoreDatabase::log`) fica no banco que estiver ativo depois da troca. Grava
+        // antes do job: com a fila `sync` (ou um worker muito rápido) o job troca o banco e o pedido cairia depois do resultado.
+        $name = $this->info['name'] ?? $request->source;
+        Auditor::record($request->mode === 'switch' ? AuditAction::RestoreSwitched : AuditAction::RestoreRequested, Auth::user(), $name);
+
         // O andamento já aparece na página de acompanhamento antes de o worker pegar o job.
         app(RestoreProgress::class)->begin($title, $steps);
         RestoreDatabaseJob::dispatch($request);
-
-        // O pedido fica no banco de agora; o resultado (`RestoreDatabase::log`) fica no banco que estiver ativo depois da troca.
-        $name = $this->info['name'] ?? $request->source;
-        Auditor::record($request->mode === 'switch' ? AuditAction::RestoreSwitched : AuditAction::RestoreRequested, Auth::user(), $name);
 
         $this->redirect(route('restauracao'));
     }
