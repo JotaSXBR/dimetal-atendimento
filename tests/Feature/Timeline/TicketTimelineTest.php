@@ -183,6 +183,13 @@ class TicketTimelineTest extends TestCase
         $this->assertSame('Bot encaminhou para Fila geral', $timeline->sentence($bare));
     }
 
+    public function test_bot_encaminhou_com_motivo_que_nao_e_texto_nao_quebra(): void
+    {
+        $event = $this->event('bot_handoff', null, ['reason' => ['x'], 'sector_id' => 'abc']);
+
+        $this->assertSame('Bot encaminhou para Fila geral', $this->timeline([$event])->sentence($event));
+    }
+
     public function test_changes_descarta_so_os_eventos_de_conversa(): void
     {
         $events = new Collection([

@@ -196,6 +196,16 @@ class NewConversationModalTest extends TestCase
         $this->assertStringContainsString('Maria Souza', (string) session('inbox-notice'));
     }
 
+    public function test_o_aviso_do_desvio_nao_promete_texto_no_campo_quando_nada_foi_digitado(): void
+    {
+        Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $this->channel->id, 'sector_id' => $this->sector->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $this->agent->id]);
+
+        Livewire::actingAs($this->agent)->test(NewConversation::class)->dispatch('start-conversation', contactId: $this->contact->id);
+
+        $this->assertStringContainsString('Já existe uma conversa aberta com Maria Souza', (string) session('inbox-notice'));
+        $this->assertStringNotContainsString('campo de resposta', (string) session('inbox-notice'));
+    }
+
     public function test_com_ticket_aberto_em_dois_canais_vai_ao_mais_recente(): void
     {
         $other = Channel::factory()->connected()->create(['waha_session' => 'outro']);
