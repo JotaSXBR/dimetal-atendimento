@@ -16,6 +16,8 @@
             @endif
         </div>
 
+        @include('livewire.contacts.tags')
+
         <div>
             <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Observações</h3>
             @if ($contact->notes)
@@ -118,6 +120,8 @@
             <p class="text-xs text-danger" role="alert">{{ $message }}</p>
         @enderror
     </div>
+
+    @include('livewire.contacts.tags')
 
     @unless ($compact)
         @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'w-full'])
