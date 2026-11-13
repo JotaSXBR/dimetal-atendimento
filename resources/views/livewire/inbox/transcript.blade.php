@@ -1,5 +1,8 @@
-{{-- Avisa o servidor se a aba está visível (o visto da equipe só vale com a aba aberta); ver resources/js/transcript-visibility.js. --}}
-<span wire:key="transcript-visibility" x-data="transcriptVisibility" hidden aria-hidden="true"></span>
+{{-- Avisa o servidor se a aba está visível (o visto da equipe só vale com a aba aberta); ver resources/js/transcript-visibility.js.
+     Só no Inbox: ele grava `$wire.visible`, que existe no componente Transcript e não em History\Index (somente leitura). --}}
+@unless ($readonly)
+    <span wire:key="transcript-visibility" x-data="transcriptVisibility" hidden aria-hidden="true"></span>
+@endunless
 
 @php
     $tz = config('app.display_timezone');
