@@ -183,14 +183,62 @@ class NewConversationModalTest extends TestCase
             ->assertHasErrors('phone');
     }
 
+    public function test_contato_com_ticket_aberto_visivel_vai_direto_ao_ticket(): void
+    {
+        $open = Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $this->channel->id, 'sector_id' => $this->sector->id, 'status' => TicketStatus::AGUARDANDO]);
+
+        Livewire::actingAs($this->agent)->test(NewConversation::class)
+            ->dispatch('start-conversation', contactId: $this->contact->id)
+            ->assertRedirect(route('inbox', ['ticket' => $open->id]))
+            ->assertSet('contactId', null)
+            ->assertNotDispatched('modal-show');
+
+        $this->assertStringContainsString('Maria Souza', (string) session('inbox-notice'));
+    }
+
+    public function test_com_ticket_aberto_em_dois_canais_vai_ao_mais_recente(): void
+    {
+        $other = Channel::factory()->connected()->create(['waha_session' => 'outro']);
+        Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $this->channel->id, 'sector_id' => $this->sector->id, 'status' => TicketStatus::AGUARDANDO, 'opened_at' => now()->subDays(2)]);
+        $recent = Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $other->id, 'sector_id' => $this->sector->id, 'status' => TicketStatus::AGUARDANDO, 'opened_at' => now()->subHour()]);
+
+        Livewire::actingAs($this->agent)->test(NewConversation::class)
+            ->dispatch('start-conversation', contactId: $this->contact->id)
+            ->assertRedirect(route('inbox', ['ticket' => $recent->id]));
+    }
+
+    public function test_ticket_aberto_de_outro_setor_abre_a_janela(): void
+    {
+        $foreign = Sector::factory()->create(['name' => 'Diretoria']);
+        $boss = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $this->channel->id, 'sector_id' => $foreign->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $boss->id]);
+
+        Livewire::actingAs($this->agent)->test(NewConversation::class)
+            ->dispatch('start-conversation', contactId: $this->contact->id)
+            ->assertNoRedirect()
+            ->assertSet('contactId', $this->contact->id)
+            ->assertDispatched('modal-show', name: 'new-conversation');
+    }
+
+    public function test_ticket_encerrado_nao_desvia_para_o_inbox(): void
+    {
+        Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $this->channel->id, 'sector_id' => $this->sector->id, 'status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subHour()]);
+
+        Livewire::actingAs($this->agent)->test(NewConversation::class)
+            ->dispatch('start-conversation', contactId: $this->contact->id)
+            ->assertNoRedirect()
+            ->assertDispatched('modal-show', name: 'new-conversation');
+    }
+
     public function test_ticket_aberto_de_outro_atendente_leva_o_aviso_e_nao_o_texto(): void
     {
         $colleague = User::factory()->create(['role' => UserRole::ATENDENTE, 'name' => 'Carlos Dias']);
         $colleague->sectors()->attach($this->sector);
         $open = Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $this->channel->id, 'sector_id' => $this->sector->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $colleague->id]);
 
+        // O ticket abriu depois de a janela abrir (corrida): o `submit` ainda trata o caso. Escolher o contato pela busca (`pick`) não passa pelo desvio do `open`.
         Livewire::actingAs($this->agent)->test(NewConversation::class)
-            ->dispatch('start-conversation', contactId: $this->contact->id)
+            ->call('pick', $this->contact->id)
             ->set('text', 'Posso falar agora?')
             ->call('submit')
             ->assertRedirect(route('inbox', ['ticket' => $open->id]));
@@ -205,7 +253,7 @@ class NewConversationModalTest extends TestCase
         $open = Ticket::factory()->create(['contact_id' => $this->contact->id, 'channel_id' => $this->channel->id, 'sector_id' => $this->sector->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $this->agent->id]);
 
         Livewire::actingAs($this->agent)->test(NewConversation::class)
-            ->dispatch('start-conversation', contactId: $this->contact->id)
+            ->call('pick', $this->contact->id)
             ->set('text', 'Posso falar agora?')
             ->call('submit')
             ->assertRedirect(route('inbox', ['ticket' => $open->id]));

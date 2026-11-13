@@ -46,6 +46,16 @@ class NewConversation extends Component
         $this->contactId = null;
 
         if ($contactId !== null) {
+            $open = Ticket::query()->open()->readableBy($this->user())->where('contact_id', $contactId)->orderByDesc('opened_at')->orderByDesc('id')->first();
+
+            // Já há conversa aberta que o usuário vê: não faz sentido pedir canal, setor e mensagem; leva direto a ela.
+            if ($open !== null) {
+                $this->flashExisting($open, Contact::query()->findOrFail($contactId));
+                $this->redirectRoute('inbox', ['ticket' => $open->id]);
+
+                return;
+            }
+
             $this->pick($contactId);
         } else {
             $this->preselect(null);
