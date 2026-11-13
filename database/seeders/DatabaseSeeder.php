@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             SectorSeeder::class,
+            TagSeeder::class,
             AdminUserSeeder::class,
             DefaultWorkflowSeeder::class,
         ]);

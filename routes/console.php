@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Setup\DefaultSectors;
+use App\Services\Setup\DefaultTags;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -27,6 +28,9 @@ Schedule::command('app:recover-messages')->dailyAt('04:15')->withoutOverlapping(
 // Setores padrão de uma instalação nova: o `migrate` roda no start do app (AUTORUN) e não há gancho de deploy próprio, então o
 // agendador instala o padrão assim que sobe. Depois da primeira vez a marca em `settings` desliga o passo.
 Schedule::call(fn () => DefaultSectors::install())->name('install-default-sectors')->everyMinute()->when(fn (): bool => ! DefaultSectors::isLoaded());
+
+// Etiquetas padrão: mesma regra dos setores (uma vez; o beta, sem etiquetas, recebe no próximo deploy).
+Schedule::call(fn () => DefaultTags::install())->name('install-default-tags')->everyMinute()->when(fn (): bool => ! DefaultTags::isLoaded());
 
 // Em segundo plano, para uma rodada lenta não atrasar as demais tarefas do minuto (elas rodam em sequência).
 Schedule::command('app:check-sla')->everyMinute()->withoutOverlapping(5)->runInBackground();
