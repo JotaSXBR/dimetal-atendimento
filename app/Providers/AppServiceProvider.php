@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Waha\WebhookSignature;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -35,11 +36,12 @@ class AppServiceProvider extends ServiceProvider
 
     protected function configureRateLimiting(): void
     {
-        // Todo o tráfego do WAHA chega do mesmo IP interno; o teto é um freio contra inundação, não um limite de uso.
-        // `presence.update` chega em rajada e tem teto próprio: não pode gastar o das mensagens.
-        RateLimiter::for('webhook', fn (Request $request) => $request->input('event') === 'presence.update'
-            ? Limit::perMinute(config()->integer('security.presence_per_minute'))->by($request->ip().':presence')
-            : Limit::perMinute(config()->integer('security.webhook_per_minute'))->by((string) $request->ip()));
+        // Todo o tráfego do WAHA chega do mesmo IP interno e vem em rajada (importação, recuperação, presença): um teto por IP dava 429
+        // em evento legítimo e perdia mensagem. Só a assinatura inválida conta; quem tem a assinatura certa nunca é limitado.
+        // Custo: um WAHA descontrolado não tem freio aqui (a fila absorve).
+        RateLimiter::for('webhook', fn (Request $request) => WebhookSignature::valid($request)
+            ? Limit::none()
+            : Limit::perMinute(config()->integer('security.webhook_invalid_per_minute'))->by('webhook-invalid:'.$request->ip()));
     }
 
     protected function configureGates(): void

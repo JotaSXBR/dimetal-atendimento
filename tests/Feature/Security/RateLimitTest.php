@@ -9,8 +9,10 @@ use App\Livewire\Inbox\Inbox;
 use App\Models\Channel;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Settings\WahaSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -18,35 +20,82 @@ class RateLimitTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_webhook_tem_teto_por_ip_e_responde_429_acima_dele(): void
+    /** IP novo a cada chamada: com o cache em Redis (CI) as chaves do limitador passam de um teste para o outro. */
+    private function ip(): string
     {
-        config(['security.webhook_per_minute' => 3]);
+        return '10.'.random_int(1, 250).'.'.random_int(1, 250).'.'.random_int(1, 250);
+    }
+
+    /** @param  array<string, mixed>  $body */
+    private function signed(string $ip, array $body): TestResponse
+    {
+        $json = (string) json_encode($body);
+
+        return $this->call('POST', '/webhooks/waha', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'REMOTE_ADDR' => $ip,
+            'HTTP_X_WEBHOOK_HMAC' => hash_hmac('sha512', $json, WahaSettings::webhookSecret()),
+            'HTTP_X_WEBHOOK_HMAC_ALGORITHM' => 'sha512',
+        ], $json);
+    }
+
+    private function unsigned(string $ip): TestResponse
+    {
+        return $this->withServerVariables(['REMOTE_ADDR' => $ip])->postJson('/webhooks/waha', ['event' => 'message']);
+    }
+
+    public function test_assinatura_valida_nunca_recebe_429(): void
+    {
+        Queue::fake();
+        config(['security.webhook_invalid_per_minute' => 3]);
+        $ip = $this->ip();
+
+        for ($i = 1; $i <= 10; $i++) {
+            $this->signed($ip, ['id' => 'evt_valido_'.$i, 'event' => 'session.status', 'session' => 'main'])->assertOk();
+        }
+    }
+
+    public function test_presence_update_valido_tambem_passa_sem_limite(): void
+    {
+        Queue::fake();
+        config(['security.webhook_invalid_per_minute' => 1]);
+        $ip = $this->ip();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $this->signed($ip, ['id' => 'evt_presenca_'.$i, 'event' => 'presence.update', 'session' => 'main', 'payload' => []])->assertOk();
+        }
+    }
+
+    public function test_assinatura_invalida_leva_429_acima_do_teto_por_ip(): void
+    {
+        config(['security.webhook_invalid_per_minute' => 3]);
+        $ip = $this->ip();
 
         for ($i = 0; $i < 3; $i++) {
-            $this->postJson('/webhooks/waha', [])->assertUnauthorized();
+            $this->unsigned($ip)->assertUnauthorized();
         }
 
-        $this->postJson('/webhooks/waha', [])->assertStatus(429);
+        $this->unsigned($ip)->assertStatus(429);
     }
 
-    public function test_presence_update_tem_limite_proprio_e_nao_gasta_o_das_mensagens(): void
+    public function test_invalidas_de_um_ip_nao_gastam_o_teto_de_outro(): void
     {
-        config(['security.webhook_per_minute' => 2, 'security.presence_per_minute' => 5]);
+        config(['security.webhook_invalid_per_minute' => 1]);
 
-        for ($i = 0; $i < 5; $i++) {
-            $this->postJson('/webhooks/waha', ['event' => 'presence.update'])->assertUnauthorized();
-        }
-
-        $this->postJson('/webhooks/waha', ['event' => 'presence.update'])->assertStatus(429);
-        $this->postJson('/webhooks/waha', ['event' => 'message'])->assertUnauthorized();
+        $this->unsigned($this->ip())->assertUnauthorized();
+        $this->unsigned($this->ip())->assertUnauthorized();
     }
 
-    public function test_o_teto_do_webhook_e_por_ip_e_nao_global(): void
+    public function test_valida_nao_gasta_o_teto_das_invalidas(): void
     {
-        config(['security.webhook_per_minute' => 1]);
+        Queue::fake();
+        config(['security.webhook_invalid_per_minute' => 2]);
+        $ip = $this->ip();
 
-        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.1'])->postJson('/webhooks/waha', [])->assertUnauthorized();
-        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])->postJson('/webhooks/waha', [])->assertUnauthorized();
+        $this->unsigned($ip)->assertUnauthorized();
+        $this->unsigned($ip)->assertUnauthorized();
+        $this->signed($ip, ['id' => 'evt_depois_das_invalidas', 'event' => 'session.status', 'session' => 'main'])->assertOk();
+        $this->unsigned($ip)->assertStatus(429);
     }
 
     public function test_envio_de_mensagem_tem_teto_por_usuario_e_o_excedente_nao_vai_para_a_fila(): void

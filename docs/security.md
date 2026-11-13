@@ -56,10 +56,12 @@ limite de tentativas do login. A lista é literal porque a configuração ainda 
 | Alvo | Limite | Onde |
 |---|---|---|
 | Login | 5 por minuto por e-mail e IP, e 20 por hora por e-mail de qualquer IP (`SECURITY_LOGIN_PER_HOUR`) | `FortifyServiceProvider`, `config/security.php` |
-| Webhook do WAHA | 300 por minuto por IP | `AppServiceProvider`, `config/security.php` |
+| Webhook do WAHA | 60 por minuto por IP, **só para assinatura inválida**; assinatura válida nunca é limitada | `AppServiceProvider`, `WebhookSignature`, `config/security.php` |
 | Envio de mensagem pelo painel | 30 por minuto por usuário | `Inbox::send`, `config/security.php` |
 
-Todo o tráfego do WAHA chega do mesmo IP interno, então o teto do webhook é um freio contra inundação. O envio conta
+Todo o tráfego do WAHA chega do mesmo IP interno e vem em rajada (importação, recuperação, presença): um teto por IP dava
+429 em evento legítimo, então o webhook só limita a assinatura inválida (o HMAC válido nunca recebe 429; custo: um WAHA
+descontrolado não tem freio, a fila absorve). O envio conta
 só mensagens: o indicador "digitando" e a gravação de áudio, quando existirem, terão limite próprio e mais folgado
 (ver `docs/superpowers/notes/2026-10-28-waha-presenca-e-midia.md`).
 
