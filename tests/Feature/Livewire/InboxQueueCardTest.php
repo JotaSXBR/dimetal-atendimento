@@ -80,6 +80,61 @@ class InboxQueueCardTest extends TestCase
         $this->assertStringNotContainsString('Souza', $assignee);
     }
 
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_atendente_fica_na_coluna_da_direita_entre_o_setor_e_as_nao_lidas(): void
+    {
+        $vendas = Sector::factory()->create(['name' => 'Vendas']);
+        Sector::factory()->create(['name' => 'Suporte']);
+        $ticket = $this->ticket(['sector_id' => $vendas->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id]);
+        Message::factory()->for($ticket)->create(['direction' => MessageDirection::IN, 'sent_at' => now()->subMinutes(3)]);
+
+        $html = $this->html();
+
+        $positions = array_map(fn (string $testid): int|false => strpos($html, 'data-testid="'.$testid.'"'), ['card-time', 'card-sector', 'card-assignee-name', 'card-unread']);
+        $this->assertNotContains(false, $positions);
+        $sorted = $positions;
+        sort($sorted);
+        $this->assertSame($sorted, $positions, 'a coluna da direita vai de hora, setor, atendente a não lidas');
+        $this->assertStringNotContainsString('data-testid="card-meta"', $html, 'com um só canal a linha de baixo some');
+    }
+
+    public function test_com_dois_canais_a_linha_de_baixo_tem_so_o_canal(): void
+    {
+        Channel::factory()->create(['name' => 'Segundo Canal', 'waha_session' => 'segundo']);
+        $this->ticket(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id]);
+
+        $xpath = $this->xpath($this->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-testid="card-meta"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-testid="card-meta"]//*[@data-testid="card-assignee-name"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@data-testid="card-assignee-name"]')->length);
+    }
+
+    public function test_atendente_mostra_so_o_primeiro_nome_truncado_e_o_nome_completo_no_title(): void
+    {
+        $this->ticket(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza Albuquerque'])->id]);
+
+        $node = $this->xpath($this->html())->query('//*[@data-testid="card-assignee-name"]')->item(0);
+
+        $this->assertSame('Marina', trim((string) $node?->textContent));
+        $this->assertSame('Marina Souza Albuquerque', $node?->getAttribute('title'));
+        $this->assertStringContainsString('truncate', (string) $node?->getAttribute('class'));
+    }
+
+    public function test_ticket_sem_atendente_nao_tem_o_atendente_na_coluna(): void
+    {
+        $this->ticket();
+
+        $this->assertStringNotContainsString('data-testid="card-assignee-name"', $this->html());
+    }
+
     public function test_sem_atendente_etiqueta_nem_espera_nao_tem_linha_3(): void
     {
         $this->ticket();
