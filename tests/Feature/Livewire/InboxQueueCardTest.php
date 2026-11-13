@@ -128,6 +128,24 @@ class InboxQueueCardTest extends TestCase
         $this->assertStringContainsString('truncate', (string) $node?->getAttribute('class'));
     }
 
+    public function test_nome_com_espaco_no_comeco_ainda_mostra_o_primeiro_nome(): void
+    {
+        $this->ticket(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => ' Marina Souza'])->id]);
+
+        $node = $this->xpath($this->html())->query('//*[@data-testid="card-assignee-name"]')->item(0);
+
+        $this->assertSame('Marina', trim((string) $node?->textContent));
+    }
+
+    public function test_leitor_de_tela_ouve_que_o_nome_e_do_atendente(): void
+    {
+        $this->ticket(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id]);
+
+        $label = $this->xpath($this->html())->query('//*[@data-testid="card-assignee-name"]/preceding-sibling::*[contains(@class, "sr-only")]')->item(0);
+
+        $this->assertSame('Atendente:', trim((string) $label?->textContent));
+    }
+
     public function test_ticket_sem_atendente_nao_tem_o_atendente_na_coluna(): void
     {
         $this->ticket();
@@ -269,9 +287,7 @@ class InboxQueueCardTest extends TestCase
         $ticket = $this->ticket();
         $this->conversationTags($ticket, 8);
 
-        $dom = new \DOMDocument;
-        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->html(), LIBXML_NOERROR | LIBXML_NOWARNING);
-        $xpath = new \DOMXPath($dom);
+        $xpath = $this->xpath($this->html());
 
         $this->assertSame('', $xpath->query('//*[@data-testid="card-tags-more"]')->item(0)?->getAttribute('title'));
         $this->assertSame('Gama, Hotel', $xpath->query('//*[@data-testid="card-tags-more"]/*[@aria-hidden="true"]')->item(0)?->getAttribute('title'));

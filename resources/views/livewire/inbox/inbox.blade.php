@@ -160,7 +160,8 @@
                                 @if ($item->assignee)
                                     <span class="inline-flex max-w-24 items-center gap-1 text-[10px] text-ink-2">
                                         <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
-                                        <span data-testid="card-assignee-name" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ \Illuminate\Support\Str::before($item->assignee->name, ' ') }}</span>
+                                        <span class="sr-only">Atendente:</span>
+                                        <span data-testid="card-assignee-name" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ \Illuminate\Support\Str::before(trim($item->assignee->name), ' ') }}</span>
                                     </span>
                                 @endif
                                 @if ($unread > 0)
