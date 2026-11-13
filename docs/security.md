@@ -77,6 +77,28 @@ vídeo, PDF); o resto baixa como `application/octet-stream` com `Content-Disposi
   (decisão do dono, 28/10/2026). Recomendação para antes de subir a produção: exigir de admin e supervisor.
 - **Enforce da CSP**: depende do teste do build compatível com CSP descrito acima.
 
+## Variáveis de produção
+
+Conferir no Coolify antes de subir a produção (o beta é ambiente de desenvolvimento e segue com `LOG_LEVEL=debug`):
+
+| Variável | Valor | Por quê |
+|---|---|---|
+| `BACKUP_RESTORE_UPLOAD` | `false` | o `pg_restore` executa o arquivo enviado; só restaura backups do próprio bucket |
+| `LOG_CHANNEL` / `LOG_LEVEL` | `stderr` / `warning` | o Coolify coleta o log do container; `debug` grava texto de cliente |
+| `APP_DEBUG` | `false` | |
+| `SESSION_SECURE_COOKIE` | `true` | não depende de o proxy repassar o protocolo |
+| `APP_MAINTENANCE_DRIVER` / `APP_MAINTENANCE_STORE` | `cache` / `redis` | app, worker e scheduler compartilham o modo de manutenção da restauração |
+
+## Retenção dos dados guardados
+
+| Dado | Prazo | Rotina |
+|---|---|---|
+| Evento bruto do webhook (`waha_events`, com o texto e os telefones do payload) | 7 dias | `app:purge-waha-events`, 03:50 |
+| Anexos (arquivo; o texto e os eventos ficam) | 90 dias | `app:purge-media`, 03:30 |
+| Alertas do sino | 7 dias | `app:purge-notifications`, 03:45 |
+
+O texto das mensagens e os tickets não têm prazo: decisão de LGPD ainda em aberto.
+
 ## Varreduras automáticas
 
 Rodam fora do workflow `tests` de propósito: o `deploy-beta` depende do `tests`, e uma varredura instável não pode travar o
