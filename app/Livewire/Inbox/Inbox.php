@@ -11,6 +11,7 @@ use App\Enums\ClosedReason;
 use App\Enums\CloseOutcome;
 use App\Enums\SectorStatus;
 use App\Enums\TicketStatus;
+use App\Actions\Inbox\MarkTicketSeenByAgent;
 use App\Jobs\MarkTicketSeenJob;
 use App\Livewire\Inbox\Concerns\ActsOnMessages;
 use App\Livewire\Inbox\Concerns\ComposesMessages;
@@ -107,6 +108,7 @@ class Inbox extends Component
 
         if ($ticket->status !== TicketStatus::ENCERRADO) {
             MarkTicketSeenJob::dispatch($ticket->id);
+            app(MarkTicketSeenByAgent::class)($ticket, $this->user());
         }
 
         if ($this->ticketId !== $ticketId) {

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ClosedReason;
+use App\Enums\MessageDirection;
 use App\Enums\CloseOutcome;
 use App\Enums\TicketStatus;
 use App\Services\Inbox\TicketProtocol;
@@ -93,6 +94,20 @@ class Ticket extends Model
             'closed_reason' => ClosedReason::class,
             'close_outcome' => CloseOutcome::class,
         ];
+    }
+
+    /**
+     * Soma `unread` à lista: as mensagens do cliente depois do último visto do atendente (todas, se ainda não houve visto).
+     *
+     * @param  Builder<Ticket>  $query
+     */
+    public function scopeWithUnread(Builder $query): void
+    {
+        $query->addSelect(['unread' => Message::query()
+            ->selectRaw('count(*)')
+            ->whereColumn('messages.ticket_id', 'tickets.id')
+            ->where('messages.direction', MessageDirection::IN->value)
+            ->whereRaw('(tickets.agent_seen_at is null or messages.sent_at > tickets.agent_seen_at)')]);
     }
 
     /**
