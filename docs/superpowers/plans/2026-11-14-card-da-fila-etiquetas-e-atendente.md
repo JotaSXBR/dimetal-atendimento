@@ -60,3 +60,18 @@
 - [ ] **Step 3: Implementar.** Tirar o bloco do atendente do `card-meta` e pô-lo na coluna da direita, depois do setor e antes das não lidas: `<span class="inline-flex max-w-24 items-center gap-1 text-[10px] text-ink-2">` com `<x-avatar ... size="xs" decorative />` e `<span data-testid="card-assignee-name" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ Str::before(...) }}</span>`. `$hasMeta = $showChannel;`.
 - [ ] **Step 4: Rodar e ver passar**, mais `tests/Feature/Livewire/InboxTest.php tests/Feature/Livewire/InboxChannelBadgeTest.php tests/Feature/Layout`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat: atendente do card da Fila na coluna da direita`.
+
+### Task 3: A hora não herda o `pre-wrap` do texto (adendo)
+
+**Files:** `resources/views/livewire/inbox/message-time.blade.php`; teste em `tests/Feature/Livewire/InboxMediaTest.php`.
+
+- [ ] Teste `test_a_hora_nao_herda_o_pre_wrap_do_texto_em_nenhum_modo` (classe `whitespace-nowrap` no trecho da hora em texto, foto e áudio): RED, depois `whitespace-nowrap` na lista base de classes. Commit `fix: hora e tiques da bolha sem herdar o pre-wrap do texto`.
+
+### Task 4: Áudio em duas linhas, com a velocidade depois da onda (adendo)
+
+**Files:** `resources/views/livewire/inbox/audio-player.blade.php`, `message-time.blade.php`, `media.blade.php`, `transcript.blade.php`; testes em `tests/Feature/Livewire/AudioPlayerLayoutTest.php` e `InboxMediaTest.php`.
+
+**Interfaces:** `$timeMode = 'audio'` (transcript) quando a mensagem é mídia de áudio com arquivo e sem legenda; `message-time` ganha o modo `audio` (`absolute end-0 bottom-0 inline-flex text-ink-2`); o player vira `grid-cols-[auto_minmax(0,1fr)_auto]` com o botão de velocidade em `row-start-1 col-start-3`.
+
+- [ ] Testes que falham: `AudioPlayerLayoutTest` (3 colunas; a velocidade fica na linha 1, coluna 3, depois da onda e fora de `audio-meta`; `audio-meta` só com a duração); `InboxMediaTest` (áudio tem `data-time-mode="audio"` e documento segue `below`; a hora do áudio existe uma vez, dentro de `audio-bubble`).
+- [ ] Implementar e rodar `InboxMediaTest`, `AudioPlayerLayoutTest`, `InboxTest`, `tests/Feature/History`. Commit `feat: áudio em duas linhas com a velocidade depois da onda e a hora na linha da duração`.

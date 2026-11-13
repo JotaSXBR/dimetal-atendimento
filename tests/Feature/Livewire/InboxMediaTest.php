@@ -51,6 +51,32 @@ class InboxMediaTest extends TestCase
         return $m[1];
     }
 
+    /** @return list<string> As classes do trecho da hora, uma por bolha. */
+    private function timeClasses(array $attributes): array
+    {
+        preg_match_all('/<span data-testid="message-time"[^>]*class="([^"]*)"/', $this->screen($attributes)->html(), $m);
+
+        return $m[1];
+    }
+
+    /**
+     * No modo `inline` a hora vive dentro de um `<p class="whitespace-pre-wrap">`: sem `whitespace-nowrap` ela herda o `pre-wrap` e as
+     * quebras de linha e os recuos do Blade viram espaço de verdade (a hora sobe, os tiques ficam no meio e aparece um vão entre os dois).
+     */
+    public function test_a_hora_nao_herda_o_pre_wrap_do_texto_em_nenhum_modo(): void
+    {
+        foreach ([
+            ['type' => 'text', 'body' => 'Olá', 'direction' => MessageDirection::OUT],
+            ['media_ref' => 'a.jpg', 'media_mime' => 'image/jpeg'],
+            ['media_ref' => 'a.ogg', 'media_mime' => 'audio/ogg'],
+        ] as $attributes) {
+            $classes = $this->timeClasses($attributes);
+
+            $this->assertNotSame([], $classes);
+            $this->assertStringContainsString('whitespace-nowrap', $classes[array_key_last($classes)]);
+        }
+    }
+
     public function test_texto_tem_hora_inline(): void
     {
         $this->assertSame(['inline'], $this->timeModes(['type' => 'text', 'body' => 'Olá']));

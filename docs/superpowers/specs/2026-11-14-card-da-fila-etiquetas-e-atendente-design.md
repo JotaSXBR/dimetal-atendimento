@@ -36,3 +36,11 @@ Mudar a ordem das etiquetas, o tamanho do chip, a Fila em outras telas (`x-conta
 ## O que fica para o construtor
 
 Nomes de testes e o ajuste fino das classes de largura.
+
+## Adendo (14/11/2026, pedido do dono durante a execução): hora e áudio nas bolhas
+
+O dono salvou um print (`Captura de tela 2026-11-13 165346.png`) com a hora, os ticks e o áudio desalinhados nas bolhas.
+
+- **Causa (medida no navegador, beta):** no modo `inline` o `message-time.blade.php` fica dentro de `<p class="whitespace-pre-wrap">`; o trecho da hora herda o `pre-wrap` e as quebras de linha e os recuos do arquivo viram espaço de verdade: o trecho passa de ~14 px para 29 px de altura, a hora sobe, os ticks ficam no meio e abre um vão entre os dois. Correção: `whitespace-nowrap` no trecho da hora.
+- **Áudio (escolha do dono):** duas linhas, no estilo do WhatsApp. Linha 1: play, onda e, **depois da onda**, o botão de velocidade (`1×`). Linha 2: a duração à esquerda e a hora com os ticks à direita, na mesma altura. A hora do áudio passa a ficar dentro do invólucro do player (`data-testid="audio-bubble"`, `relative`) em novo modo `audio` (`absolute end-0 bottom-0`), e não mais numa terceira linha. Fica fora do `wire:ignore` do player, então os ticks continuam atualizando ao vivo.
+- **Decisão minha:** a hora entra pelo `media.blade.php` (como já é o modo `overlay` da foto), e o modo `below` fica só para documento. Custo se errado: nenhum além do nome do modo.
