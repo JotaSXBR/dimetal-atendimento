@@ -23,6 +23,8 @@ Schedule::command('app:check-backup-health')->hourly()->withoutOverlapping(10);
 Schedule::command('app:purge-old-databases')->dailyAt('03:00')->timezone(config()->string('app.display_timezone'))->withoutOverlapping(10);
 Schedule::command('app:purge-media')->dailyAt('03:30')->withoutOverlapping(10);
 Schedule::command('app:purge-notifications')->dailyAt('03:45')->withoutOverlapping(10);
+// O envelope bruto de cada webhook (texto e telefones) não fica para sempre: 7 dias bastam para reprocessar um evento que falhou.
+Schedule::command('app:purge-waha-events')->dailyAt('03:50')->withoutOverlapping(10);
 Schedule::command('app:recover-messages')->dailyAt('04:15')->withoutOverlapping(10);
 
 // Setores padrão de uma instalação nova: o `migrate` roda no start do app (AUTORUN) e não há gancho de deploy próprio, então o
