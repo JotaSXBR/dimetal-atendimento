@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire;
 
 use App\Enums\UserRole;
 use App\Livewire\Settings\Backups;
+use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\Backup\ManualBackupState;
 use App\Services\Backup\Restore\RestoreProgress;
@@ -164,5 +165,19 @@ class BackupsPageTest extends TestCase
 
         Queue::assertNothingPushed();
         $this->assertFalse((new ManualBackupState)->isRunning());
+        $this->assertSame(0, AuditLog::query()->count());
+    }
+
+    public function test_fazer_agora_grava_a_auditoria_so_quando_enfileira(): void
+    {
+        Queue::fake();
+        $admin = $this->admin();
+
+        $page = Livewire::actingAs($admin)->test(Backups::class)->call('runNow');
+        $page->call('runNow')->assertSee('Já há um backup em andamento');
+
+        $log = AuditLog::query()->sole();
+        $this->assertSame('backup.manual_requested', $log->action);
+        $this->assertSame($admin->id, $log->actor_user_id);
     }
 }

@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Settings;
 
+use App\Enums\AuditAction;
 use App\Jobs\RestoreDatabaseJob;
+use App\Services\Audit\Auditor;
 use App\Services\Backup\BackupCatalog;
 use App\Services\Backup\BackupFile;
 use App\Services\Backup\ManualBackupState;
@@ -78,6 +80,7 @@ class Backups extends Component
 
         // Fila `history`: o worker dela aguenta até 900 s; na `default` (120 s) um dump longo mataria o worker e as outras filas.
         Artisan::queue('app:backup-database', ['--manual' => true])->onQueue('history');
+        Auditor::record(AuditAction::BackupManualRequested, Auth::user());
     }
 
     /** Abre a conferência de um backup da lista. */
@@ -253,6 +256,10 @@ class Backups extends Component
         // O andamento já aparece na página de acompanhamento antes de o worker pegar o job.
         app(RestoreProgress::class)->begin($title, $steps);
         RestoreDatabaseJob::dispatch($request);
+
+        // O pedido fica no banco de agora; o resultado (`RestoreDatabase::log`) fica no banco que estiver ativo depois da troca.
+        $name = $this->info['name'] ?? $request->source;
+        Auditor::record($request->mode === 'switch' ? AuditAction::RestoreSwitched : AuditAction::RestoreRequested, Auth::user(), $name);
 
         $this->redirect(route('restauracao'));
     }

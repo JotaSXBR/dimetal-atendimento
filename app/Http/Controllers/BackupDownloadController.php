@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AuditAction;
+use App\Services\Audit\Auditor;
 use App\Services\Backup\BackupCatalog;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -17,6 +19,7 @@ class BackupDownloadController extends Controller
         abort_if($file === null || $stream === null, 404);
 
         Log::notice('Backup baixado', ['user_id' => auth()->id(), 'file' => $file->name]);
+        Auditor::record(AuditAction::BackupDownloaded, auth()->user(), $file->name);
 
         return response()->streamDownload(function () use ($stream): void {
             fpassthru($stream);
