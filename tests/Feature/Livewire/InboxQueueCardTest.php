@@ -116,6 +116,17 @@ class InboxQueueCardTest extends TestCase
         $this->assertStringContainsString('bg-[var(--tag-line)]/15', $this->part($html, 'card-chip-ticket', true));
     }
 
+    /** `opacity-70` no número da aba dava 3,4:1 sobre o fundo do seletor; o número usa a cor de texto, sem opacidade. */
+    public function test_contador_das_abas_nao_usa_opacidade_no_texto(): void
+    {
+        $this->ticket(['status' => TicketStatus::AGUARDANDO]);
+
+        $html = $this->html();
+
+        $this->assertStringContainsString('data-testid="tab-aguardando"', $html);
+        $this->assertStringNotContainsString('font-mono opacity-70', $html);
+    }
+
     public function test_icone_do_canal_aparece_sobre_o_avatar(): void
     {
         $this->ticket();

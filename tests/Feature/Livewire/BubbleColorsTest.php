@@ -84,6 +84,16 @@ class BubbleColorsTest extends TestCase
         $this->assertStringContainsString('Nota interna', $html);
     }
 
+    /** O horário dentro de uma bolha tingida (nossa, bot) precisa de 4,5:1: `ink-3` não chega, `ink-2` sim (medido no navegador). */
+    public function test_horario_da_bolha_usa_ink_2_e_nao_ink_3(): void
+    {
+        $this->message(MessageDirection::OUT, MessageOrigin::BOT, 'Mensagem com horário');
+        $html = $this->html($this->ticket->messages()->firstOrFail());
+
+        $this->assertMatchesRegularExpression('/data-testid="message-time"[^>]*class="[^"]*text-ink-2/', $html);
+        $this->assertDoesNotMatchRegularExpression('/data-testid="message-time"[^>]*class="[^"]*text-ink-3/', $html);
+    }
+
     public function test_enviada_pelo_celular_e_tracejada_e_neutra_sem_ambar(): void
     {
         $this->message(MessageDirection::OUT, MessageOrigin::FORA_DO_PAINEL, 'Mandei pelo celular');

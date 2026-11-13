@@ -2,8 +2,8 @@
      quando não cabe; `overlay`: sobre foto/vídeo sem legenda; `below`: na base da bolha (áudio, documento, localização). --}}
 <span data-testid="message-time" data-time-mode="{{ $mode }}" @class([
     'items-center gap-1 font-mono text-[10px]',
-    'float-right ms-3 mt-2 inline-flex text-ink-3' => $mode === 'inline',
-    'mt-1 flex justify-end text-ink-3' => $mode === 'below',
+    'float-right ms-3 mt-2 inline-flex text-ink-2' => $mode === 'inline',
+    'mt-1 flex justify-end text-ink-2' => $mode === 'below',
     'pointer-events-none absolute end-1.5 bottom-1.5 inline-flex rounded bg-black/55 px-1.5 py-0.5 text-white' => $mode === 'overlay',
 ])>
     @if ($message->edited_at)

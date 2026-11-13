@@ -26,8 +26,8 @@
             <div class="mt-3 flex items-center gap-2">
                 <flux:radio.group wire:model.live="tab" variant="segmented" size="sm" class="min-w-0 flex-1" aria-label="Visão da fila">
                     <flux:radio value="todos" data-testid="tab-todos" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Todos</flux:radio>
-                    <flux:radio value="aguardando" data-testid="tab-aguardando" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Aguardando @if (! empty($tabCounts['aguardando']))<span class="font-mono opacity-70">{{ $tabCounts['aguardando'] }}</span>@endif</flux:radio>
-                    <flux:radio value="meus" data-testid="tab-meus" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Meus @if (! empty($tabCounts['meus']))<span class="font-mono opacity-70">{{ $tabCounts['meus'] }}</span>@endif</flux:radio>
+                    <flux:radio value="aguardando" data-testid="tab-aguardando" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Aguardando @if (! empty($tabCounts['aguardando']))<span class="font-mono text-ink-2">{{ $tabCounts['aguardando'] }}</span>@endif</flux:radio>
+                    <flux:radio value="meus" data-testid="tab-meus" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Meus @if (! empty($tabCounts['meus']))<span class="font-mono text-ink-2">{{ $tabCounts['meus'] }}</span>@endif</flux:radio>
                 </flux:radio.group>
 
                 <flux:dropdown position="bottom" align="end">
