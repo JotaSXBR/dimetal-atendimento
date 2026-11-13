@@ -3,7 +3,7 @@
 //   - estado: a faixa visível na página (`[data-alert=…]`) liga e desliga o som repetido, então quem abre a tela no meio
 //     de uma queda também ouve, e a repetição para sozinha quando a faixa some;
 //   - evento: mensagem, fila, atribuição e SLA chegam pelo canal privado do usuário e tocam uma vez.
-import { MAX_REPEATS, repeatMs, soundFor, wantsBalloon } from './alerts-rules';
+import { MAX_REPEATS, audioStripHidden, openAudio, repeatMs, soundFor, wantsBalloon } from './alerts-rules';
 
 const DEFAULTS = { sound: {}, volume: 70, repeat: true, desktop_notifications: false, mute_critical_until: null };
 
@@ -26,7 +26,9 @@ function parse(raw) {
 
 function start(id) {
     let settings = parse(meta('alert-settings'));
-    let audio = null;
+    const AudioClass = window.AudioContext || window.webkitAudioContext;
+    // Aberto já aqui: o estado dele diz se o navegador libera o som; a faixa acompanha as mudanças (`statechange`).
+    let audio = openAudio(AudioClass);
     let leader = false;
     let offline = false;
     const loops = new Map();
@@ -37,8 +39,7 @@ function start(id) {
         return value ? Number(value) : null;
     };
 
-    const context = () => (audio ??= new (window.AudioContext || window.webkitAudioContext)());
-    const anySound = () => Object.values(settings.sound ?? {}).some(Boolean);
+    const context = () => (audio ??= new AudioClass());
 
     function play(kind, ignoreLeader = false) {
         const ctx = context();
@@ -145,7 +146,7 @@ function start(id) {
         }
 
         if (strip) {
-            strip.hidden = !anySound() || (audio !== null && audio.state === 'running');
+            strip.hidden = audioStripHidden(settings, audio);
         }
     }
 
@@ -249,6 +250,10 @@ function start(id) {
             Livewire.dispatch('realtime-reconnected');
         }
     });
+
+    audio?.addEventListener('statechange', render);
+    // Se o navegador já libera o som (permissão do site), isto o ativa sem clique; senão fica suspenso e a faixa pede o clique.
+    audio?.resume().catch(() => {});
 
     sync();
 }

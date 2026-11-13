@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GRAVE_REPEAT_MS, CRITICAL_REPEAT_MS, MAX_REPEATS, isMuted, repeatMs, soundFor, wantsBalloon } from '../../resources/js/alerts-rules.js';
+import { GRAVE_REPEAT_MS, CRITICAL_REPEAT_MS, MAX_REPEATS, audioStripHidden, isMuted, openAudio, repeatMs, soundFor, wantsBalloon } from '../../resources/js/alerts-rules.js';
 
 const base = () => ({
     sound: { message: true, queue: true, assigned: true, sla: true },
@@ -73,4 +73,25 @@ test('alerta de backup não toca, não repete e não vira balão', () => {
     assert.equal(soundFor('backup', base()), null);
     assert.equal(repeatMs('backup', base()), null);
     assert.equal(wantsBalloon('backup', { ...base(), desktop_notifications: true }, 'granted'), false);
+});
+
+test('o áudio é aberto já no carregamento, para o navegador dizer se o som está liberado', () => {
+    class Liberado {
+        constructor() {
+            this.state = 'running';
+        }
+    }
+
+    assert.equal(openAudio(Liberado)?.state, 'running');
+    assert.equal(openAudio(undefined), null);
+    assert.equal(openAudio(class { constructor() { throw new Error('bloqueado'); } }), null);
+});
+
+test('a faixa de som só aparece quando há som configurado e o navegador ainda não o liberou', () => {
+    const comSom = { sound: { message: true } };
+
+    assert.equal(audioStripHidden(comSom, { state: 'running' }), true);
+    assert.equal(audioStripHidden(comSom, { state: 'suspended' }), false);
+    assert.equal(audioStripHidden(comSom, null), false);
+    assert.equal(audioStripHidden({ sound: { message: false } }, null), true);
 });

@@ -54,3 +54,21 @@ export function wantsBalloon(kind, settings, permission) {
 
     return kind === 'connection_down' || (kind === 'sla_breached' && Boolean(settings.sound?.sla));
 }
+
+/**
+ * Abre o contexto de áudio já no carregamento da página (criar não exige gesto): é ele quem diz se o navegador deixa tocar
+ * (`running`) ou ainda bloqueia (`suspended`). Sem isso a faixa "Som desligado" aparecia a cada refresh, antes de alguém perguntar.
+ * `null` quando não há Web Audio ou o navegador recusa criar.
+ */
+export function openAudio(AudioContextClass) {
+    try {
+        return AudioContextClass ? new AudioContextClass() : null;
+    } catch {
+        return null;
+    }
+}
+
+/** A faixa "Som desligado neste navegador" some se nada está configurado para tocar ou se o áudio já está liberado. */
+export function audioStripHidden(settings, audio) {
+    return !Object.values(settings.sound ?? {}).some(Boolean) || audio?.state === 'running';
+}
