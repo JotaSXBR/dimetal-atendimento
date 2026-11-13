@@ -12,7 +12,7 @@
                 </span>
             @endforeach
             @if (! $readonly && $availableTags->isNotEmpty())
-                <flux:select size="sm" wire:model.live="addTagId" class="max-w-40" aria-label="Adicionar etiqueta ao contato">
+                <flux:select size="sm" wire:model.live="addTagId" class="w-full" aria-label="Adicionar etiqueta ao contato">
                     <flux:select.option value="">Adicionar etiqueta…</flux:select.option>
                     @foreach ($availableTags as $tag)
                         <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
