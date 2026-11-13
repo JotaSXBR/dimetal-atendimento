@@ -26,6 +26,17 @@
             <flux:input icon="magnifying-glass" aria-label="Buscar contatos" placeholder="Buscar por nome, telefone, e-mail ou empresa" wire:model.live.debounce.300ms="search" clearable />
         </div>
 
+        @if ($tags->isNotEmpty())
+            <div class="mt-3">
+                <flux:select wire:model.live="tagId" size="sm" aria-label="Filtrar por etiqueta">
+                    <flux:select.option value="">Todas as etiquetas</flux:select.option>
+                    @foreach ($tags as $tag)
+                        <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+        @endif
+
         <x-skeleton-rows :rows="4" wire:loading.delay wire:target="search" class="mt-4 rounded-[14px] border border-line bg-surface" />
 
         <ul wire:loading.remove.delay wire:target="search" class="mt-4 divide-y divide-line rounded-[14px] border border-line bg-surface">
@@ -38,6 +49,7 @@
                             <span class="block truncate text-xs text-ink-3">
                                 {{ $contact->phoneLabel() }}@if ($contact->company) · {{ $contact->company }}@endif
                             </span>
+                            <x-contact-chips :contact="$contact" testid="contact-chip" class="mt-1" />
                         </span>
                     </button>
                     @include('livewire.contacts.chat-button', ['contact' => $contact])

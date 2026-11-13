@@ -120,6 +120,36 @@ class LiveEffectsTest extends TestCase
         Sleep::assertSleptTimes(1);
     }
 
+    public function test_tag_grava_no_contato_ou_no_ticket_conforme_o_escopo(): void
+    {
+        $contactTag = Tag::factory()->contato()->create();
+        $ticketTag = Tag::factory()->create();
+        $before = $this->contact->fresh();
+
+        $this->fx->tag($contactTag);
+        $this->fx->tag($ticketTag);
+        $this->fx->tag($contactTag);
+
+        $this->assertSame([$contactTag->id], $this->contact->tags()->pluck('tags.id')->all());
+        $this->assertSame([$ticketTag->id], $this->ticket->tags()->pluck('tags.id')->all());
+        $this->assertEquals($before?->updated_at, $this->contact->fresh()?->updated_at);
+    }
+
+    public function test_has_tag_olha_onde_o_escopo_manda(): void
+    {
+        $contactTag = Tag::factory()->contato()->create();
+        $ticketTag = Tag::factory()->create();
+
+        $this->assertFalse($this->fx->hasTag($contactTag));
+        $this->assertFalse($this->fx->hasTag($ticketTag));
+
+        $this->contact->tags()->attach($contactTag);
+        $this->ticket->tags()->attach($ticketTag);
+
+        $this->assertTrue($this->fx->hasTag($contactTag));
+        $this->assertTrue($this->fx->hasTag($ticketTag));
+    }
+
     public function test_is_open_contact_name_returning_protocol(): void
     {
         $this->assertTrue($this->fx->isOpen(), 'sem horário cadastrado, está aberto');

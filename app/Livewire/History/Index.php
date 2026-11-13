@@ -90,12 +90,12 @@ class Index extends Component
 
         $tickets = (new HistorySearch)
             ->query($user, $this->q, $this->from ?: null, $this->to ?: null, $this->sectorId, $this->userId, $this->outcome ?: null, $this->contactId)
-            ->with(['contact', 'sector', 'assignee'])
+            ->with(['contact.tags', 'sector', 'assignee'])
             ->simplePaginate(self::PER_PAGE);
 
         $ticket = $this->ticketId === null
             ? null
-            : Ticket::query()->inHistoryOf($user)->with(['contact', 'channel', 'assignee', 'sector'])->find($this->ticketId);
+            : Ticket::query()->inHistoryOf($user)->with(['contact.tags', 'channel', 'assignee', 'sector'])->find($this->ticketId);
 
         $messages = collect();
         $hasMore = false;

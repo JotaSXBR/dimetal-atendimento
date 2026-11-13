@@ -34,6 +34,9 @@ class MergeLidContact
 
         $this->mergeProfile($phone, $lid);
 
+        // Antes de apagar o lid (o pivô cai junto): as etiquetas do contato dos dois registros ficam no telefone.
+        $phone->tags()->syncWithoutDetaching($lid->tags()->pluck('tags.id')->all());
+
         // Antes de o telefone ser salvo: o `google_resource_name` é único.
         $lid->delete();
     }

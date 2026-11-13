@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire;
 
 use App\Enums\UserRole;
 use App\Livewire\Automation\Editor;
+use App\Models\Tag;
 use App\Models\User;
 use App\Models\Workflow;
 use App\Services\Bot\DefaultWorkflow;
@@ -45,6 +46,17 @@ class AutomationEditorTest extends TestCase
 
         $this->assertStringContainsString($this->user->name, html_entity_decode($html));
         $this->assertStringNotContainsString($inactive->name, html_entity_decode($html));
+    }
+
+    public function test_editor_entrega_as_etiquetas_com_o_escopo(): void
+    {
+        Tag::factory()->contato()->create(['name' => 'Revenda']);
+        Tag::factory()->create(['name' => 'Orçamento']);
+
+        $html = html_entity_decode(Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html());
+
+        $this->assertStringContainsString('"name":"Revenda","scope":"contato"', $html);
+        $this->assertStringContainsString('"name":"Orçamento","scope":"conversa"', str_replace('ç', 'ç', str_replace('ã', 'ã', $html)));
     }
 
     public function test_publicar_recusa_atribuir_a_pessoa_inativa(): void

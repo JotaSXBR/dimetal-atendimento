@@ -5,6 +5,12 @@ import { BLOCKS } from '../../resources/js/flow-editor/nodes.js';
 
 const lookups = { sectors: [{ id: 1, name: 'Vendas' }], tags: [{ id: 7, name: 'VIP' }] };
 
+test('a condição por etiqueta oferece o campo da etiqueta só nesse tipo', () => {
+    const fields = BLOCKS.condicao.fields;
+    assert.ok(fields[0].options.some(([value]) => value === 'etiqueta'));
+    assert.deepEqual(fields.find((f) => f.key === 'tag_id')?.when, { kind: 'etiqueta' });
+});
+
 test('todo bloco tem categoria e ícone existentes', () => {
     for (const [type, block] of Object.entries(BLOCKS)) {
         assert.ok(CATEGORIES[categoryOf(type)], type);
@@ -30,6 +36,8 @@ test('prévia: menus, condição, esperar, salvar, início e fim', () => {
     assert.deepEqual(previewOf('condicao', { kind: 'variavel', var: 'x', op: 'igual', valor: '1' }, lookups), ['x é igual a 1']);
     assert.deepEqual(previewOf('condicao', { kind: 'nome' }, lookups), ['O contato já tem nome?']);
     assert.deepEqual(previewOf('condicao', { kind: 'retorno' }, lookups), ['Já foi atendido antes?']);
+    assert.deepEqual(previewOf('condicao', { kind: 'etiqueta', tag_id: 7 }, lookups), ['Tem a etiqueta VIP?']);
+    assert.deepEqual(previewOf('condicao', { kind: 'etiqueta', tag_id: 99 }, lookups), ['Tem a etiqueta removida?']);
     assert.deepEqual(previewOf('nota', { texto: 'Pedido 10' }, lookups), ['Pedido 10']);
     assert.deepEqual(previewOf('esperar', { segundos: 4 }, lookups), ['Digitando por 4 s']);
     assert.deepEqual(previewOf('salvar_contato', { campo: 'name', variavel: 'resposta' }, lookups), ['name ← resposta']);

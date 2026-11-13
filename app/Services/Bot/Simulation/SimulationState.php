@@ -10,7 +10,7 @@ use App\Models\BotSession;
  *
  * @phpstan-type SessionShape array{node_id: ?string, vars: array<string, mixed>, attempts: int, waiting: ?string, state: string}
  * @phpstan-type LogShape list<array{kind: string, text: string}>
- * @phpstan-type StateShape array{name: string, clock: string, session: SessionShape, log: LogShape, trail: list<string>, outcome: ?string}
+ * @phpstan-type StateShape array{name: string, clock: string, session: SessionShape, log: LogShape, trail: list<string>, outcome: ?string, tags?: array<int, true>}
  */
 final class SimulationState
 {
@@ -30,6 +30,8 @@ final class SimulationState
         public array $log = [],
         public array $trail = [],
         public ?string $outcome = null,
+        /** @var array<int, true> as etiquetas "aplicadas" na conversa de teste (id → true) */
+        public array $tags = [],
     ) {}
 
     public function add(string $kind, string $text): void
@@ -57,12 +59,12 @@ final class SimulationState
     /** @return StateShape */
     public function toArray(): array
     {
-        return ['name' => $this->name, 'clock' => $this->clock, 'session' => $this->session, 'log' => $this->log, 'trail' => $this->trail, 'outcome' => $this->outcome];
+        return ['name' => $this->name, 'clock' => $this->clock, 'session' => $this->session, 'log' => $this->log, 'trail' => $this->trail, 'outcome' => $this->outcome, 'tags' => $this->tags];
     }
 
     /** @param  StateShape  $data */
     public static function fromArray(array $data): self
     {
-        return new self($data['name'], $data['clock'], $data['session'], $data['log'], $data['trail'], $data['outcome']);
+        return new self($data['name'], $data['clock'], $data['session'], $data['log'], $data['trail'], $data['outcome'], $data['tags'] ?? []);
     }
 }

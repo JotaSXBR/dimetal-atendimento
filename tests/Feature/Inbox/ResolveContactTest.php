@@ -7,6 +7,7 @@ use App\Enums\TicketStatus;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
@@ -25,6 +26,24 @@ class ResolveContactTest extends TestCase
     private function resolve(string $from, ?string $alt = null, ?string $name = null): Contact
     {
         return (new ResolveContact)($from, $alt, $name);
+    }
+
+    public function test_a_mesclagem_une_as_etiquetas_do_contato_sem_duplicar(): void
+    {
+        $shared = Tag::factory()->contato()->create();
+        $onlyLid = Tag::factory()->contato()->create();
+        $onlyPhone = Tag::factory()->contato()->create();
+        $phone = Contact::factory()->create(['wa_id' => '5516997524950@c.us']);
+        $lid = Contact::factory()->create(['wa_id' => null, 'lid' => self::LID]);
+        $phone->tags()->attach([$shared->id, $onlyPhone->id]);
+        $lid->tags()->attach([$shared->id, $onlyLid->id]);
+
+        $this->travel(5)->minutes();
+        $merged = $this->resolve(self::LID, '5516997524950:1@s.whatsapp.net');
+
+        $this->assertTrue($merged->is($phone));
+        $this->assertEqualsCanonicalizing([$shared->id, $onlyLid->id, $onlyPhone->id], $phone->tags()->pluck('tags.id')->all());
+        $this->assertSame(0, DB::table('contact_tag')->where('contact_id', $lid->id)->count());
     }
 
     public function test_lid_com_sender_alt_vira_telefone_sem_o_sufixo_do_dispositivo(): void

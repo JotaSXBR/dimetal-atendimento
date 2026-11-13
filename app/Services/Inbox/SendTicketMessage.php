@@ -2,6 +2,7 @@
 
 namespace App\Services\Inbox;
 
+use App\Actions\Inbox\MarkTicketSeenByAgent;
 use App\Enums\ChannelStatus;
 use App\Enums\DeliveryStatus;
 use App\Enums\MessageDirection;
@@ -74,6 +75,11 @@ class SendTicketMessage
         ]);
 
         MessageCreated::dispatch($message);
+
+        // Quem responde pelo painel viu a conversa: zera as não lidas (só se for o responsável).
+        if ($author !== null && $origin === MessageOrigin::PAINEL) {
+            app(MarkTicketSeenByAgent::class)($ticket, $author);
+        }
 
         return $message;
     }

@@ -26,7 +26,7 @@
         <p class="border-b border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger" role="alert">{{ $message }}</p>
     @enderror
 
-    <div x-show="errors.length > 0" x-cloak class="border-b border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="alert">
+    <div x-show="errors.length > 0" x-cloak class="border-b border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">
         <p class="font-semibold">Corrija antes de publicar:</p>
         <ul class="mt-1 list-disc ps-5">
             <template x-for="error in errors" x-bind:key="error">
@@ -107,7 +107,7 @@
                 <flux:button size="xs" x-on:click="testSilence()" x-bind:disabled="busy || !testWaiting()">Simular silêncio</flux:button>
             </div>
 
-            <div x-show="hasSimErrors" class="rounded-md border border-warn/30 bg-warn/10 p-2 text-xs text-warn" role="alert">
+            <div x-show="hasSimErrors" class="rounded-md border border-warn-line bg-warn-soft p-2 text-xs text-warn" role="alert">
                 <p class="font-semibold">Corrija o fluxo antes de testar:</p>
                 <ul class="mt-1 list-disc ps-4">
                     <template x-for="error in $wire.simErrors" x-bind:key="error">
@@ -215,7 +215,7 @@
                                 <select class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model.number="selected.data[field.key]" x-on:change="apply()">
                                     <option value="">Escolha a etiqueta</option>
                                     <template x-for="tag in tags" x-bind:key="tag.id">
-                                        <option x-bind:value="tag.id" x-text="tag.name"></option>
+                                        <option x-bind:value="tag.id" x-text="tag.label"></option>
                                     </template>
                                 </select>
                             </template>

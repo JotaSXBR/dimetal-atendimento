@@ -307,7 +307,7 @@ new #[Title('Segurança')] class extends Component {
                                     icon="trash"
                                     icon:variant="outline"
                                     wire:click="confirmDelete({{ $passkey['id'] }})"
-                                    class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                                    class="text-danger hover:bg-danger/10"
                                 />
                             </div>
                         @empty

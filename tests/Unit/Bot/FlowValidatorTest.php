@@ -161,6 +161,17 @@ class FlowValidatorTest extends TestCase
         $this->assertSame([], (new FlowValidator)->validate($graph), 'sem listas, a existência não é conferida');
     }
 
+    public function test_condicao_por_etiqueta_precisa_de_etiqueta_existente(): void
+    {
+        $graph = $this->graph(
+            [['i', 'inicio', []], ['c', 'condicao', ['kind' => 'etiqueta', 'tag_id' => 99]], ['t', 'transferir', []], ['u', 'transferir', []]],
+            [['i', 'out', 'c'], ['c', 'true', 't'], ['c', 'false', 'u']],
+        );
+
+        $this->assertHasError((new FlowValidator)->validate($graph, tagIds: [5]), 'c: a etiqueta 99 não existe');
+        $this->assertSame([], (new FlowValidator)->validate($graph, tagIds: [99]));
+    }
+
     public function test_campos_obrigatorios_dos_blocos(): void
     {
         $graph = $this->graph(

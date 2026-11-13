@@ -6,6 +6,7 @@ use App\Actions\Contacts\SaveContact;
 use App\Jobs\SyncContactToGoogleJob;
 use App\Livewire\Forms\ContactForm;
 use App\Models\Contact;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Google\ContactSyncStatus;
@@ -19,6 +20,9 @@ use Livewire\Component;
 class ContactCard extends Component
 {
     private const HISTORY_LIMIT = 5;
+
+    /** Etiquetas do contato por ficha: acima disso a ficha vira um mural de chips. */
+    public const MAX_TAGS = 20;
 
     #[Locked]
     public int $contactId;
@@ -37,6 +41,9 @@ class ContactCard extends Component
     /** Histórico: só leitura, sem o botão Editar. */
     #[Locked]
     public bool $readonly = false;
+
+    /** O valor do seletor de etiqueta: ao escolher, aplica e volta a vazio. */
+    public string $addTagId = '';
 
     public function mount(int $contactId, bool $compact = false, bool $readonly = false, ?int $currentTicketId = null): void
     {
@@ -83,6 +90,45 @@ class ContactCard extends Component
         SyncContactToGoogleJob::dispatchWhenConnected($contact);
     }
 
+    public function updatedAddTagId(string $value): void
+    {
+        $this->addTagId = '';
+
+        if (ctype_digit($value)) {
+            $this->addTag((int) $value);
+        }
+    }
+
+    /** Só `attach`/`detach`: o contato não é tocado, então o Google não é reenviado. Aplica só etiqueta do escopo `contato`. */
+    public function addTag(int $tagId): void
+    {
+        abort_if($this->readonly, 403);
+
+        $tag = Tag::query()->ofContact()->find($tagId);
+        $contact = $this->contact();
+
+        if ($tag === null || $contact->tags()->whereKey($tag->id)->exists()) {
+            return;
+        }
+
+        if ($contact->tags()->count() >= self::MAX_TAGS) {
+            $this->addError('tag', 'Limite de '.self::MAX_TAGS.' etiquetas por contato.');
+
+            return;
+        }
+
+        $this->resetErrorBag('tag');
+        $contact->tags()->attach($tag->id);
+    }
+
+    public function removeTag(int $tagId): void
+    {
+        abort_if($this->readonly, 403);
+
+        $this->contact()->tags()->detach($tagId);
+        $this->resetErrorBag('tag');
+    }
+
     public function addUrl(): void
     {
         if (count($this->form->urls) < ContactForm::MAX_URLS) {
@@ -121,8 +167,12 @@ class ContactCard extends Component
         $history = (clone $others)->with(['sector', 'channel'])->latest('opened_at')->limit(self::HISTORY_LIMIT)->get();
         $historyTotal = $others->count();
 
+        $contactTags = Tag::sortedByName($contact->tags()->get());
+
         return view('livewire.contacts.contact-card', [
             'contact' => $contact,
+            'contactTags' => $contactTags,
+            'availableTags' => Tag::sortedByName(Tag::query()->ofContact()->whereNotIn('id', $contactTags->pluck('id'))->get()),
             'google' => $syncStatus->describe($contact),
             'history' => $history,
             'historyTotal' => $historyTotal,

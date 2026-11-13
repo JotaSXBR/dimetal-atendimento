@@ -25,7 +25,11 @@ interface BotEffects
 
     public function saveContactField(string $field, string $value): void;
 
+    /** Aplica a etiqueta onde o escopo dela manda: no contato (`contato`) ou no ticket (`conversa`). */
     public function tag(Tag $tag): void;
+
+    /** O contato (escopo `contato`) ou o ticket (escopo `conversa`) já tem a etiqueta. */
+    public function hasTag(Tag $tag): bool;
 
     public function note(string $body): void;
 

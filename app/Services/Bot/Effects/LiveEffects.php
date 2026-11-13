@@ -9,10 +9,12 @@ use App\Actions\Inbox\TransferTicket;
 use App\Enums\ClosedReason;
 use App\Enums\MessageOrigin;
 use App\Enums\NoteOrigin;
+use App\Enums\TagScope;
 use App\Enums\TicketStatus;
 use App\Events\TicketUpdated;
 use App\Jobs\SendTicketMessageJob;
 use App\Models\BotSession;
+use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Sector;
 use App\Models\Tag;
@@ -28,6 +30,7 @@ use App\Services\Inbox\SendTicketMessage;
 use App\Services\Waha\WahaClient;
 use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -123,7 +126,18 @@ final class LiveEffects implements BotEffects
 
     public function tag(Tag $tag): void
     {
-        $this->ticket->tags()->syncWithoutDetaching([$tag->id]);
+        $this->tagOwner($tag)->syncWithoutDetaching([$tag->id]);
+    }
+
+    public function hasTag(Tag $tag): bool
+    {
+        return $this->tagOwner($tag)->whereKey($tag->id)->exists();
+    }
+
+    /** @return BelongsToMany<Tag, Contact>|BelongsToMany<Tag, Ticket> */
+    private function tagOwner(Tag $tag): BelongsToMany
+    {
+        return $tag->scope === TagScope::CONTATO ? $this->ticket->contact()->firstOrFail()->tags() : $this->ticket->tags();
     }
 
     public function note(string $body): void

@@ -12,7 +12,7 @@
         'neutral' => 'bg-canvas text-ink-2 ring-1 ring-line',
         'bot' => 'bg-bot/10 text-bot',
         'ok' => 'bg-ok/10 text-ok',
-        'warn' => 'bg-warn/10 text-warn',
+        'warn' => 'bg-warn-soft text-warn',
         'danger' => 'bg-danger/10 text-danger',
         'accent' => 'bg-accent-soft text-accent-content',
         default => throw new \InvalidArgumentException('x-status-badge: tom desconhecido "'.$tone.'".'),

@@ -69,6 +69,7 @@
                             <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
                             <span class="font-mono text-[10px] text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m/Y') }}</span>
                         </span>
+                        <x-contact-chips :contact="$item->contact" testid="history-chip" class="mt-0.5" />
                         <span class="mt-0.5 block truncate text-xs text-ink-2">
                             {{ $item->protocol }} · {{ $item->sector?->name ?? 'Sem setor' }}
                             @if ($item->close_outcome)
@@ -103,6 +104,7 @@
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-semibold text-ink">{{ $ticket->contact->label() }}</p>
                     <p class="truncate font-mono text-[11px] text-ink-3">{{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }}</p>
+                    <x-contact-chips :contact="$ticket->contact" testid="history-panel-chip" class="mt-0.5" />
                 </div>
 
                 <flux:button size="sm" variant="subtle" icon="information-circle" class="lg:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
@@ -120,7 +122,7 @@
             </div>
 
             @if ($hasMore)
-                <div class="border-b border-warn/30 bg-warn/10 px-4 py-2 text-xs text-warn" role="status">
+                <div class="border-b border-warn-line bg-warn-soft px-4 py-2 text-xs text-warn" role="status">
                     Mostrando as últimas {{ $limit }} mensagens desta conversa.
                 </div>
             @endif

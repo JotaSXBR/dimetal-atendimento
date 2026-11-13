@@ -12,24 +12,26 @@
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-    /* Tokens claros. Marca amarela (yellow-400); o verde só sobrevive como `ok` (status de sucesso).
+    /* Tokens claros. Marca neutra (zinc-800 no claro, branco no escuro); verde, âmbar e vermelho são só estado e alerta (`ok`, `warn`, `danger`).
        Cada um é redefinido em `.dark` abaixo; os pares de texto são medidos em tests/Unit/ThemeTokensTest.php. */
-    --color-ink: #101513;
-    --color-ink-2: #46514d;
-    --color-ink-3: #5f6a65;
-    --color-line: #e2e0d9;
-    --color-canvas: #f5f4f0;
+    --color-ink: #18181b; /* zinc-900 */
+    --color-ink-2: #52525b; /* zinc-600 */
+    --color-ink-3: #71717a; /* zinc-500 */
+    --color-line: #e4e4e7; /* zinc-200 */
+    --color-canvas: #fafafa; /* zinc-50 */
     --color-surface: #ffffff;
-    --color-accent: #facc15; /* yellow-400 */
-    --color-accent-content: #854d0e; /* yellow-800: texto/link de marca */
-    --color-accent-foreground: #422006; /* yellow-950: texto sobre a marca */
-    --color-accent-soft: #fef9c3; /* yellow-100 */
-    --color-warn: #9a3412; /* orange-800: afastado do amarelo da marca e legível sobre warn/10 */
+    --color-accent: #27272a; /* zinc-800 */
+    --color-accent-content: #27272a; /* zinc-800: texto/link de marca */
+    --color-accent-foreground: #ffffff; /* texto sobre a marca */
+    --color-accent-soft: #e4e4e7; /* zinc-200 */
+    --color-warn: #92400e; /* amber-800: legível sobre warn/10 e warn/20 */
     --color-warn-foreground: #ffffff;
+    --color-warn-soft: #fffbeb; /* amber-50: fundo de aviso e de nota interna */
+    --color-warn-line: #fcd34d; /* amber-300 */
     --color-danger: #b42318;
     --color-danger-foreground: #ffffff;
     --color-ok: #166534; /* green-800 */
-    --color-bot: #4a5a66;
+    --color-bot: #4338ca; /* indigo-700: quem respondeu foi o bot */
 
     --duration-base: 200ms;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -37,18 +39,6 @@
     /* O botão `danger` do Flux usa red-500 (claro) e red-600 (escuro) com texto branco: sobem um degrau (red-600 e red-700 do Tailwind) para passar AA. */
     --color-red-500: #dc2626;
     --color-red-600: #b91c1c;
-
-    --color-zinc-50: var(--color-stone-50);
-    --color-zinc-100: var(--color-stone-100);
-    --color-zinc-200: var(--color-stone-200);
-    --color-zinc-300: var(--color-stone-300);
-    --color-zinc-400: var(--color-stone-400);
-    --color-zinc-500: var(--color-stone-500);
-    --color-zinc-600: var(--color-stone-600);
-    --color-zinc-700: var(--color-stone-700);
-    --color-zinc-800: var(--color-stone-800);
-    --color-zinc-900: var(--color-stone-900);
-    --color-zinc-950: var(--color-stone-950);
 }
 
 @layer base {
@@ -83,24 +73,50 @@ select:focus[data-flux-control] {
 
 @layer theme {
     .dark {
-        --color-ink: #fafaf9; /* stone-50 */
-        --color-ink-2: #d6d3d1; /* stone-300 */
-        --color-ink-3: #a8a29e; /* stone-400 */
-        --color-line: #44403c; /* stone-700 */
-        --color-canvas: #1c1917; /* stone-900 */
-        --color-surface: #292524; /* stone-800 */
-        --color-accent: #facc15;
-        --color-accent-content: #facc15;
-        --color-accent-foreground: #422006;
-        --color-accent-soft: #422006;
-        --color-warn: #fb923c; /* orange-400 */
-        --color-warn-foreground: #1c1917;
+        --color-ink: #fafafa; /* zinc-50 */
+        --color-ink-2: #d4d4d8; /* zinc-300 */
+        --color-ink-3: #a1a1aa; /* zinc-400 */
+        --color-line: #3f3f46; /* zinc-700 */
+        --color-canvas: #18181b; /* zinc-900 */
+        --color-surface: #27272a; /* zinc-800 */
+        --color-accent: #ffffff;
+        --color-accent-content: #ffffff;
+        --color-accent-foreground: #27272a; /* zinc-800 */
+        --color-accent-soft: #3f3f46; /* zinc-700 */
+        --color-warn: #fbbf24; /* amber-400 */
+        --color-warn-foreground: #18181b;
+        --color-warn-soft: #3b2f0d; /* amber-400 a ~12% sobre o fundo escuro */
+        --color-warn-line: #78561a;
         --color-danger: #f87171; /* red-400 */
-        --color-danger-foreground: #1c1917;
+        --color-danger-foreground: #18181b;
         --color-ok: #4ade80; /* green-400 */
-        --color-bot: #94a3b8; /* slate-400 */
+        --color-bot: #a5b4fc; /* indigo-300 */
     }
 }
+
+/* Etiquetas: um tom por nome (enum TagColor). `--tag-bg`/`--tag-fg` é o chip cheio do contato; `--tag-line` é o contorno do chip da conversa. Medidos em ThemeTokensTest. */
+.tag-azul { --tag-bg: #dbeafe; --tag-fg: #1e40af; --tag-line: #2563eb; }
+.dark .tag-azul { --tag-bg: #1e3a8a; --tag-fg: #bfdbfe; --tag-line: #60a5fa; }
+.tag-ceu { --tag-bg: #e0f2fe; --tag-fg: #075985; --tag-line: #0284c7; }
+.dark .tag-ceu { --tag-bg: #0c4a6e; --tag-fg: #bae6fd; --tag-line: #38bdf8; }
+.tag-anil { --tag-bg: #e0e7ff; --tag-fg: #3730a3; --tag-line: #4f46e5; }
+.dark .tag-anil { --tag-bg: #312e81; --tag-fg: #c7d2fe; --tag-line: #818cf8; }
+.tag-violeta { --tag-bg: #ede9fe; --tag-fg: #5b21b6; --tag-line: #7c3aed; }
+.dark .tag-violeta { --tag-bg: #4c1d95; --tag-fg: #ddd6fe; --tag-line: #a78bfa; }
+.tag-lilas { --tag-bg: #f3e8ff; --tag-fg: #6b21a8; --tag-line: #9333ea; }
+.dark .tag-lilas { --tag-bg: #581c87; --tag-fg: #e9d5ff; --tag-line: #c084fc; }
+.tag-fucsia { --tag-bg: #fae8ff; --tag-fg: #86198f; --tag-line: #c026d3; }
+.dark .tag-fucsia { --tag-bg: #701a75; --tag-fg: #f5d0fe; --tag-line: #e879f9; }
+.tag-rosa { --tag-bg: #fce7f3; --tag-fg: #9d174d; --tag-line: #db2777; }
+.dark .tag-rosa { --tag-bg: #831843; --tag-fg: #fbcfe8; --tag-line: #f472b6; }
+.tag-turquesa { --tag-bg: #ccfbf1; --tag-fg: #115e59; --tag-line: #0d9488; }
+.dark .tag-turquesa { --tag-bg: #134e4a; --tag-fg: #99f6e4; --tag-line: #2dd4bf; }
+.tag-ciano { --tag-bg: #cffafe; --tag-fg: #155e75; --tag-line: #0891b2; }
+.dark .tag-ciano { --tag-bg: #164e63; --tag-fg: #a5f3fc; --tag-line: #22d3ee; }
+.tag-ardosia { --tag-bg: #f1f5f9; --tag-fg: #1e293b; --tag-line: #64748b; }
+.dark .tag-ardosia { --tag-bg: #334155; --tag-fg: #e2e8f0; --tag-line: #94a3b8; }
+.tag-pedra { --tag-bg: #f5f5f4; --tag-fg: #292524; --tag-line: #78716c; }
+.dark .tag-pedra { --tag-bg: #44403c; --tag-fg: #e7e5e4; --tag-line: #a8a29e; }
 
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -124,24 +140,24 @@ select:focus[data-flux-control] {
 /* Editor de workflows (/automacao/{id}): blocos, bolinhas e linhas desenhados em resources/js/flow-editor/editor.js.
    As cores de categoria são do editor, nos dois temas; o resto usa os tokens do projeto. */
 .flow-canvas {
-    --flow-cat-inicio: #166534;
+    --flow-cat-inicio: #3f3f46;
     --flow-cat-fala: #1d4ed8;
     --flow-cat-espera: #6d28d9;
-    --flow-cat-logica: #b45309;
+    --flow-cat-logica: #a21caf;
     --flow-cat-acao: #0f766e;
-    --flow-cat-fim: #4a5a66;
+    --flow-cat-fim: #71717a;
     background-image: radial-gradient(circle, var(--color-line) 1px, transparent 1.5px);
     background-size: 24px 24px;
     touch-action: none;
 }
 
 .dark .flow-canvas {
-    --flow-cat-inicio: #4ade80;
+    --flow-cat-inicio: #d4d4d8;
     --flow-cat-fala: #93c5fd;
     --flow-cat-espera: #c4b5fd;
-    --flow-cat-logica: #fdba74;
+    --flow-cat-logica: #f0abfc;
     --flow-cat-acao: #5eead4;
-    --flow-cat-fim: #94a3b8;
+    --flow-cat-fim: #a1a1aa;
 }
 
 flow-node { display: block; }
@@ -195,5 +211,5 @@ flow-node { display: block; }
 /* O minimapa do editor só aparece com largura para não cobrir o canvas nem o painel de propriedades. */
 .flow-canvas rete-minimap { display: none; }
 @media (min-width: 1100px) {
-    .flow-canvas rete-minimap { display: block; }
+    .flow-canvas rete-minimap { display: block; filter: grayscale(1); }
 }

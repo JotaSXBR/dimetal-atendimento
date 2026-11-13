@@ -37,7 +37,7 @@ class InboxComposerModeTest extends TestCase
             ->assertSee('Só a equipe vê')
             ->assertSee('Salvar nota')
             ->assertSeeHtml('x-on:keydown.alt.p.window.prevent="toggle()"')
-            ->assertSeeHtml('bg-warn/10');
+            ->assertSeeHtml('bg-warn-soft');
     }
 
     public function test_envio_passa_pelo_submit_do_alpine_e_o_digitando_so_vale_no_modo_resposta(): void

@@ -26,8 +26,8 @@
             <div class="mt-3 flex items-center gap-2">
                 <flux:radio.group wire:model.live="tab" variant="segmented" size="sm" class="min-w-0 flex-1" aria-label="Visão da fila">
                     <flux:radio value="todos" data-testid="tab-todos" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Todos</flux:radio>
-                    <flux:radio value="aguardando" data-testid="tab-aguardando" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Aguardando @if (! empty($tabCounts['aguardando']))<span class="font-mono opacity-70">{{ $tabCounts['aguardando'] }}</span>@endif</flux:radio>
-                    <flux:radio value="meus" data-testid="tab-meus" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Meus @if (! empty($tabCounts['meus']))<span class="font-mono opacity-70">{{ $tabCounts['meus'] }}</span>@endif</flux:radio>
+                    <flux:radio value="aguardando" data-testid="tab-aguardando" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Aguardando @if (! empty($tabCounts['aguardando']))<span class="font-mono text-ink-2">{{ $tabCounts['aguardando'] }}</span>@endif</flux:radio>
+                    <flux:radio value="meus" data-testid="tab-meus" class="min-w-0! flex-auto! gap-1! overflow-hidden! px-1! text-xs!">Meus @if (! empty($tabCounts['meus']))<span class="font-mono text-ink-2">{{ $tabCounts['meus'] }}</span>@endif</flux:radio>
                 </flux:radio.group>
 
                 <flux:dropdown position="bottom" align="end">
@@ -43,13 +43,24 @@
                 </flux:dropdown>
             </div>
 
-            @if ($tags->isNotEmpty())
+            @if ($contactTags->isNotEmpty() || $ticketTags->isNotEmpty())
                 <div class="mt-3">
                     <flux:select wire:model.live="tagId" size="sm" aria-label="Filtrar por etiqueta">
                         <flux:select.option value="">Todas as etiquetas</flux:select.option>
-                        @foreach ($tags as $tag)
-                            <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
-                        @endforeach
+                        @if ($contactTags->isNotEmpty())
+                            <optgroup label="Do contato">
+                                @foreach ($contactTags as $tag)
+                                    <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if ($ticketTags->isNotEmpty())
+                            <optgroup label="Da conversa">
+                                @foreach ($ticketTags as $tag)
+                                    <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
+                                @endforeach
+                            </optgroup>
+                        @endif
                     </flux:select>
                 </div>
             @endif
@@ -97,32 +108,39 @@
                         >
                             @php
                                 $sla = $item->slaState();
-                                $tagsShown = $item->tags->take(2);
-                                $tagsRest = $item->tags->slice(2);
-                                $hasMeta = $item->assignee !== null || ($showSector && $item->sector !== null) || $showChannel || $item->tags->isNotEmpty();
+                                $chips = \App\Models\Tag::sortedByName($item->contact->tags)->concat(\App\Models\Tag::sortedByName($item->tags))->values();
+                                $chipsShown = $chips->take(3);
+                                $chipsRest = $chips->slice(3);
+                                $hasMeta = $item->assignee !== null || $showChannel;
+                                $at = $item->waiting_since ?? $item->last_inbound_at ?? $item->opened_at;
+                                $unread = (int) $item->getAttribute('unread');
                             @endphp
                             <span class="relative shrink-0">
                                 <x-avatar :src="$item->contact->avatarUrl()" :name="$item->contact->label()" shape="round" size="lg" decorative />
+                                <span data-testid="card-channel-icon" class="absolute -end-1 -bottom-1 grid size-4 place-items-center rounded-full bg-surface text-ink-2 ring-2 ring-surface">
+                                    <svg viewBox="0 0 24 24" class="size-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $item->channel->kind->icon() !!}</svg>
+                                    <span class="sr-only">{{ $item->channel->kind->label() }}</span>
+                                </span>
                                 @if ($sla)
-                                    <span data-testid="card-sla" title="{{ $sla === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}" class="absolute -end-0.5 -bottom-0.5 block size-2.5 rounded-full ring-2 ring-surface {{ $sla === 'estourou' ? 'bg-danger' : 'bg-warn' }}"><span class="sr-only">{{ $sla === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span></span>
+                                    <span data-testid="card-sla" title="{{ $sla === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}" class="absolute -end-0.5 -top-0.5 block size-2.5 rounded-full ring-2 ring-surface {{ $sla === 'estourou' ? 'bg-danger' : 'bg-warn' }}"><span class="sr-only">{{ $sla === 'estourou' ? 'SLA estourado' : 'Perto de estourar' }}</span></span>
                                 @endif
                             </span>
 
                             <span class="min-w-0 flex-1">
-                                <span class="flex items-baseline justify-between gap-2">
-                                    <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
-                                    <span class="font-mono text-[10px] text-ink-3">
-                                        {{ ($item->last_inbound_at ?? $item->opened_at)->timezone($tz)->format('H:i') }}
+                                <span class="block truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
+                                @if ($chips->isNotEmpty())
+                                    <span class="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
+                                        @foreach ($chipsShown as $tag)
+                                            <x-tag-chip :tag="$tag" :conversation="$tag->scope === \App\Enums\TagScope::CONVERSA" :data-testid="$tag->scope === \App\Enums\TagScope::CONTATO ? 'card-chip-contact' : 'card-chip-ticket'" />
+                                        @endforeach
+                                        @if ($chipsRest->isNotEmpty())
+                                            <span data-testid="card-tags-more" class="shrink-0 text-[11px] text-ink-3"><span aria-hidden="true" title="{{ $chipsRest->pluck('name')->join(', ') }}">+{{ $chipsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $chipsRest->pluck('name')->join(', ') }}</span></span>
+                                        @endif
                                     </span>
-                                </span>
-                                <span class="mt-0.5 flex items-baseline gap-2 text-xs text-ink-2">
-                                    <span class="min-w-0 flex-1 truncate">
+                                @endif
+                                <span class="mt-0.5 block min-w-0 truncate text-xs text-ink-2">
                                     <span x-cloak x-show="$store.clientPresence.label({{ $item->id }})" x-text="$store.clientPresence.label({{ $item->id }})" class="font-medium text-accent-content"></span>
                                     <span x-show="! $store.clientPresence.label({{ $item->id }})">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
-                                    </span>
-                                    @if ($item->waiting_since)
-                                        <span data-testid="card-wait" class="shrink-0 font-mono text-[10px] text-ink-3">{{ \App\Support\WaitLabel::since($item->waiting_since, now()) }}</span>
-                                    @endif
                                 </span>
                                 @if ($hasMeta)
                                     <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-ink-3">
@@ -132,19 +150,20 @@
                                                 <span data-testid="card-assignee-name">{{ \Illuminate\Support\Str::before($item->assignee->name, ' ') }}</span>
                                             </span>
                                         @endif
-                                        @if ($showSector && $item->sector)
-                                            <span data-testid="card-sector" class="min-w-10 truncate">{{ $item->sector->name }}</span>
-                                        @endif
                                         @if ($showChannel)
                                             <span class="truncate font-mono text-[10px]">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
                                         @endif
-                                        @foreach ($tagsShown as $tag)
-                                            <span data-testid="card-tag" class="inline-flex shrink-0 items-center gap-1 text-ink-2"><span class="size-2 shrink-0 rounded-full" style="background-color: {{ $tag->color }}"></span><span class="max-w-20 truncate">{{ $tag->name }}</span></span>
-                                        @endforeach
-                                        @if ($tagsRest->isNotEmpty())
-                                            <span data-testid="card-tags-more"><span aria-hidden="true" title="{{ $tagsRest->pluck('name')->join(', ') }}">+{{ $tagsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $tagsRest->pluck('name')->join(', ') }}</span></span>
-                                        @endif
                                     </span>
+                                @endif
+                            </span>
+
+                            <span class="flex shrink-0 flex-col items-end gap-1">
+                                <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="font-mono text-[10px] text-ink-3">{{ \App\Support\WaitLabel::since($at, now()) }}</span>
+                                @if ($showSector && $item->sector)
+                                    <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-[10px] text-ink-2">{{ $item->sector->name }}</span>
+                                @endif
+                                @if ($unread > 0)
+                                    <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-[10px] font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>
                                 @endif
                             </span>
                         </button>
@@ -298,7 +317,7 @@
             @endif
 
             @if ($notice)
-                <div class="border-b border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn" role="alert">{{ $notice }}</div>
+                <div class="border-b border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">{{ $notice }}</div>
             @endif
 
             <div class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-4 py-4">
@@ -318,7 +337,7 @@
                     x-on:note-from-message.window="addToNote($event.detail)"
                     x-on:emoji-insert="insert($event.detail)"
                     x-on:composer-focus="focusField()"
-                    x-bind:class="mode === 'note' ? 'border-warn/30 bg-warn/10' : 'border-line bg-surface'"
+                    x-bind:class="mode === 'note' ? 'border-warn-line bg-warn-soft' : 'border-line bg-surface'"
                 @endif
                 class="border-t p-3 {{ $canReply ? '' : 'border-line bg-surface' }}"
             >
@@ -332,7 +351,7 @@
                 @endif
 
                 @if ($canReply && $ticket->channel->status !== \App\Enums\ChannelStatus::WORKING)
-                    <p class="mb-1.5 truncate rounded-md bg-warn/10 px-3 py-1.5 text-xs text-warn" role="status" title="O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).">O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).</p>
+                    <p class="mb-1.5 truncate rounded-md bg-warn-soft px-3 py-1.5 text-xs text-warn" role="status" title="O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).">O WhatsApp deste canal está desconectado. As mensagens ficam aguardando e saem sozinhas quando a conexão voltar (por até 24 h).</p>
                 @endif
 
                 @if ($canReply)
@@ -404,7 +423,7 @@
                             <div data-testid="composer-modes">
                                 <div class="inline-flex rounded-md border border-line bg-canvas p-0.5 text-xs font-medium" role="tablist" aria-label="Tipo de envio">
                                     <button type="button" role="tab" data-testid="mode-reply" x-on:click="toggle('reply')" x-bind:aria-selected="mode === 'reply'" x-bind:class="mode === 'reply' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'" class="rounded px-3 py-1">Responder</button>
-                                    <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn/20 text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
+                                    <button type="button" role="tab" data-testid="mode-note" x-on:click="toggle('note')" x-bind:aria-selected="mode === 'note'" x-bind:class="mode === 'note' ? 'bg-warn-soft text-warn shadow-sm' : 'text-ink-3 hover:text-ink'" class="flex items-center gap-1 rounded px-3 py-1"><flux:icon.lock-closed class="size-3" />Nota privada</button>
                                 </div>
                             </div>
                             {{-- Coluna larga (@md): uma linha só. Coluna estreita (1280 px com o painel de contato aberto): o campo ocupa a linha de cima e as ferramentas ficam embaixo. --}}

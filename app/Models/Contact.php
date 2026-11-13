@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -136,6 +137,17 @@ class Contact extends Model
     public function phoneLabel(): string
     {
         return PhoneFormat::display($this->wa_id);
+    }
+
+    /**
+     * Etiquetas do contato (escopo `contato`). Aplicar ou tirar usa só `attach`/`detach`: o contato não é tocado
+     * (`updated_at`, `edited_at`) e o Google não é reenviado.
+     *
+     * @return BelongsToMany<Tag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'contact_tag');
     }
 
     /**

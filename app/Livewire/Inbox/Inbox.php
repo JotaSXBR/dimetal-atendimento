@@ -4,6 +4,7 @@ namespace App\Livewire\Inbox;
 
 use App\Actions\Inbox\ClaimTicket;
 use App\Actions\Inbox\CloseTicket;
+use App\Actions\Inbox\MarkTicketSeenByAgent;
 use App\Actions\Inbox\ReassignTicket;
 use App\Actions\Inbox\TakeoverTicket;
 use App\Actions\Inbox\TransferTicket;
@@ -24,6 +25,7 @@ use App\Models\User;
 use App\Services\Inbox\ClientPresence;
 use App\Services\Inbox\ConversationHandoff;
 use App\Services\Inbox\ResendTicketMessage;
+use App\Support\TicketQueue;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -107,6 +109,7 @@ class Inbox extends Component
 
         if ($ticket->status !== TicketStatus::ENCERRADO) {
             MarkTicketSeenJob::dispatch($ticket->id);
+            app(MarkTicketSeenByAgent::class)($ticket, $this->user());
         }
 
         if ($this->ticketId !== $ticketId) {
@@ -368,18 +371,20 @@ class Inbox extends Component
         $list = Ticket::query()
             ->open()
             ->visibleTo($user)
-            ->with(['contact', 'channel', 'tags', 'assignee', 'sector'])
+            ->with(['contact.tags', 'channel', 'tags', 'assignee', 'sector'])
+            ->tap(TicketQueue::withUnread(...))
             ->addSelect(['preview' => Message::query()
                 ->selectRaw(self::PREVIEW_SQL)->whereColumn('ticket_id', 'tickets.id')->orderByDesc('sent_at')->orderByDesc('id')->limit(1)])
             ->when($this->tab === 'pendentes', fn (Builder $q) => $q->where('status', TicketStatus::PENDENTE->value))
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
             ->when($this->tab === 'meus', fn (Builder $q) => $q->where('assigned_user_id', $user->id))
-            ->when($this->tagId !== null, fn (Builder $q) => $q->whereHas('tags', fn (Builder $t) => $t->whereKey($this->tagId)))
+            ->when($this->tagId !== null, fn (Builder $q) => TicketQueue::withTag($q, (int) $this->tagId))
             ->orderBy('last_inbound_at')
             ->get();
 
         return view('livewire.inbox.inbox', [
-            'tags' => Tag::sortedByName(Tag::query()->get()),
+            'contactTags' => Tag::sortedByName(Tag::query()->ofContact()->get()),
+            'ticketTags' => Tag::sortedByName(Tag::query()->ofTicket()->get()),
             'pending' => $list->where('status', TicketStatus::PENDENTE),
             'waiting' => $list->where('status', TicketStatus::AGUARDANDO),
             'active' => $list->where('status', TicketStatus::EM_ATENDIMENTO),

@@ -89,12 +89,12 @@ class InboxSlaTest extends TestCase
     }
 
     /** O prazo fica na conversa e no painel; a lista mostra só a espera, para não poluir o card. */
-    public function test_cliente_esperando_dentro_do_prazo_mostra_a_espera_e_nao_o_prazo_na_lista(): void
+    public function test_cliente_esperando_dentro_do_prazo_mostra_o_tempo_de_espera_e_nao_o_prazo_na_lista(): void
     {
         $this->travelTo($this->sp('2026-10-30 10:00'));
         $this->waiting('Tranquilo', ['sla_warn_at' => $this->sp('2026-10-30 10:30'), 'sla_due_at' => $this->sp('2026-10-30 10:40')]);
 
-        $this->inbox()->assertSeeHtml('data-testid="card-wait"')->assertDontSee('Responder até')->assertDontSee('Perto de estourar');
+        $this->inbox()->assertSeeHtml('data-testid="card-time"')->assertDontSee('Responder até')->assertDontSee('Perto de estourar');
     }
 
     public function test_sem_espera_nao_ha_selo(): void

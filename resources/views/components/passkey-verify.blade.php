@@ -27,7 +27,7 @@
                     <span x-show="loading" x-cloak>{{ $loadingLabel }}</span>
                 </flux:button>
                 <p x-show="error" x-text="error" x-cloak
-                   class="text-sm text-center text-red-600 dark:text-red-400"></p>
+                   class="text-sm text-center text-danger"></p>
             </div>
 
             <div class="relative my-6">

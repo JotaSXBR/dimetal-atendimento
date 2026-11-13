@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Enums\TagColor;
 use PHPUnit\Framework\TestCase;
 
 class ThemeTokensTest extends TestCase
@@ -81,10 +82,82 @@ class ThemeTokensTest extends TestCase
         }
     }
 
-    public function test_a_marca_e_amarela_e_o_verde_antigo_sumiu(): void
+    public function test_a_marca_e_neutra_e_o_aviso_e_ambar(): void
     {
-        $this->assertSame('#facc15', $this->themes()['light']['accent'] ?? null);
+        $themes = $this->themes();
+
+        $this->assertSame('#27272a', $themes['light']['accent'] ?? null);
+        $this->assertSame('#27272a', $themes['light']['accent-content'] ?? null);
+        $this->assertSame('#ffffff', $themes['light']['accent-foreground'] ?? null);
+        $this->assertSame('#ffffff', $themes['dark']['accent'] ?? null);
+        $this->assertSame('#ffffff', $themes['dark']['accent-content'] ?? null);
+        $this->assertSame('#27272a', $themes['dark']['accent-foreground'] ?? null);
+        $this->assertSame('#92400e', $themes['light']['warn'] ?? null);
+        $this->assertSame('#fbbf24', $themes['dark']['warn'] ?? null);
+        $this->assertStringNotContainsString('#facc15', strtolower($this->css()));
         $this->assertStringNotContainsString('#12705a', strtolower($this->css()));
+    }
+
+    /** Texto, fundo e linhas são da mesma família (zinc, a do Flux): sem o verde da marca antiga nem o stone quente. */
+    public function test_os_neutros_sao_todos_zinc_nos_dois_temas(): void
+    {
+        $themes = $this->themes();
+        $zinc = [
+            'light' => ['ink' => '#18181b', 'ink-2' => '#52525b', 'ink-3' => '#71717a', 'line' => '#e4e4e7', 'canvas' => '#fafafa', 'surface' => '#ffffff', 'accent-soft' => '#e4e4e7'],
+            'dark' => ['ink' => '#fafafa', 'ink-2' => '#d4d4d8', 'ink-3' => '#a1a1aa', 'line' => '#3f3f46', 'canvas' => '#18181b', 'surface' => '#27272a', 'accent-soft' => '#3f3f46'],
+        ];
+
+        foreach ($zinc as $theme => $tokens) {
+            foreach ($tokens as $token => $hex) {
+                $this->assertSame($hex, $themes[$theme][$token] ?? null, "{$theme}: {$token}");
+            }
+        }
+    }
+
+    /** Aviso e nota interna têm fundo amarelo próprio (`warn-soft`): texto, rótulo e cadeado legíveis sobre ele e contorno visível. */
+    public function test_aviso_e_nota_tem_fundo_amarelo_proprio_e_texto_legivel_nos_dois_temas(): void
+    {
+        foreach ($this->themes() as $theme => $t) {
+            $this->assertArrayHasKey('warn-soft', $t, "{$theme}: warn-soft");
+            $this->assertArrayHasKey('warn-line', $t, "{$theme}: warn-line");
+
+            foreach (['ink', 'ink-2', 'warn'] as $text) {
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($t[$text], $t['warn-soft']), "{$theme}: {$text} sobre warn-soft");
+            }
+
+            $this->assertGreaterThanOrEqual(1.3, $this->ratio($t['warn-line'], $t['warn-soft']), "{$theme}: warn-line sobre warn-soft");
+        }
+    }
+
+    /** O âmbar de aviso a 10% sobre claro vira um salmão rosado: o fundo de aviso e de nota é o token `warn-soft`. */
+    public function test_nenhuma_view_pinta_aviso_com_warn_translucido(): void
+    {
+        $offenders = [];
+
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(dirname(__DIR__, 2).'/resources/views')) as $file) {
+            if (! str_ends_with((string) $file, '.blade.php')) {
+                continue;
+            }
+
+            foreach (file((string) $file) ?: [] as $n => $line) {
+                if (preg_match('/(?:bg|border)-warn\/(?:10|20|30)/', $line, $m) === 1) {
+                    $offenders[] = basename((string) $file).':'.($n + 1).' '.$m[0];
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders, 'use bg-warn-soft e border-warn-line');
+    }
+
+    /** O minimapa do editor (rete) traz o retângulo de visão em amarelo fixo, dentro do shadow DOM: ele fica em tons de cinza. */
+    public function test_minimapa_do_editor_nao_traz_o_amarelo_padrao_da_biblioteca(): void
+    {
+        $this->assertMatchesRegularExpression('/rete-minimap\s*\{[^}]*filter:\s*grayscale\(1\)/', $this->css());
+    }
+
+    public function test_o_flux_enxerga_o_zinc_de_verdade_sem_remapear_para_stone(): void
+    {
+        $this->assertDoesNotMatchRegularExpression('/--color-zinc-\d+:\s*var\(--color-stone/', $this->css());
     }
 
     public function test_contraste_minimo_de_texto_nos_dois_temas(): void
@@ -119,7 +192,7 @@ class ThemeTokensTest extends TestCase
         foreach ($this->themes() as $theme => $t) {
             foreach (['canvas', 'surface'] as $ground) {
                 foreach (['warn', 'danger', 'ok', 'bot'] as $tone) {
-                    foreach ($tone === 'warn' ? [0.10, 0.20] : [0.10] as $alpha) { // warn/20 é o realce da aba "Nota privada"
+                    foreach ($tone === 'warn' ? [0.10, 0.20] : ($tone === 'bot' ? [0.10, 0.15] : [0.10]) as $alpha) { // warn/20 é o realce da aba "Nota privada"; bot/15 é a bolha do bot
                         $tint = $this->mix($t[$tone], $t[$ground], $alpha);
                         $this->assertGreaterThanOrEqual(4.5, $this->ratio($t[$tone], $tint), "{$theme}: {$tone} sobre {$tone}/".(int) ($alpha * 100)." em {$ground}");
                     }
@@ -158,6 +231,56 @@ class ThemeTokensTest extends TestCase
         }
     }
 
+    /** @return array<string, array{light: array<string, string>, dark: array<string, string>}> tom → variáveis `--tag-*` */
+    private function tagTones(): array
+    {
+        $css = $this->css();
+        $tones = [];
+
+        foreach (TagColor::cases() as $tone) {
+            $name = preg_quote($tone->value, '/');
+            $this->assertSame(1, preg_match('/(?<!\.dark )\.tag-'.$name.'\s*\{([^}]*)\}/', $css, $light), "claro: .tag-{$tone->value}");
+            $this->assertSame(1, preg_match('/\.dark \.tag-'.$name.'\s*\{([^}]*)\}/', $css, $dark), "escuro: .tag-{$tone->value}");
+
+            foreach (['light' => $light[1], 'dark' => $dark[1]] as $theme => $block) {
+                preg_match_all('/--tag-(bg|fg|line):\s*(#[0-9a-fA-F]{6})\s*;/', $block, $m, PREG_SET_ORDER);
+                $tones[$tone->value][$theme] = array_column($m, 2, 1);
+            }
+        }
+
+        return $tones;
+    }
+
+    public function test_cada_tom_de_etiqueta_tem_texto_legivel_e_contorno_visivel_nos_dois_temas(): void
+    {
+        $surface = ['light' => $this->themes()['light']['surface'], 'dark' => $this->themes()['dark']['surface']];
+
+        foreach ($this->tagTones() as $tone => $themes) {
+            foreach ($themes as $theme => $v) {
+                $this->assertSame(['bg', 'fg', 'line'], array_keys(array_intersect_key(['bg' => 1, 'fg' => 1, 'line' => 1], $v)), "{$tone}/{$theme}");
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($v['fg'], $v['bg']), "{$theme}: tag-{$tone} fg sobre bg");
+                $this->assertGreaterThanOrEqual(3.0, $this->ratio($v['line'], $surface[$theme]), "{$theme}: tag-{$tone} contorno sobre surface");
+            }
+        }
+    }
+
+    public function test_texto_da_etiqueta_da_conversa_e_legivel_sobre_o_fundo_translucido_nos_dois_temas(): void
+    {
+        foreach ($this->tagTones() as $tone => $themes) {
+            foreach ($themes as $theme => $v) {
+                $surface = $this->themes()[$theme]['surface'];
+                $this->assertGreaterThanOrEqual(4.5, $this->ratio($v['fg'], $this->mix($v['line'], $surface, 0.15)), "{$theme}: tag-{$tone} fg sobre line/15");
+            }
+        }
+    }
+
+    public function test_o_swatch_do_tom_e_o_contorno_do_tema_claro(): void
+    {
+        foreach ($this->tagTones() as $tone => $themes) {
+            $this->assertSame(strtolower(TagColor::from($tone)->swatch()), strtolower($themes['light']['line']), $tone);
+        }
+    }
+
     private function mix(string $top, string $bottom, float $alpha): string
     {
         $a = array_map('hexdec', str_split(ltrim($top, '#'), 2));
@@ -166,7 +289,29 @@ class ThemeTokensTest extends TestCase
         return '#'.implode('', array_map(fn (int $i): string => sprintf('%02x', (int) round($a[$i] * $alpha + $b[$i] * (1 - $alpha))), [0, 1, 2]));
     }
 
-    public function test_marca_amarela_nunca_e_cor_de_texto_nem_o_texto_vira_fundo(): void
+    /** Cor de estado vem dos tokens (`ok`, `warn`, `danger`), não de paleta crua; e o stone quente não existe mais (os neutros são zinc). */
+    public function test_nenhuma_view_usa_paleta_crua_de_estado_nem_stone(): void
+    {
+        // Ilustrações e ícones decorativos (mapa, tipos de arquivo) ficam de fora de propósito.
+        $decorative = ['location.blade.php', 'media.blade.php', 'welcome.blade.php'];
+        $offenders = [];
+
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(dirname(__DIR__, 2).'/resources/views')) as $file) {
+            if (! str_ends_with((string) $file, '.blade.php') || in_array(basename((string) $file), $decorative, true)) {
+                continue;
+            }
+
+            foreach (file((string) $file) ?: [] as $n => $line) {
+                if (preg_match('/(?:bg|text|border|ring|fill|stroke|from|to|via|divide|outline|decoration)-(?:red|green|emerald|amber|yellow|orange|stone)-\d{2,3}/', $line, $m) === 1) {
+                    $offenders[] = basename((string) $file).':'.($n + 1).' '.$m[0];
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders);
+    }
+
+    public function test_bg_accent_content_nao_e_usado_porque_accent_content_e_cor_de_texto(): void
     {
         $offenders = [];
         foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(dirname(__DIR__, 2).'/resources/views')) as $file) {
@@ -174,8 +319,7 @@ class ThemeTokensTest extends TestCase
                 continue;
             }
             foreach (file((string) $file) ?: [] as $n => $line) {
-                // `text-accent` é o amarelo de FUNDO (1,5:1 sobre branco); texto de marca é `text-accent-content`, e `bg-accent-content` é cor de texto.
-                if (preg_match('/(?<![\w-])text-accent(?![\w-])|bg-accent-content/', $line)) {
+                if (str_contains($line, 'bg-accent-content')) {
                     $offenders[] = basename((string) $file).':'.($n + 1);
                 }
             }

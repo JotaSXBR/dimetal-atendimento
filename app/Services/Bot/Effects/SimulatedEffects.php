@@ -53,7 +53,14 @@ final class SimulatedEffects implements BotEffects
 
     public function tag(Tag $tag): void
     {
+        $this->state->tags[$tag->id] = true;
         $this->state->add('efeito', "etiquetaria \"{$tag->name}\"");
+    }
+
+    /** Só as etiquetas aplicadas na própria conversa de teste: o contato do teste não existe. */
+    public function hasTag(Tag $tag): bool
+    {
+        return isset($this->state->tags[$tag->id]);
     }
 
     public function note(string $body): void
