@@ -1,3 +1,6 @@
+{{-- Avisa o servidor se a aba está visível (o visto da equipe só vale com a aba aberta); ver resources/js/transcript-visibility.js. --}}
+<span wire:key="transcript-visibility" x-data="transcriptVisibility" hidden aria-hidden="true"></span>
+
 @php
     $tz = config('app.display_timezone');
 @endphp

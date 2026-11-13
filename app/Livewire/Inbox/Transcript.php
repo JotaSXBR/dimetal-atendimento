@@ -18,6 +18,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 /**
@@ -30,6 +31,9 @@ class Transcript extends Component
 
     #[Locked]
     public int $ticketId;
+
+    /** A aba está visível? O navegador atualiza (resources/js/transcript-visibility.js): em segundo plano a mensagem fica não lida. */
+    public bool $visible = true;
 
     /** @param  array<string, mixed>  $payload */
     #[On('echo-private:inbox,.message.created')]
@@ -49,12 +53,27 @@ class Transcript extends Component
         if (($payload['direction'] ?? null) === 'in') {
             MarkTicketSeenJob::dispatch($this->ticketId);
 
-            $ticket = Ticket::query()->find($this->ticketId);
-            $user = auth()->user();
-
-            if ($ticket !== null && $user instanceof User) {
-                app(MarkTicketSeenByAgent::class)($ticket, $user);
+            if ($this->visible) {
+                $this->markSeenByAgent();
             }
+        }
+    }
+
+    /** A aba voltou a ficar visível: o que chegou em segundo plano conta como visto agora. */
+    #[Renderless]
+    public function seen(): void
+    {
+        $this->markSeenByAgent();
+    }
+
+    /** Só vale para quem pode ver o ticket (e, dentro da ação, só para o responsável ou em ticket sem responsável). */
+    private function markSeenByAgent(): void
+    {
+        $user = auth()->user();
+        $ticket = $user instanceof User ? Ticket::query()->readableBy($user)->find($this->ticketId) : null;
+
+        if ($ticket !== null && $user instanceof User) {
+            app(MarkTicketSeenByAgent::class)($ticket, $user);
         }
     }
 

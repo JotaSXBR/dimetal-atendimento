@@ -7,6 +7,7 @@ use App\Enums\MessageOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Events\TicketUpdated;
+use App\Jobs\MarkTicketSeenJob;
 use App\Livewire\Inbox\Inbox;
 use App\Livewire\Inbox\Transcript;
 use App\Models\Channel;
@@ -93,6 +94,40 @@ class AgentSeenTest extends TestCase
             ->dispatch('echo-private:inbox,.message.created', ['ticket_id' => $this->ticket->id, 'direction' => 'in']);
 
         $this->assertSame(0, $this->unread());
+    }
+
+    /** Aba em segundo plano: a mensagem chega, o cliente recebe o visto, mas para a equipe ela segue não lida até a aba voltar. */
+    public function test_aba_em_segundo_plano_nao_zera_o_nao_lido_ate_voltar(): void
+    {
+        $this->ticket->forceFill(['agent_seen_at' => now()->subMinutes(10)])->save();
+        $this->inbound();
+
+        $screen = Livewire::actingAs($this->owner)->test(Transcript::class, ['ticketId' => $this->ticket->id])
+            ->set('visible', false)
+            ->dispatch('echo-private:inbox,.message.created', ['ticket_id' => $this->ticket->id, 'direction' => 'in']);
+
+        $this->assertSame(1, $this->unread());
+        Queue::assertPushed(MarkTicketSeenJob::class);
+
+        $screen->call('seen');
+
+        $this->assertSame(0, $this->unread());
+    }
+
+    public function test_voltar_a_aba_nao_zera_o_ticket_de_quem_nao_e_o_responsavel(): void
+    {
+        $this->inbound();
+        $other = User::factory()->create(['role' => UserRole::ATENDENTE]);
+
+        Livewire::actingAs($other)->test(Transcript::class, ['ticketId' => $this->ticket->id])->call('seen');
+
+        $this->assertNull($this->ticket->fresh()?->agent_seen_at);
+    }
+
+    public function test_a_conversa_traz_o_gatilho_de_visibilidade_da_aba(): void
+    {
+        Livewire::actingAs($this->owner)->test(Transcript::class, ['ticketId' => $this->ticket->id])
+            ->assertSeeHtml('x-data="transcriptVisibility"');
     }
 
     public function test_responder_pelo_painel_zera(): void
