@@ -13,6 +13,7 @@ use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Sector;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\TicketNote;
@@ -271,6 +272,52 @@ class EngineBlocksTest extends TestCase
             [['i', 'inicio', []], ['c', 'condicao', ['kind' => $kind]], ['s', 'mensagem', ['texto' => 'SIM']], ['n', 'mensagem', ['texto' => 'NAO']], ['e', 'encerrar', []]],
             [['i', 'out', 'c'], ['c', 'true', 's'], ['c', 'false', 'n'], ['s', 'out', 'e'], ['n', 'out', 'e']],
         ];
+    }
+
+    /** @return array{list<array{string, string, array<string, mixed>}>, list<array{string, string, string}>} */
+    private function branchOnTag(?int $tagId): array
+    {
+        [$nodes, $edges] = $this->branch('etiqueta');
+        $nodes[1][2] = ['kind' => 'etiqueta', 'tag_id' => $tagId];
+
+        return [$nodes, $edges];
+    }
+
+    public function test_condicao_etiqueta_do_contato_olha_o_contato(): void
+    {
+        $tag = Tag::factory()->contato()->create();
+        $this->ticket->contact()->firstOrFail()->tags()->attach($tag);
+
+        $this->start(...$this->branchOnTag($tag->id));
+
+        $this->assertSame(['SIM'], $this->botTexts());
+    }
+
+    public function test_condicao_etiqueta_do_contato_sem_a_etiqueta_vai_por_nao(): void
+    {
+        $tag = Tag::factory()->contato()->create();
+
+        $this->start(...$this->branchOnTag($tag->id));
+
+        $this->assertSame(['NAO'], $this->botTexts());
+    }
+
+    public function test_condicao_etiqueta_da_conversa_olha_o_ticket_e_nao_o_contato(): void
+    {
+        $tag = Tag::factory()->create();
+        $this->ticket->contact()->firstOrFail()->tags()->attach(Tag::factory()->contato()->create());
+        $this->ticket->tags()->attach($tag);
+
+        $this->start(...$this->branchOnTag($tag->id));
+
+        $this->assertSame(['SIM'], $this->botTexts());
+    }
+
+    public function test_condicao_etiqueta_apagada_ou_sem_escolha_vai_por_nao(): void
+    {
+        $this->start(...$this->branchOnTag(99999));
+
+        $this->assertSame(['NAO'], $this->botTexts());
     }
 
     public function test_condicao_nome_segue_pelo_nome_do_contato(): void

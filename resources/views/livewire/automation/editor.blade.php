@@ -215,7 +215,7 @@
                                 <select class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model.number="selected.data[field.key]" x-on:change="apply()">
                                     <option value="">Escolha a etiqueta</option>
                                     <template x-for="tag in tags" x-bind:key="tag.id">
-                                        <option x-bind:value="tag.id" x-text="tag.name"></option>
+                                        <option x-bind:value="tag.id" x-text="tag.label"></option>
                                     </template>
                                 </select>
                             </template>

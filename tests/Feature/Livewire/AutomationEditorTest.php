@@ -47,6 +47,17 @@ class AutomationEditorTest extends TestCase
         $this->assertStringNotContainsString($inactive->name, html_entity_decode($html));
     }
 
+    public function test_editor_entrega_as_etiquetas_com_o_escopo(): void
+    {
+        \App\Models\Tag::factory()->contato()->create(['name' => 'Revenda']);
+        \App\Models\Tag::factory()->create(['name' => 'Orçamento']);
+
+        $html = html_entity_decode(Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html());
+
+        $this->assertStringContainsString('"name":"Revenda","scope":"contato"', $html);
+        $this->assertStringContainsString('"name":"Orçamento","scope":"conversa"', str_replace('ç', 'ç', str_replace('ã', 'ã', $html)));
+    }
+
     public function test_publicar_recusa_atribuir_a_pessoa_inativa(): void
     {
         $inactive = User::factory()->create(['active' => false]);

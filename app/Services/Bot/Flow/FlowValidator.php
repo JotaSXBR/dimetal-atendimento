@@ -118,6 +118,7 @@ final class FlowValidator
                 ...($data->has('setor_id') && $sectorIds !== null && ! in_array($data->int('setor_id'), $sectorIds, true) ? ["{$id}: o setor {$data->string('setor_id')} não existe."] : []),
                 ...($data->has('atribuir_a') && $userIds !== null && ! in_array($data->int('atribuir_a'), $userIds, true) ? ["{$id}: a pessoa {$data->string('atribuir_a')} não existe ou está inativa."] : []),
             ],
+            NodeType::Condicao => $data->string('kind') === 'etiqueta' && $tagIds !== null && ! in_array($data->int('tag_id'), $tagIds, true) ? ["{$id}: a etiqueta ".($data->has('tag_id') ? $data->string('tag_id') : '?').' não existe.'] : [],
             NodeType::Etiquetar => $tagIds !== null && ! in_array($data->int('tag_id'), $tagIds, true) ? ["{$id}: a etiqueta ".($data->has('tag_id') ? $data->string('tag_id') : '?').' não existe.'] : [],
             default => [],
         };

@@ -93,6 +93,7 @@ export function previewOf(type, data, lookups = {}) {
         case 'condicao':
             if (d.kind === 'nome') return ['O contato já tem nome?'];
             if (d.kind === 'retorno') return ['Já foi atendido antes?'];
+            if (d.kind === 'etiqueta') return [clip(`Tem a etiqueta ${(nameOf(lookups.tags, d.tag_id) ?? 'removida')}?`)];
 
             return d.kind === 'variavel' ? [clip(`${d.var ?? ''} ${OPS[d.op] ?? ''} ${d.valor ?? ''}`)] : ['Dentro do horário?'];
         case 'esperar':

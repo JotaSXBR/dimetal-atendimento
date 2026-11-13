@@ -210,6 +210,19 @@ class BotSimulatorTest extends TestCase
         $this->assertContains('Obrigado, Ana', $this->texts($state, 'bot'), 'o nome salvo no contato vale nas mensagens seguintes');
     }
 
+    public function test_condicao_por_etiqueta_enxerga_a_etiqueta_aplicada_antes_no_teste(): void
+    {
+        $tag = Tag::factory()->contato()->create(['name' => 'VIP']);
+        $g = $this->graph(
+            [['i', 'inicio', []], ['tg', 'etiquetar', ['tag_id' => $tag->id]], ['c', 'condicao', ['kind' => 'etiqueta', 'tag_id' => $tag->id]], ['s', 'mensagem', ['texto' => 'SIM']], ['n', 'mensagem', ['texto' => 'NAO']], ['e', 'encerrar', []]],
+            [['i', 'out', 'tg'], ['tg', 'out', 'c'], ['c', 'true', 's'], ['c', 'false', 'n'], ['s', 'out', 'e'], ['n', 'out', 'e']],
+        );
+
+        $state = $this->sim()->start($g, 'Maria', 'real');
+
+        $this->assertSame(['SIM'], $this->texts($state, 'bot'));
+    }
+
     public function test_encerrar_marca_o_desfecho(): void
     {
         $g = $this->graph([['i', 'inicio', []], ['e', 'encerrar', []]], [['i', 'out', 'e']]);

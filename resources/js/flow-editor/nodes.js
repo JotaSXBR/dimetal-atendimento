@@ -53,7 +53,8 @@ export const BLOCKS = {
         palette: true,
         data: { kind: 'horario' },
         fields: [
-            { key: 'kind', label: 'Testar', kind: 'select', options: [['horario', 'Dentro do horário de funcionamento'], ['nome', 'O contato já tem nome (inclusive o do perfil do WhatsApp)'], ['retorno', 'O cliente já foi atendido antes'], ['variavel', 'Valor de uma variável']] },
+            { key: 'kind', label: 'Testar', kind: 'select', options: [['horario', 'Dentro do horário de funcionamento'], ['nome', 'O contato já tem nome (inclusive o do perfil do WhatsApp)'], ['retorno', 'O cliente já foi atendido antes'], ['etiqueta', 'Tem uma etiqueta (do contato ou da conversa)'], ['variavel', 'Valor de uma variável']] },
+            { key: 'tag_id', label: 'Etiqueta', kind: 'tag', when: { kind: 'etiqueta' } },
             { key: 'var', label: 'Variável', kind: 'text', when: { kind: 'variavel' } },
             { key: 'op', label: 'Comparação', kind: 'select', when: { kind: 'variavel' }, options: [['igual', 'é igual a'], ['diferente', 'é diferente de'], ['contem', 'contém'], ['preenchida', 'está preenchida']] },
             { key: 'valor', label: 'Valor', kind: 'text', when: { kind: 'variavel' } },
