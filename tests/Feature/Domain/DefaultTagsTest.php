@@ -4,7 +4,6 @@ namespace Tests\Feature\Domain;
 
 use App\Enums\TagColor;
 use App\Enums\TagScope;
-use App\Models\Setting;
 use App\Models\Tag;
 use App\Services\Setup\DefaultTags;
 use Database\Seeders\TagSeeder;
@@ -27,9 +26,10 @@ class DefaultTagsTest extends TestCase
         $vip = Tag::query()->where('name', 'VIP')->firstOrFail();
         $this->assertSame(TagScope::CONTATO, $vip->scope);
         $this->assertSame(TagColor::FUCSIA, $vip->color);
-        $this->assertTrue((bool) Setting::get('tags.defaults_loaded'));
+        $this->assertTrue(DefaultTags::isLoaded());
     }
 
+    /** "Enxuto até no nome" (decisão do dono): o card da Fila não pode se poluir; 12 é o teto que ele aprovou na escolha dos nomes. */
     public function test_nomes_unicos_entre_escopos_e_enxutos(): void
     {
         $names = array_column(DefaultTags::ALL, 0);
@@ -57,7 +57,19 @@ class DefaultTagsTest extends TestCase
         $this->assertTrue(DefaultTags::install());
 
         $this->assertSame(1, Tag::query()->count());
-        $this->assertTrue((bool) Setting::get('tags.defaults_loaded'));
+        $this->assertTrue(DefaultTags::isLoaded());
+        $this->assertFalse(DefaultTags::install());
+        $this->assertSame(1, Tag::query()->count());
+    }
+
+    public function test_apagar_todas_depois_da_marca_nao_traz_nenhuma_de_volta(): void
+    {
+        DefaultTags::install();
+        Tag::query()->delete();
+
+        $this->assertFalse(DefaultTags::install());
+
+        $this->assertSame(0, Tag::query()->count());
     }
 
     public function test_seeder_usa_o_mesmo_caminho_e_continua_idempotente(): void
