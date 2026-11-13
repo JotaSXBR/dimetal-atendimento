@@ -141,7 +141,7 @@ class InboxQueueCardTest extends TestCase
 
         $this->assertStringContainsString('aria-hidden="true">2', $this->part($this->html(), 'card-unread'));
 
-        $ticket->forceFill(['agent_seen_at' => now()])->save();
+        $ticket->forceFill(['agent_seen_at' => now(), 'agent_seen_message_id' => $ticket->messages()->max('id')])->save();
 
         $this->assertStringNotContainsString('data-testid="card-unread"', $this->html());
     }

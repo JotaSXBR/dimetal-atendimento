@@ -30,6 +30,8 @@
 **Files:** `app/Actions/Inbox/MarkTicketSeenByAgent.php`, `tests/Feature/Inbox/AgentSeenTest.php`.
 - [ ] RED: `agent_seen_at` passa a ser o `sent_at` da mensagem mais recente do cliente (não `now()`); mensagem que chega depois disso continua não lida.
 
+- [x] **Revisada (13/11, menor adiado):** o visto passou a ser uma marca d'água por **id** de mensagem (`tickets.agent_seen_message_id`, migração `2026_11_13_000005` com backfill a partir de `agent_seen_at`), porque `sent_at` tem precisão de segundo e duas mensagens no mesmo segundo se confundiam. `agent_seen_at` continua gravado ("quando viu").
+
 ### Tarefa 3: Efeito de etiqueta sem contato
 **Files:** `app/Services/Bot/Effects/LiveEffects.php`, `tests/Feature/Bot/LiveEffectsTest.php`.
 - [ ] RED: `tag()` e `hasTag()` de etiqueta do contato com o contato inexistente não lançam exceção (`hasTag` falso, `tag` sem efeito).

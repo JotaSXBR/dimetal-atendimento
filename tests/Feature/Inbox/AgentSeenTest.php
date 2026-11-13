@@ -48,6 +48,12 @@ class AgentSeenTest extends TestCase
         return Message::factory()->for($this->ticket)->create(['direction' => MessageDirection::IN, 'sent_at' => $at === 'now' ? now() : $at]);
     }
 
+    /** A pessoa viu a conversa até esta mensagem do cliente (marca d'água por id, como a ação grava). */
+    private function seenUpTo(Message $message): void
+    {
+        $this->ticket->forceFill(['agent_seen_at' => now()->subMinutes(10), 'agent_seen_message_id' => $message->id])->save();
+    }
+
     private function unread(): int
     {
         return (int) Ticket::query()->tap(TicketQueue::withUnread(...))->findOrFail($this->ticket->id)->getAttribute('unread');
@@ -86,7 +92,7 @@ class AgentSeenTest extends TestCase
 
     public function test_mensagem_nova_com_o_ticket_aberto_na_tela_do_responsavel_zera_de_novo(): void
     {
-        $this->ticket->forceFill(['agent_seen_at' => now()->subMinutes(10)])->save();
+        $this->seenUpTo($this->inbound(now()->subMinutes(20)->toDateTimeString()));
         $this->inbound();
         $this->assertSame(1, $this->unread());
 
@@ -99,7 +105,7 @@ class AgentSeenTest extends TestCase
     /** Aba em segundo plano: a mensagem chega, o cliente recebe o visto, mas para a equipe ela segue não lida até a aba voltar. */
     public function test_aba_em_segundo_plano_nao_zera_o_nao_lido_ate_voltar(): void
     {
-        $this->ticket->forceFill(['agent_seen_at' => now()->subMinutes(10)])->save();
+        $this->seenUpTo($this->inbound(now()->subMinutes(20)->toDateTimeString()));
         $this->inbound();
 
         $screen = Livewire::actingAs($this->owner)->test(Transcript::class, ['ticketId' => $this->ticket->id])
@@ -152,8 +158,7 @@ class AgentSeenTest extends TestCase
 
     public function test_abrir_sem_novidade_nao_dispara_atualizacao(): void
     {
-        $this->inbound(now()->subMinutes(5)->toDateTimeString());
-        $this->ticket->forceFill(['agent_seen_at' => now()->subMinute()])->save();
+        $this->seenUpTo($this->inbound(now()->subMinutes(5)->toDateTimeString()));
         Event::fake([TicketUpdated::class]);
 
         Livewire::actingAs($this->owner)->test(Inbox::class)->call('select', $this->ticket->id);
@@ -168,9 +173,24 @@ class AgentSeenTest extends TestCase
 
         Livewire::actingAs($this->owner)->test(Inbox::class)->call('select', $this->ticket->id);
 
-        $this->assertEquals($seen->sent_at, $this->ticket->fresh()?->agent_seen_at);
+        $this->assertSame($seen->id, $this->ticket->fresh()?->agent_seen_message_id);
+        $this->assertNotNull($this->ticket->fresh()?->agent_seen_at);
 
         $this->inbound(now()->subMinute()->toDateTimeString());
+        $this->assertSame(1, $this->unread());
+    }
+
+    /** Marca d'água por id: duas mensagens do cliente no MESMO segundo (álbum, rajada) não se confundem, a segunda segue não lida. */
+    public function test_mensagem_no_mesmo_segundo_da_ja_vista_continua_nao_lida(): void
+    {
+        $at = now()->startOfSecond()->subMinutes(5)->toDateTimeString();
+        $this->inbound($at);
+
+        Livewire::actingAs($this->owner)->test(Inbox::class)->call('select', $this->ticket->id);
+        $this->assertSame(0, $this->unread());
+
+        $this->inbound($at);
+
         $this->assertSame(1, $this->unread());
     }
 
@@ -179,12 +199,12 @@ class AgentSeenTest extends TestCase
         $this->assertSame(0, $this->unread(), 'ticket sem mensagens');
 
         $this->inbound(now()->subMinutes(30)->toDateTimeString());
-        $this->inbound(now()->subMinutes(20)->toDateTimeString());
+        $second = $this->inbound(now()->subMinutes(20)->toDateTimeString());
         $this->inbound(now()->subMinutes(2)->toDateTimeString());
         Message::factory()->for($this->ticket)->create(['direction' => MessageDirection::OUT, 'sent_at' => now()->subMinute()]);
-        $this->assertSame(3, $this->unread(), 'sem agent_seen_at conta todas as do cliente');
+        $this->assertSame(3, $this->unread(), 'sem marca de visto conta todas as do cliente');
 
-        $this->ticket->forceFill(['agent_seen_at' => now()->subMinutes(10)])->save();
+        $this->seenUpTo($second);
         $this->assertSame(1, $this->unread());
     }
 }
