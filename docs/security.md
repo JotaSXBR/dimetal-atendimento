@@ -96,6 +96,7 @@ Conferir no Coolify antes de subir a produção (o beta é ambiente de desenvolv
 | Dado | Prazo | Rotina |
 |---|---|---|
 | Evento bruto do webhook (`waha_events`, com o texto e os telefones do payload) | 7 dias | `app:purge-waha-events`, 03:50 |
+| Auditoria do sistema (`audit_logs`: IP e e-mail digitado nas falhas de login) | 365 dias | `app:purge-audit-logs`, 03:55 |
 | Anexos (arquivo; o texto e os eventos ficam) | 90 dias | `app:purge-media`, 03:30 |
 | Alertas do sino | 7 dias | `app:purge-notifications`, 03:45 |
 
