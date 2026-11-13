@@ -15,7 +15,7 @@
             <p class="text-sm text-ink-2 sm:hidden">{{ $paginator->currentPage() }} / {{ $paginator->lastPage() }}</p>
 
             <div class="flex items-center gap-1">
-                <flux:button size="sm" variant="subtle" icon="chevron-left" :disabled="$paginator->onFirstPage()" wire:click="previousPage('{{ $name }}')" x-on:click="{{ $scroll }}" aria-label="{{ __('pagination.previous') }}" />
+                <flux:button size="sm" variant="subtle" icon="chevron-left" :disabled="$paginator->onFirstPage()" wire:click="previousPage('{{ $name }}')" x-on:click="{{ $scroll }}" wire:loading.attr="disabled" aria-label="{{ __('pagination.previous') }}" />
 
                 @foreach ($elements as $element)
                     @if (is_string($element))
@@ -26,14 +26,14 @@
                                 @if ($page == $paginator->currentPage())
                                     <flux:button size="sm" variant="filled" aria-current="page" aria-label="Página {{ $page }}">{{ $page }}</flux:button>
                                 @else
-                                    <flux:button size="sm" variant="subtle" wire:click="gotoPage({{ $page }}, '{{ $name }}')" x-on:click="{{ $scroll }}" aria-label="Ir para a página {{ $page }}">{{ $page }}</flux:button>
+                                    <flux:button size="sm" variant="subtle" wire:click="gotoPage({{ $page }}, '{{ $name }}')" x-on:click="{{ $scroll }}" wire:loading.attr="disabled" aria-label="Ir para a página {{ $page }}">{{ $page }}</flux:button>
                                 @endif
                             </span>
                         @endforeach
                     @endif
                 @endforeach
 
-                <flux:button size="sm" variant="subtle" icon="chevron-right" :disabled="! $paginator->hasMorePages()" wire:click="nextPage('{{ $name }}')" x-on:click="{{ $scroll }}" aria-label="{{ __('pagination.next') }}" />
+                <flux:button size="sm" variant="subtle" icon="chevron-right" :disabled="! $paginator->hasMorePages()" wire:click="nextPage('{{ $name }}')" x-on:click="{{ $scroll }}" wire:loading.attr="disabled" aria-label="{{ __('pagination.next') }}" />
             </div>
         </nav>
     @endif

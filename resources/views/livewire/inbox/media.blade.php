@@ -75,7 +75,7 @@
             <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-medium text-ink">{{ $message->media_name ?? 'Arquivo' }}</span>
                 @if ($meta !== '')
-                    <span data-document-meta class="block text-xs text-ink-3">{{ $meta }}</span>
+                    <span data-document-meta class="block text-xs text-ink-2">{{ $meta }}</span>
                 @endif
             </span>
         </div>

@@ -22,13 +22,18 @@ class MarkTicketSeenByAgent
             return;
         }
 
-        // Sem mensagem do cliente depois do último visto não há o que zerar: nada de gravar nem de avisar a Fila.
-        if ($ticket->agent_seen_at !== null && ! $ticket->messages()->where('direction', MessageDirection::IN->value)->where('sent_at', '>', $ticket->agent_seen_at)->exists()) {
+        // A marca é o id da última mensagem do cliente lida AGORA: o que chegar depois tem id maior e segue não lido (sem corrida,
+        // nem com duas mensagens no mesmo segundo). Sem mensagem do cliente depois da marca não há o que zerar: nada de gravar
+        // nem de avisar a Fila.
+        $max = $ticket->messages()->where('direction', MessageDirection::IN->value)->max('id');
+        $latestId = is_numeric($max) ? (int) $max : null;
+
+        if ($ticket->agent_seen_at !== null && ($latestId === null || $latestId <= ($ticket->agent_seen_message_id ?? 0))) {
             return;
         }
 
         // Consulta direta: o visto não é uma edição do ticket (não mexe em `updated_at`).
-        Ticket::query()->whereKey($ticket->id)->update(['agent_seen_at' => now()]);
+        Ticket::query()->whereKey($ticket->id)->update(['agent_seen_at' => now(), 'agent_seen_message_id' => $latestId]);
         $ticket->refresh();
 
         TicketUpdated::dispatch($ticket);

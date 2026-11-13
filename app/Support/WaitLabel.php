@@ -4,18 +4,22 @@ namespace App\Support;
 
 use Carbon\CarbonInterface;
 
-/** Há quanto tempo o cliente espera, curto para o card da fila: "agora", "há 12 min", "há 3 h", "há 2 d". */
+/**
+ * Há quanto tempo, curto para o card da fila, no mesmo texto que o navegador escreve depois (`resources/js/relative-time.js`, estilo
+ * `narrow`): "há 5 seg.", "há 12 min.", "há 3 h", "há 2 dias". Igual de propósito: sem isso o card troca de texto ao carregar.
+ */
 final class WaitLabel
 {
-    public static function since(CarbonInterface $since, CarbonInterface $now): string
+    public static function narrow(CarbonInterface $since, CarbonInterface $now): string
     {
-        $minutes = (int) max(0, $since->diffInMinutes($now, false));
+        $seconds = (int) max(0, round($since->diffInSeconds($now, false)));
+        $days = intdiv($seconds, 86400);
 
         return match (true) {
-            $minutes < 1 => 'agora',
-            $minutes < 60 => "há {$minutes} min",
-            $minutes < 1440 => 'há '.intdiv($minutes, 60).' h',
-            default => 'há '.intdiv($minutes, 1440).' d',
+            $days >= 1 => "há {$days} ".($days === 1 ? 'dia' : 'dias'),
+            $seconds >= 3600 => 'há '.intdiv($seconds, 3600).' h',
+            $seconds >= 60 => 'há '.intdiv($seconds, 60).' min.',
+            default => "há {$seconds} seg.",
         };
     }
 }

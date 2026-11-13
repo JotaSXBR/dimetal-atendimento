@@ -51,7 +51,7 @@ enum TagColor: string
             self::TURQUESA => '#0d9488',
             self::CIANO => '#0891b2',
             self::ARDOSIA => '#64748b',
-            self::PEDRA => '#78716c',
+            self::PEDRA => '#71717a',
         };
     }
 

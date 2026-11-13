@@ -32,6 +32,14 @@ class TagsTest extends TestCase
         $this->actingAs($this->supervisor())->get('/configuracoes/etiquetas')->assertOk();
     }
 
+    public function test_nova_etiqueta_com_escopo_invalido_ou_ausente_vira_da_conversa(): void
+    {
+        Livewire::actingAs($this->supervisor())->test(Tags::class)
+            ->call('newTag', 'qualquer')->assertSet('scope', 'conversa')
+            ->call('newTag')->assertSet('scope', 'conversa')
+            ->call('newTag', 'contato')->assertSet('scope', 'contato');
+    }
+
     public function test_atendente_nao_abre_o_componente(): void
     {
         Livewire::actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))->test(Tags::class)->assertForbidden();

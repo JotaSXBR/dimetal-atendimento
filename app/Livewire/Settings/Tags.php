@@ -33,7 +33,7 @@ class Tags extends Component
         $this->authorize('supervisor');
 
         $this->resetForm();
-        $this->scope = TagScope::tryFrom((string) $scope)->value ?? TagScope::CONVERSA->value;
+        $this->scope = $scope !== null && TagScope::tryFrom($scope) !== null ? $scope : TagScope::CONVERSA->value;
         $this->showForm = true;
     }
 

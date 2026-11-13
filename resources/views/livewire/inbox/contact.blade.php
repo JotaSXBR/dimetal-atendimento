@@ -18,7 +18,7 @@
                     @else
                         <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
                             @if ($known)
-                                <span class="text-ink-3">Já está nos contatos</span>
+                                <span class="text-ink-2">Já está nos contatos</span>
                             @else
                                 <flux:button type="button" size="xs" variant="subtle" wire:click="addContact({{ $message->id }}, {{ $loop->index }})">Adicionar aos contatos</flux:button>
                             @endif

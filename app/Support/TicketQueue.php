@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 final class TicketQueue
 {
     /**
-     * Soma `unread` à lista: as mensagens do cliente depois do último visto do atendente (todas, se ainda não houve visto).
+     * Soma `unread` à lista: as mensagens do cliente depois da marca de visto do atendente, por id (todas, se ainda não houve visto).
      *
      * @param  Builder<Ticket>  $query
      */
@@ -23,7 +23,7 @@ final class TicketQueue
             ->selectRaw('count(*)')
             ->whereColumn('messages.ticket_id', 'tickets.id')
             ->where('messages.direction', MessageDirection::IN->value)
-            ->whereRaw('(tickets.agent_seen_at is null or messages.sent_at > tickets.agent_seen_at)')]);
+            ->whereRaw('(tickets.agent_seen_message_id is null or messages.id > tickets.agent_seen_message_id)')]);
     }
 
     /**

@@ -204,7 +204,26 @@ class SidebarTest extends TestCase
 
         $link = $this->xpath($this->page(UserRole::ADMIN))->query('//a[@data-flux-sidebar-item][1]')->item(0);
 
-        $this->assertSame('Fila, 3 aguardando, 1 com SLA estourado', $link?->getAttribute('aria-label'));
+        $this->assertSame('Fila 1 3: 3 aguardando, 1 com SLA estourado', $link?->getAttribute('aria-label'));
+    }
+
+    /** WCAG 2.5.3: o nome acessível contém o texto visível do link ("Fila" e os números dos selos, nessa ordem). */
+    public function test_nome_do_item_contem_o_texto_visivel_com_e_sem_pendencias(): void
+    {
+        $normalize = fn (string $text): string => mb_strtolower(trim((string) preg_replace('/\s+/', ' ', $text)));
+        $check = function () use ($normalize): void {
+            foreach ($this->xpath($this->page(UserRole::ADMIN))->query('//a[@data-flux-sidebar-item]') as $link) {
+                $this->assertStringContainsString($normalize($link->textContent), $normalize($link->getAttribute('aria-label')), $link->getAttribute('aria-label'));
+            }
+        };
+
+        $check();
+
+        $channel = Channel::factory()->connected()->create();
+        Ticket::factory()->count(2)->for($channel)->create(['status' => TicketStatus::AGUARDANDO]);
+        Ticket::factory()->for($channel)->create(['status' => TicketStatus::AGUARDANDO, 'waiting_since' => now()->subHour(), 'sla_due_at' => now()->subMinutes(5)]);
+
+        $check();
     }
 
     /** A ordem do Tab é a do DOM: marca, botão de colapso, sino, igual à ordem visual aberta e fechada (sem `order-*`). */

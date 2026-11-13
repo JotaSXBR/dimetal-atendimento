@@ -20,6 +20,7 @@ import './message-menu';
 import './settings-ui';
 import './auth-ui';
 import './relative-time';
+import './transcript-visibility';
 import './channel-qr';
 import './avatar-cropper';
 import './flow-editor';

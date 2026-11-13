@@ -1,3 +1,6 @@
+{{-- Avisa o servidor se a aba está visível (o visto da equipe só vale com a aba aberta); ver resources/js/transcript-visibility.js. --}}
+<span wire:key="transcript-visibility" x-data="transcriptVisibility" hidden aria-hidden="true"></span>
+
 @php
     $tz = config('app.display_timezone');
 @endphp
@@ -25,7 +28,7 @@
         $outside = $message->origin === \App\Enums\MessageOrigin::FORA_DO_PAINEL;
         $tick = match ($message->delivery_status) {
             \App\Enums\DeliveryStatus::FAILED => ['Falhou', 'falhou ao enviar', 'text-danger'],
-            \App\Enums\DeliveryStatus::READ => ['Lida', '✓✓', 'text-sky-600'],
+            \App\Enums\DeliveryStatus::READ => ['Lida', '✓✓', 'text-read'],
             \App\Enums\DeliveryStatus::DELIVERED => ['Entregue', '✓✓', ''],
             \App\Enums\DeliveryStatus::SENT => ['Enviada', '✓', ''],
             \App\Enums\DeliveryStatus::QUEUED => ['Aguardando conexão', '⏳', 'text-warn'],
@@ -94,7 +97,7 @@
             @endif
 
             @if ($message->edits->isNotEmpty())
-                <div class="mt-1 space-y-0.5 border-l-2 border-line pl-2 text-xs text-ink-3">
+                <div class="mt-1 space-y-0.5 border-l-2 border-line pl-2 text-xs text-ink-2">
                     @foreach ($message->edits as $edit)
                         <p class="break-words whitespace-pre-wrap"><span class="font-mono text-[10px] uppercase">Antes:</span> {{ $edit->previous_body }}</p>
                     @endforeach

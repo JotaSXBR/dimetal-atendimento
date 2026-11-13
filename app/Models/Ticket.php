@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\DB;
  * @property CarbonImmutable|null $sla_warned_at
  * @property CarbonImmutable|null $sla_breached_at
  * @property CarbonImmutable|null $agent_seen_at
+ * @property int|null $agent_seen_message_id
  * @property ClosedReason|null $closed_reason
  * @property CloseOutcome|null $close_outcome
  * @property string|null $close_summary

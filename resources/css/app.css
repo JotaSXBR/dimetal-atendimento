@@ -32,6 +32,7 @@
     --color-danger-foreground: #ffffff;
     --color-ok: #166534; /* green-800 */
     --color-bot: #4338ca; /* indigo-700: quem respondeu foi o bot */
+    --color-read: #0369a1; /* sky-700: tique "Lida" (azul, como no WhatsApp), legível sobre as bolhas */
 
     --duration-base: 200ms;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -91,6 +92,7 @@ select:focus[data-flux-control] {
         --color-danger-foreground: #18181b;
         --color-ok: #4ade80; /* green-400 */
         --color-bot: #a5b4fc; /* indigo-300 */
+        --color-read: #7dd3fc; /* sky-300 */
     }
 }
 
@@ -115,8 +117,8 @@ select:focus[data-flux-control] {
 .dark .tag-ciano { --tag-bg: #164e63; --tag-fg: #a5f3fc; --tag-line: #22d3ee; }
 .tag-ardosia { --tag-bg: #f1f5f9; --tag-fg: #1e293b; --tag-line: #64748b; }
 .dark .tag-ardosia { --tag-bg: #334155; --tag-fg: #e2e8f0; --tag-line: #94a3b8; }
-.tag-pedra { --tag-bg: #f5f5f4; --tag-fg: #292524; --tag-line: #78716c; }
-.dark .tag-pedra { --tag-bg: #44403c; --tag-fg: #e7e5e4; --tag-line: #a8a29e; }
+.tag-pedra { --tag-bg: #f4f4f5; --tag-fg: #27272a; --tag-line: #71717a; }
+.dark .tag-pedra { --tag-bg: #3f3f46; --tag-fg: #e4e4e7; --tag-line: #a1a1aa; }
 
 @media (prefers-reduced-motion: reduce) {
     *,

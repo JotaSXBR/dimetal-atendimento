@@ -25,9 +25,16 @@
                 @foreach ($nav->primary(auth()->user()) as $item)
                     @php
                         // Fechada, o texto do item some e o `aria-label` vira o nome do link; ele substitui o conteúdo, então leva as contagens do selo.
-                        $name = $item->route === 'inbox'
-                            ? $item->label.($counts['waiting'] > 0 ? ', '.$counts['waiting'].' aguardando' : '').($counts['breached'] > 0 ? ', '.$counts['breached'].' com SLA estourado' : '')
-                            : $item->label;
+                        // O nome COMEÇA pelo texto visível (a Fila e os números dos selos, nessa ordem): WCAG 2.5.3, nome acessível contém o rótulo visível.
+                        $name = $item->label;
+
+                        if ($item->route === 'inbox' && ($counts['waiting'] > 0 || $counts['breached'] > 0)) {
+                            $details = array_filter([
+                                $counts['waiting'] > 0 ? $counts['waiting'].' aguardando' : null,
+                                $counts['breached'] > 0 ? $counts['breached'].' com SLA estourado' : null,
+                            ]);
+                            $name = implode(' ', array_filter([$item->label, $counts['breached'] ?: null, $counts['waiting'] ?: null])).': '.implode(', ', $details);
+                        }
                     @endphp
                     <flux:sidebar.item :href="route($item->route)" :current="request()->routeIs($item->match)" aria-label="{{ $name }}" wire:navigate
                         :badge="$item->route === 'inbox' ? ($counts['waiting'] ?: null) : null" badge-color="yellow"

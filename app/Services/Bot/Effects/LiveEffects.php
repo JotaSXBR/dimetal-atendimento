@@ -126,18 +126,22 @@ final class LiveEffects implements BotEffects
 
     public function tag(Tag $tag): void
     {
-        $this->tagOwner($tag)->syncWithoutDetaching([$tag->id]);
+        $this->tagOwner($tag)?->syncWithoutDetaching([$tag->id]);
     }
 
     public function hasTag(Tag $tag): bool
     {
-        return $this->tagOwner($tag)->whereKey($tag->id)->exists();
+        return $this->tagOwner($tag)?->whereKey($tag->id)->exists() ?? false;
     }
 
-    /** @return BelongsToMany<Tag, Contact>|BelongsToMany<Tag, Ticket> */
-    private function tagOwner(Tag $tag): BelongsToMany
+    /**
+     * Onde a etiqueta mora, ou nulo se o contato não existe mais: efeito opcional, o fluxo do bot segue.
+     *
+     * @return BelongsToMany<Tag, Contact>|BelongsToMany<Tag, Ticket>|null
+     */
+    private function tagOwner(Tag $tag): ?BelongsToMany
     {
-        return $tag->scope === TagScope::CONTATO ? $this->ticket->contact()->firstOrFail()->tags() : $this->ticket->tags();
+        return $tag->scope === TagScope::CONTATO ? $this->ticket->contact()->first()?->tags() : $this->ticket->tags();
     }
 
     public function note(string $body): void
