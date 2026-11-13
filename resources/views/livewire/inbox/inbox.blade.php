@@ -158,7 +158,7 @@
                             </span>
 
                             <span class="flex shrink-0 flex-col items-end gap-1">
-                                <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="font-mono text-[10px] text-ink-3">{{ \App\Support\WaitLabel::since($at, now()) }}</span>
+                                <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="font-mono text-[10px] text-ink-3">{{ \App\Support\WaitLabel::narrow($at, now()) }}</span>
                                 @if ($showSector && $item->sector)
                                     <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-[10px] text-ink-2">{{ $item->sector->name }}</span>
                                 @endif

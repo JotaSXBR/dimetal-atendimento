@@ -196,7 +196,7 @@ class InboxQueueCardTest extends TestCase
 
         $html = $this->html();
 
-        $this->assertSame('há 12 min', trim($this->part($html, 'card-time')));
+        $this->assertSame('há 12 min.', trim($this->part($html, 'card-time')));
         $this->assertStringContainsString('x-data="relativeTime(', $html);
     }
 

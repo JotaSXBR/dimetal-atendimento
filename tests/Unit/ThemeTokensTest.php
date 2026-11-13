@@ -281,7 +281,7 @@ class ThemeTokensTest extends TestCase
 
         $this->assertSame(['bg' => '#f4f4f5', 'fg' => '#27272a', 'line' => '#71717a'], $pedra['light']);
         $this->assertSame(['bg' => '#3f3f46', 'fg' => '#e4e4e7', 'line' => '#a1a1aa'], $pedra['dark']);
-        $this->assertSame('#71717a', \App\Enums\TagColor::PEDRA->swatch());
+        $this->assertSame('#71717a', TagColor::PEDRA->swatch());
     }
 
     public function test_o_swatch_do_tom_e_o_contorno_do_tema_claro(): void

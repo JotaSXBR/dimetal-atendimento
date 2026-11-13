@@ -14,8 +14,9 @@ const formatters = {
     narrow: new Intl.RelativeTimeFormat('pt-BR', { numeric: 'always', style: 'narrow' }),
 };
 
-function label(iso, style) {
-    const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+/** O texto relativo de `iso` agora (ou em `now`, para teste). Tem o mesmo formato de App\Support\WaitLabel::narrow no servidor. */
+export function label(iso, style, now = Date.now()) {
+    const seconds = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
 
     for (const [unit, size] of UNITS) {
         if (seconds >= size || unit === 'second') {
@@ -26,7 +27,8 @@ function label(iso, style) {
     return '';
 }
 
-document.addEventListener('alpine:init', () => {
+// Sem `document` (testes em node) só a função `label` interessa.
+if (typeof document !== 'undefined') document.addEventListener('alpine:init', () => {
     window.Alpine.data('relativeTime', (iso, style = 'long') => ({
         label: label(iso, style),
         timer: null,
