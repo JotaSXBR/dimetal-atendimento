@@ -372,16 +372,19 @@
                         x-bind:class="dragging ? 'rounded-md ring-2 ring-accent' : ''"
                     >
                         @if ($attachments !== [])
-                            <ul x-show="!voiceBusy" class="mb-2 flex flex-wrap gap-2" aria-label="Arquivos para enviar">
-                                @foreach ($attachments as $index => $file)
-                                    <li wire:key="attachment-{{ $index }}-{{ $file->getFilename() }}" class="flex items-center gap-2 rounded-md border border-line bg-canvas px-2 py-1 text-xs">
-                                        <flux:icon.paper-clip class="size-3.5 text-ink-3" />
-                                        <span class="max-w-40 truncate text-ink">{{ $file->getClientOriginalName() }}</span>
-                                        <span class="font-mono text-ink-3">{{ \Illuminate\Support\Number::fileSize($file->getSize(), 1) }}</span>
-                                        <flux:button type="button" size="xs" variant="ghost" icon="x-mark" wire:click="removeAttachment({{ $index }})" aria-label="Remover {{ $file->getClientOriginalName() }}" />
-                                    </li>
-                                @endforeach
-                            </ul>
+                            {{-- O servidor insere a bandeja já pronta: `revealOnInsert` abre o `x-collapse` logo depois de inserida (attach-tray.js). --}}
+                            <div x-data="revealOnInsert" x-show="shown" x-cloak x-collapse.duration.200ms>
+                                <ul x-show="!voiceBusy" class="mb-2 flex flex-wrap gap-2" aria-label="Arquivos para enviar">
+                                    @foreach ($attachments as $index => $file)
+                                        <li wire:key="attachment-{{ $index }}-{{ $file->getFilename() }}" class="flex items-center gap-2 rounded-md border border-line bg-canvas px-2 py-1 text-xs">
+                                            <flux:icon.paper-clip class="size-3.5 text-ink-3" />
+                                            <span class="max-w-40 truncate text-ink">{{ $file->getClientOriginalName() }}</span>
+                                            <span class="font-mono text-ink-3">{{ \Illuminate\Support\Number::fileSize($file->getSize(), 1) }}</span>
+                                            <flux:button type="button" size="xs" variant="ghost" icon="x-mark" wire:click="removeAttachment({{ $index }})" aria-label="Remover {{ $file->getClientOriginalName() }}" />
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
                         @endif
 
                         <p x-show="uploading > 0" x-cloak class="mb-2 text-xs text-ink-3" role="status">Enviando arquivo…</p>

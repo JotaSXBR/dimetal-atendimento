@@ -13,6 +13,7 @@ use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportTesting\Testable;
@@ -130,5 +131,25 @@ class InboxMotionMarkupTest extends TestCase
             $this->assertStringNotContainsString('mb-2', substr($wrapper, 0, (int) strpos($wrapper, '>')), $fase);
             $this->assertMatchesRegularExpression('/x-collapse\.duration\.200ms[^>]*>\s*<div class="mb-2 /', $wrapper, $fase);
         }
+    }
+
+    public function test_a_bandeja_de_anexos_entra_pela_altura_e_o_respondendo_a_nao_anima(): void
+    {
+        $mensagem = $this->mensagem(MessageDirection::IN);
+        $jpeg = "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00";
+
+        $html = $this->inbox()
+            ->set('upload', UploadedFile::fake()->createWithContent('foto.jpg', $jpeg))->call('commitUpload', $this->ticket->id)
+            ->call('reply', $mensagem->id)
+            ->html();
+
+        $bandeja = $this->tagCom($html, 'x-data="revealOnInsert"');
+        $this->assertStringContainsString('x-show="shown"', $bandeja);
+        $this->assertStringContainsString('x-collapse.duration.200ms', $bandeja);
+
+        // "Respondendo a" não anima: o Alt+P alterna o bloco várias vezes por dia e ele continua instantâneo.
+        $resposta = $this->tagCom($html, 'border-l-4 border-accent');
+        $this->assertStringNotContainsString('x-collapse', $resposta);
+        $this->assertStringNotContainsString('starting:', $resposta);
     }
 }
