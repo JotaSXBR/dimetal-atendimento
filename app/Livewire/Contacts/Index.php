@@ -49,6 +49,16 @@ class Index extends Component
         $this->resetPage();
     }
 
+    /** `?contato=ID` (a busca Ctrl+K): abre a ficha; id que não existe é ignorado. */
+    public function mount(): void
+    {
+        $id = request()->integer('contato');
+
+        if ($id > 0 && Contact::query()->whereKey($id)->exists()) {
+            $this->select($id);
+        }
+    }
+
     public function select(int $id): void
     {
         $this->selectedId = Contact::query()->findOrFail($id)->id;

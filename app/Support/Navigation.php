@@ -57,8 +57,12 @@ class Navigation
         return null;
     }
 
-    /** @return list<NavItem> */
-    private function visible(User $user): array
+    /**
+     * Tudo que o usuário pode abrir (a barra e Configuração): também a lista da busca Ctrl+K.
+     *
+     * @return list<NavItem>
+     */
+    public function visible(User $user): array
     {
         return array_values(array_filter(self::items(), fn (NavItem $item): bool => $item->gate === null || $user->can($item->gate)));
     }
