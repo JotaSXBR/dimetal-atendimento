@@ -436,7 +436,7 @@
                             {{-- Seletor de emoji: o elemento vive no Alpine (wire:ignore); ver resources/js/emoji-picker.js --}}
                             <div class="relative" wire:ignore x-data="emojiPicker" x-on:keydown.escape="close(true)" x-on:click.outside="close()">
                                 <flux:button type="button" variant="subtle" icon="face-smile" aria-label="Emoji" title="Emoji" aria-haspopup="dialog" x-bind:aria-expanded="open.toString()" x-on:click="toggle()" />
-                                <div x-ref="panel" x-show="open" x-cloak role="dialog" aria-label="Seletor de emoji" class="absolute bottom-full start-0 z-20 mb-2 overflow-hidden rounded-lg border border-line shadow-lg"></div>
+                                <div x-ref="panel" x-show="open" x-cloak x-transition:enter="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition duration-100 ease-out" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" role="dialog" aria-label="Seletor de emoji" class="origin-bottom-left absolute bottom-full start-0 z-20 mb-2 overflow-hidden rounded-lg border border-line shadow-lg"></div>
                             </div>
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" title="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
 

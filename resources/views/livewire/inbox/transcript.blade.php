@@ -197,7 +197,7 @@
             @can('react', $message)
                 {{-- Reação rápida ao lado da bolha, do lado de dentro da conversa. A barra abre na mesma linha (sem sobrepor nada, então nada a corta). --}}
                 <div x-data="{ open: false }" data-testid="quick-react" class="flex items-center gap-0.5 {{ $out ? 'order-first' : 'order-last' }}">
-                    <div x-cloak x-show="open" x-on:click.outside="open = false" class="flex gap-0.5 rounded-full border border-line bg-surface px-1 py-0.5 shadow-sm" role="group" aria-label="Reagir">
+                    <div x-cloak x-show="open" x-transition:enter="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition duration-100 ease-out" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" x-on:click.outside="open = false" class="{{ $out ? 'origin-right' : 'origin-left' }} flex gap-0.5 rounded-full border border-line bg-surface px-1 py-0.5 shadow-sm" role="group" aria-label="Reagir">
                         @foreach (\App\Services\Inbox\ReactToMessage::EMOJIS as $emoji)
                             <button type="button" data-testid="quick-react-emoji" wire:click="$parent.react({{ $message->id }}, '{{ $emoji }}')" x-on:click="open = false" class="rounded px-1 text-base hover:bg-canvas">{{ $emoji }}</button>
                         @endforeach

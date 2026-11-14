@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire;
 use App\Enums\MessageDirection;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Livewire\Alerts\Bell;
 use App\Livewire\Inbox\Inbox;
 use App\Models\Channel;
 use App\Models\Contact;
@@ -78,5 +79,42 @@ class InboxMotionMarkupTest extends TestCase
         $this->assertStringContainsString('x-bind:class="placed', $menu);
         $this->assertStringContainsString('duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]', $menu);
         $this->assertStringContainsString(self::SAIDA, $menu);
+    }
+
+    public function test_o_sino_cresce_do_canto_superior_esquerdo(): void
+    {
+        $painel = $this->tagCom(Livewire::actingAs($this->me)->test(Bell::class)->html(), 'role="dialog" aria-label="Alertas"');
+
+        $this->assertStringContainsString('origin-top-left', $painel);
+        $this->assertStringContainsString(self::ENTRADA, $painel);
+        $this->assertStringContainsString(self::SAIDA, $painel);
+        $this->assertStringNotContainsString('x-transition.opacity', $painel);
+    }
+
+    public function test_o_emoji_sobe_do_botao(): void
+    {
+        $painel = $this->tagCom($this->inbox()->html(), 'aria-label="Seletor de emoji"');
+
+        $this->assertStringContainsString('origin-bottom-left', $painel);
+        $this->assertStringContainsString(self::ENTRADA, $painel);
+        $this->assertStringContainsString(self::SAIDA, $painel);
+    }
+
+    public function test_a_barra_de_reacao_abre_do_lado_da_bolha(): void
+    {
+        $this->mensagem(MessageDirection::OUT);
+        $this->mensagem(MessageDirection::IN);
+
+        $html = $this->inbox()->html();
+        preg_match_all('/<div x-cloak x-show="open"[^>]*aria-label="Reagir"[^>]*>/', $html, $barras);
+
+        $this->assertCount(2, $barras[0]);
+        $this->assertStringContainsString('origin-right', $barras[0][0]);
+        $this->assertStringContainsString('origin-left', $barras[0][1]);
+
+        foreach ($barras[0] as $barra) {
+            $this->assertStringContainsString(self::ENTRADA, $barra);
+            $this->assertStringContainsString(self::SAIDA, $barra);
+        }
     }
 }
