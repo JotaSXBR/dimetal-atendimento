@@ -27,10 +27,13 @@ document.addEventListener('alpine:init', () => {
         open: false,
         info: false,
         style: '',
+        // A entrada só toca depois de posicionar: antes disso o menu está escondido e a animação seria invisível.
+        placed: false,
 
         toggle() {
             this.open = !this.open;
             this.info = false;
+            this.placed = false;
 
             if (this.open) {
                 this.style = 'top:0;left:0;visibility:hidden';
@@ -54,6 +57,7 @@ document.addEventListener('alpine:init', () => {
 
             // A animação cresce do lado do botão: o menu fica alinhado à direita dele, abaixo ou acima.
             this.style = `top:${top}px;left:${left}px;transform-origin:${above ? 'bottom' : 'top'} right`;
+            this.placed = true;
         },
 
         copy(body) {

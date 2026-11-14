@@ -146,7 +146,7 @@
                         <button type="button" data-testid="message-menu-button" x-ref="button" x-on:click="toggle()" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="rounded bg-surface/80 px-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-ink focus-visible:opacity-100 [@media(hover:none)]:opacity-100">
                             <svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
                         </button>
-                        <div x-ref="menu" x-cloak x-show="open" x-bind:style="style" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="fixed z-50 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md">
+                        <div x-ref="menu" x-cloak x-show="open" x-bind:style="style" x-bind:class="placed ? 'opacity-100 scale-100' : 'opacity-0 scale-95'" x-transition:leave="transition duration-100 ease-out" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="fixed z-50 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]">
                             @can('react', $message)
                                 <div class="flex gap-0.5 rounded-full border border-line bg-canvas px-1 py-0.5" role="group" aria-label="Reagir">
                                     @foreach (\App\Services\Inbox\ReactToMessage::EMOJIS as $emoji)
