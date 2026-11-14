@@ -225,6 +225,14 @@ export function clampToViewport(x, y, width, height, viewWidth, viewHeight, marg
     };
 }
 
+/** O texto dos blocos tem 12 px: com 0,9 fica em 10,8 px, o menor que ainda se lê em 1280×720. Abaixo disso o fluxo inteiro vira mancha. */
+export const MIN_FIT_ZOOM = 0.9;
+
+/** O zoom do enquadramento, nunca abaixo do piso legível (fluxo que cabe com folga mantém o zoom que o enquadramento deu). */
+export function fitScale(zoomedTo, min = MIN_FIT_ZOOM) {
+    return Math.max(zoomedTo, min);
+}
+
 /** Cópia do bloco para o ponto 40 px abaixo e à direita, sem ligações; o Início não se duplica. */
 export function duplicate(node, id) {
     if (node.type === 'inicio') return null;

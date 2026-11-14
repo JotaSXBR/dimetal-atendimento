@@ -8,6 +8,7 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Models\Workflow;
 use App\Services\Bot\DefaultWorkflow;
+use App\Services\Bot\Vars;
 use App\Services\Bot\WorkflowPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -36,6 +37,17 @@ class AutomationEditorTest extends TestCase
 
         $this->actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))->get($url)->assertForbidden();
         $this->actingAs($this->user)->get($url)->assertOk()->assertSee('Triagem');
+    }
+
+    public function test_editor_entrega_as_variaveis_embutidas_para_o_botao_inserir_variavel(): void
+    {
+        $html = html_entity_decode(Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html());
+
+        foreach (array_keys(Vars::BUILTIN) as $key) {
+            $this->assertStringContainsString('"key":"'.$key.'"', $html);
+        }
+
+        $this->assertStringContainsString('Inserir variável', $html);
     }
 
     public function test_editor_entrega_so_as_pessoas_ativas_para_atribuir(): void

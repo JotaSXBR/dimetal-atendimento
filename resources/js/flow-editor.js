@@ -4,6 +4,8 @@
 import { CATEGORIES, categoryOf, clampToViewport, errorNodeIds } from './flow-editor/appearance.js';
 import { BLOCKS, PALETTE_SHORTCUTS } from './flow-editor/nodes.js';
 import { messagesOf, withMessages } from './flow-editor/serialize.js';
+import { token, variableChoices } from './flow-editor/variables.js';
+import { insertAt } from './composer-insert.js';
 import { shown } from './shown.js';
 
 document.addEventListener('alpine:init', () => {
@@ -28,6 +30,7 @@ document.addEventListener('alpine:init', () => {
             users: [],
             versions: [],
             catalog: [],
+            builtinVariables: [],
             messages: {},
             selected: null,
             errors: [],
@@ -48,6 +51,7 @@ document.addEventListener('alpine:init', () => {
                 this.users = config.users;
                 this.versions = config.versions;
                 this.catalog = config.messages;
+                this.builtinVariables = config.variables;
                 this.messages = messagesOf(config.graph);
 
                 try {
@@ -132,6 +136,31 @@ document.addEventListener('alpine:init', () => {
 
             blockLabel(type) {
                 return BLOCKS[type]?.label ?? type;
+            },
+
+            /** O que o "Inserir variável" oferece: as embutidas e as respostas das perguntas do fluxo como está agora. */
+            variableOptions() {
+                return variableChoices(this.builtinVariables, api?.getGraph().nodes ?? []).map((v) => ({ ...v, text: `${v.label} — ${token(v.key)}` }));
+            },
+
+            /** Escolheu uma variável no select: entra `{{chave}}` no cursor do campo (trocando a seleção) e o select volta ao título. */
+            insertVariable(event, key) {
+                const select = event.target;
+                const field = select.closest('label')?.querySelector('textarea');
+
+                if (select.value === '' || !field) {
+                    return;
+                }
+
+                const { value, caret } = insertAt(this.selected.data[key] ?? '', field.selectionStart, field.selectionEnd, token(select.value));
+
+                this.selected.data[key] = value;
+                this.apply();
+                select.value = '';
+                this.$nextTick(() => {
+                    field.focus();
+                    field.setSelectionRange(caret, caret);
+                });
             },
 
             linesValue(key) {
