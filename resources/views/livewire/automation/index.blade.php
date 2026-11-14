@@ -1,7 +1,7 @@
-<x-settings-page route="automacao" title="Automação" subtitle="Workflows do pré-atendimento: o bot conversa com o cliente e entrega o ticket à fila do setor. Cada número usa um workflow ativo." width="5xl">
-    <x-slot:actions>
+<section class="mx-auto w-full max-w-5xl space-y-6 p-6">
+    <x-page-header title="Automação" subtitle="Workflows do pré-atendimento: o bot conversa com o cliente e entrega o ticket à fila do setor. Cada número usa um workflow ativo.">
         <flux:button variant="primary" icon="plus" wire:click="$set('showNew', true)">Novo workflow</flux:button>
-    </x-slot:actions>
+    </x-page-header>
 
     @if ($error)
         <div class="mt-4 rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">{{ $error }}</div>
@@ -87,4 +87,4 @@
             <li class="rounded-[14px] border border-line bg-surface"><x-empty-state icon="bolt" title="Nenhum workflow ainda." description="Crie o primeiro a partir do modelo." /></li>
         @endforelse
     </ul>
-</x-settings-page>
+</section>

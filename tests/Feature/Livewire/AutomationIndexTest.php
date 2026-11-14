@@ -32,6 +32,17 @@ class AutomationIndexTest extends TestCase
         return Livewire::actingAs($this->user)->test(Index::class);
     }
 
+    /** A Automação é uma página da barra lateral, não do hub de Configuração: sem a navegação de Configuração ao lado. */
+    public function test_a_pagina_nao_traz_a_navegacao_de_configuracao_mas_traz_o_titulo_e_o_botao(): void
+    {
+        $html = (string) $this->actingAs($this->user)->get('/automacao')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('<nav aria-label="Configuração"', $html);
+        $this->assertStringNotContainsString('data-test="settings-group-title"', $html);
+        $this->assertStringContainsString('Novo workflow', $html);
+        $this->assertStringContainsString('Workflows do pré-atendimento', $html);
+    }
+
     private function published(string $name = 'Fluxo A'): Workflow
     {
         $publisher = app(WorkflowPublisher::class);

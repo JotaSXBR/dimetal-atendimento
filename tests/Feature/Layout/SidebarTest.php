@@ -96,6 +96,24 @@ class SidebarTest extends TestCase
         $this->assertStringNotContainsString('Acompanhamento', $html);
     }
 
+    public function test_automacao_esta_na_barra_para_supervisor_e_admin_e_nao_para_atendente(): void
+    {
+        $this->assertSame(0, $this->linksTo($this->page(UserRole::ATENDENTE), 'automacao'));
+        $this->assertSame(1, $this->linksTo($this->page(UserRole::SUPERVISOR), 'automacao'));
+        $this->assertSame(1, $this->linksTo($this->page(UserRole::ADMIN), 'automacao'));
+    }
+
+    /** A Automação saiu de Configuração: em `/automacao` o item dela fica ativo e o de Configuração não. */
+    public function test_na_automacao_o_item_dela_fica_ativo_e_o_de_configuracao_nao(): void
+    {
+        $html = $this->page(UserRole::SUPERVISOR, '/automacao');
+        $link = $this->xpath($html)->query('//a[@href="'.route('automacao').'"]')->item(0);
+
+        $this->assertInstanceOf(\DOMElement::class, $link);
+        $this->assertTrue($link->hasAttribute('data-current'));
+        $this->assertFalse($this->entry($html)?->hasAttribute('data-current'));
+    }
+
     public function test_configuracao_fica_ativa_so_nas_paginas_de_configuracao(): void
     {
         $this->assertFalse($this->entry($this->page(UserRole::ADMIN))?->hasAttribute('data-current'));
@@ -188,7 +206,7 @@ class SidebarTest extends TestCase
             $names[] = $link->getAttribute('aria-label');
         }
 
-        $this->assertSame(['Fila', 'Contatos', 'Histórico', 'Relatórios', 'Auditoria', 'Configuração'], $names);
+        $this->assertSame(['Fila', 'Contatos', 'Histórico', 'Relatórios', 'Automação', 'Auditoria', 'Configuração'], $names);
         // Com a inicial do monograma (texto visível) na frente do nome: WCAG 2.5.3, o nome acessível contém o rótulo visível.
         $this->assertSame(mb_strtoupper(mb_substr((string) config('app.name'), 0, 1)).' '.config('app.name'), $xpath->query('//a[@data-flux-sidebar-brand]')->item(0)?->getAttribute('aria-label'));
     }

@@ -51,8 +51,8 @@ class NavigationTest extends TestCase
     public function test_primary_por_papel(): void
     {
         $this->assertSame(['Fila', 'Contatos', 'Histórico'], $this->primaryLabels(UserRole::ATENDENTE));
-        $this->assertSame(['Fila', 'Contatos', 'Histórico', 'Relatórios'], $this->primaryLabels(UserRole::SUPERVISOR));
-        $this->assertSame(['Fila', 'Contatos', 'Histórico', 'Relatórios', 'Auditoria'], $this->primaryLabels(UserRole::ADMIN));
+        $this->assertSame(['Fila', 'Contatos', 'Histórico', 'Relatórios', 'Automação'], $this->primaryLabels(UserRole::SUPERVISOR));
+        $this->assertSame(['Fila', 'Contatos', 'Histórico', 'Relatórios', 'Automação', 'Auditoria'], $this->primaryLabels(UserRole::ADMIN));
     }
 
     public function test_settings_groups_por_papel(): void
@@ -63,9 +63,9 @@ class NavigationTest extends TestCase
         );
 
         $this->assertSame([], $groups(UserRole::ATENDENTE));
-        $this->assertSame(['Atendimento' => ['Respostas rápidas', 'Etiquetas', 'Automação'], 'Equipe' => ['Usuários']], $groups(UserRole::SUPERVISOR));
+        $this->assertSame(['Atendimento' => ['Respostas rápidas', 'Etiquetas'], 'Equipe' => ['Usuários']], $groups(UserRole::SUPERVISOR));
         $this->assertSame([
-            'Atendimento' => ['Setores', 'Horário e SLA', 'Respostas rápidas', 'Etiquetas', 'Automação'],
+            'Atendimento' => ['Setores', 'Horário e SLA', 'Respostas rápidas', 'Etiquetas'],
             'Equipe' => ['Usuários'],
             'Conexões' => ['Canais', 'Google Contatos'],
             'Empresa' => ['Empresa e assinatura', 'Anexos e retenção', 'Backup do banco'],
@@ -89,10 +89,11 @@ class NavigationTest extends TestCase
         return $this->nav()->settingsActive($this->user($role));
     }
 
-    public function test_settings_active_cobre_automacao_editar_e_o_retorno_do_google(): void
+    public function test_settings_active_cobre_as_paginas_de_configuracao_e_o_retorno_do_google_mas_nao_a_automacao(): void
     {
         $this->assertTrue($this->activeOn('/configuracoes/setores'));
-        $this->assertTrue($this->activeOn('/automacao/1'));
+        $this->assertFalse($this->activeOn('/automacao'), 'a Automação tem item próprio na barra');
+        $this->assertFalse($this->activeOn('/automacao/1'), 'o editor também');
         $this->assertTrue($this->activeOn('/configuracoes/google/callback'));
         $this->assertFalse($this->activeOn('/inbox'));
         $this->assertFalse($this->activeOn('/configuracoes/setores', UserRole::ATENDENTE));
