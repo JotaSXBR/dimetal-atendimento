@@ -277,6 +277,8 @@ class Inbox extends Component
     #[On('echo-private:inbox,.message.created')]
     #[On('echo-private:inbox,.channel.status')]
     #[On('realtime-reconnected')]
+    // As etiquetas mudaram no painel (ficha do contato ou etiquetas da conversa): o card da fila se atualiza na hora, sem esperar o websocket.
+    #[On('tags-changed')]
     public function refresh(): void {}
 
     /** Só o protocolo, e só se o usuário ainda pode ver o ticket (ele pode ter sido transferido enquanto isso). */

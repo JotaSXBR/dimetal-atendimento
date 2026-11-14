@@ -50,3 +50,4 @@ yarn-error.log
 /.phpstan.cache
 /.pint.cache
 /docs/ux-refactor-prompt.md
+/docs/prompt-revisao.md

@@ -94,6 +94,8 @@ class TicketTags extends Component
 
         if ($ticket !== null) {
             TicketUpdated::dispatch($ticket);
+            // O aviso pelo Reverb chega a todos; este, ao navegador de quem editou, atualiza o card da fila sem depender dele.
+            $this->dispatch('tags-changed');
         }
     }
 
