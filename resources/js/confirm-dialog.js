@@ -52,7 +52,7 @@ if (typeof document !== 'undefined') {
             pending = element;
             dialog.returnValue = '';
             dialog.showModal();
-            dialog.querySelector(`[data-confirm-ok="${tone}"]`)?.focus();
+            dialog.querySelector('[value=cancel]')?.focus();
         },
         true,
     );
