@@ -13,6 +13,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Google\ContactSyncStatus;
 use App\Services\Google\GoogleAccount;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -116,11 +117,27 @@ class ContactCard extends Component
     {
         abort_if($this->readonly, 403);
 
+        $tag = Tag::query()->find($tagId);
         $removed = $this->contact()->tags()->detach($tagId) > 0;
         $this->resetErrorBag('tag');
 
         if ($removed) {
             $this->tagsChanged();
+
+            if ($tag !== null) {
+                Flux::toast(text: 'Etiqueta «'.$tag->name.'» removida.', duration: 6000, action: [
+                    'label' => 'Desfazer', 'event' => 'undo-contact-tag', 'params' => ['ownerId' => $this->contactId, 'tagId' => $tag->id],
+                ]);
+            }
+        }
+    }
+
+    /** O "Desfazer" do aviso de remoção (só age a ficha do próprio contato). Reaproveita as regras do `addTag`, inclusive o limite. */
+    #[On('undo-contact-tag')]
+    public function undoRemove(int $ownerId, int $tagId): void
+    {
+        if ($ownerId === $this->contactId) {
+            $this->addTag($tagId);
         }
     }
 

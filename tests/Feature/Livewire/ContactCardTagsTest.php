@@ -158,4 +158,43 @@ class ContactCardTagsTest extends TestCase
 
         $this->assertGreaterThan($before, substr_count($inbox->html(), 'Revenda'));
     }
+
+    public function test_remover_oferece_desfazer_so_quando_removeu(): void
+    {
+        $tag = Tag::factory()->contato()->create(['name' => 'Revenda']);
+        $this->contact->tags()->attach($tag);
+
+        $this->card()->call('removeTag', Tag::factory()->contato()->create()->id)->assertNotDispatched('toast-show');
+        $this->card()->call('removeTag', $tag->id)
+            ->assertDispatched('toast-show', fn (string $event, array $params): bool => str_contains(json_encode($params, JSON_UNESCAPED_UNICODE), 'Etiqueta «Revenda» removida.')
+                && str_contains(json_encode($params), 'undo-contact-tag'));
+    }
+
+    public function test_desfazer_recoloca_a_etiqueta_do_contato(): void
+    {
+        $tag = Tag::factory()->contato()->create();
+        $this->contact->tags()->attach($tag);
+
+        $this->card()->call('removeTag', $tag->id)->call('undoRemove', $this->contact->id, $tag->id);
+
+        $this->assertSame([$tag->id], $this->contact->tags()->pluck('tags.id')->all());
+    }
+
+    public function test_desfazer_de_outro_contato_nao_faz_nada(): void
+    {
+        $tag = Tag::factory()->contato()->create();
+
+        $this->card()->call('undoRemove', $this->contact->id + 1000, $tag->id);
+
+        $this->assertSame(0, $this->contact->tags()->count());
+    }
+
+    public function test_desfazer_no_limite_de_etiquetas_recusa_com_o_erro_de_sempre(): void
+    {
+        $this->contact->tags()->attach(Tag::factory()->contato()->count(ContactCard::MAX_TAGS)->create()->modelKeys());
+        $removed = Tag::factory()->contato()->create();
+
+        $this->card()->call('undoRemove', $this->contact->id, $removed->id)->assertHasErrors(['tag']);
+        $this->assertSame(ContactCard::MAX_TAGS, $this->contact->tags()->count());
+    }
 }
