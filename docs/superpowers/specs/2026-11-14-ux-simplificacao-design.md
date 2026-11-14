@@ -38,7 +38,7 @@ ganha é a atendente, que passa o dia na Fila e na Conversa; o supervisor ganha 
 
 ## Decisões do dono, por fatia
 
-Ordem: **B → A → C → D → E → F → G** (B primeiro porque é a tela de uso contínuo). Cada fatia tem plano próprio em
+Ordem: **B → A → C → D → E → F → G → H** (e o sino, à parte, no fim) (B primeiro porque é a tela de uso contínuo). Cada fatia tem plano próprio em
 `docs/superpowers/plans/` e PR próprio; o dono autorizou ir até o PR.
 
 ### Fatia B: Fila e Conversa
@@ -108,6 +108,30 @@ Ordem: **B → A → C → D → E → F → G** (B primeiro porque é a tela de
 14. **Ctrl+K** (e ⌘K no Mac, e um botão de busca na barra lateral) abre uma busca em modal: telas que o papel do usuário pode
     abrir, contatos (nome/telefone) e protocolos de ticket. Enter abre; setas navegam; Esc fecha. Respeita permissões e setores
     (quem não vê um ticket não acha o protocolo dele). Lista vazia mostra "Nada encontrado".
+
+### Fatia H: faixas de aviso do topo dispensáveis (pedido do dono em 14/11, depois da aprovação das fatias A a G)
+
+15. Cada faixa fixa do topo (Sem conexão com o servidor, WhatsApp desconectado, SLA estourado, Som desligado neste navegador) ganha um
+    "✕" (`aria-label="Dispensar aviso"`, alvo ≥ 24 px) que a **esconde por um tempo** e ela volta sozinha; não é fechar de vez. O dono
+    delegou os tempos ("dada a importância de cada barra"); **minha proposta, a confirmar**:
+
+    | Faixa | Some por | Volta antes se |
+    |---|---|---|
+    | Sem conexão com o servidor | 1 min | a conexão cai de novo depois de voltar |
+    | WhatsApp desconectado | 2 min | outro canal cai, ou o canal volta e cai de novo |
+    | SLA estourado | 3 min | o número de tickets estourados aumenta |
+    | Som desligado neste navegador | até a próxima visita (sessão do navegador) | nunca no mesmo acesso |
+
+    - Fica **no navegador** (`localStorage` para os minutos, `sessionStorage` para "próxima visita"): dispensar no celular não esconde no
+      desktop, e cada pessoa decide por si. Sem persistência no servidor nem nova tabela.
+    - A regra "a dispensa vale?" é uma função pura (`isDismissed(entry, now, signature)`) com testes `node --test`; `signature` é o que muda
+      quando o problema piora (ex.: lista de canais fora do ar, contagem de SLA).
+    - Os botões "Silenciar som 15 min / 1 h" da faixa do WhatsApp continuam como estão (são sobre o som, não sobre a faixa).
+    - Quem vê a faixa hoje (papel e permissão) continua vendo e pode dispensá-la; nada novo é exibido.
+    - Anti-objetivo: o aviso crítico sumir sem voltar. Toda dispensa tem prazo, e o estado "fora do ar" real continua visível no sino e
+      na Fila (ponto e selo).
+    - **Fora do escopo:** o dono prevê, mais adiante, uma parte mobile separada do aplicativo de desktop; esta fatia só corrige o peso das
+      faixas empilhadas (hoje quatro ocupam a tela do celular inteira) e vale para os dois.
 
 ## Componentes: Flux grátis x Pro
 
