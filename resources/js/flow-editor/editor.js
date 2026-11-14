@@ -11,7 +11,7 @@ import { MinimapPlugin } from 'rete-minimap-plugin';
 import { getDOMSocketPosition } from 'rete-render-utils';
 import { LitElement, html } from 'lit';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
-import { History, ICONS, arrange, categoryOf, connectionPath, duplicate, hasPositions, previewOf } from './appearance.js';
+import { History, ICONS, arrange, categoryOf, connectionPath, duplicate, fitScale, hasPositions, previewOf } from './appearance.js';
 import { BLOCKS, defaultData, outputsFor } from './nodes.js';
 import { fromGraph, toGraph } from './serialize.js';
 
@@ -242,7 +242,25 @@ export async function createEditor(container, graph, hooks) {
         }
 
         if (fit) {
-            await AreaExtensions.zoomAt(area, editor.getNodes());
+            await fitView();
+        }
+    }
+
+    /**
+     * Enquadra o fluxo todo; se para isso o zoom ficar abaixo do piso legível (`fitScale`), sobe ao piso e deixa o bloco Início
+     * a 24 px do canto do canvas: o resto do fluxo se alcança arrastando.
+     */
+    async function fitView() {
+        await AreaExtensions.zoomAt(area, editor.getNodes());
+
+        const { k } = area.area.transform;
+        const target = fitScale(k);
+        const start = editor.getNodes().find((node) => node.type === 'inicio');
+        const view = start ? area.nodeViews.get(start.id) : null;
+
+        if (target !== k && view) {
+            await area.area.zoom(target);
+            await area.area.translate(24 - view.position.x * target, 24 - view.position.y * target);
         }
     }
 
@@ -346,7 +364,7 @@ export async function createEditor(container, graph, hooks) {
         },
 
         async fit() {
-            await AreaExtensions.zoomAt(area, editor.getNodes());
+            await fitView();
         },
 
         /** Arruma os blocos em camadas (ver `arrange`) e enquadra o resultado; conta como alteração do rascunho. */

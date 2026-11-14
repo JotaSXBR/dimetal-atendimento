@@ -147,3 +147,13 @@ test('hasPositions: sem coordenada é falso; 0,0 explícito e um nó com posiç�
     assert.equal(hasPositions([{ id: 'a' }, { id: 'b', x: 340, y: 150 }]), true);
     assert.equal(hasPositions([{ id: 'a', x: 10 }]), false);
 });
+
+test('fitScale: nunca abaixo do piso legível, e fluxo pequeno segue enquadrado', async () => {
+    const { MIN_FIT_ZOOM, fitScale } = await import('../../resources/js/flow-editor/appearance.js');
+
+    assert.equal(MIN_FIT_ZOOM, 0.9);
+    assert.equal(fitScale(0.15), 0.9);
+    assert.equal(fitScale(0.9), 0.9);
+    assert.equal(fitScale(1.3), 1.3);
+    assert.equal(fitScale(0.3, 0.5), 0.5);
+});
