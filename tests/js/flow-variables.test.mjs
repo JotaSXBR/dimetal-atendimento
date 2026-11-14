@@ -33,3 +33,9 @@ test('variableChoices: ignora vazias, repetidas e as que repetem uma embutida', 
 test('token: envolve a chave em chaves duplas', () => {
     assert.equal(token('nome'), '{{nome}}');
 });
+
+test('variableChoices: só oferece nomes que o bot resolve (minúsculas, números e _, sem começar por _)', () => {
+    const nodes = ['Meu CPF', 'cpf do cliente', 'endereço', 'CPF', '_interna', 'cpf', 'cep_2'].map((variavel) => ({ type: 'pergunta', data: { variavel } }));
+
+    assert.deepEqual(variableChoices(builtin, nodes).map((v) => v.key), ['nome', 'empresa', 'cpf', 'cep_2']);
+});
