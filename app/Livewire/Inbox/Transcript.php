@@ -121,11 +121,12 @@ class Transcript extends Component
     #[On('undo-note-delete')]
     public function restoreNote(string $token): void
     {
-        $saved = Cache::pull(self::undoKey($token));
+        // O evento chega a todo painel aberto: só gasta o token quem é do ticket certo, e `forget` devolve true a um único chamador.
+        $saved = Cache::get(self::undoKey($token));
 
         $createdAt = is_array($saved) ? ($saved['created_at'] ?? null) : null;
 
-        if (! is_array($saved) || ($saved['ticket_id'] ?? null) !== $this->ticketId || ! is_string($createdAt)) {
+        if (! is_array($saved) || ($saved['ticket_id'] ?? null) !== $this->ticketId || ! is_string($createdAt) || ! Cache::forget(self::undoKey($token))) {
             return;
         }
 

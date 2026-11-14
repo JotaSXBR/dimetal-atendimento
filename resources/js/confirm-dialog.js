@@ -68,6 +68,8 @@ if (typeof document !== 'undefined') {
         if (element && event.target.returnValue === 'ok' && element.isConnected) {
             element.dataset.confirmed = '1';
             element.click();
+            // Se o clique não gerou evento (botão desabilitado), a marca não pode sobrar e liberar o próximo clique sem confirmação.
+            delete element.dataset.confirmed;
         }
     }, true);
 }

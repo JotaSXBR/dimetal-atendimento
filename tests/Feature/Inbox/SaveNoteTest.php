@@ -175,9 +175,14 @@ class SaveNoteTest extends TestCase
         $outroTicket = $this->ticket($autor);
         $screen = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->call('deleteNote', $note->id);
 
-        Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $outroTicket->id])->call('restoreNote', $this->undoToken($screen));
+        $token = $this->undoToken($screen);
+        Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $outroTicket->id])->call('restoreNote', $token);
 
         $this->assertSame(0, TicketNote::query()->count());
+
+        // O painel de outro ticket não gasta o token: voltar ao ticket certo ainda desfaz.
+        $screen->call('restoreNote', $token);
+        $this->assertSame(1, TicketNote::query()->where('ticket_id', $ticket->id)->count());
     }
 
     public function test_o_botao_apagar_da_nota_nao_pede_confirmacao(): void
