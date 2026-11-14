@@ -123,12 +123,14 @@ class Transcript extends Component
     {
         $saved = Cache::pull(self::undoKey($token));
 
-        if (! is_array($saved) || $saved['ticket_id'] !== $this->ticketId) {
+        $createdAt = is_array($saved) ? ($saved['created_at'] ?? null) : null;
+
+        if (! is_array($saved) || ($saved['ticket_id'] ?? null) !== $this->ticketId || ! is_string($createdAt)) {
             return;
         }
 
         $note = new TicketNote(['ticket_id' => $this->ticketId, 'user_id' => $saved['user_id'], 'origin' => $saved['origin'], 'body' => $saved['body']]);
-        $note->created_at = CarbonImmutable::parse($saved['created_at']);
+        $note->created_at = CarbonImmutable::parse($createdAt);
         $note->save();
 
         TicketEvent::create(['ticket_id' => $this->ticketId, 'type' => 'note_restored', 'actor_user_id' => auth()->id(), 'payload' => ['note_id' => $note->id]]);
