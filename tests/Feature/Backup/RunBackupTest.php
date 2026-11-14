@@ -181,7 +181,7 @@ class RunBackupTest extends TestCase
         $this->travelTo('2026-11-12 05:15:00');
         $this->fakePgDump();
         $partial = Mockery::mock(Storage::disk('backups'))->makePartial();
-        $partial->shouldReceive('files')->andThrow(new RuntimeException('listagem recusada'));
+        $partial->shouldReceive('getDriver')->andThrow(new RuntimeException('listagem recusada'));
         Storage::set('backups', $partial);
         Exceptions::fake();
 

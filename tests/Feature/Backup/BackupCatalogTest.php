@@ -5,7 +5,11 @@ namespace Tests\Feature\Backup;
 use App\Services\Backup\BackupCatalog;
 use App\Services\Backup\BackupKind;
 use Carbon\CarbonImmutable;
+use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\Filesystem as Flysystem;
+use League\Flysystem\Local\LocalFilesystemAdapter;
 use Tests\TestCase;
 
 class BackupCatalogTest extends TestCase
@@ -55,6 +59,28 @@ class BackupCatalogTest extends TestCase
         $this->assertSame(5, $all[0]->size);
         $this->assertSame('2026-11-13 02:15', $all[0]->createdAt->format('Y-m-d H:i'));
         $this->assertSame(8, $this->catalog()->totalBytes());
+    }
+
+    public function test_lista_com_o_tamanho_da_propria_listagem_sem_size_por_arquivo(): void
+    {
+        $root = storage_path('framework/testing/disks/backups-sem-size-'.uniqid());
+        $adapter = new LocalFilesystemAdapter($root);
+        $disk = new class(new Flysystem($adapter), $adapter, ['root' => $root]) extends FilesystemAdapter
+        {
+            public function size($path): int
+            {
+                throw new \LogicException('size() por arquivo não deveria ser chamado');
+            }
+        };
+        Storage::set('backups', $disk);
+
+        try {
+            $name = $this->stored(BackupKind::Diario, 0, 'abcde');
+
+            $this->assertSame([[$name, 5]], array_map(fn ($file) => [$file->name, $file->size], $this->catalog()->all()));
+        } finally {
+            File::deleteDirectory($root);
+        }
     }
 
     public function test_find_so_acha_nome_da_lista(): void

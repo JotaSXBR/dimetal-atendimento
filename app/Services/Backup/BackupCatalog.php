@@ -4,7 +4,9 @@ namespace App\Services\Backup;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\FileAttributes;
 
 /** O que há no bucket de backup: nomes, listagem e rotação. Só arquivos com o nome do padrão existem para o catálogo. */
 class BackupCatalog
@@ -27,10 +29,12 @@ class BackupCatalog
     {
         $files = [];
 
-        foreach ($this->disk()->files() as $path) {
-            $file = $this->parse($path);
+        $disk = $this->disk();
+        assert($disk instanceof FilesystemAdapter);
 
-            if ($file !== null) {
+        // O ListObjectsV2 do S3 já traz o tamanho: uma requisição para a lista inteira, não uma por arquivo.
+        foreach ($disk->getDriver()->listContents('', false) as $item) {
+            if ($item instanceof FileAttributes && ($file = $this->parse($item->path(), $item->fileSize())) !== null) {
                 $files[] = $file;
             }
         }
@@ -82,7 +86,7 @@ class BackupCatalog
         return is_array($keep) && is_int($keep[$kind->value] ?? null) ? $keep[$kind->value] : 0;
     }
 
-    private function parse(string $path): ?BackupFile
+    private function parse(string $path, ?int $size): ?BackupFile
     {
         if (preg_match(self::PATTERN, $path, $m) !== 1) {
             return null;
@@ -90,6 +94,6 @@ class BackupCatalog
 
         $createdAt = CarbonImmutable::createFromFormat('Y-m-d Hi', $m[1].' '.$m[2], config()->string('app.display_timezone'));
 
-        return $createdAt === null ? null : new BackupFile($path, BackupKind::from($m[3]), $createdAt, $this->disk()->size($path));
+        return $createdAt === null ? null : new BackupFile($path, BackupKind::from($m[3]), $createdAt, $size ?? $this->disk()->size($path));
     }
 }

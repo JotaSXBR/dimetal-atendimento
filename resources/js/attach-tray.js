@@ -7,6 +7,17 @@
 const MAX_BYTES = 16 * 1024 * 1024;
 
 document.addEventListener('alpine:init', () => {
+    // Bloco que o servidor insere já pronto (ex.: a bandeja): nasce fechado e abre no quadro seguinte, para o `x-collapse` animar a entrada.
+    window.Alpine.data('revealOnInsert', () => ({
+        shown: false,
+
+        init() {
+            this.$nextTick(() => {
+                this.shown = true;
+            });
+        },
+    }));
+
     window.Alpine.data('attachTray', ($wire, ticketId) => ({
         uploading: 0,
         dragging: false,

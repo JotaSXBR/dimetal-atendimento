@@ -126,6 +126,7 @@ class Ticket extends Model
 
         $query->where(fn (Builder $q) => $q
             ->where('assigned_user_id', $user->id)
+            // De propósito: todo atendente acompanha a triagem do bot (só leitura; responder e assumir a TicketPolicy barra).
             ->orWhere('status', TicketStatus::PENDENTE->value)
             ->orWhere(fn (Builder $queue) => $queue
                 ->where('status', TicketStatus::AGUARDANDO->value)
