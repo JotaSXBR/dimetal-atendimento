@@ -22,7 +22,7 @@
             <div class="flex items-start gap-2">
                 <flux:input class="min-w-0 flex-1" icon="magnifying-glass" aria-label="Buscar no histórico" placeholder="Contato, protocolo ou texto" wire:model.live.debounce.400ms="q" clearable />
 
-                {{-- Os filtros moram num popover: ficam só a busca e o botão. Os campos só valem no "Aplicar" (`$refresh`); "Limpar" volta ao padrão. --}}
+                {{-- Os filtros moram num popover: ficam só a busca e o botão. Os campos só valem ao aplicar: "Aplicar", Esc ou clique fora com mudança enviam tudo de uma vez; "Limpar" volta ao padrão. --}}
                 <x-popover id="history-filters" label="Filtros do histórico" class="shrink-0">
                     <x-slot:trigger>
                         @php
@@ -60,8 +60,8 @@
                     </div>
 
                     <div class="mt-3 flex justify-end gap-2">
-                        <flux:button size="sm" variant="subtle" wire:click="clearFilters" x-on:click="close">Limpar</flux:button>
-                        <flux:button size="sm" variant="primary" wire:click="$refresh" x-on:click="close">Aplicar</flux:button>
+                        <flux:button size="sm" variant="subtle" wire:click="clearFilters" x-on:click="reset">Limpar</flux:button>
+                        <flux:button size="sm" variant="primary" x-on:click="apply">Aplicar</flux:button>
                     </div>
                 </x-popover>
             </div>

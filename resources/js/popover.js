@@ -1,11 +1,13 @@
 // Popover próprio (resources/views/components/popover.blade.php): painel ancorado num botão, que fecha com Esc (devolvendo o foco ao botão),
-// com "Aplicar"/"Limpar" (idem) e com clique fora (sem roubar o foco de onde a pessoa clicou). Visual e comportamento inspirados no Popover do
-// Flux Pro; código próprio. Fica aqui, e não num `x-data` inline, porque o build CSP do Alpine não aceita método dentro do atributo.
+// com "Aplicar"/"Limpar" (idem) e com clique fora (sem roubar o foco de onde a pessoa clicou). Os campos do painel são `wire:model` adiado:
+// o valor só vai ao servidor numa requisição. Para ele não vazar numa requisição qualquer, qualquer fechamento com mudança nos campos
+// (`touch`) aplica (`$wire.$refresh()`); "Limpar" descarta (`reset`). Visual e comportamento inspirados no Popover do Flux Pro; código próprio. Fica aqui, e não num `x-data` inline, porque o build CSP do Alpine não aceita método dentro do atributo.
 // `this.$el` muda conforme o elemento que dispara o evento: a raiz do componente fica guardada em `root`.
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('popover', () => ({
         root: null,
         open: false,
+        dirty: false,
 
         init() {
             this.root = this.$el;
@@ -32,18 +34,49 @@ document.addEventListener('alpine:init', () => {
             requestAnimationFrame(focusWhenShown);
         },
 
-        /** Fecha e devolve o foco ao botão que abriu. */
+        /** Um campo do painel mudou: fechar passa a aplicar. */
+        touch() {
+            this.dirty = true;
+        },
+
+        /** Envia as mudanças dos campos (uma requisição só); sem mudança não faz nada. */
+        flush() {
+            if (this.dirty) {
+                this.dirty = false;
+                this.$wire.$refresh();
+            }
+        },
+
+        /** "Aplicar": envia sempre e fecha. */
+        apply() {
+            this.dirty = true;
+            this.close();
+        },
+
+        /** "Limpar": o servidor já devolve os padrões, então descarta o que estava pendente e fecha. */
+        reset() {
+            this.dirty = false;
+            this.close();
+        },
+
+        /** Fecha (aplicando o que mudou) e devolve o foco ao botão que abriu. */
         close() {
             if (!this.open) {
                 return;
             }
 
+            this.flush();
             this.open = false;
             this.root.querySelector('[data-popover-trigger]')?.focus();
         },
 
-        /** Clique fora: fecha sem mexer no foco (a pessoa já clicou em outra coisa). */
+        /** Clique fora: fecha (aplicando o que mudou) sem mexer no foco, porque a pessoa já clicou em outra coisa. */
         dismiss() {
+            if (!this.open) {
+                return;
+            }
+
+            this.flush();
             this.open = false;
         },
 

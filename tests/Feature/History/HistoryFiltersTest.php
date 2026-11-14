@@ -38,8 +38,27 @@ class HistoryFiltersTest extends TestCase
         $this->assertSame(1, $xpath->query('//button[@data-popover-trigger and contains(normalize-space(.), "Filtros")]')->length);
 
         foreach (['De', 'Até', 'Setor', 'Motivo', 'Atendente'] as $label) {
-            $this->assertSame(1, $xpath->query('//*[@role="dialog"]//label[contains(normalize-space(.), "'.$label.'")] | //*[@role="dialog"]//*[normalize-space(text())="'.$label.'"]')->length > 0 ? 1 : 0, $label);
+            $found = $xpath->query('//*[@role="dialog"]//label[contains(normalize-space(.), "'.$label.'")] | //*[@role="dialog"]//*[normalize-space(text())="'.$label.'"]');
+
+            $this->assertGreaterThan(0, $found->length, "campo {$label} fora do diálogo de filtros");
         }
+    }
+
+    /**
+     * Os campos são `wire:model` adiado: o valor só vai ao servidor numa requisição. Para ele não vazar numa requisição qualquer (a busca, um
+     * clique numa linha), o popover aplica ao fechar com mudança (Esc, clique fora ou Aplicar) e "Limpar" descarta.
+     */
+    public function test_campos_adiados_e_o_popover_aplica_ao_fechar_com_mudanca(): void
+    {
+        $html = $this->page()->html();
+
+        foreach (['from', 'to', 'sectorId', 'outcome', 'userId'] as $field) {
+            $this->assertStringContainsString('wire:model="'.$field.'"', $html, $field);
+            $this->assertStringNotContainsString('wire:model.live="'.$field.'"', $html, $field);
+        }
+
+        $this->assertStringContainsString('x-on:click="apply"', $html);
+        $this->assertStringContainsString('x-on:click="reset"', $html);
     }
 
     public function test_com_os_padroes_nao_ha_filtro_ativo(): void
