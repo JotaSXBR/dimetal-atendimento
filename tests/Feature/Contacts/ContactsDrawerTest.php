@@ -31,6 +31,12 @@ class ContactsDrawerTest extends TestCase
             ->assertSeeHtml('data-testid="contact-drawer"');
     }
 
+    /** O app é em português: o botão de fechar do `flux:modal` não pode ter o nome acessível em inglês. */
+    public function test_o_botao_de_fechar_da_gaveta_tem_nome_em_portugues(): void
+    {
+        $this->page()->assertSeeHtml('aria-label="Fechar"')->assertDontSeeHtml('Close modal');
+    }
+
     public function test_clicar_no_contato_abre_a_gaveta_com_a_ficha(): void
     {
         $contact = Contact::factory()->create(['name' => 'Ana Paula']);
