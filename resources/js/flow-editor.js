@@ -31,6 +31,7 @@ document.addEventListener('alpine:init', () => {
             versions: [],
             catalog: [],
             builtinVariables: [],
+            variableList: [],
             messages: {},
             selected: null,
             errors: [],
@@ -58,7 +59,10 @@ document.addEventListener('alpine:init', () => {
                     const { createEditor } = await import('./flow-editor/editor.js');
 
                     api = await createEditor(this.$refs.canvas, config.graph, {
-                        onSelect: (node) => (this.selected = node),
+                        onSelect: (node) => {
+                            this.selected = node;
+                            this.refreshVariables();
+                        },
                         onChange: () => (this.dirty = true),
                         onHistory: (state) => Object.assign(this, state),
                         onContextMenu: (info) => {
@@ -138,15 +142,15 @@ document.addEventListener('alpine:init', () => {
                 return BLOCKS[type]?.label ?? type;
             },
 
-            /** O que o "Inserir variável" oferece: as embutidas e as respostas das perguntas do fluxo como está agora. */
-            variableOptions() {
-                return variableChoices(this.builtinVariables, api?.getGraph().nodes ?? []).map((v) => ({ ...v, text: `${v.label} — ${token(v.key)}` }));
+            /** O que o "Inserir variável" oferece: as embutidas e as respostas das perguntas do fluxo. Relido quando o select ganha foco (o grafo não é reativo). */
+            refreshVariables() {
+                this.variableList = variableChoices(this.builtinVariables, api?.getGraph().nodes ?? []).map((v) => ({ ...v, text: `${v.label} — ${token(v.key)}` }));
             },
 
             /** Escolheu uma variável no select: entra `{{chave}}` no cursor do campo (trocando a seleção) e o select volta ao título. */
             insertVariable(event, key) {
                 const select = event.target;
-                const field = select.closest('label')?.querySelector('textarea');
+                const field = select.closest('[data-variable-field]')?.querySelector('textarea');
 
                 if (select.value === '' || !field) {
                     return;
@@ -205,6 +209,7 @@ document.addEventListener('alpine:init', () => {
 
             apply() {
                 api?.updateData(this.selected.id, JSON.parse(JSON.stringify(this.selected.data)));
+                this.refreshVariables();
             },
 
             undo() {

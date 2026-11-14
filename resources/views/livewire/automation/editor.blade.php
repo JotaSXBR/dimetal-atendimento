@@ -170,19 +170,12 @@
                     <p class="font-mono text-xs text-ink-3" x-text="'id: ' + selected.id"></p>
 
                     <template x-for="field in fields()" x-bind:key="selected.id + field.key">
+                        <div data-variable-field>
                         <label class="block text-xs text-ink-2">
                             <span x-text="field.label"></span>
 
                             <template x-if="field.kind === 'textarea'">
-                                <div>
-                                    <textarea rows="4" class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model="selected.data[field.key]" x-on:input="apply()"></textarea>
-                                    <select aria-label="Inserir variável" class="mt-1 w-full rounded-md border border-line bg-surface p-1.5 text-xs text-ink-2" x-on:change="insertVariable($event, field.key)">
-                                        <option value="">Inserir variável…</option>
-                                        <template x-for="variable in variableOptions()" x-bind:key="variable.key">
-                                            <option x-bind:value="variable.key" x-text="variable.text"></option>
-                                        </template>
-                                    </select>
-                                </div>
+                                <textarea rows="4" class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model="selected.data[field.key]" x-on:input="apply()"></textarea>
                             </template>
                             <template x-if="field.kind === 'text'">
                                 <input type="text" class="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink" x-model="selected.data[field.key]" x-on:input="apply()">
@@ -228,6 +221,15 @@
                                 </select>
                             </template>
                         </label>
+                        <template x-if="field.kind === 'textarea'">
+                            <select aria-label="Inserir variável" class="mt-1 w-full rounded-md border border-line bg-surface p-1.5 text-xs text-ink-2" x-on:focus="refreshVariables" x-on:mousedown="refreshVariables" x-on:change="insertVariable($event, field.key)">
+                                    <option value="">Inserir variável…</option>
+                                    <template x-for="variable in variableList" x-bind:key="variable.key">
+                                        <option x-bind:value="variable.key" x-text="variable.text"></option>
+                                    </template>
+                                </select>
+                        </template>
+                        </div>
                     </template>
 
                     <p x-show="selected.type === 'mensagem' || selected.type === 'pergunta' || selected.type === 'menu' || selected.type === 'menu_setores'" class="text-xs text-ink-3">

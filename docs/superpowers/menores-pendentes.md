@@ -16,11 +16,6 @@ As fatias A, B e C fecharam sem menores. As fatias D, E e F estão abaixo.
 
 | # | Onde | O quê | Por quê / cenário | Decisão |
 |---|------|-------|-------------------|---------|
-| E1 | `resources/js/flow-editor.js` (`variableOptions`) | A lista do "Inserir variável" não reage a editar a variável da própria pergunta aberta (só após reselecionar o bloco) | `api.getGraph()` não é reativo | Advisor: tornar reativo ou aceitar? |
-| E2 | `resources/js/flow-editor/editor.js` (`fitView`) | Sem teste automatizado da geometria (âncora do Início a 24 px, ordem `zoom` → `translate`) | Verificado só no Chrome | Dono: vale Playwright/Dusk? (mesma pergunta já aberta para o Alpine) |
-| E3 | `resources/js/flow-editor/editor.js` (`fitView`) | Fluxo sem bloco Início não recebe o piso de zoom | Alternativa: ancorar no canto do `boundingBox` | — |
-| E4 | `resources/views/livewire/automation/editor.blade.php` (select dentro do `<label>`) | O nome acessível do textarea inclui "Inserir variável…" | Mover o select para fora do `<label>` ou usar `aria-labelledby` | — |
-| E5 | `app/Services/Bot/Nodes/PerguntaNode.php` / `FlowValidator` | O campo "Guardar a resposta na variável" aceita nome que o bot não resolve (maiúsculas, espaços, `_` no início) | O seletor já esconde esses nomes; o certo é validar no servidor | Dono: validar e recusar a publicação? (muda o que é publicável) |
 
 ### Fatia F: gráfico de barras nos Relatórios (branch `feat/ux-grafico-relatorios`, 14/11)
 

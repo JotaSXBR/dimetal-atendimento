@@ -206,4 +206,24 @@ class FlowValidatorTest extends TestCase
         $this->assertTrue(NodeType::Encerrar->isFinal());
         $this->assertFalse(NodeType::Mensagem->waits());
     }
+
+    /** O bot só troca `{{[a-z0-9_]+}}` (minúsculas) e descarta variável que começa por `_`: outro nome guardaria uma resposta que ninguém usa. */
+    public function test_pergunta_so_guarda_em_variavel_que_o_bot_resolve(): void
+    {
+        foreach (['CPF', 'meu cpf', 'endereço', '_interna', 'a-b'] as $name) {
+            $graph = $this->graph(
+                [['i', 'inicio', []], ['p', 'pergunta', ['texto' => 'Qual?', 'variavel' => $name, 'validacao' => 'texto']], ['t', 'transferir', []]],
+                [['i', 'out', 'p'], ['p', 'out', 't']],
+            );
+
+            $this->assertHasError((new FlowValidator)->validate($graph), 'p: o nome da variável');
+        }
+
+        $ok = $this->graph(
+            [['i', 'inicio', []], ['p', 'pergunta', ['texto' => 'Qual?', 'variavel' => 'cpf_2', 'validacao' => 'texto']], ['t', 'transferir', []]],
+            [['i', 'out', 'p'], ['p', 'out', 't']],
+        );
+
+        $this->assertSame([], array_filter((new FlowValidator)->validate($ok), fn (string $e): bool => str_contains($e, 'o nome da variável')));
+    }
 }
