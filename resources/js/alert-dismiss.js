@@ -33,11 +33,34 @@ function write(kind, entry) {
     }
 }
 
+/** A faixa voltou depois de dispensada: `display: none` → visível não é anunciado pelo leitor de tela, então diz em voz baixa. */
+function announce(text) {
+    let region = document.getElementById('alerts-announce');
+
+    if (!region) {
+        region = document.createElement('div');
+        region.id = 'alerts-announce';
+        region.className = 'sr-only';
+        region.setAttribute('role', 'status');
+        region.setAttribute('aria-live', 'polite');
+        document.body.append(region);
+    }
+
+    region.textContent = '';
+    setTimeout(() => (region.textContent = `Aviso de volta: ${text}`), 50);
+}
+
 export function apply() {
     document.querySelectorAll('[data-dismiss]').forEach((banner) => {
         const kind = banner.dataset.dismiss;
+        const was = banner.hasAttribute('data-dismissed');
+        const now = isDismissed(read(kind), Date.now(), banner.dataset.signature ?? '', kind);
 
-        banner.toggleAttribute('data-dismissed', isDismissed(read(kind), Date.now(), banner.dataset.signature ?? '', kind));
+        banner.toggleAttribute('data-dismissed', now);
+
+        if (was && !now && !banner.hidden) {
+            announce(banner.querySelector('strong')?.textContent ?? 'aviso');
+        }
     });
 }
 
@@ -51,12 +74,13 @@ if (typeof document !== 'undefined') {
         }
     });
 
-    // O Livewire re-renderiza a faixa (Reverb) e o servidor não sabe da dispensa: reaplica a cada mudança no documento, antes do próximo quadro.
+    // O Livewire re-renderiza a faixa (Reverb) e o servidor não sabe da dispensa: o morph tira `data-dismissed`. Reaplica a cada mudança no
+    // documento (inclusive nesse atributo e na assinatura), antes do próximo quadro; `toggleAttribute` com o valor que já está não gera mutação, então converge.
     let frame = null;
     new MutationObserver(() => {
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(apply);
-    }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-signature'] });
+    }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-signature', 'data-dismissed'] });
     document.addEventListener('livewire:navigated', apply);
     // E a dispensa vence sozinha, sem nada mudar na página.
     setInterval(apply, 5000);

@@ -81,10 +81,11 @@ export function audioStripHidden(settings, audio, remembered = false, critical =
 }
 
 // Dispensar uma faixa do topo: esconde por um tempo e ela volta sozinha. `ms: null` = até a próxima visita (sessionStorage).
-// `grows`: só volta quando o número aumenta (SLA); nos demais, qualquer assinatura diferente (o problema mudou) traz a faixa de volta.
+// `grows`: só volta quando o número aumenta (SLA). `set`: a assinatura é uma lista (canais fora do ar) e só volta com item novo (um canal que se
+// recupera não reabre a faixa). Nos demais, qualquer assinatura diferente (o problema mudou) traz a faixa de volta.
 export const DISMISSALS = {
     offline: { ms: 60000, store: 'local' },
-    whatsapp: { ms: 120000, store: 'local' },
+    whatsapp: { ms: 120000, store: 'local', set: true },
     sla: { ms: 180000, store: 'local', grows: true },
     audio: { ms: null, store: 'session' },
 };
@@ -115,5 +116,18 @@ export function isDismissed(entry, now, signature, kind) {
         return false;
     }
 
-    return rule.grows ? !(Number(signature) > Number(entry.signature)) : signature === entry.signature;
+    if (rule.grows) {
+        const saved = Number(entry.signature);
+
+        // Assinatura guardada que não é número (entrada corrompida) não esconde nada.
+        return Number.isFinite(saved) && entry.signature !== '' && !(Number(signature) > saved);
+    }
+
+    if (rule.set) {
+        const saved = new Set(entry.signature.split(','));
+
+        return signature.split(',').every((item) => saved.has(item));
+    }
+
+    return signature === entry.signature;
 }

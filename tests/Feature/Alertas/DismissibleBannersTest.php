@@ -37,7 +37,7 @@ class DismissibleBannersTest extends TestCase
 
         $this->assertStringContainsString('data-dismiss="whatsapp"', $html);
         $this->assertStringContainsString('data-signature="'.$a->id.'@', $html);
-        $this->assertStringContainsString('aria-label="Dispensar aviso"', $html);
+        $this->assertStringContainsString('aria-label="Dispensar aviso de', $html);
         $this->assertStringContainsString('data-dismiss-button', $html);
     }
 
@@ -65,7 +65,7 @@ class DismissibleBannersTest extends TestCase
 
         $this->assertStringContainsString('data-dismiss="sla"', $html);
         $this->assertSame('3', $this->signature($html, 'sla'));
-        $this->assertStringContainsString('aria-label="Dispensar aviso"', $html);
+        $this->assertStringContainsString('aria-label="Dispensar aviso de', $html);
     }
 
     public function test_faixas_do_navegador_tem_x_e_tipo(): void
@@ -75,7 +75,7 @@ class DismissibleBannersTest extends TestCase
         $this->assertStringContainsString('data-dismiss="offline"', $html);
         $this->assertStringContainsString('data-signature="0"', $html);
         $this->assertStringContainsString('data-dismiss="audio"', $html);
-        $this->assertGreaterThanOrEqual(2, substr_count($html, 'aria-label="Dispensar aviso"'));
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'aria-label="Dispensar aviso de'));
         $this->assertSame(2, substr_count($html, 'data-dismiss-button="'));
     }
 

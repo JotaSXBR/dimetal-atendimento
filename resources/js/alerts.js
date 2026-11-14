@@ -31,7 +31,7 @@ function start(id) {
     let audio = openAudio(AudioClass);
     let leader = false;
     let offline = false;
-    let drops = 0; // quantas vezes a conexão com o servidor caiu: a assinatura da faixa, para a dispensa não valer numa queda nova
+    let dropToken = '0'; // identifica a queda atual da conexão com o servidor (a assinatura da faixa): uma queda nova tem outro token
     const loops = new Map();
 
     const openTicket = () => {
@@ -163,6 +163,8 @@ function start(id) {
 
         if (off) {
             off.hidden = !offline;
+            // O `wire:navigate` troca o body e a faixa nova nasce com assinatura "0": reaplica a da queda atual.
+            off.dataset.signature = dropToken;
         }
 
         if (strip) {
@@ -254,8 +256,7 @@ function start(id) {
             offline = down;
 
             if (down) {
-                drops += 1;
-                document.getElementById('alerts-offline')?.setAttribute('data-signature', String(drops));
+                dropToken = String(Date.now());
             }
 
             sync();

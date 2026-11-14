@@ -18,7 +18,7 @@
                     @if ($canSeeChannels)
                         <flux:button size="xs" variant="ghost" :href="route('configuracoes.canais')" wire:navigate class="border border-white text-danger-foreground! hover:bg-white/10!">Ver canais</flux:button>
                     @endif
-                    <x-alert-dismiss class="text-danger-foreground! hover:bg-white/10!" />
+                    <x-alert-dismiss label="Dispensar aviso de WhatsApp desconectado" class="text-danger-foreground! hover:bg-white/10!" />
                 </div>
             </div>
         @endif
@@ -39,7 +39,7 @@
                 <flux:icon.clock variant="mini" class="size-4 shrink-0" />
                 <p class="min-w-0 flex-1 sm:truncate" title="SLA estourado · {{ $breachedRest }}"><strong>SLA estourado</strong> · {{ $breachedRest }}</p>
                 <flux:button size="xs" variant="danger" :href="route('inbox')" wire:navigate class="shrink-0">Abrir atendimento</flux:button>
-                <x-alert-dismiss class="text-danger!" />
+                <x-alert-dismiss label="Dispensar aviso de SLA estourado" class="text-danger!" />
             </div>
         @endif
     </div>

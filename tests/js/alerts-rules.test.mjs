@@ -173,3 +173,19 @@ test('isDismissed: prazo absurdamente no futuro (relógio mudou) não esconde pa
 
     assert.equal(isDismissed({ until: NOW + 365 * 24 * 3600 * 1000, signature: '1' }, NOW, '1', 'offline'), false);
 });
+
+test('isDismissed: WhatsApp só volta com canal novo ou queda nova; um canal que se recupera não reabre', async () => {
+    const { dismissEntry, isDismissed } = await import('../../resources/js/alerts-rules.js');
+    const entry = dismissEntry('whatsapp', NOW, '3@100,4@200');
+
+    assert.equal(isDismissed(entry, NOW + 1000, '4@200', 'whatsapp'), true);
+    assert.equal(isDismissed(entry, NOW + 1000, '3@100,4@200', 'whatsapp'), true);
+    assert.equal(isDismissed(entry, NOW + 1000, '3@100,4@200,5@300', 'whatsapp'), false);
+    assert.equal(isDismissed(entry, NOW + 1000, '3@999', 'whatsapp'), false);
+});
+
+test('isDismissed: assinatura de SLA que não é número não esconde nada', async () => {
+    const { isDismissed } = await import('../../resources/js/alerts-rules.js');
+
+    assert.equal(isDismissed({ until: NOW + 1000, signature: 'abc' }, NOW, '16', 'sla'), false);
+});
