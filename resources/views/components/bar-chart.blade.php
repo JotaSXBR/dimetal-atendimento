@@ -17,7 +17,7 @@
                 <svg class="h-2 w-full" viewBox="0 0 100 8" preserveAspectRatio="none" role="presentation">
                     <title>{{ $row['label'] }}: {{ $row['value'] }} ({{ $share }}%)</title>
                     <rect width="100" height="8" rx="2" class="fill-line" />
-                    <rect width="{{ round($row['value'] / $max * 100) }}" height="8" rx="2" class="fill-accent" />
+                    <rect width="{{ $row['value'] > 0 ? max(1, round($row['value'] / $max * 100)) : 0 }}" height="8" rx="2" class="fill-accent" />
                 </svg>
                 <span class="text-end font-mono text-ink">{{ $row['value'] }}</span>
             </li>

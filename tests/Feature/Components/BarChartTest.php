@@ -25,8 +25,9 @@ class BarChartTest extends TestCase
     {
         $html = $this->chart([['label' => 'A', 'value' => 8], ['label' => 'B', 'value' => 4]]);
 
-        $this->assertStringContainsString('width="100"', $html);
-        $this->assertStringContainsString('width="50"', $html);
+        // A trilha (`fill-line`) tem sempre 100; o que importa é a largura da barra (`fill-accent`).
+        $this->assertMatchesRegularExpression('/width="100" height="8" rx="2" class="fill-accent"/', $html);
+        $this->assertMatchesRegularExpression('/width="50" height="8" rx="2" class="fill-accent"/', $html);
     }
 
     public function test_tudo_zero_nao_divide_por_zero(): void
@@ -48,8 +49,19 @@ class BarChartTest extends TestCase
 
     public function test_rotulo_e_escapado(): void
     {
-        $html = $this->chart([['label' => '<script>x</script>', 'value' => 1]]);
+        $html = $this->chart([['label' => '<script>x</script>', 'value' => 1], ['label' => 'a" onmouseover="x', 'value' => 1]]);
 
         $this->assertStringNotContainsString('<script>x</script>', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+        // As aspas do rótulo não fecham o atributo `title` nem abrem outro.
+        $this->assertStringNotContainsString('title="a" onmouseover="x"', $html);
+        $this->assertStringContainsString('&quot;', $html);
+    }
+
+    public function test_valor_pequeno_ao_lado_de_um_grande_ainda_aparece_como_barra(): void
+    {
+        $html = $this->chart([['label' => 'Grande', 'value' => 300], ['label' => 'Pequeno', 'value' => 1]]);
+
+        $this->assertMatchesRegularExpression('/width="1" height="8" rx="2" class="fill-accent"/', $html);
     }
 }
