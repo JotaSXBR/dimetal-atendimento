@@ -227,12 +227,21 @@
                         <flux:button size="sm" icon="arrow-uturn-left" wire:click="takeover({{ $ticket->assigned_user_id }})" wire:confirm="Tomar este ticket de {{ $ticket->assignee?->name }}?">Tomar</flux:button>
                     @endif
 
-                    @if ($canTransfer)
-                        <flux:button size="sm" icon="arrows-right-left" class="@max-2xl:w-8 @max-2xl:px-0" wire:click="openPanel('transfer')" aria-label="Transferir" tooltip="Transferir"><span class="hidden @2xl:inline">Transferir</span></flux:button>
-                    @endif
+                    {{-- Ações menos frequentes num menu: o cabeçalho fica com Assumir/Tomar/Encerrar e libera espaço em coluna estreita. Cada item respeita a mesma permissão de antes. --}}
+                    @if ($canTransfer || $canReassign)
+                        <flux:dropdown position="bottom" align="end">
+                            <flux:button size="sm" icon="ellipsis-horizontal" aria-label="Mais ações" tooltip="Mais ações" />
 
-                    @if ($canReassign)
-                        <flux:button size="sm" icon="user-plus" class="@max-2xl:w-8 @max-2xl:px-0" wire:click="openPanel('reassign')" aria-label="Reatribuir" tooltip="Reatribuir"><span class="hidden @2xl:inline">Reatribuir</span></flux:button>
+                            <flux:menu data-testid="header-more-menu">
+                                @if ($canTransfer)
+                                    <flux:menu.item icon="arrows-right-left" wire:click="openPanel('transfer')">Transferir</flux:menu.item>
+                                @endif
+
+                                @if ($canReassign)
+                                    <flux:menu.item icon="user-plus" wire:click="openPanel('reassign')">Reatribuir</flux:menu.item>
+                                @endif
+                            </flux:menu>
+                        </flux:dropdown>
                     @endif
 
                     @if ($canClose)
