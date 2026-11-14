@@ -4,6 +4,9 @@ namespace Tests\Feature\Reports;
 
 use App\Enums\UserRole;
 use App\Livewire\Reports\Index;
+use App\Models\Channel;
+use App\Models\Sector;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -24,5 +27,15 @@ class ReportsMarkupTest extends TestCase
         $this->assertGreaterThan(0, $xpath->query('//dl/div')->length);
         // Dentro do `<div>` de um `<dl>` só entram `<dt>` e `<dd>` (axe: definition-list).
         $this->assertSame(0, $xpath->query('//dl/div/*[not(self::dt or self::dd)]')->length);
+    }
+
+    public function test_volume_por_setor_usa_o_grafico_de_barras(): void
+    {
+        $sector = Sector::factory()->create(['name' => 'Comercial']);
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create(['sector_id' => $sector->id, 'opened_at' => now()]);
+
+        $screen = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Index::class);
+
+        $screen->assertSeeHtml('data-testid="bar-row"')->assertSeeHtml('<title>Comercial: 1 (100%)</title>');
     }
 }

@@ -75,18 +75,11 @@
 
     <div class="rounded-[14px] border border-line bg-surface p-4">
         <h2 class="text-sm font-semibold text-ink">Volume por setor</h2>
-        @php($max = max(1, collect($data['by_sector'])->max('count') ?? 1))
-        <ul class="mt-3 space-y-2">
-            @forelse ($data['by_sector'] as $row)
-                <li class="grid grid-cols-[8rem_1fr_3rem] items-center gap-3 text-sm">
-                    <span class="truncate text-ink-2">{{ $row['name'] }}</span>
-                    <span class="h-2 rounded bg-surface-2"><span class="block h-2 rounded bg-accent" style="width: {{ round($row['count'] / $max * 100) }}%"></span></span>
-                    <span class="text-end font-mono text-ink">{{ $row['count'] }}</span>
-                </li>
-            @empty
-                <li><x-empty-state compact icon="chart-bar" title="Nenhum ticket no período." /></li>
-            @endforelse
-        </ul>
+        @if ($data['by_sector'] === [])
+            <x-empty-state compact icon="chart-bar" title="Nenhum ticket no período." />
+        @else
+            <x-bar-chart class="mt-3" caption="Volume por setor" :rows="collect($data['by_sector'])->map(fn ($row) => ['label' => $row['name'], 'value' => $row['count']])->all()" />
+        @endif
     </div>
 
     <div class="overflow-x-auto rounded-[14px] border border-line bg-surface">
