@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { splitConfirm } from '../../resources/js/confirm-dialog.js';
+
+test('splitConfirm: título até o primeiro ? e texto com o resto', () => {
+    assert.deepEqual(splitConfirm('Apagar o setor Vendas? Os tickets antigos continuam mostrando o nome.'), {
+        title: 'Apagar o setor Vendas?',
+        text: 'Os tickets antigos continuam mostrando o nome.',
+    });
+});
+
+test('splitConfirm: sem ? o título é a mensagem inteira', () => {
+    assert.deepEqual(splitConfirm('Apagar tudo'), { title: 'Apagar tudo', text: '' });
+});
+
+test('splitConfirm: ? no fim deixa o texto vazio', () => {
+    assert.deepEqual(splitConfirm('Remover este feriado?'), { title: 'Remover este feriado?', text: '' });
+});
+
+test('splitConfirm: apara espaços sobrando', () => {
+    assert.deepEqual(splitConfirm('  Apagar?   Sem volta.  '), { title: 'Apagar?', text: 'Sem volta.' });
+});

@@ -49,7 +49,7 @@
                         <x-tag-chip :tag="$tag" :conversation="$group['scope'] === 'conversa'" :title="$tag->name" />
                         <p class="min-w-0 flex-1 text-xs text-ink-3">{{ $tag->{$group['uses']} }} {{ $tag->{$group['uses']} === 1 ? $group['unit'][0] : $group['unit'][1] }}</p>
                         <flux:button size="xs" variant="subtle" icon="pencil-square" wire:click="edit({{ $tag->id }})" aria-label="Editar {{ $tag->name }}" />
-                        <flux:button size="xs" variant="subtle" icon="trash" wire:click="delete({{ $tag->id }})" wire:confirm="Apagar a etiqueta {{ $tag->name }}?" aria-label="Apagar {{ $tag->name }}" />
+                        <flux:button size="xs" variant="subtle" icon="trash" wire:click="delete({{ $tag->id }})" data-confirm="Apagar a etiqueta {{ $tag->name }}?" data-confirm-label="Apagar" data-confirm-tone="danger" aria-label="Apagar {{ $tag->name }}" />
                     </li>
                 @empty
                     <li><x-empty-state compact icon="tag" :title="$group['empty']" /></li>

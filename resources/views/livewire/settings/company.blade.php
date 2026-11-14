@@ -7,7 +7,7 @@
 
         <x-avatar-uploader model="photo" action="saveLogo" :current="\App\Settings\CompanySettings::logoUrl()" :name="$name" shape="rounded" single accent>
             @if (\App\Settings\CompanySettings::logoUrl())
-                <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeLogo" wire:confirm="Remover o logotipo da empresa?">Remover</flux:button>
+                <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeLogo" data-confirm="Remover o logotipo da empresa?" data-confirm-label="Remover" data-confirm-tone="danger">Remover</flux:button>
             @endif
         </x-avatar-uploader>
     </section>

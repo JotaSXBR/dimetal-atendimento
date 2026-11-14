@@ -131,7 +131,7 @@ class OutboxResendTest extends TestCase
         $html = $screen->html();
         // Dois botões "Reenviar" (flux:button): o seguro e o que pede confirmação.
         $this->assertSame(2, substr_count($html, 'wire:click="$parent.resend('));
-        $this->assertSame(1, substr_count($html, 'wire:confirm="Esta mensagem pode já ter sido enviada'));
+        $this->assertSame(1, substr_count($html, 'data-confirm="Esta mensagem pode já ter sido enviada'));
     }
 
     public function test_reenviar_pela_tela_enfileira_e_recusa_sem_confirmacao_quando_precisa(): void

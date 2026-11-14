@@ -8,7 +8,7 @@
                 <div class="md:col-span-2">
                     <x-avatar-uploader model="photo" action="saveAvatar" :current="$editing->avatarUrl()" :name="$editing->name" shape="round">
                         @if ($editing->avatar_path)
-                            <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" wire:confirm="Remover a foto de {{ $editing->name }}?">Remover</flux:button>
+                            <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" data-confirm="Remover a foto de {{ $editing->name }}?" data-confirm-label="Remover" data-confirm-tone="danger">Remover</flux:button>
                         @endif
                     </x-avatar-uploader>
                 </div>
@@ -91,7 +91,7 @@
 
                     @if ($user->active)
                         @can('deactivate', $user)
-                            <flux:button size="xs" variant="subtle" wire:click="toggleActive({{ $user->id }})" wire:confirm="Desativar {{ $user->name }}? A pessoa é desconectada agora{{ $user->open_tickets_count > 0 ? ' e os '.$user->open_tickets_count.' tickets abertos dela continuam atribuídos a ela até alguém reatribuir' : '' }}.">Desativar</flux:button>
+                            <flux:button size="xs" variant="subtle" wire:click="toggleActive({{ $user->id }})" data-confirm="Desativar {{ $user->name }}? A pessoa é desconectada agora{{ $user->open_tickets_count > 0 ? ' e os '.$user->open_tickets_count.' tickets abertos dela continuam atribuídos a ela até alguém reatribuir' : '' }}." data-confirm-label="Desativar" data-confirm-tone="danger">Desativar</flux:button>
                         @endcan
                     @else
                         <flux:button size="xs" variant="subtle" wire:click="toggleActive({{ $user->id }})">Reativar</flux:button>

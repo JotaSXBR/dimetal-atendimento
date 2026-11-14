@@ -54,7 +54,7 @@
                     <flux:button size="sm" icon="pencil-square" :href="route('automacao.editar', $workflow)" wire:navigate>Editar</flux:button>
                     <flux:button size="sm" variant="subtle" wire:click="toggle({{ $workflow->id }})">Versões ({{ $workflow->versions_count }})</flux:button>
                     <flux:button size="sm" variant="subtle" icon="document-duplicate" wire:click="duplicate({{ $workflow->id }})" aria-label="Duplicar {{ $workflow->name }}" />
-                    <flux:button size="sm" variant="subtle" icon="trash" wire:click="delete({{ $workflow->id }})" wire:confirm="Apagar o workflow {{ $workflow->name }}?" aria-label="Apagar {{ $workflow->name }}" />
+                    <flux:button size="sm" variant="subtle" icon="trash" wire:click="delete({{ $workflow->id }})" data-confirm="Apagar o workflow {{ $workflow->name }}?" data-confirm-label="Apagar" data-confirm-tone="danger" aria-label="Apagar {{ $workflow->name }}" />
                 </div>
 
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -75,7 +75,7 @@
                             <li class="flex items-center gap-3 px-3 py-2 text-xs" wire:key="version-{{ $version->id }}">
                                 <span class="font-semibold text-ink">Versão {{ $version->number }}</span>
                                 <span class="flex-1 text-ink-3">{{ $version->published_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }} · {{ $version->publisher?->name ?? 'usuário removido' }}</span>
-                                <flux:button size="xs" variant="subtle" wire:click="restore({{ $workflow->id }}, {{ $version->id }})" wire:confirm="Copiar a versão {{ $version->number }} para o rascunho? O rascunho atual será substituído.">Restaurar no rascunho</flux:button>
+                                <flux:button size="xs" variant="subtle" wire:click="restore({{ $workflow->id }}, {{ $version->id }})" data-confirm="Copiar a versão {{ $version->number }} para o rascunho? O rascunho atual será substituído." data-confirm-label="Copiar versão" data-confirm-tone="primary">Restaurar no rascunho</flux:button>
                             </li>
                         @empty
                             <li class="px-3 py-2 text-xs text-ink-3">Ainda não há versões publicadas.</li>

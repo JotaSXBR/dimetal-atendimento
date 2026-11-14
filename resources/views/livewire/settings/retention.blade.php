@@ -22,7 +22,7 @@
     <div class="rounded-[14px] border border-line bg-surface p-4">
         <p class="text-sm font-semibold text-ink">Apagar agora a mídia com mais de {{ $days }} dias</p>
         <p class="mt-1 text-xs text-ink-3">Não afeta texto, protocolos nem relatórios. Cada arquivo apagado fica registrado na auditoria.</p>
-        <flux:button class="mt-3" variant="danger" wire:click="purgeNow" wire:confirm="Apagar agora os anexos com mais de {{ $days }} dias? Isso não pode ser desfeito.">Executar expurgo agora</flux:button>
+        <flux:button class="mt-3" variant="danger" wire:click="purgeNow" data-confirm="Apagar agora os anexos com mais de {{ $days }} dias? Isso não pode ser desfeito." data-confirm-label="Apagar agora" data-confirm-tone="danger">Executar expurgo agora</flux:button>
         @if ($result !== '')
             <p class="mt-3 text-sm text-ink-2" role="status">{{ $result }}</p>
         @endif

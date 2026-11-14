@@ -25,7 +25,7 @@
 
             <div class="mt-5 flex flex-wrap gap-2">
                 <flux:button :href="route('configuracoes.google.redirect')" icon="arrow-path">Reconectar</flux:button>
-                <flux:button variant="danger" wire:click="disconnect" wire:confirm="Desconectar o Google? O que já foi enviado continua lá.">Desconectar</flux:button>
+                <flux:button variant="danger" wire:click="disconnect" data-confirm="Desconectar o Google? O que já foi enviado continua lá." data-confirm-label="Desconectar" data-confirm-tone="danger">Desconectar</flux:button>
             </div>
         @else
             <p class="text-sm text-ink-2">Nenhuma conta conectada.</p>
