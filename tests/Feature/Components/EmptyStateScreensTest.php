@@ -33,6 +33,6 @@ class EmptyStateScreensTest extends TestCase
             ->assertSeeHtml('wire:loading.delay')
             ->assertDontSeeHtml('wire:loading.delay.block')
             ->assertSeeHtml('wire:loading.remove.delay')
-            ->assertSeeHtml('wire:target="q,from,to,sectorId,outcome,userId"');
+            ->assertSeeHtml('wire:target="q,$refresh,clearFilters"');
     }
 }
