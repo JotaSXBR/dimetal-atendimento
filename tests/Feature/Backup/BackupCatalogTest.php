@@ -6,6 +6,7 @@ use App\Services\Backup\BackupCatalog;
 use App\Services\Backup\BackupKind;
 use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use League\Flysystem\Filesystem as Flysystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
@@ -72,9 +73,14 @@ class BackupCatalogTest extends TestCase
             }
         };
         Storage::set('backups', $disk);
-        $name = $this->stored(BackupKind::Diario, 0, 'abcde');
 
-        $this->assertSame([[$name, 5]], array_map(fn ($file) => [$file->name, $file->size], $this->catalog()->all()));
+        try {
+            $name = $this->stored(BackupKind::Diario, 0, 'abcde');
+
+            $this->assertSame([[$name, 5]], array_map(fn ($file) => [$file->name, $file->size], $this->catalog()->all()));
+        } finally {
+            File::deleteDirectory($root);
+        }
     }
 
     public function test_find_so_acha_nome_da_lista(): void
