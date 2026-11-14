@@ -99,7 +99,12 @@ final class FlowValidator
                 NodeType::Menu => $this->validOptions($data->list('opcoes')) ? [] : ["{$id}: o menu precisa de ao menos uma opção, todas com texto."],
                 NodeType::Nota => mb_strlen($data->string('texto')) > NodeType::NOTE_MAX_LENGTH ? ["{$id}: a nota passa de ".NodeType::NOTE_MAX_LENGTH.' caracteres.'] : [],
                 NodeType::Midia => $data->filled('path') ? [] : ["{$id}: escolha o arquivo."],
-                NodeType::Pergunta => $data->filled('variavel') ? [] : ["{$id}: informe o nome da variável que guarda a resposta."],
+                NodeType::Pergunta => match (true) {
+                    ! $data->filled('variavel') => ["{$id}: informe o nome da variável que guarda a resposta."],
+                    // O bot só troca `{{[a-z0-9_]+}}` (minúsculas) e descarta o que começa por `_`: outro nome guardaria uma resposta que ninguém usa.
+                    preg_match('/^[a-z0-9][a-z0-9_]*$/', $data->string('variavel')) !== 1 => ["{$id}: o nome da variável usa só letras minúsculas, números e _ (e não começa por _)."],
+                    default => [],
+                },
                 default => [],
             },
         ];

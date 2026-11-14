@@ -26,6 +26,8 @@ class Index extends Component
     #[Url(as: 'etiqueta')]
     public ?int $tagId = null;
 
+    /** O contato da ficha. Ligado à URL (`?contato=ID`, o destino da busca Ctrl+K): fechar a gaveta zera e a URL volta limpa. */
+    #[Url(as: 'contato')]
     public ?int $selectedId = null;
 
     /** A gaveta com a ficha do contato escolhido (`flux:modal` flyout). Fechar (Esc, ✕, clique fora) limpa a seleção. */
@@ -49,13 +51,17 @@ class Index extends Component
         $this->resetPage();
     }
 
-    /** `?contato=ID` (a busca Ctrl+K): abre a ficha; id que não existe é ignorado. */
+    /** Chegou com `?contato=ID`: abre a gaveta; id que não existe é ignorado (e a URL limpa). */
     public function mount(): void
     {
-        $id = request()->integer('contato');
+        if ($this->selectedId === null) {
+            return;
+        }
 
-        if ($id > 0 && Contact::query()->whereKey($id)->exists()) {
-            $this->select($id);
+        if (Contact::query()->whereKey($this->selectedId)->exists()) {
+            $this->showCard = true;
+        } else {
+            $this->selectedId = null;
         }
     }
 

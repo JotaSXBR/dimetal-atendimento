@@ -19,6 +19,11 @@ export function isShortcut(event) {
     return (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && String(event.key).toLowerCase() === 'k';
 }
 
+/** O rótulo do atalho na barra: ⌘K no Mac e no iOS, Ctrl K no resto. */
+export function shortcutLabel(platform) {
+    return /mac|iphone|ipad|ipod/i.test(String(platform ?? '')) ? '⌘K' : 'Ctrl K';
+}
+
 if (typeof document !== 'undefined') {
     const dialog = () => document.getElementById('command-palette');
     const options = (root) => [...root.querySelectorAll('[data-palette-option]')];
@@ -57,11 +62,44 @@ if (typeof document !== 'undefined') {
         });
     });
 
+    // O primeiro resultado já vem marcado (é o que o Enter abre): refeito a cada atualização da lista pelo servidor.
+    const markFirst = (root) => {
+        const items = options(root);
+
+        if (items.length === 0 || items.some((item) => item.hasAttribute('data-active'))) {
+            return;
+        }
+
+        items[0].setAttribute('data-active', '');
+        root.querySelector('input[type="search"]')?.setAttribute('aria-activedescendant', items[0].id);
+    };
+
+    // O <dialog> não persiste entre páginas (wire:navigate troca o body): reobserva quando a lista é outro nó.
+    let observer = null;
+    let observed = null;
+
+    const watch = (root) => {
+        const list = root.querySelector('[data-palette-list]');
+
+        if (list && list !== observed) {
+            observer?.disconnect();
+            observed = list;
+            // `data-active` também: um morph que só tira a marca (mesmos itens) refaz o destaque.
+            observer = new MutationObserver(() => markFirst(root));
+            observer.observe(list, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-active'] });
+        }
+    };
+
+    const applyHint = () => document.querySelectorAll('[data-palette-hint]').forEach((hint) => (hint.textContent = shortcutLabel(navigator.platform)));
+
+    applyHint();
+    document.addEventListener('livewire:navigated', applyHint);
+
     const open = () => {
         const root = dialog();
 
-        // Com o diálogo de confirmação aberto, o atalho não abre outra coisa por cima.
-        if (!root || root.open || document.getElementById('confirm-dialog')?.open) {
+        // Com qualquer outro diálogo aberto (confirmação, ficha em gaveta), o atalho não empilha a busca por cima.
+        if (!root || root.open || document.querySelector('dialog[open]')) {
             return;
         }
 
@@ -74,6 +112,8 @@ if (typeof document !== 'undefined') {
         }
 
         root.showModal();
+        watch(root);
+        markFirst(root);
         input?.focus();
     };
 

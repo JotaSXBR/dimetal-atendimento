@@ -157,3 +157,12 @@ test('fitScale: nunca abaixo do piso legível, e fluxo pequeno segue enquadrado'
     assert.equal(fitScale(1.3), 1.3);
     assert.equal(fitScale(0.3, 0.5), 0.5);
 });
+
+test('anchorTranslate: ancora o Início a 24 px; sem Início, o bloco mais ao canto', async () => {
+    const { anchorTranslate } = await import('../../resources/js/flow-editor/appearance.js');
+    const positions = [{ type: 'mensagem', x: 300, y: 200 }, { type: 'inicio', x: 100, y: 50 }, { type: 'transferir', x: 900, y: 700 }];
+
+    assert.deepEqual(anchorTranslate(positions, 0.9), { x: 24 - 100 * 0.9, y: 24 - 50 * 0.9 });
+    assert.deepEqual(anchorTranslate(positions.filter((p) => p.type !== 'inicio'), 1), { x: 24 - 300, y: 24 - 200 });
+    assert.deepEqual(anchorTranslate([], 1), { x: 24, y: 24 });
+});

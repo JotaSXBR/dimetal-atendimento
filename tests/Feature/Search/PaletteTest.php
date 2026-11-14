@@ -12,6 +12,7 @@ use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Attributes\Url;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -135,5 +136,29 @@ class PaletteTest extends TestCase
 
         $this->assertStringContainsString('role="status"', $html);
         $this->assertStringNotContainsString('id="palette-option-0"', $html);
+    }
+
+    public function test_fechar_a_ficha_tira_o_contato_da_url(): void
+    {
+        $contact = Contact::factory()->create();
+
+        Livewire::withQueryParams(['contato' => $contact->id])->actingAs($this->atendente())->test(ContactsIndex::class)
+            ->assertSet('showCard', true)
+            ->set('showCard', false)
+            ->assertSet('selectedId', null)
+            ->assertSet('showCard', false);
+    }
+
+    public function test_o_parametro_contato_e_ligado_a_url(): void
+    {
+        $property = new \ReflectionProperty(ContactsIndex::class, 'selectedId');
+        $attributes = array_map(fn (\ReflectionAttribute $a): string => $a->getName(), $property->getAttributes());
+
+        $this->assertContains(Url::class, $attributes);
+    }
+
+    public function test_contato_na_url_que_nao_e_numero_nao_quebra_a_tela(): void
+    {
+        $this->actingAs($this->atendente())->get('/contatos?contato=abc')->assertOk();
     }
 }

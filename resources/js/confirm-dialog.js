@@ -14,8 +14,20 @@ export function splitConfirm(message) {
     return { title: text.slice(0, cut + 1).trim(), text: text.slice(cut + 1).trim() };
 }
 
+/** O que identifica a ação do elemento: os `wire:click` (com ou sem modificador) e a mensagem. Se, entre abrir o diálogo e confirmar, o morph do Livewire reaproveitar o nó para outro item, a chave muda. */
+export function actionKey(element) {
+    const clicks = [...element.attributes].filter((attr) => attr.name.startsWith('wire:click')).map((attr) => `${attr.name}=${attr.value}`).sort();
+
+    return `${clicks.join('\u001e')}\u001f${element.getAttribute('data-confirm') ?? ''}`;
+}
+
+export function sameAction(key, element) {
+    return actionKey(element) === key;
+}
+
 if (typeof document !== 'undefined') {
     let pending = null;
+    let pendingKey = '';
 
     document.addEventListener(
         'click',
@@ -23,7 +35,17 @@ if (typeof document !== 'undefined') {
             const element = event.target instanceof Element ? event.target.closest('[data-confirm]') : null;
             const dialog = document.getElementById('confirm-dialog');
 
-            if (!element || !dialog) {
+            if (!element) {
+                return;
+            }
+
+            // Sem o diálogo no layout, nunca deixa a ação passar sem confirmar: cai no confirm() do navegador.
+            if (!dialog) {
+                if (element.dataset.confirmed !== '1' && !window.confirm(element.dataset.confirm)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                }
+
                 return;
             }
 
@@ -50,6 +72,7 @@ if (typeof document !== 'undefined') {
             });
 
             pending = element;
+            pendingKey = actionKey(element);
             dialog.returnValue = '';
             dialog.showModal();
             dialog.querySelector('[value=cancel]')?.focus();
@@ -65,7 +88,7 @@ if (typeof document !== 'undefined') {
         const element = pending;
         pending = null;
 
-        if (element && event.target.returnValue === 'ok' && element.isConnected) {
+        if (element && event.target.returnValue === 'ok' && element.isConnected && sameAction(pendingKey, element)) {
             element.dataset.confirmed = '1';
             element.click();
             // Se o clique não gerou evento (botão desabilitado), a marca não pode sobrar e liberar o próximo clique sem confirmação.

@@ -52,6 +52,17 @@ class SidebarTest extends TestCase
         return $this->xpath($html)->query('//a[@href="'.route($route).'"][not(ancestor::dialog)]')->length;
     }
 
+    /** Com a barra reduzida (56 px) o texto some: o botão precisa de nome próprio e a dica "Ctrl K" não pode vazar para fora dela. */
+    public function test_botao_buscar_tem_nome_e_a_dica_do_atalho_some_com_a_barra_reduzida(): void
+    {
+        $xpath = $this->xpath($this->page(UserRole::ATENDENTE));
+        $button = $xpath->query('//*[@data-palette-open]')->item(0);
+
+        $this->assertInstanceOf(\DOMElement::class, $button);
+        $this->assertSame('Buscar', $button->getAttribute('aria-label'));
+        $this->assertStringContainsString('in-data-flux-sidebar-collapsed-desktop:hidden', $xpath->query('.//span[@aria-hidden="true"]', $button)->item(0)?->getAttribute('class') ?? '');
+    }
+
     public function test_a_raiz_leva_ao_atendimento(): void
     {
         $this->get('/')->assertRedirect('/inbox');

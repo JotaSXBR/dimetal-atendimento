@@ -233,6 +233,20 @@ export function fitScale(zoomedTo, min = MIN_FIT_ZOOM) {
     return Math.max(zoomedTo, min);
 }
 
+/**
+ * Onde pôr o canvas (translate absoluto) para o bloco Início ficar a `margin` px do canto no zoom `k`; sem Início, o bloco mais ao
+ * canto (menor x e menor y); sem blocos, só a margem.
+ *
+ * @param {{type: string, x: number, y: number}[]} positions posições dos blocos em coordenadas do grafo
+ */
+export function anchorTranslate(positions, k, margin = 24) {
+    const start = positions.find((p) => p.type === 'inicio');
+    const x = start ? start.x : positions.length ? Math.min(...positions.map((p) => p.x)) : 0;
+    const y = start ? start.y : positions.length ? Math.min(...positions.map((p) => p.y)) : 0;
+
+    return { x: margin - x * k, y: margin - y * k };
+}
+
 /** Cópia do bloco para o ponto 40 px abaixo e à direita, sem ligações; o Início não se duplica. */
 export function duplicate(node, id) {
     if (node.type === 'inicio') return null;

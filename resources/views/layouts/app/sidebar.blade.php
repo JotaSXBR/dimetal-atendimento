@@ -23,9 +23,9 @@
 
             <flux:sidebar.nav>
                 {{-- Busca Ctrl+K (resources/js/command-palette.js): o atalho abre o mesmo modal. --}}
-                <flux:sidebar.item icon="magnifying-glass" as="button" type="button" data-palette-open aria-keyshortcuts="Control+K Meta+K" data-test="palette-open">
+                <flux:sidebar.item icon="magnifying-glass" as="button" type="button" data-palette-open aria-label="Buscar" aria-keyshortcuts="Control+K Meta+K" data-test="palette-open">
                     Buscar
-                    <x-slot:icon-trailing><span aria-hidden="true" class="font-mono text-xs text-ink-3">Ctrl K</span></x-slot:icon-trailing>
+                    <x-slot:icon-trailing><span data-palette-hint aria-hidden="true" class="font-mono text-xs text-ink-3 in-data-flux-sidebar-collapsed-desktop:hidden">Ctrl K</span></x-slot:icon-trailing>
                 </flux:sidebar.item>
 
                 @foreach ($nav->primary(auth()->user()) as $item)

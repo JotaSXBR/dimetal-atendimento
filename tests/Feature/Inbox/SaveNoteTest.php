@@ -194,4 +194,28 @@ class SaveNoteTest extends TestCase
         $this->assertStringContainsString('deleteNote(', $html);
         $this->assertStringNotContainsString('data-confirm="Apagar esta nota', $html);
     }
+
+    public function test_desfazer_com_o_ticket_apagado_na_janela_nao_quebra_nem_recria(): void
+    {
+        [$autor, $ticket, $note] = $this->noteOf();
+        $screen = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->call('deleteNote', $note->id);
+        $token = $this->undoToken($screen);
+
+        $ticket->delete();
+        $screen->call('restoreNote', $token)->assertOk();
+
+        $this->assertSame(0, TicketNote::query()->count());
+    }
+
+    public function test_desfazer_de_usuario_inativado_na_janela_nao_recria(): void
+    {
+        [$autor, $ticket, $note] = $this->noteOf();
+        $screen = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->call('deleteNote', $note->id);
+        $token = $this->undoToken($screen);
+
+        $autor->forceFill(['active' => false])->save();
+        $screen->call('restoreNote', $token);
+
+        $this->assertSame(0, TicketNote::query()->where('ticket_id', $ticket->id)->count());
+    }
 }

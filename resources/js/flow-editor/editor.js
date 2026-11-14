@@ -11,7 +11,7 @@ import { MinimapPlugin } from 'rete-minimap-plugin';
 import { getDOMSocketPosition } from 'rete-render-utils';
 import { LitElement, html } from 'lit';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
-import { History, ICONS, arrange, categoryOf, connectionPath, duplicate, fitScale, hasPositions, previewOf } from './appearance.js';
+import { History, ICONS, anchorTranslate, arrange, categoryOf, connectionPath, duplicate, fitScale, hasPositions, previewOf } from './appearance.js';
 import { BLOCKS, defaultData, outputsFor } from './nodes.js';
 import { fromGraph, toGraph } from './serialize.js';
 
@@ -255,12 +255,17 @@ export async function createEditor(container, graph, hooks) {
 
         const { k } = area.area.transform;
         const target = fitScale(k);
-        const start = editor.getNodes().find((node) => node.type === 'inicio');
-        const view = start ? area.nodeViews.get(start.id) : null;
 
-        if (target !== k && view) {
+        if (target !== k) {
+            const positions = editor.getNodes().flatMap((node) => {
+                const view = area.nodeViews.get(node.id);
+
+                return view ? [{ type: node.type, x: view.position.x, y: view.position.y }] : [];
+            });
+            const { x, y } = anchorTranslate(positions, target);
+
             await area.area.zoom(target);
-            await area.area.translate(24 - view.position.x * target, 24 - view.position.y * target);
+            await area.area.translate(x, y);
         }
     }
 
