@@ -48,7 +48,8 @@ class SidebarTest extends TestCase
 
     private function linksTo(string $html, string $route): int
     {
-        return $this->xpath($html)->query('//a[@href="'.route($route).'"]')->length;
+        // A busca Ctrl+K (o <dialog>) repete as telas como resultado; aqui só contam os links da barra.
+        return $this->xpath($html)->query('//a[@href="'.route($route).'"][not(ancestor::dialog)]')->length;
     }
 
     public function test_a_raiz_leva_ao_atendimento(): void
