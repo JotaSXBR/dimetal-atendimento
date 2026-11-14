@@ -8,6 +8,7 @@ use App\Models\Channel;
 use App\Models\Message;
 use App\Models\WahaEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
@@ -115,6 +116,7 @@ class HandleWahaEventTest extends TestCase
     public function test_evento_de_sessao_desconhecida_deixa_aviso_no_log(): void
     {
         Log::spy();
+        Cache::forget('waha:sessao-sem-canal:nao-existe');
         $event = WahaEvent::create([
             'waha_event_id' => 'evt_orfao',
             'channel_id' => null,
@@ -128,6 +130,30 @@ class HandleWahaEventTest extends TestCase
 
         Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => ($context['waha_event_id'] ?? null) === $event->id && ($context['session'] ?? null) === 'nao-existe');
         $this->assertSame(0, Message::query()->count());
+    }
+
+    public function test_sessao_desconhecida_avisa_no_log_uma_vez_por_hora_e_nao_a_cada_evento(): void
+    {
+        Log::spy();
+        Cache::forget('waha:sessao-sem-canal:nao-existe');
+        $ids = [];
+
+        foreach (['evt_orfao_1', 'evt_orfao_2', 'evt_orfao_3'] as $waId) {
+            $ids[] = WahaEvent::create([
+                'waha_event_id' => $waId,
+                'channel_id' => null,
+                'event' => 'message.any',
+                'session' => 'nao-existe',
+                'payload' => [],
+                'received_at' => now(),
+            ])->id;
+        }
+
+        foreach ($ids as $id) {
+            (new HandleWahaEvent($id))->handle();
+        }
+
+        Log::shouldHaveReceived('warning')->once();
     }
 
     public function test_job_tenta_de_novo_antes_de_ir_para_failed_jobs(): void

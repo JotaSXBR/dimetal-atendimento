@@ -12,6 +12,7 @@ use App\Services\Waha\ChannelPhone;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class HandleWahaEvent implements ShouldQueue
@@ -43,7 +44,10 @@ class HandleWahaEvent implements ShouldQueue
         }
 
         if ($event->channel === null && ! $this->channelFor($event)) {
-            Log::warning('Evento do WAHA sem canal: descartado', ['waha_event_id' => $event->id, 'session' => $event->session]);
+            // Uma sessão antiga ou de teste do WAHA manda evento sem parar: um aviso por sessão a cada hora basta para ver o problema.
+            if (Cache::add('waha:sessao-sem-canal:'.$event->session, true, 3600)) {
+                Log::warning('Evento do WAHA sem canal: descartado', ['waha_event_id' => $event->id, 'session' => $event->session]);
+            }
 
             return;
         }
