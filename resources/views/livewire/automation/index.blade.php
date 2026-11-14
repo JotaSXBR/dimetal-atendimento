@@ -4,15 +4,15 @@
     </x-page-header>
 
     @if ($error)
-        <div class="mt-4 rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">{{ $error }}</div>
+        <div class="rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">{{ $error }}</div>
     @endif
 
     @if ($notice)
-        <div class="mt-4 rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="status">{{ $notice }}</div>
+        <div class="rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="status">{{ $notice }}</div>
     @endif
 
     @if ($showNew)
-        <form wire:submit="create" class="mt-4 space-y-3 rounded-[14px] border border-line bg-surface p-4">
+        <form wire:submit="create" class="space-y-3 rounded-[14px] border border-line bg-surface p-4">
             <flux:input label="Nome" wire:model="newName" maxlength="120" />
             <fieldset class="space-y-2">
                 <legend class="text-sm font-medium text-ink">Começar de</legend>
