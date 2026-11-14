@@ -12,6 +12,7 @@ use App\Services\Bot\Flow\NodeType;
 use App\Services\Bot\InvalidFlowException;
 use App\Services\Bot\Simulation\BotSimulator;
 use App\Services\Bot\Simulation\SimulationState;
+use App\Services\Bot\Vars;
 use App\Services\Bot\WorkflowPublisher;
 use Closure;
 use Illuminate\Contracts\View\View;
@@ -305,6 +306,7 @@ class Editor extends Component
                 'users' => User::query()->where('active', true)->orderBy('name')->get(['id', 'name'])->map(fn (User $u): array => ['id' => $u->id, 'name' => $u->name])->all(),
                 'versions' => $this->versions(),
                 'messages' => $this->messageCatalog(),
+                'variables' => array_map(fn (string $key, string $label): array => ['key' => $key, 'label' => $label], array_keys(Vars::BUILTIN), Vars::BUILTIN),
             ],
         ]);
     }
