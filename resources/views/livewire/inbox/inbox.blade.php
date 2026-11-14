@@ -196,8 +196,11 @@
                             </span>
                         @endif
                     </div>
-                    <p class="truncate font-mono text-[11px] text-ink-3">
-                        {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}@if ($showChannel) · {{ $ticket->channel->phoneLabel() ?? 'sem número' }}@endif
+                    @php
+                        $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
+                    @endphp
+                    <p data-testid="header-line" class="truncate font-mono text-xs text-ink-3" title="{{ $line }}">
+                        <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>{{ mb_substr($line, mb_strlen($ticket->protocol)) }}
                     </p>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">

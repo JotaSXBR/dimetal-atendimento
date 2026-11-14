@@ -87,17 +87,15 @@ class ContactCardCompactTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $tag);
     }
 
-    /** `wire:ignore.self` congela o `open` do primeiro render: trocar a chave recria o bloco quando o contato passa a ter anteriores. */
-    public function test_bloco_de_anteriores_muda_de_chave_quando_passa_a_ter_anteriores(): void
+    /** Menos informação na tela: Anteriores vem recolhido mesmo com histórico; o título já diz quantos são. */
+    public function test_bloco_de_anteriores_vem_fechado_mesmo_com_anteriores(): void
     {
-        $card = $this->card(['compact' => true]);
-        $this->assertStringContainsString('wire:key="history-block-none"', $card->html());
+        $this->past(2);
 
-        $this->past(1);
+        $html = $this->card(['compact' => true])->html();
 
-        $html = $card->call('$refresh')->html();
-        $this->assertStringContainsString('wire:key="history-block-has"', $html);
-        $this->assertMatchesRegularExpression('/\sopen[\s>]/', $this->detailsTag($html, 'details-history'));
+        $this->assertStringContainsString('Anteriores (2)', $html);
+        $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $this->detailsTag($html, 'details-history'));
     }
 
     public function test_ficha_completa_tambem_limita_a_5_sem_blocos(): void

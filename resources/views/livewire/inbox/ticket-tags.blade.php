@@ -1,9 +1,9 @@
-{{-- Etiquetas da conversa no painel: chips redondos (com remover) e o seletor do que ainda falta. Some se não há o que mostrar nem aplicar. --}}
+{{-- Linha "Conversa" do bloco Etiquetas do painel: chips redondos (com remover) e o seletor do que ainda falta. Some se não há o que mostrar nem aplicar. --}}
 <div>
     @if ($applied->isNotEmpty() || ($editable && $available->isNotEmpty()))
-        <div data-testid="ticket-tags" class="mt-4">
-            <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Etiquetas da conversa</h3>
-            <div class="mt-1 flex flex-wrap items-center gap-1.5">
+        <div data-testid="ticket-tags" class="flex items-start gap-2">
+            <span data-testid="tags-row-conversa" class="w-16 shrink-0 pt-1 text-xs text-ink-3">Conversa</span>
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
                 @foreach ($applied as $tag)
                     <span class="inline-flex items-center gap-0.5" wire:key="ticket-tag-{{ $tag->id }}">
                         <x-tag-chip :tag="$tag" :conversation="true" :title="$tag->name" />
