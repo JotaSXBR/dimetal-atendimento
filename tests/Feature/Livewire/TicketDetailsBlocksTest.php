@@ -54,16 +54,69 @@ class TicketDetailsBlocksTest extends TestCase
         return $m[0];
     }
 
-    public function test_bloco_do_ticket_vem_aberto_e_linha_do_tempo_fechada(): void
+    public function test_etiquetas_vem_abertas_e_observacoes_anteriores_e_linha_do_tempo_fechadas(): void
     {
-        $this->assertMatchesRegularExpression('/\sopen[\s>]/', $this->tag($this->inboxHtml(), 'details-ticket'));
+        $inbox = $this->inboxHtml();
+
+        $this->assertMatchesRegularExpression('/\sopen[\s>]/', $this->tag($inbox, 'details-tags'));
+        $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $this->tag($inbox, 'details-notes'));
+        $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $this->tag($inbox, 'details-history'));
         $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $this->tag($this->historyHtml(), 'details-timeline'));
     }
 
     public function test_blocos_ignoram_o_morph_do_livewire(): void
     {
-        $this->assertStringContainsString('wire:ignore.self', $this->tag($this->inboxHtml(), 'details-ticket'));
+        $this->assertStringContainsString('wire:ignore.self', $this->tag($this->inboxHtml(), 'details-tags'));
         $this->assertStringContainsString('wire:ignore.self', $this->tag($this->historyHtml(), 'details-timeline'));
+    }
+
+    public function test_painel_do_inbox_nao_tem_o_bloco_ticket_que_o_cabecalho_ja_mostra(): void
+    {
+        $html = $this->inboxHtml();
+
+        $this->assertStringNotContainsString('data-testid="details-ticket"', $html);
+        $this->assertStringNotContainsString('Responsável', $html);
+    }
+
+    public function test_painel_do_historico_mantem_o_bloco_ticket_com_encerrado_em_e_motivo(): void
+    {
+        $html = $this->historyHtml();
+
+        $this->tag($html, 'details-ticket');
+        $this->assertStringContainsString('Encerrado em', $html);
+        $this->assertStringContainsString('Responsável', $html);
+    }
+
+    public function test_um_unico_bloco_de_etiquetas_com_as_linhas_conversa_e_contato(): void
+    {
+        // As linhas só aparecem quando há etiqueta aplicada ou a aplicar.
+        Tag::factory()->create();
+        Tag::factory()->contato()->create();
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->inboxHtml(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+
+        $this->assertSame(1, $xpath->query('//details[@data-testid="details-tags"]')->length);
+        $this->assertSame(1, $xpath->query('//details[@data-testid="details-tags"]//*[@data-testid="tags-row-conversa"]')->length);
+        $this->assertSame(1, $xpath->query('//details[@data-testid="details-tags"]//*[@data-testid="tags-row-contato"]')->length);
+    }
+
+    /** O telefone já está na linha de baixo do cabeçalho; no Histórico continua no painel. */
+    public function test_telefone_sai_do_painel_do_inbox_e_fica_no_do_historico(): void
+    {
+        $contact = Contact::factory()->create(['wa_id' => '5516997524950@c.us']);
+        $channel = Channel::factory()->create();
+        $open = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $contact->id, 'status' => TicketStatus::AGUARDANDO]);
+        $closed = Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => $contact->id, 'status' => TicketStatus::ENCERRADO, 'closed_at' => now()]);
+
+        $panel = fn (string $html): string => (string) preg_replace('/^.*?<aside[^>]*id="ticket-details".*?>/s', '', $html);
+
+        $inbox = Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $open->id)->html();
+        $history = Livewire::actingAs($this->admin())->test(History::class)->call('select', $closed->id)->html();
+
+        $this->assertStringNotContainsString($contact->phoneLabel(), $panel($inbox));
+        $this->assertStringContainsString($contact->phoneLabel(), $panel($history));
     }
 
     public function test_painel_lista_todas_as_etiquetas_do_ticket(): void
@@ -96,7 +149,7 @@ class TicketDetailsBlocksTest extends TestCase
     {
         $html = $this->inboxHtml();
 
-        $this->assertMatchesRegularExpression('/<details[^>]*data-testid="details-ticket"[^>]*\spy-0\.5[\s"]/', $html);
+        $this->assertMatchesRegularExpression('/<details[^>]*data-testid="details-tags"[^>]*\spy-0\.5[\s"]/', $html);
         $this->assertStringContainsString('min-h-9', $html);
         $this->assertStringNotContainsString('min-h-11', $html);
     }

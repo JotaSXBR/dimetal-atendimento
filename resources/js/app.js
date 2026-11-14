@@ -16,6 +16,8 @@ import './quote-jump';
 import './alerts';
 import './alert-ui';
 import './ticket-details';
+import './tag-picker';
+import './queue-search';
 import './message-menu';
 import './settings-ui';
 import './auth-ui';

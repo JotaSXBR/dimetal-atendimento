@@ -4,7 +4,7 @@
 
 <div
     data-open-ticket="{{ $ticketId }}"
-    class="grid min-h-0 flex-1 grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]"
+    class="grid min-h-0 flex-1 grid-cols-1 bg-surface {{ $ticket ? 'lg:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]' : 'lg:grid-cols-[340px_minmax(0,1fr)]' }}"
     x-data="ticketDetails"
     x-bind:style="details ? '' : '--details-w: 0px'"
     data-client-presence="{{ json_encode($clientPresence, JSON_THROW_ON_ERROR) }}"
@@ -12,10 +12,18 @@
 >
     {{-- Lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
-        <header class="border-b border-line p-4">
+        <header class="border-b border-line p-4" x-data="queueSearch" data-open="{{ $search !== '' ? '1' : '0' }}" x-on:keydown.escape="escape">
             <div class="flex items-center justify-between gap-2">
                 <h1 class="text-base font-semibold text-ink">Fila</h1>
-                <flux:button size="sm" variant="primary" icon="plus" x-on:click="$dispatch('start-conversation')">Nova conversa</flux:button>
+                <div class="flex items-center gap-1">
+                    <flux:button size="sm" variant="subtle" icon="magnifying-glass" aria-label="Buscar na fila" tooltip="Buscar na fila" x-on:click="toggle" x-bind:aria-expanded="open" />
+                    <flux:button size="sm" variant="primary" icon="plus" x-on:click="$dispatch('start-conversation')">Nova conversa</flux:button>
+                </div>
+            </div>
+
+            {{-- A busca só estreita o que o usuário já vê (nome, telefone ou protocolo); fechar o campo a limpa. --}}
+            <div x-show="open" x-cloak class="mt-3">
+                <flux:input x-ref="field" data-testid="queue-search-field" size="sm" icon="magnifying-glass" wire:model.live.debounce.300ms="search" placeholder="Nome, telefone ou protocolo" aria-label="Buscar na fila" autocomplete="off" />
             </div>
 
             {{-- Três visões do dia a dia sempre à mão; as duas raras (triagem do bot e histórico recente) ficam no menu "Mais". --}}
@@ -45,28 +53,15 @@
 
             @if ($contactTags->isNotEmpty() || $ticketTags->isNotEmpty())
                 <div class="mt-3">
-                    <flux:select wire:model.live="tagId" size="sm" aria-label="Filtrar por etiqueta">
-                        <flux:select.option value="">Todas as etiquetas</flux:select.option>
-                        @if ($contactTags->isNotEmpty())
-                            <optgroup label="Do contato">
-                                @foreach ($contactTags as $tag)
-                                    <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-                        @if ($ticketTags->isNotEmpty())
-                            <optgroup label="Da conversa">
-                                @foreach ($ticketTags as $tag)
-                                    <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-                    </flux:select>
+                    <x-tag-picker :tags="$contactTags->concat($ticketTags)" grouped label="Filtrar por etiqueta" model="tagId" :selected="$tagId" placeholder="Todas as etiquetas" />
                 </div>
             @endif
         </header>
 
         <div class="relative min-h-0 flex-1 overflow-y-auto">
+            @php
+                $searching = trim($search) !== '';
+            @endphp
             @if ($tab === 'encerrados')
                 @foreach ($closed as $item)
                     <button
@@ -88,7 +83,11 @@
                 @endforeach
 
                 @if ($closed->isEmpty())
-                    <x-empty-state compact icon="archive-box" title="Nenhum ticket encerrado nos últimos 7 dias." />
+                    @if ($searching)
+                        <x-empty-state compact icon="magnifying-glass" :title="'Nada encontrado para «'.trim($search).'».'" />
+                    @else
+                        <x-empty-state compact icon="archive-box" title="Nenhum ticket encerrado nos últimos 7 dias." />
+                    @endif
                 @endif
 
                 <p class="p-4 text-center text-xs"><a href="{{ route('historico') }}" wire:navigate class="text-accent-content underline">Busca completa</a></p>
@@ -157,7 +156,7 @@
                                 @if ($showSector && $item->sector)
                                     <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-[10px] text-ink-2">{{ $item->sector->name }}</span>
                                 @endif
-                                @if ($item->assignee)
+                                @if ($item->assignee && $tab !== 'meus')
                                     <span class="inline-flex max-w-24 items-center gap-1 text-[10px] text-ink-2">
                                         <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
                                         @php
@@ -177,7 +176,11 @@
             @endforeach
 
             @if ($pending->isEmpty() && $waiting->isEmpty() && $active->isEmpty())
-                <x-empty-state compact icon="inbox" title="Nenhum ticket por aqui." />
+                @if ($searching)
+                    <x-empty-state compact icon="magnifying-glass" :title="'Nada encontrado para «'.trim($search).'».'" />
+                @else
+                    <x-empty-state compact icon="inbox" title="Nenhum ticket por aqui." />
+                @endif
             @endif
             @endif
         </div>
@@ -212,9 +215,14 @@
                             </span>
                         @endif
                     </div>
-                    <p class="truncate font-mono text-[11px] text-ink-3">
-                        {{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }} · {{ $ticket->channel->name }}@if ($showChannel) · {{ $ticket->channel->phoneLabel() ?? 'sem número' }}@endif
-                    </p>
+                    @php
+                        $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
+                    @endphp
+                    {{-- `div`, não `p`: o conteúdo do tooltip do Flux é um bloco, e bloco dentro de `p` faz o navegador fechar o `p` antes dele. --}}
+                    <div data-testid="header-line" data-line="{{ $line }}" class="min-w-0 font-mono text-xs break-words text-ink-3">
+                        <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
+                        <span>&nbsp;{{ mb_substr($line, mb_strlen($ticket->protocol) + 1) }}</span>
+                    </div>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
                             @if ($ticket->close_outcome)
@@ -240,12 +248,21 @@
                         <flux:button size="sm" icon="arrow-uturn-left" wire:click="takeover({{ $ticket->assigned_user_id }})" wire:confirm="Tomar este ticket de {{ $ticket->assignee?->name }}?">Tomar</flux:button>
                     @endif
 
-                    @if ($canTransfer)
-                        <flux:button size="sm" icon="arrows-right-left" class="@max-2xl:w-8 @max-2xl:px-0" wire:click="openPanel('transfer')" aria-label="Transferir" tooltip="Transferir"><span class="hidden @2xl:inline">Transferir</span></flux:button>
-                    @endif
+                    {{-- Ações menos frequentes num menu: o cabeçalho fica com Assumir/Tomar/Encerrar e libera espaço em coluna estreita. Cada item respeita a mesma permissão de antes. --}}
+                    @if ($canTransfer || $canReassign)
+                        <flux:dropdown position="bottom" align="end">
+                            <flux:button size="sm" icon="ellipsis-horizontal" aria-label="Mais ações" tooltip="Mais ações" />
 
-                    @if ($canReassign)
-                        <flux:button size="sm" icon="user-plus" class="@max-2xl:w-8 @max-2xl:px-0" wire:click="openPanel('reassign')" aria-label="Reatribuir" tooltip="Reatribuir"><span class="hidden @2xl:inline">Reatribuir</span></flux:button>
+                            <flux:menu data-testid="header-more-menu">
+                                @if ($canTransfer)
+                                    <flux:menu.item icon="arrows-right-left" wire:click="openPanel('transfer')">Transferir</flux:menu.item>
+                                @endif
+
+                                @if ($canReassign)
+                                    <flux:menu.item icon="user-plus" wire:click="openPanel('reassign')">Reatribuir</flux:menu.item>
+                                @endif
+                            </flux:menu>
+                        </flux:dropdown>
                     @endif
 
                     @if ($canClose)
@@ -508,7 +525,29 @@
                 @endif
             </footer>
         @else
-            <div class="grid flex-1 place-items-center text-sm text-ink-3">Selecione um ticket.</div>
+            @php
+                $nearest = $summary['nearest'];
+            @endphp
+            <div data-testid="queue-summary" class="grid flex-1 place-items-center p-6">
+                <div class="w-full max-w-sm space-y-4 text-center">
+                    <div class="flex items-center justify-center gap-8 text-sm text-ink-2">
+                        <p>Aguardando <span data-testid="summary-waiting" class="ms-1 font-mono text-base font-semibold text-ink">{{ $summary['waiting'] }}</span></p>
+                        <p>Meus <span data-testid="summary-mine" class="ms-1 font-mono text-base font-semibold text-ink">{{ $summary['mine'] }}</span></p>
+                    </div>
+
+                    @if ($nearest)
+                        <flux:button data-testid="summary-nearest" variant="filled" class="h-auto! w-full justify-start! py-2!" wire:click="select({{ $nearest->id }})">
+                            <span class="flex min-w-0 flex-col items-start gap-0.5 text-start">
+                                <span class="text-xs text-ink-3">SLA mais perto de estourar</span>
+                                <span class="max-w-full truncate font-mono text-sm text-ink">{{ $nearest->protocol }} · {{ $nearest->contact->label() }}</span>
+                                <span class="text-xs {{ $nearest->sla_due_at->isPast() ? 'text-danger' : 'text-ink-2' }}">{{ $nearest->sla_due_at->isPast() ? 'Venceu ' : 'Responder até ' }}{{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($nearest->sla_due_at, now()) }}</span>
+                            </span>
+                        </flux:button>
+                    @endif
+
+                    <p class="text-sm text-ink-3">Escolha uma conversa à esquerda.</p>
+                </div>
+            </div>
         @endif
     </section>
 

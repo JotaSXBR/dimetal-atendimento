@@ -18,7 +18,7 @@ class InboxHeaderTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function xpath(TicketStatus $status = TicketStatus::AGUARDANDO, array $override = []): \DOMXPath
+    private function xpath(TicketStatus $status = TicketStatus::AGUARDANDO, array $override = [], ?User $as = null): \DOMXPath
     {
         $ticket = Ticket::factory()->create(array_replace([
             'channel_id' => (Channel::query()->first() ?? Channel::factory()->create())->id,
@@ -30,7 +30,7 @@ class InboxHeaderTest extends TestCase
             'sla_due_at' => now()->subMinute(),
         ], $override));
 
-        $html = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class)->call('select', $ticket->id)->html();
+        $html = Livewire::actingAs($as ?? User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class)->call('select', $ticket->id)->html();
         $dom = new \DOMDocument;
         @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
 
@@ -45,19 +45,45 @@ class InboxHeaderTest extends TestCase
         $this->assertStringContainsString('@container', $column->getAttribute('class'));
     }
 
-    public function test_transferir_e_reatribuir_tem_nome_acessivel_e_rotulo_so_em_coluna_larga(): void
+    /** @return list<string> os itens do menu "Mais ações" do cabeçalho */
+    private function menuItems(\DOMXPath $xpath): array
+    {
+        $items = [];
+
+        foreach ($xpath->query('//header//*[@data-testid="header-more-menu"]//*[@data-flux-menu-item]') as $item) {
+            $items[] = trim((string) preg_replace('/\s+/', ' ', $item->textContent));
+        }
+
+        return $items;
+    }
+
+    public function test_transferir_e_reatribuir_ficam_no_menu_mais_acoes_e_nao_avulsos(): void
     {
         $xpath = $this->xpath(TicketStatus::EM_ATENDIMENTO, ['assigned_user_id' => User::factory()->create()->id]);
 
-        foreach (['Transferir', 'Reatribuir'] as $action) {
-            $button = $xpath->query('//header//button[@aria-label="'.$action.'"]')->item(0);
+        $this->assertNotNull($xpath->query('//header//button[@aria-label="Mais ações"]')->item(0));
+        $this->assertSame(['Transferir', 'Reatribuir'], $this->menuItems($xpath));
+        $this->assertSame(0, $xpath->query('//header//button[@aria-label="Transferir" or @aria-label="Reatribuir"]')->length);
+    }
 
-            $this->assertNotNull($button, $action);
-            $label = $xpath->query('.//span[contains(@class, "@2xl:inline")]', $button)->item(0);
-            $this->assertSame($action, trim((string) $label?->textContent), $action);
-            // O slot nunca fica vazio (tem o rótulo escondido), então o Flux não faz o botão quadrado: `w-8` sem padding faz isso (32x32) em coluna estreita.
-            $this->assertStringContainsString('@max-2xl:w-8', $button->getAttribute('class'), $action);
-        }
+    /** O responsável com a opção "pode transferir" ligada transfere, mas só supervisor e admin reatribuem. */
+    public function test_quem_so_pode_transferir_ve_so_transferir_no_menu(): void
+    {
+        $attendant = User::factory()->create(['role' => UserRole::ATENDENTE, 'can_transfer' => true]);
+
+        $xpath = $this->xpath(TicketStatus::EM_ATENDIMENTO, ['assigned_user_id' => $attendant->id], $attendant);
+
+        $this->assertSame(['Transferir'], $this->menuItems($xpath));
+    }
+
+    public function test_sem_permissao_de_transferir_nem_reatribuir_nao_ha_menu_mas_o_encerrar_fica(): void
+    {
+        $attendant = User::factory()->create(['role' => UserRole::ATENDENTE, 'can_transfer' => false]);
+
+        $xpath = $this->xpath(TicketStatus::EM_ATENDIMENTO, ['assigned_user_id' => $attendant->id], $attendant);
+
+        $this->assertSame(0, $xpath->query('//header//button[@aria-label="Mais ações"]')->length);
+        $this->assertNotNull($xpath->query('//header//button[normalize-space(.)="Encerrar"]')->item(0));
     }
 
     public function test_assumir_e_encerrar_mantem_o_texto(): void
@@ -88,6 +114,6 @@ class InboxHeaderTest extends TestCase
         $xpath = $this->xpath(TicketStatus::ENCERRADO);
 
         $this->assertSame(0, $xpath->query('//*[@data-testid="header-sla"]')->length);
-        $this->assertSame(0, $xpath->query('//header//button[@aria-label="Transferir" or @aria-label="Reatribuir"]')->length);
+        $this->assertSame(0, $xpath->query('//header//button[@aria-label="Transferir" or @aria-label="Reatribuir" or @aria-label="Mais ações"]')->length);
     }
 }

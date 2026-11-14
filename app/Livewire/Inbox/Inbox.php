@@ -24,7 +24,9 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Inbox\ClientPresence;
 use App\Services\Inbox\ConversationHandoff;
+use App\Services\Inbox\QueueOverview;
 use App\Services\Inbox\ResendTicketMessage;
+use App\Services\Inbox\TicketTextSearch;
 use App\Support\TicketQueue;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -67,6 +69,9 @@ class Inbox extends Component
 
     #[Url]
     public string $tab = 'todos';
+
+    /** Busca da Fila por nome, telefone ou protocolo (a lupa do cabeçalho); vazia não filtra. */
+    public string $search = '';
 
     /** Filtro da lista por etiqueta. */
     #[Url]
@@ -351,6 +356,7 @@ class Inbox extends Component
 
         return Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
             ->where(fn (Builder $q) => $q->whereNull('closed_reason')->orWhere('closed_reason', '<>', ClosedReason::IMPORTADO->value))
+            ->tap(fn (Builder $q) => TicketTextSearch::apply($q, $this->search))
             ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get();
     }
 
@@ -381,8 +387,15 @@ class Inbox extends Component
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
             ->when($this->tab === 'meus', fn (Builder $q) => $q->where('assigned_user_id', $user->id))
             ->when($this->tagId !== null, fn (Builder $q) => TicketQueue::withTag($q, (int) $this->tagId))
+            ->tap(fn (Builder $q) => TicketTextSearch::apply($q, $this->search))
             ->orderBy('last_inbound_at')
             ->get();
+
+        $counts = [
+            'pendentes' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::PENDENTE->value)->count(),
+            'aguardando' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::AGUARDANDO->value)->count(),
+            'meus' => Ticket::query()->open()->where('assigned_user_id', $user->id)->count(),
+        ];
 
         return view('livewire.inbox.inbox', [
             'contactTags' => Tag::sortedByName(Tag::query()->ofContact()->get()),
@@ -393,14 +406,11 @@ class Inbox extends Component
             'closed' => $this->recentlyClosed($user),
             // "Digitando…" do cliente guardado no Redis: quem abre a tela no meio da digitação já o vê (os avisos seguintes vêm pelo Reverb).
             'clientPresence' => $this->clientPresence($list, $ticket),
-            'tabCounts' => [
-                'pendentes' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::PENDENTE->value)->count(),
-                'aguardando' => Ticket::query()->open()->visibleTo($user)->where('status', TicketStatus::AGUARDANDO->value)->count(),
-                'meus' => Ticket::query()->open()->where('assigned_user_id', $user->id)->count(),
-            ],
+            'tabCounts' => $counts,
+            // Sem ticket aberto a coluna do meio mostra o resumo do dia (ver `summary`).
+            'summary' => QueueOverview::summary($ticket, $user, $counts),
+            'showSector' => QueueOverview::showSector($list),
             // O selo do número só ajuda quando há mais de um número ativo.
-            // O setor no card só ajuda quando há mais de um setor recebendo tickets.
-            'showSector' => Sector::query()->receivingTickets()->count() >= 2,
             'showChannel' => Channel::query()->where('active', true)->count() >= 2,
             'ticket' => $ticket,
             'replyTo' => $this->replyBar($ticket?->id),

@@ -56,6 +56,7 @@ class InboxQueueFilterTest extends TestCase
         Tag::factory()->contato()->create(['name' => 'Revenda']);
         Tag::factory()->create(['name' => 'Orçamento']);
 
-        $this->page()->assertSeeInOrder(['Do contato', 'Revenda', 'Da conversa', 'Orçamento']);
+        // O seletor leva as etiquetas em `data-tags` (JSON), cada uma com o grupo; as do contato vêm antes das da conversa.
+        $this->page()->assertSeeInOrder(['Revenda', 'Do contato', 'Orçamento', 'Da conversa']);
     }
 }

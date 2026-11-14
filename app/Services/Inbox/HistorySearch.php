@@ -32,8 +32,7 @@ final class HistorySearch
             $like = '%'.addcslashes($q, '%_\\').'%';
 
             $query->where(function (Builder $match) use ($q, $like): void {
-                $match->whereHas('contact', fn (Builder $contact) => $contact->search($q))
-                    ->orWhereRaw('tickets.protocol ilike ?', [$like]);
+                TicketTextSearch::apply($match, $q);
 
                 if (mb_strlen($q) >= self::MIN_TEXT) {
                     $match->orWhereExists(fn (QueryBuilder $message) => $message->selectRaw('1')->from('messages')

@@ -91,8 +91,9 @@ class InboxQueueCardTest extends TestCase
     public function test_atendente_fica_na_coluna_da_direita_entre_o_setor_e_as_nao_lidas(): void
     {
         $vendas = Sector::factory()->create(['name' => 'Vendas']);
-        Sector::factory()->create(['name' => 'Suporte']);
+        $suporte = Sector::factory()->create(['name' => 'Suporte']);
         $ticket = $this->ticket(['sector_id' => $vendas->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id]);
+        $this->ticket(['sector_id' => $suporte->id]); // a lista mistura setores: só então o setor aparece no card
         Message::factory()->for($ticket)->create(['direction' => MessageDirection::IN, 'sent_at' => now()->subMinutes(3)]);
 
         $html = $this->html();
@@ -169,16 +170,39 @@ class InboxQueueCardTest extends TestCase
         $this->assertStringNotContainsString('data-testid="card-meta"', $this->html());
     }
 
-    public function test_setor_some_com_um_so_setor_e_aparece_com_dois(): void
+    /** O setor só ajuda quando a lista tem mais de um: com dois setores no sistema mas todos os cards do mesmo, repetir só polui. */
+    public function test_setor_some_quando_todos_os_cards_sao_do_mesmo_e_aparece_quando_a_lista_mistura(): void
     {
         $vendas = Sector::factory()->create(['name' => 'Vendas']);
+        $suporte = Sector::factory()->create(['name' => 'Suporte']);
         $this->ticket(['sector_id' => $vendas->id]);
 
         $this->assertStringNotContainsString('data-testid="card-sector"', $this->html());
 
-        Sector::factory()->create(['name' => 'Suporte']);
+        $this->ticket(['sector_id' => $suporte->id]);
 
         $this->assertStringContainsString('Vendas', $this->part($this->html(), 'card-sector'));
+    }
+
+    public function test_um_so_setor_no_sistema_nunca_mostra_o_setor(): void
+    {
+        $vendas = Sector::factory()->create(['name' => 'Vendas']);
+        $this->ticket(['sector_id' => $vendas->id]);
+        $this->ticket(['sector_id' => $vendas->id]);
+
+        $this->assertStringNotContainsString('data-testid="card-sector"', $this->html());
+    }
+
+    /** Na visão "Meus" o atendente é sempre quem está olhando: repetir o nome em todo card só polui. */
+    public function test_na_visao_meus_o_atendente_some_do_card_e_nas_outras_aparece(): void
+    {
+        $me = User::factory()->create(['role' => UserRole::ADMIN, 'name' => 'Marina Souza']);
+        $this->ticket(['status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => $me->id]);
+
+        $page = Livewire::actingAs($me)->test(Inbox::class);
+
+        $this->assertStringContainsString('data-testid="card-assignee-name"', $page->html());
+        $this->assertStringNotContainsString('data-testid="card-assignee-name"', $page->set('tab', 'meus')->html());
     }
 
     /** @return list<string> */

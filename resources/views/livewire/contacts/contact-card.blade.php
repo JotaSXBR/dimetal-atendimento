@@ -3,34 +3,41 @@
 @php($tz = config()->string('app.display_timezone'))
 @if ($compact && ! $editing)
     <div class="contents text-sm">
+        {{-- O telefone já está no cabeçalho da conversa; só o Histórico (somente leitura, sem esse cabeçalho) o mostra aqui. --}}
         <x-disclosure title="Contato" testid="details-contact">
-        <div class="space-y-4">
         <div>
             <p class="font-semibold text-ink">{{ $contact->label() }}</p>
             @if ($contact->company || $contact->job_title)
                 <p class="text-ink-2">{{ implode(' · ', array_filter([$contact->company, $contact->job_title])) }}</p>
             @endif
-            <p class="font-mono text-xs text-ink-2">{{ $contact->phoneLabel() }}</p>
+            @if ($readonly)
+                <p class="font-mono text-xs text-ink-2">{{ $contact->phoneLabel() }}</p>
+            @endif
             @if ($contact->email)
                 <p class="truncate text-xs text-ink-2">{{ $contact->email }}</p>
             @endif
         </div>
+        </x-disclosure>
 
-        @include('livewire.contacts.tags')
-
-        <div>
-            <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Observações</h3>
-            @if ($contact->notes)
-                <p class="mt-1 text-xs break-words whitespace-pre-wrap text-ink">{{ $contact->notes }}</p>
-            @else
-                <p class="mt-1 text-xs text-ink-3">Nenhuma observação.</p>
+        {{-- Um bloco só: a linha "Conversa" (as etiquetas do ticket) e a linha "Contato". --}}
+        <x-disclosure title="Etiquetas" testid="details-tags">
+        <div class="space-y-3">
+            @if ($currentTicketId !== null)
+                <livewire:inbox.ticket-tags :ticket-id="$currentTicketId" :readonly="$readonly" :key="'ticket-tags-'.$currentTicketId" />
             @endif
-        </div>
+            @include('livewire.contacts.tags', ['rowLabel' => 'Contato'])
         </div>
         </x-disclosure>
 
-        {{-- A chave muda quando o contato passa a ter (ou deixa de ter) anteriores: o `wire:ignore.self` congela o `open`, e a chave nova recria o bloco. --}}
-        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="$historyTotal > 0" testid="details-history" wire:key="history-block-{{ $historyTotal > 0 ? 'has' : 'none' }}">
+        <x-disclosure :title="'Observações ('.($contact->notes ? 1 : 0).')'" :open="false" testid="details-notes">
+            @if ($contact->notes)
+                <p class="text-xs break-words whitespace-pre-wrap text-ink">{{ $contact->notes }}</p>
+            @else
+                <p class="text-xs text-ink-3">Nenhuma observação.</p>
+            @endif
+        </x-disclosure>
+
+        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="false" testid="details-history">
             <ul class="space-y-2">
                 @forelse ($history as $past)
                     @php($mine = in_array($past->id, $openable, true))

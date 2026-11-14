@@ -27,9 +27,6 @@ class TicketTags extends Component
     #[Locked]
     public bool $readonly = false;
 
-    /** O valor do seletor: ao escolher, aplica e volta a vazio. */
-    public string $addTagId = '';
-
     public function mount(int $ticketId, bool $readonly = false): void
     {
         $this->ticketId = $ticketId;
@@ -41,15 +38,6 @@ class TicketTags extends Component
     #[On('echo-private:inbox,.ticket.updated')]
     #[On('realtime-reconnected')]
     public function refresh(): void {}
-
-    public function updatedAddTagId(string $value): void
-    {
-        $this->addTagId = '';
-
-        if (ctype_digit($value)) {
-            $this->addTag((int) $value);
-        }
-    }
 
     /** Só etiqueta do escopo `conversa`. O evento só nasce se esta chamada de fato aplicou (duas pessoas ao mesmo tempo não duplicam). */
     public function addTag(int $tagId): void

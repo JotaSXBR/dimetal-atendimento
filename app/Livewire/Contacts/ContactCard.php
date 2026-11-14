@@ -44,9 +44,6 @@ class ContactCard extends Component
     #[Locked]
     public bool $readonly = false;
 
-    /** O valor do seletor de etiqueta: ao escolher, aplica e volta a vazio. */
-    public string $addTagId = '';
-
     public function mount(int $contactId, bool $compact = false, bool $readonly = false, ?int $currentTicketId = null): void
     {
         $this->currentTicketId = $currentTicketId;
@@ -90,15 +87,6 @@ class ContactCard extends Component
         $contact->forceFill(['google_error' => null, 'google_attempted_at' => null])->save();
 
         SyncContactToGoogleJob::dispatchWhenConnected($contact);
-    }
-
-    public function updatedAddTagId(string $value): void
-    {
-        $this->addTagId = '';
-
-        if (ctype_digit($value)) {
-            $this->addTag((int) $value);
-        }
     }
 
     /** Só `attach`/`detach`: o contato não é tocado, então o Google não é reenviado. Aplica só etiqueta do escopo `contato`. */
