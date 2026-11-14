@@ -4,7 +4,7 @@
 
 <div
     data-open-ticket="{{ $ticketId }}"
-    class="grid min-h-0 flex-1 grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]"
+    class="grid min-h-0 flex-1 grid-cols-1 bg-surface {{ $ticket ? 'lg:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]' : 'lg:grid-cols-[340px_minmax(0,1fr)]' }}"
     x-data="ticketDetails"
     x-bind:style="details ? '' : '--details-w: 0px'"
     data-client-presence="{{ json_encode($clientPresence, JSON_THROW_ON_ERROR) }}"
@@ -149,7 +149,7 @@
                                 @if ($showSector && $item->sector)
                                     <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-[10px] text-ink-2">{{ $item->sector->name }}</span>
                                 @endif
-                                @if ($item->assignee)
+                                @if ($item->assignee && $tab !== 'meus')
                                     <span class="inline-flex max-w-24 items-center gap-1 text-[10px] text-ink-2">
                                         <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
                                         @php
@@ -512,7 +512,27 @@
                 @endif
             </footer>
         @else
-            <div class="grid flex-1 place-items-center text-sm text-ink-3">Selecione um ticket.</div>
+            @php
+                $nearest = $summary['nearest'];
+            @endphp
+            <div data-testid="queue-summary" class="grid flex-1 place-items-center p-6">
+                <div class="w-full max-w-sm space-y-4 text-center">
+                    <div class="flex items-center justify-center gap-8 text-sm text-ink-2">
+                        <p>Aguardando <span data-testid="summary-waiting" class="ms-1 font-mono text-base font-semibold text-ink">{{ $summary['waiting'] }}</span></p>
+                        <p>Meus <span data-testid="summary-mine" class="ms-1 font-mono text-base font-semibold text-ink">{{ $summary['mine'] }}</span></p>
+                    </div>
+
+                    @if ($nearest)
+                        <flux:button data-testid="summary-nearest" variant="filled" class="h-auto! w-full flex-col! items-start! gap-0.5! py-2!" wire:click="select({{ $nearest->id }})">
+                            <span class="text-xs text-ink-3">SLA mais perto de estourar</span>
+                            <span class="font-mono text-sm text-ink">{{ $nearest->protocol }} · {{ $nearest->contact->label() }}</span>
+                            <span class="text-xs {{ $nearest->sla_due_at->isPast() ? 'text-danger' : 'text-ink-2' }}">{{ $nearest->sla_due_at->isPast() ? 'Venceu ' : 'Responder até ' }}{{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($nearest->sla_due_at, now()) }}</span>
+                        </flux:button>
+                    @endif
+
+                    <p class="text-sm text-ink-3">Escolha uma conversa à esquerda.</p>
+                </div>
+            </div>
         @endif
     </section>
 
