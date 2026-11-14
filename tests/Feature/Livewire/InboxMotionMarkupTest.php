@@ -117,4 +117,18 @@ class InboxMotionMarkupTest extends TestCase
             $this->assertStringContainsString(self::SAIDA, $barra);
         }
     }
+
+    public function test_as_faixas_de_audio_abrem_pela_altura(): void
+    {
+        $html = $this->inbox()->html();
+
+        foreach (['recording', 'preview'] as $fase) {
+            $wrapper = $this->tagCom($html, "x-show=\"phase === '{$fase}'\"");
+
+            $this->assertStringContainsString('x-collapse.duration.200ms', $wrapper, $fase);
+            // A margem vai para dentro do wrapper: no wrapper ela sobraria como vão de 8px com a faixa fechada.
+            $this->assertStringNotContainsString('mb-2', substr($wrapper, 0, (int) strpos($wrapper, '>')), $fase);
+            $this->assertMatchesRegularExpression('/x-collapse\.duration\.200ms[^>]*>\s*<div class="mb-2 /', $wrapper, $fase);
+        }
+    }
 }

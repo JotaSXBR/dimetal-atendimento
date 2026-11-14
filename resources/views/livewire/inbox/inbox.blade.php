@@ -394,19 +394,23 @@
                         <div wire:ignore x-data="voiceRecorder($wire, {{ $ticket->id }})" x-on:voice-start.window="start()">
                             <p x-show="error" x-cloak x-text="error" class="mb-2 text-xs text-danger" role="alert"></p>
 
-                            <div x-show="phase === 'recording'" x-cloak class="flex items-center gap-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2">
-                                <span class="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true"></span>
-                                <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
-                                <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
-                                <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()">Descartar</flux:button>
-                                <flux:button type="button" size="xs" variant="primary" x-on:click="stop()">Parar</flux:button>
+                            <div x-show="phase === 'recording'" x-cloak x-collapse.duration.200ms>
+                                <div class="mb-2 flex items-center gap-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2">
+                                    <span class="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true"></span>
+                                    <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
+                                    <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
+                                    <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()">Descartar</flux:button>
+                                    <flux:button type="button" size="xs" variant="primary" x-on:click="stop()">Parar</flux:button>
+                                </div>
                             </div>
 
-                            <div x-show="phase === 'preview'" x-cloak class="flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
-                                <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
-                                <flux:button type="button" size="xs" variant="subtle" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</flux:button>
-                                <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()" x-bind:disabled="sending">Descartar</flux:button>
-                                <flux:button type="button" size="xs" variant="primary" x-on:click="send()" x-bind:disabled="sending">Enviar</flux:button>
+                            <div x-show="phase === 'preview'" x-cloak x-collapse.duration.200ms>
+                                <div class="mb-2 flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
+                                    <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
+                                    <flux:button type="button" size="xs" variant="subtle" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</flux:button>
+                                    <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()" x-bind:disabled="sending">Descartar</flux:button>
+                                    <flux:button type="button" size="xs" variant="primary" x-on:click="send()" x-bind:disabled="sending">Enviar</flux:button>
+                                </div>
                             </div>
                         </div>
 
