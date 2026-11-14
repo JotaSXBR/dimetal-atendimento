@@ -60,6 +60,7 @@ class ViewConventionsTest extends TestCase
     private function botoesCrusAprovados(): array
     {
         return [
+            'components/tag-picker.blade.php' => 1, // opção da lista selecionável do seletor de etiquetas
             'flux/navlist/group.blade.php' => 1, // sobrescrita do Flux
             'livewire/alerts/bell.blade.php' => 2, // gatilho do sino e item de alerta (lista selecionável)
             'livewire/automation/editor.blade.php' => 3, // foco no erro (Validar e Testar) e paleta de blocos (lista)
