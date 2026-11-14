@@ -1,10 +1,8 @@
 // Balão da conversa: edição inline e menu de ações da mensagem (resources/views/livewire/inbox/transcript.blade.php).
 // A lógica fica aqui, e não em `x-data` inline, porque o build CSP do Alpine não aceita método dentro do atributo.
 
+import { placeMenu } from './menu-placement.js';
 import { shown } from './shown.js';
-
-const MARGIN = 8;
-const GAP = 4;
 
 document.addEventListener('alpine:init', () => {
     // Estado de edição do balão (o menu, que é filho, chama `startEdit` pelo escopo).
@@ -29,10 +27,13 @@ document.addEventListener('alpine:init', () => {
         open: false,
         info: false,
         style: '',
+        // A entrada só toca depois de posicionar: antes disso o menu está escondido e a animação seria invisível.
+        placed: false,
 
         toggle() {
             this.open = !this.open;
             this.info = false;
+            this.placed = false;
 
             if (this.open) {
                 this.style = 'top:0;left:0;visibility:hidden';
@@ -44,18 +45,19 @@ document.addEventListener('alpine:init', () => {
         },
 
         place() {
-            const button = this.$refs.button.getBoundingClientRect();
             const menu = this.$refs.menu;
-            // O limite é a área da conversa (acima do campo de resposta), não a tela inteira.
-            const area = this.$el.closest('.overflow-y-auto')?.getBoundingClientRect();
-            const floor = Math.min(area?.bottom ?? window.innerHeight, window.innerHeight) - MARGIN;
-            const ceiling = Math.max(area?.top ?? 0, 0) + MARGIN;
-            const below = button.bottom + GAP;
-            const wanted = below + menu.offsetHeight > floor ? button.top - menu.offsetHeight - GAP : below;
-            const top = Math.max(Math.min(wanted, floor - menu.offsetHeight), ceiling);
-            const left = Math.min(Math.max(button.right - menu.offsetWidth, MARGIN), window.innerWidth - menu.offsetWidth - MARGIN);
+            const { top, left, above } = placeMenu({
+                button: this.$refs.button.getBoundingClientRect(),
+                menuWidth: menu.offsetWidth,
+                menuHeight: menu.offsetHeight,
+                area: this.$el.closest('.overflow-y-auto')?.getBoundingClientRect() ?? null,
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+            });
 
-            this.style = `top:${top}px;left:${left}px`;
+            // A animação cresce do lado do botão: o menu fica alinhado à direita dele, abaixo ou acima.
+            this.style = `top:${top}px;left:${left}px;transform-origin:${above ? 'bottom' : 'top'} right`;
+            this.placed = true;
         },
 
         copy(body) {

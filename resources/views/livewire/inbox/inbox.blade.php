@@ -372,16 +372,19 @@
                         x-bind:class="dragging ? 'rounded-md ring-2 ring-accent' : ''"
                     >
                         @if ($attachments !== [])
-                            <ul x-show="!voiceBusy" class="mb-2 flex flex-wrap gap-2" aria-label="Arquivos para enviar">
-                                @foreach ($attachments as $index => $file)
-                                    <li wire:key="attachment-{{ $index }}-{{ $file->getFilename() }}" class="flex items-center gap-2 rounded-md border border-line bg-canvas px-2 py-1 text-xs">
-                                        <flux:icon.paper-clip class="size-3.5 text-ink-3" />
-                                        <span class="max-w-40 truncate text-ink">{{ $file->getClientOriginalName() }}</span>
-                                        <span class="font-mono text-ink-3">{{ \Illuminate\Support\Number::fileSize($file->getSize(), 1) }}</span>
-                                        <flux:button type="button" size="xs" variant="ghost" icon="x-mark" wire:click="removeAttachment({{ $index }})" aria-label="Remover {{ $file->getClientOriginalName() }}" />
-                                    </li>
-                                @endforeach
-                            </ul>
+                            {{-- O servidor insere a bandeja já pronta: `revealOnInsert` abre o `x-collapse` logo depois de inserida (attach-tray.js). --}}
+                            <div x-data="revealOnInsert" x-show="shown" x-cloak x-collapse.duration.200ms>
+                                <ul x-show="!voiceBusy" class="mb-2 flex flex-wrap gap-2" aria-label="Arquivos para enviar">
+                                    @foreach ($attachments as $index => $file)
+                                        <li wire:key="attachment-{{ $index }}-{{ $file->getFilename() }}" class="flex items-center gap-2 rounded-md border border-line bg-canvas px-2 py-1 text-xs">
+                                            <flux:icon.paper-clip class="size-3.5 text-ink-3" />
+                                            <span class="max-w-40 truncate text-ink">{{ $file->getClientOriginalName() }}</span>
+                                            <span class="font-mono text-ink-3">{{ \Illuminate\Support\Number::fileSize($file->getSize(), 1) }}</span>
+                                            <flux:button type="button" size="xs" variant="ghost" icon="x-mark" wire:click="removeAttachment({{ $index }})" aria-label="Remover {{ $file->getClientOriginalName() }}" />
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
                         @endif
 
                         <p x-show="uploading > 0" x-cloak class="mb-2 text-xs text-ink-3" role="status">Enviando arquivo…</p>
@@ -394,19 +397,23 @@
                         <div wire:ignore x-data="voiceRecorder($wire, {{ $ticket->id }})" x-on:voice-start.window="start()">
                             <p x-show="error" x-cloak x-text="error" class="mb-2 text-xs text-danger" role="alert"></p>
 
-                            <div x-show="phase === 'recording'" x-cloak class="flex items-center gap-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2">
-                                <span class="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true"></span>
-                                <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
-                                <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
-                                <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()">Descartar</flux:button>
-                                <flux:button type="button" size="xs" variant="primary" x-on:click="stop()">Parar</flux:button>
+                            <div x-show="phase === 'recording'" x-cloak x-collapse.duration.200ms>
+                                <div class="mb-2 flex items-center gap-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2">
+                                    <span class="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true"></span>
+                                    <span class="font-mono text-sm text-ink" x-text="clock" role="timer"></span>
+                                    <span class="flex-1 text-xs text-ink-2">Gravando… o cliente vê "gravando áudio"</span>
+                                    <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()">Descartar</flux:button>
+                                    <flux:button type="button" size="xs" variant="primary" x-on:click="stop()">Parar</flux:button>
+                                </div>
                             </div>
 
-                            <div x-show="phase === 'preview'" x-cloak class="flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
-                                <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
-                                <flux:button type="button" size="xs" variant="subtle" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</flux:button>
-                                <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()" x-bind:disabled="sending">Descartar</flux:button>
-                                <flux:button type="button" size="xs" variant="primary" x-on:click="send()" x-bind:disabled="sending">Enviar</flux:button>
+                            <div x-show="phase === 'preview'" x-cloak x-collapse.duration.200ms>
+                                <div class="mb-2 flex items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2">
+                                    <audio x-bind:src="url" controls class="h-9 min-w-0 flex-1"></audio>
+                                    <flux:button type="button" size="xs" variant="subtle" x-on:click="rerecord()" x-bind:disabled="sending">Regravar</flux:button>
+                                    <flux:button type="button" size="xs" variant="subtle" x-on:click="discard()" x-bind:disabled="sending">Descartar</flux:button>
+                                    <flux:button type="button" size="xs" variant="primary" x-on:click="send()" x-bind:disabled="sending">Enviar</flux:button>
+                                </div>
                             </div>
                         </div>
 
@@ -436,7 +443,7 @@
                             {{-- Seletor de emoji: o elemento vive no Alpine (wire:ignore); ver resources/js/emoji-picker.js --}}
                             <div class="relative" wire:ignore x-data="emojiPicker" x-on:keydown.escape="close(true)" x-on:click.outside="close()">
                                 <flux:button type="button" variant="subtle" icon="face-smile" aria-label="Emoji" title="Emoji" aria-haspopup="dialog" x-bind:aria-expanded="open.toString()" x-on:click="toggle()" />
-                                <div x-ref="panel" x-show="open" x-cloak role="dialog" aria-label="Seletor de emoji" class="absolute bottom-full start-0 z-20 mb-2 overflow-hidden rounded-lg border border-line shadow-lg"></div>
+                                <div x-ref="panel" x-show="open" x-cloak x-transition:enter="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition duration-100 ease-out" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" role="dialog" aria-label="Seletor de emoji" class="origin-bottom-left absolute bottom-full start-0 z-20 mb-2 overflow-hidden rounded-lg border border-line shadow-lg"></div>
                             </div>
                             <flux:button type="button" variant="subtle" icon="paper-clip" aria-label="Anexar arquivo" title="Anexar arquivo" x-show="mode === 'reply'" x-on:click="$refs.picker.click()" />
 

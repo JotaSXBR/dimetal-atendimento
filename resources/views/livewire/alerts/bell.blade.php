@@ -12,7 +12,7 @@
         @endif
     </button>
 
-    <div x-show="open" x-cloak x-transition.opacity :style="menuStyle" class="fixed z-50 w-96 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-xl" role="dialog" aria-label="Alertas">
+    <div x-show="open" x-cloak x-transition:enter="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition duration-100 ease-out" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" :style="menuStyle" class="origin-top-left fixed z-50 w-96 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-xl" role="dialog" aria-label="Alertas">
         <div class="flex items-center justify-between border-b border-line px-3.5 py-3">
             <p class="text-sm font-bold">Alertas <span class="ms-1 text-xs font-normal text-ink-3">{{ $unread }} {{ $unread === 1 ? 'novo' : 'novos' }}</span></p>
             @if ($unread > 0)
