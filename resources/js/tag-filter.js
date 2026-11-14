@@ -39,3 +39,28 @@ export function buildRows(tags, query, { filtering = false, clearLabel = '', act
         rowClass: index === active ? 'bg-canvas' : '',
     }));
 }
+
+/**
+ * A próxima linha ativa ao apertar seta: sem linha ativa (-1), para baixo vai à primeira e para cima à última; fora isso anda uma linha
+ * e para nas pontas. Lista vazia nunca tem linha ativa.
+ *
+ * @param {number} active
+ * @param {1|-1} direction
+ * @param {number} length
+ */
+export function stepActive(active, direction, length) {
+    if (length === 0) {
+        return -1;
+    }
+
+    if (active < 0) {
+        return direction > 0 ? 0 : length - 1;
+    }
+
+    return Math.min(Math.max(active + direction, 0), length - 1);
+}
+
+/** Só digitar pré-escolhe a primeira linha: apenas focar o campo e apertar Enter não aplica nada que ninguém escolheu. */
+export function activeForQuery(query) {
+    return query.trim() === '' ? -1 : 0;
+}

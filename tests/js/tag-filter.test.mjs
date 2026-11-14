@@ -21,7 +21,7 @@ test('filterTags: sem correspondência devolve lista vazia', () => {
     assert.deepEqual(filterTags(TAGS, 'zzz'), []);
 });
 
-import { buildRows } from '../../resources/js/tag-filter.js';
+import { activeForQuery, buildRows, stepActive } from '../../resources/js/tag-filter.js';
 
 const GROUPED = [
     { id: 1, name: 'Revenda', color: 'azul', group: 'Do contato' },
@@ -57,4 +57,27 @@ test('buildRows: marca só a linha ativa e dá a cor da etiqueta ao ponto', () =
 
 test('buildRows: sem correspondência não há linhas, nem a de limpar (consulta não vazia)', () => {
     assert.deepEqual(buildRows(GROUPED, 'zzz', { filtering: true, clearLabel: 'Todas' }), []);
+});
+
+test('stepActive: sem linha ativa, para baixo vai à primeira e para cima à última', () => {
+    assert.equal(stepActive(-1, 1, 3), 0);
+    assert.equal(stepActive(-1, -1, 3), 2);
+});
+
+test('stepActive: anda uma linha e para nas pontas', () => {
+    assert.equal(stepActive(0, 1, 3), 1);
+    assert.equal(stepActive(2, 1, 3), 2);
+    assert.equal(stepActive(1, -1, 3), 0);
+    assert.equal(stepActive(0, -1, 3), 0);
+});
+
+test('stepActive: lista vazia nunca tem linha ativa', () => {
+    assert.equal(stepActive(-1, 1, 0), -1);
+    assert.equal(stepActive(0, -1, 0), -1);
+});
+
+test('activeForQuery: só há linha pré-escolhida depois de digitar (Enter não aplica nada ao apenas focar)', () => {
+    assert.equal(activeForQuery(''), -1);
+    assert.equal(activeForQuery('   '), -1);
+    assert.equal(activeForQuery('or'), 0);
 });

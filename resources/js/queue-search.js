@@ -5,7 +5,7 @@ document.addEventListener('alpine:init', () => {
         open: false,
 
         init() {
-            // Já há busca no servidor (recarga, volta do histórico): o campo nasce aberto para ela não ficar escondida.
+            // Defensivo: se o servidor entregar o componente já com busca, o campo nasce aberto para o filtro não ficar escondido.
             this.open = this.$el.dataset.open === '1';
         },
 
@@ -15,7 +15,16 @@ document.addEventListener('alpine:init', () => {
 
         show() {
             this.open = true;
-            this.$nextTick(() => this.$refs.field.focus());
+            // O `x-show` só mostra o campo alguns ms depois, e foco em campo oculto falha sem aviso: foca quando ele já está visível.
+            const focusWhenShown = () => {
+                if (!this.open) {
+                    return;
+                }
+
+                this.$refs.field.offsetParent === null ? requestAnimationFrame(focusWhenShown) : this.$refs.field.focus();
+            };
+
+            requestAnimationFrame(focusWhenShown);
         },
 
         close() {

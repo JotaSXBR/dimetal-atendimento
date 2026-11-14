@@ -82,6 +82,20 @@ class QueueSearchTest extends TestCase
         $this->page()->set('search', '_')->assertSee('Jo_ao 100%')->assertDontSee('Maria Souza');
     }
 
+    public function test_sem_resultado_diz_o_que_nao_achou_em_vez_de_fila_vazia(): void
+    {
+        $this->pair();
+
+        $this->page()->set('search', 'zzz')->assertSee('Nada encontrado para «zzz».')->assertDontSee('Nenhum ticket por aqui.');
+        $this->page()->set('tab', 'encerrados')->set('search', 'zzz')->assertSee('Nada encontrado para «zzz».')->assertDontSee('Nenhum ticket encerrado');
+        $this->page()->assertSee('Maria Souza')->assertDontSee('Nada encontrado');
+    }
+
+    public function test_o_termo_digitado_aparece_escapado_na_mensagem_de_nada_encontrado(): void
+    {
+        $this->page()->set('search', '<b>x</b>')->assertSee('Nada encontrado')->assertDontSeeHtml('<b>x</b>');
+    }
+
     public function test_busca_so_com_espacos_equivale_a_vazia(): void
     {
         $this->pair();
@@ -97,9 +111,10 @@ class QueueSearchTest extends TestCase
         $attendant->sectors()->attach($vendas);
 
         $this->ticket('Maria Souza', '5516997524950@c.us', '2026-000029', sector: $vendas);
-        $this->ticket('João Lima', '5511988887777@c.us', '2026-000030', sector: $financeiro);
+        $hidden = $this->ticket('João Lima', '5511988887777@c.us', '2026-000030', sector: $financeiro);
 
-        $this->page($attendant)->set('search', 'João Lima')->assertDontSee('João Lima')->assertDontSee('2026-000030');
+        // A tela repete o termo digitado ("Nada encontrado para «João Lima»"), mas nenhum card nem protocolo do ticket que o usuário não vê.
+        $this->page($attendant)->set('search', 'João Lima')->assertSee('Nada encontrado')->assertDontSee('2026-000030')->assertDontSeeHtml('wire:key="ticket-'.$hidden->id.'"');
         $this->page($attendant)->set('search', 'Maria')->assertSee('Maria Souza');
     }
 

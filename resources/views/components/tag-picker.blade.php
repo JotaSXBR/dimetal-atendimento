@@ -20,7 +20,7 @@
         @if ($method) data-method="{{ $method }}" @endif
         @if ($model) data-model="{{ $model }}" data-clear="{{ $placeholder }}" @endif
         data-list-id="{{ $listId }}"
-        x-on:keydown.escape="close"
+        x-on:keydown.escape="escape"
         x-on:focusout="leave"
         {{ $attributes->class('relative') }}
     >
@@ -37,7 +37,7 @@
             x-model="query"
             x-on:focus="show"
             x-on:click="show"
-            x-on:input="show"
+            x-on:input="typed"
             x-on:keydown.arrow-down.prevent="next"
             x-on:keydown.arrow-up.prevent="prev"
             x-on:keydown.enter.prevent="choose"
@@ -51,10 +51,10 @@
 
         <flux:icon.chevron-up-down variant="micro" class="pointer-events-none absolute end-2 top-2.5 text-ink-3" />
 
-        <ul id="{{ $listId }}" role="listbox" aria-label="{{ $label }}" x-show="open" x-cloak class="absolute inset-x-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-lg">
+        <ul id="{{ $listId }}" role="listbox" aria-label="{{ $label }}" x-show="open" x-cloak x-on:mousedown.prevent class="absolute inset-x-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-lg">
             <template x-for="item in items" x-bind:key="item.key">
                 <li role="presentation">
-                    <p x-show="item.header" class="px-2 pt-2 pb-1 text-xs font-semibold text-ink-3" x-text="item.group"></p>
+                    <p x-show="item.header" aria-hidden="true" class="px-2 pt-2 pb-1 text-xs font-semibold text-ink-3" x-text="item.group"></p>
                     <button
                         type="button"
                         role="option"
@@ -72,7 +72,8 @@
                     </button>
                 </li>
             </template>
-            <p x-show="empty" class="px-2 py-2 text-sm text-ink-3">Nenhuma etiqueta encontrada.</p>
         </ul>
+
+        <p x-show="empty" x-cloak role="status" class="absolute inset-x-0 z-30 mt-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-3 shadow-lg">Nenhuma etiqueta encontrada.</p>
     </div>
 @endif

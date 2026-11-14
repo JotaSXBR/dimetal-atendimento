@@ -59,6 +59,9 @@
         </header>
 
         <div class="relative min-h-0 flex-1 overflow-y-auto">
+            @php
+                $searching = trim($search) !== '';
+            @endphp
             @if ($tab === 'encerrados')
                 @foreach ($closed as $item)
                     <button
@@ -80,7 +83,11 @@
                 @endforeach
 
                 @if ($closed->isEmpty())
-                    <x-empty-state compact icon="archive-box" title="Nenhum ticket encerrado nos últimos 7 dias." />
+                    @if ($searching)
+                        <x-empty-state compact icon="magnifying-glass" :title="'Nada encontrado para «'.trim($search).'».'" />
+                    @else
+                        <x-empty-state compact icon="archive-box" title="Nenhum ticket encerrado nos últimos 7 dias." />
+                    @endif
                 @endif
 
                 <p class="p-4 text-center text-xs"><a href="{{ route('historico') }}" wire:navigate class="text-accent-content underline">Busca completa</a></p>
@@ -169,7 +176,11 @@
             @endforeach
 
             @if ($pending->isEmpty() && $waiting->isEmpty() && $active->isEmpty())
-                <x-empty-state compact icon="inbox" title="Nenhum ticket por aqui." />
+                @if ($searching)
+                    <x-empty-state compact icon="magnifying-glass" :title="'Nada encontrado para «'.trim($search).'».'" />
+                @else
+                    <x-empty-state compact icon="inbox" title="Nenhum ticket por aqui." />
+                @endif
             @endif
             @endif
         </div>
@@ -208,9 +219,9 @@
                         $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
                     @endphp
                     {{-- `div`, não `p`: o conteúdo do tooltip do Flux é um bloco, e bloco dentro de `p` faz o navegador fechar o `p` antes dele. --}}
-                    <div data-testid="header-line" data-line="{{ $line }}" class="flex min-w-0 font-mono text-xs text-ink-3">
-                        <flux:tooltip class="shrink-0" content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
-                        <span class="truncate" title="{{ $line }}">&nbsp;{{ mb_substr($line, mb_strlen($ticket->protocol) + 1) }}</span>
+                    <div data-testid="header-line" data-line="{{ $line }}" class="min-w-0 font-mono text-xs break-words text-ink-3">
+                        <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
+                        <span>&nbsp;{{ mb_substr($line, mb_strlen($ticket->protocol) + 1) }}</span>
                     </div>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">

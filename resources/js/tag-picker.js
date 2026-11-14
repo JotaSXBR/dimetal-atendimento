@@ -1,21 +1,31 @@
 // Seletor de etiquetas com busca (resources/views/components/tag-picker.blade.php). Fica aqui, e não num `x-data` inline, porque o build
 // CSP do Alpine não aceita método dentro do atributo. A lista é lida de `data-tags` a cada uso: o Livewire pode trocá-la ao renderizar.
 // `this.$el` muda conforme o elemento que dispara o evento (o campo, a opção): a raiz do componente fica guardada em `root`.
-import { buildRows } from './tag-filter.js';
+import { activeForQuery, buildRows, stepActive } from './tag-filter.js';
 
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('tagPicker', () => ({
         root: null,
+        all: [],
+        observer: null,
         open: false,
         query: '',
-        active: 0,
+        active: -1,
 
         init() {
             this.root = this.$el;
+            this.sync();
+            // O Livewire troca `data-tags` ao aplicar ou tirar uma etiqueta: a lista acompanha, sem esperar o usuário digitar.
+            this.observer = new MutationObserver(() => this.sync());
+            this.observer.observe(this.root, { attributes: true, attributeFilter: ['data-tags'] });
         },
 
-        get all() {
-            return JSON.parse(this.root.dataset.tags);
+        destroy() {
+            this.observer.disconnect();
+        },
+
+        sync() {
+            this.all = JSON.parse(this.root.dataset.tags);
         },
 
         /** Linhas da lista: o filtro, o título dos grupos e a linha "Todas" do modo filtro (ver `buildRows`). */
@@ -40,13 +50,27 @@ document.addEventListener('alpine:init', () => {
 
         show() {
             this.open = true;
-            this.active = Math.min(this.active, Math.max(this.items.length - 1, 0));
+            this.active = Math.min(this.active, this.items.length - 1);
+        },
+
+        /** Digitou: abre e pré-escolhe a primeira correspondência (Enter a aplica). */
+        typed() {
+            this.open = true;
+            this.active = activeForQuery(this.query);
         },
 
         close() {
             this.open = false;
             this.query = '';
-            this.active = 0;
+            this.active = -1;
+        },
+
+        /** Esc com a lista aberta fecha só a lista: o evento não sobe para quem está em volta (a busca da Fila, por exemplo). */
+        escape(event) {
+            if (this.open) {
+                event.stopPropagation();
+                this.close();
+            }
         },
 
         /** O foco saiu do conjunto (campo e lista): fecha. Clicar numa opção não tira o foco do campo (`mousedown.prevent`). */
@@ -57,13 +81,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         next() {
-            this.show();
-            this.active = Math.min(this.active + 1, this.items.length - 1);
+            this.open = true;
+            this.active = stepActive(this.active, 1, this.items.length);
         },
 
         prev() {
-            this.show();
-            this.active = Math.max(this.active - 1, 0);
+            this.open = true;
+            this.active = stepActive(this.active, -1, this.items.length);
         },
 
         hover(index) {
@@ -88,8 +112,8 @@ document.addEventListener('alpine:init', () => {
                 this.$wire.$set(model, id === '' ? null : id);
             }
 
+            // O foco fica no campo (com a lista fechada): quem usa teclado segue de onde estava.
             this.close();
-            this.$refs.field.blur();
         },
     }));
 });

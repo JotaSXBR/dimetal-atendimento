@@ -55,7 +55,7 @@ class InboxChannelBadgeTest extends TestCase
 
         $header = $screen->call('select', $ticket->id)->html();
         $this->assertStringContainsString($ticket->protocol.' ·', $header);
-        // O Livewire põe um marcador de bloco dentro do @if do cabeçalho: a regex o tolera.
-        $this->assertSame(3, preg_match_all('/Suporte(?:<!--\[if BLOCK\]><!\[endif\]-->)? · \(16\) 98888-7777/', $header), 'item da lista, cabeçalho e painel de detalhes');
+        // Só o texto visível (atributos como `data-line` e `title` repetem a linha): o item da lista e o cabeçalho. O painel de detalhes não repete mais o canal.
+        $this->assertSame(2, preg_match_all('/Suporte · \(16\) 98888-7777/', strip_tags($header)), 'item da lista e cabeçalho');
     }
 }

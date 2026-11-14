@@ -94,7 +94,11 @@ class InboxSlaTest extends TestCase
         $this->travelTo($this->sp('2026-10-30 10:00'));
         $this->waiting('Tranquilo', ['sla_warn_at' => $this->sp('2026-10-30 10:30'), 'sla_due_at' => $this->sp('2026-10-30 10:40')]);
 
-        $this->inbox()->assertSeeHtml('data-testid="card-time"')->assertDontSee('Responder até')->assertDontSee('Perto de estourar');
+        $screen = $this->inbox()->assertSeeHtml('data-testid="card-time"')->assertDontSee('Perto de estourar');
+
+        // Na lista o card mostra o tempo de espera, não o prazo (o resumo da coluna vazia, ao lado, é outra superfície e traz o prazo).
+        $this->assertSame(1, preg_match('/<section.*?<\/section>/s', $screen->html(), $list));
+        $this->assertStringNotContainsString('Responder até', $list[0]);
     }
 
     public function test_sem_espera_nao_ha_selo(): void
