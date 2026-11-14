@@ -19,41 +19,58 @@
                 </flux:badge>
             @endif
 
-            <flux:input icon="magnifying-glass" aria-label="Buscar no histórico" placeholder="Contato, protocolo ou texto" wire:model.live.debounce.400ms="q" clearable />
+            <div class="flex items-start gap-2">
+                <flux:input class="min-w-0 flex-1" icon="magnifying-glass" aria-label="Buscar no histórico" placeholder="Contato, protocolo ou texto" wire:model.live.debounce.400ms="q" clearable />
 
-            <div class="grid grid-cols-2 gap-2">
-                <flux:input type="date" size="sm" label="De" wire:model.live="from" />
-                <flux:input type="date" size="sm" label="Até" wire:model.live="to" />
+                {{-- Os filtros moram num popover: ficam só a busca e o botão. Os campos só valem no "Aplicar" (`$refresh`); "Limpar" volta ao padrão. --}}
+                <x-popover id="history-filters" label="Filtros do histórico" class="shrink-0">
+                    <x-slot:trigger>
+                        @php
+                            $filtersLabel = $activeFilters > 0 ? 'Filtros · '.$activeFilters : 'Filtros';
+                        @endphp
+                        <flux:button size="base" :variant="$filtersLabel === 'Filtros' ? 'subtle' : 'filled'" icon="adjustments-horizontal" data-popover-trigger x-on:click="toggle" x-bind:aria-expanded="open" aria-controls="history-filters">{{ $filtersLabel }}</flux:button>
+                    </x-slot:trigger>
 
-                <flux:select size="sm" wire:model.live="sectorId" label="Setor">
-                    <flux:select.option value="">Todos</flux:select.option>
-                    @foreach ($sectors as $sector)
-                        <flux:select.option :value="$sector->id">{{ $sector->name }}{{ $sector->trashed() ? ' (apagado)' : '' }}</flux:select.option>
-                    @endforeach
-                </flux:select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <flux:input type="date" size="sm" label="De" wire:model="from" />
+                        <flux:input type="date" size="sm" label="Até" wire:model="to" />
 
-                <flux:select size="sm" wire:model.live="outcome" label="Motivo">
-                    <flux:select.option value="">Todos</flux:select.option>
-                    @foreach ($outcomes as $item)
-                        <flux:select.option :value="$item->value">{{ $item->label() }}</flux:select.option>
-                    @endforeach
-                </flux:select>
+                        <flux:select size="sm" wire:model="sectorId" label="Setor">
+                            <flux:select.option value="">Todos</flux:select.option>
+                            @foreach ($sectors as $sector)
+                                <flux:select.option :value="$sector->id">{{ $sector->name }}{{ $sector->trashed() ? ' (apagado)' : '' }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
 
-                @if ($agents !== null)
-                    <flux:select size="sm" wire:model.live="userId" label="Atendente" class="col-span-2">
-                        <flux:select.option value="">Todos</flux:select.option>
-                        @foreach ($agents as $agent)
-                            <flux:select.option :value="$agent->id">{{ $agent->name }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                @endif
+                        <flux:select size="sm" wire:model="outcome" label="Motivo">
+                            <flux:select.option value="">Todos</flux:select.option>
+                            @foreach ($outcomes as $item)
+                                <flux:select.option :value="$item->value">{{ $item->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        @if ($agents !== null)
+                            <flux:select size="sm" wire:model="userId" label="Atendente" class="col-span-2">
+                                <flux:select.option value="">Todos</flux:select.option>
+                                @foreach ($agents as $agent)
+                                    <flux:select.option :value="$agent->id">{{ $agent->name }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                        @endif
+                    </div>
+
+                    <div class="mt-3 flex justify-end gap-2">
+                        <flux:button size="sm" variant="subtle" wire:click="clearFilters" x-on:click="close">Limpar</flux:button>
+                        <flux:button size="sm" variant="primary" wire:click="$refresh" x-on:click="close">Aplicar</flux:button>
+                    </div>
+                </x-popover>
             </div>
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
-            <x-skeleton-rows wire:loading.delay wire:target="q,from,to,sectorId,outcome,userId" />
+            <x-skeleton-rows wire:loading.delay wire:target="q,$refresh,clearFilters" />
 
-            <div wire:loading.remove.delay wire:target="q,from,to,sectorId,outcome,userId">
+            <div wire:loading.remove.delay wire:target="q,$refresh,clearFilters">
 
             @forelse ($tickets as $item)
                 <button

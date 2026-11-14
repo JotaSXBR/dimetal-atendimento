@@ -1,0 +1,58 @@
+// Popover próprio (resources/views/components/popover.blade.php): painel ancorado num botão, que fecha com Esc (devolvendo o foco ao botão),
+// com "Aplicar"/"Limpar" (idem) e com clique fora (sem roubar o foco de onde a pessoa clicou). Visual e comportamento inspirados no Popover do
+// Flux Pro; código próprio. Fica aqui, e não num `x-data` inline, porque o build CSP do Alpine não aceita método dentro do atributo.
+// `this.$el` muda conforme o elemento que dispara o evento: a raiz do componente fica guardada em `root`.
+document.addEventListener('alpine:init', () => {
+    window.Alpine.data('popover', () => ({
+        root: null,
+        open: false,
+
+        init() {
+            this.root = this.$el;
+        },
+
+        toggle() {
+            this.open ? this.close() : this.show();
+        },
+
+        /** Abre e leva o foco ao primeiro campo, assim que o painel estiver de fato visível (o `x-show` demora alguns ms; foco em oculto falha sem aviso). */
+        show() {
+            this.open = true;
+
+            const focusWhenShown = () => {
+                if (!this.open) {
+                    return;
+                }
+
+                const panel = this.root.querySelector('[data-popover-panel]');
+
+                panel.offsetParent === null ? requestAnimationFrame(focusWhenShown) : panel.querySelector('input, select, textarea, button')?.focus();
+            };
+
+            requestAnimationFrame(focusWhenShown);
+        },
+
+        /** Fecha e devolve o foco ao botão que abriu. */
+        close() {
+            if (!this.open) {
+                return;
+            }
+
+            this.open = false;
+            this.root.querySelector('[data-popover-trigger]')?.focus();
+        },
+
+        /** Clique fora: fecha sem mexer no foco (a pessoa já clicou em outra coisa). */
+        dismiss() {
+            this.open = false;
+        },
+
+        /** Esc com o painel aberto fecha só ele: o evento não sobe para quem está em volta. */
+        escape(event) {
+            if (this.open) {
+                event.stopPropagation();
+                this.close();
+            }
+        },
+    }));
+});

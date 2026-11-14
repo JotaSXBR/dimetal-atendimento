@@ -17,6 +17,7 @@ import './alerts';
 import './alert-ui';
 import './ticket-details';
 import './tag-picker';
+import './popover';
 import './queue-search';
 import './message-menu';
 import './settings-ui';

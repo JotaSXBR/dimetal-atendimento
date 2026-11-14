@@ -15,6 +15,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -58,12 +59,40 @@ class Index extends Component
     #[Url]
     public ?int $ticketId = null;
 
+    /** O `De` padrão, fixado na abertura da tela (virar o dia com ela aberta não faz o padrão parecer um filtro). Vazio quando há contato. */
+    #[Locked]
+    public string $defaultFrom = '';
+
     public function mount(): void
     {
         // Vindo do "Ver todos" de um contato, o que interessa são os antigos: sem a janela padrão.
-        if ($this->from === '' && $this->contactId === null) {
-            $this->from = CarbonImmutable::now(config()->string('app.display_timezone'))->subDays(self::DEFAULT_DAYS)->toDateString();
+        $this->defaultFrom = $this->contactId === null
+            ? CarbonImmutable::now(config()->string('app.display_timezone'))->subDays(self::DEFAULT_DAYS)->toDateString()
+            : '';
+
+        if ($this->from === '') {
+            $this->from = $this->defaultFrom;
         }
+    }
+
+    /** Volta os filtros do popover ao padrão: o período padrão e nenhuma data final, setor, motivo ou atendente. A busca e o contato filtrado ficam. */
+    public function clearFilters(): void
+    {
+        $this->from = $this->defaultFrom;
+        $this->reset('to', 'sectorId', 'outcome', 'userId');
+        $this->resetPage();
+    }
+
+    /** Quantos filtros do popover estão fora do padrão (o `De` padrão não conta). */
+    private function activeFilters(): int
+    {
+        return count(array_filter([
+            $this->from !== $this->defaultFrom,
+            $this->to !== '',
+            $this->sectorId !== null,
+            $this->userId !== null,
+            $this->outcome !== '',
+        ]));
     }
 
     public function updated(string $name): void
@@ -111,6 +140,7 @@ class Index extends Component
         }
 
         return view('livewire.history.index', [
+            'activeFilters' => $this->activeFilters(),
             'tickets' => $tickets,
             'ticket' => $ticket,
             'messages' => $messages,
