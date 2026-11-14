@@ -11,11 +11,8 @@ As fatias A, B e C fecharam sem menores. As fatias D, E e F estão abaixo.
 
 | # | Onde | O quê | Por quê / cenário | Decisão |
 |---|------|-------|-------------------|---------|
-| D1 | `resources/js/confirm-dialog.js` (listener de clique) | O clique passa sem confirmar se o layout não tem `#confirm-dialog` | Hoje só o layout da barra lateral tem `data-confirm`; vira risco numa tela futura com outro layout. Opção: bloquear o clique quando o diálogo falta (falha fechada) | Advisor: falhar fechado ou aberto? |
-| D2 | `resources/js/confirm-dialog.js` (`pending`) | Nó reaproveitado pelo morph do Livewire com o diálogo aberto confirma a ação de outro item | Listas sem `wire:key` (setores, etiquetas, respostas rápidas); o risco é baixo mas a ação é destrutiva. Opção: guardar o `wire:click` (texto) e comparar ao confirmar | Dono: vale a pena? |
 | D3 | `app/Livewire/Inbox/Transcript.php` (`restoreNote`) | Não revalida usuário ativo nem ticket ainda existente/legível (ticket mesclado dá erro de FK) | Janela de 60 s, cache por usuário; impacto pequeno | Advisor |
 | D4 | `app/Livewire/Inbox/TicketTags.php` (`undoRemove`/`removeTag`) | `removeTag` aceita qualquer escopo de etiqueta e o Desfazer só `ofTicket()`; 403 em ticket encerrado vira modal de erro do Livewire | Toast promete algo que não acontece; trocar o 403 por no-op silencioso no listener | Dono: silencioso ou erro? |
-| D5 | `resources/js/confirm-dialog.js` (rótulo do botão) | `textContent` apaga o `<span>`/indicador de loading do botão Flux | Só cosmético; o diálogo não usa loading | — (pode virar "não fazer") |
 
 ### Fatia E: editor do bot (PR #123, branch `feat/ux-editor-do-bot`, 14/11)
 
