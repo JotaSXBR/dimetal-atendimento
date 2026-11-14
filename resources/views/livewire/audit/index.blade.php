@@ -43,7 +43,7 @@
                         <td class="px-4 py-2 font-mono text-xs text-ink-2">
                             @if ($event->ticket?->protocol)
                                 {{-- O Histórico só abre ticket encerrado; o aberto está na Fila. --}}
-                                <a href="{{ $event->ticket->status === \App\Enums\TicketStatus::ENCERRADO ? route('historico', ['ticketId' => $event->ticket->id]) : route('inbox') }}" wire:navigate class="underline-offset-2 hover:underline">{{ $event->ticket->protocol }}</a>
+                                <a href="{{ $event->ticket->status === \App\Enums\TicketStatus::ENCERRADO ? route('historico', ['ticketId' => $event->ticket->id]) : route('inbox') }}" wire:navigate class="inline-flex min-h-6 items-center underline-offset-2 hover:underline">{{ $event->ticket->protocol }}</a>
                             @else
                                 —
                             @endif

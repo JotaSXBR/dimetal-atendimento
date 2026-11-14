@@ -101,7 +101,7 @@ new #[Title('Meus alertas')] class extends Component {
             <div class="space-y-2">
                 <label for="alert-volume" class="text-xs font-semibold text-ink-3">Volume</label>
                 <div class="flex items-center gap-3">
-                    <input id="alert-volume" type="range" min="0" max="100" step="5" wire:model.live.debounce.300ms="volume" class="w-full accent-accent" />
+                    <input id="alert-volume" type="range" min="0" max="100" step="5" wire:model.live.debounce.300ms="volume" class="h-6 w-full accent-accent" />
                     <span class="w-10 text-end text-sm font-semibold">{{ $volume }}%</span>
                 </div>
                 <flux:error name="volume" />

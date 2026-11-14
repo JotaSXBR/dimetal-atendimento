@@ -50,6 +50,23 @@ class ViewConventionsTest extends TestCase
         }
     }
 
+    /** Piso de toque: link de protocolo sublinhado e os controles pequenos conhecidos têm alvo de ao menos 24 px (WCAG 2.2, 2.5.8). */
+    public function test_alvos_de_clique_pequenos_tem_ao_menos_24px(): void
+    {
+        foreach ($this->views() as $path => $html) {
+            preg_match_all('/class="([^"]*underline-offset-2[^"]*)"/', $html, $links);
+
+            foreach ($links[1] as $class) {
+                $this->assertStringContainsString('min-h-6', $class, "{$path}: link sublinhado precisa de min-h-6 (alvo de 24 px)");
+            }
+        }
+
+        $views = $this->views();
+        $this->assertMatchesRegularExpression('/data-testid="message-menu-button"[^>]*class="[^"]*(?=[^"]*min-h-6)(?=[^"]*min-w-6)/', $views['livewire/inbox/transcript.blade.php'], 'botão Ações da mensagem');
+        $this->assertMatchesRegularExpression('/min-h-6[^\n]*aria-label="Renomear|aria-label="Renomear[^\n]*min-h-6/', $views['livewire/settings/sectors.blade.php'], 'botão Renomear');
+        $this->assertMatchesRegularExpression('/id="alert-volume"[^\n]*class="[^"]*(?<![\w-])h-6(?![\w-])/', $views['pages/settings/⚡alerts.blade.php'], 'controle de volume');
+    }
+
     /** Só `flux:button`: o `x-ui.button` próprio foi migrado e removido (regra em docs/ui-botoes.md). */
     public function test_nenhuma_view_usa_x_ui_button(): void
     {
