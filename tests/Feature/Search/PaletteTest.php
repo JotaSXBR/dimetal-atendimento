@@ -12,6 +12,7 @@ use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Attributes\Url;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -153,6 +154,6 @@ class PaletteTest extends TestCase
         $property = new \ReflectionProperty(ContactsIndex::class, 'selectedId');
         $attributes = array_map(fn (\ReflectionAttribute $a): string => $a->getName(), $property->getAttributes());
 
-        $this->assertContains(\Livewire\Attributes\Url::class, $attributes);
+        $this->assertContains(Url::class, $attributes);
     }
 }

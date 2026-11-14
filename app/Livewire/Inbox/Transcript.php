@@ -126,7 +126,12 @@ class Transcript extends Component
 
         $createdAt = is_array($saved) ? ($saved['created_at'] ?? null) : null;
 
-        if (! is_array($saved) || ($saved['ticket_id'] ?? null) !== $this->ticketId || ! is_string($createdAt) || ! Cache::forget(self::undoKey($token))) {
+        $user = auth()->user();
+
+        // Quem apagou pode ter sido inativado, ou o ticket ter sumido (mesclado, apagado), na janela de 60 s: nada é recriado e o token não é gasto.
+        if (! is_array($saved) || ($saved['ticket_id'] ?? null) !== $this->ticketId || ! is_string($createdAt)
+            || ! $user instanceof User || ! Ticket::query()->readableBy($user)->whereKey($this->ticketId)->exists()
+            || ! Cache::forget(self::undoKey($token))) {
             return;
         }
 

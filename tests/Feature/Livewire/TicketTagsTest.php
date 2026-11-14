@@ -273,13 +273,25 @@ class TicketTagsTest extends TestCase
         $this->assertSame(0, $this->ticket->tags()->count());
     }
 
-    public function test_desfazer_em_ticket_encerrado_da_403_e_nao_recoloca(): void
+    public function test_desfazer_em_ticket_encerrado_avisa_em_vez_de_dar_403_e_nao_recoloca(): void
     {
         $tag = Tag::factory()->create();
         $this->ticket->forceFill(['status' => TicketStatus::ENCERRADO, 'closed_at' => now()])->save();
 
-        $this->block()->call('undoRemove', $this->ticket->id, $tag->id)->assertForbidden();
+        $this->block()->call('undoRemove', $this->ticket->id, $tag->id)
+            ->assertOk()
+            ->assertDispatched('toast-show', fn (string $event, array $params): bool => str_contains(json_encode($params, JSON_UNESCAPED_UNICODE), 'A conversa foi encerrada'));
         $this->assertSame(0, $this->ticket->tags()->count());
+    }
+
+    public function test_remover_etiqueta_que_nao_e_da_conversa_nao_oferece_desfazer(): void
+    {
+        $contactTag = Tag::factory()->contato()->create(['name' => 'Revenda']);
+        $this->ticket->tags()->attach($contactTag);
+
+        $this->block()->call('removeTag', $contactTag->id)
+            ->assertDispatched('toast-show', fn (string $event, array $params): bool => str_contains(json_encode($params, JSON_UNESCAPED_UNICODE), 'Etiqueta «Revenda» removida.')
+                && ! str_contains(json_encode($params), 'undo-ticket-tag'));
     }
 
     public function test_desfazer_com_a_etiqueta_apagada_no_meio_nao_quebra(): void

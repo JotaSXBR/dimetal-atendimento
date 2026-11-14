@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Inbox;
 
+use App\Enums\TagScope;
 use App\Enums\TicketStatus;
 use App\Events\TicketUpdated;
 use App\Models\Tag;
@@ -51,9 +52,10 @@ class TicketTags extends Component
         $tag = $this->change($tagId, 'tag_removed', Tag::query(), fn (Ticket $ticket, Tag $tag): bool => $ticket->tags()->detach($tag->id) > 0);
 
         if ($tag !== null) {
-            Flux::toast(text: 'Etiqueta «'.$tag->name.'» removida.', duration: 6000, action: [
-                'label' => 'Desfazer', 'event' => 'undo-ticket-tag', 'params' => ['ownerId' => $this->ticketId, 'tagId' => $tag->id],
-            ]);
+            // O Desfazer reaproveita `addTag`, que só aceita etiqueta da conversa: para outro escopo o aviso não promete o que não cumpre.
+            Flux::toast(text: 'Etiqueta «'.$tag->name.'» removida.', duration: 6000, action: $tag->scope === TagScope::CONVERSA
+                ? ['label' => 'Desfazer', 'event' => 'undo-ticket-tag', 'params' => ['ownerId' => $this->ticketId, 'tagId' => $tag->id]]
+                : null);
         }
     }
 
@@ -61,9 +63,18 @@ class TicketTags extends Component
     #[On('undo-ticket-tag')]
     public function undoRemove(int $ownerId, int $tagId): void
     {
-        if ($ownerId === $this->ticketId) {
-            $this->addTag($tagId);
+        if ($ownerId !== $this->ticketId) {
+            return;
         }
+
+        // A conversa pode ter sido encerrada depois da remoção: aviso, e não o 403 (modal de erro) do `addTag`.
+        if ($this->ticket()->status === TicketStatus::ENCERRADO) {
+            Flux::toast(variant: 'warning', text: 'A conversa foi encerrada; a etiqueta não voltou.');
+
+            return;
+        }
+
+        $this->addTag($tagId);
     }
 
     /**

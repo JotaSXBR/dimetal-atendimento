@@ -11,8 +11,6 @@ As fatias A, B e C fecharam sem menores. As fatias D, E e F estão abaixo.
 
 | # | Onde | O quê | Por quê / cenário | Decisão |
 |---|------|-------|-------------------|---------|
-| D3 | `app/Livewire/Inbox/Transcript.php` (`restoreNote`) | Não revalida usuário ativo nem ticket ainda existente/legível (ticket mesclado dá erro de FK) | Janela de 60 s, cache por usuário; impacto pequeno | Advisor |
-| D4 | `app/Livewire/Inbox/TicketTags.php` (`undoRemove`/`removeTag`) | `removeTag` aceita qualquer escopo de etiqueta e o Desfazer só `ofTicket()`; 403 em ticket encerrado vira modal de erro do Livewire | Toast promete algo que não acontece; trocar o 403 por no-op silencioso no listener | Dono: silencioso ou erro? |
 
 ### Fatia E: editor do bot (PR #123, branch `feat/ux-editor-do-bot`, 14/11)
 
