@@ -105,27 +105,6 @@ class Ticket extends Model
     }
 
     /**
-     * Busca da Fila e do Histórico: nome, apelido, e-mail, empresa ou telefone do contato, ou o protocolo. `%`, `_` e `\` valem como
-     * texto; termo vazio (ou só espaços) não filtra. Só estreita a consulta: a visibilidade do usuário é outro escopo, aplicado antes.
-     *
-     * @param  Builder<Ticket>  $query
-     */
-    public function scopeSearchContactOrProtocol(Builder $query, string $term): void
-    {
-        $term = trim($term);
-
-        if ($term === '') {
-            return;
-        }
-
-        $like = '%'.addcslashes($term, '%_\\').'%';
-
-        $query->where(fn (Builder $match) => $match
-            ->whereHas('contact', fn (Builder $contact) => $contact->search($term))
-            ->orWhereRaw('tickets.protocol ilike ?', [$like]));
-    }
-
-    /**
      * Supervisor/admin veem tudo; inativo, nada. O atendente vê os que assumiu, a fila `aguardando` sem setor ou de
      * um dos seus setores e os `em_atendimento` dos seus setores (para poder tomar o ticket de um colega).
      *

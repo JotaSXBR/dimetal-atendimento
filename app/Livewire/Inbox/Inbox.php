@@ -24,7 +24,9 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Inbox\ClientPresence;
 use App\Services\Inbox\ConversationHandoff;
+use App\Services\Inbox\QueueOverview;
 use App\Services\Inbox\ResendTicketMessage;
+use App\Services\Inbox\TicketTextSearch;
 use App\Support\TicketQueue;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -354,7 +356,7 @@ class Inbox extends Component
 
         return Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
             ->where(fn (Builder $q) => $q->whereNull('closed_reason')->orWhere('closed_reason', '<>', ClosedReason::IMPORTADO->value))
-            ->searchContactOrProtocol($this->search)
+            ->tap(fn (Builder $q) => TicketTextSearch::apply($q, $this->search))
             ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get();
     }
 
@@ -367,23 +369,6 @@ class Inbox extends Component
         $ids = [...$list->modelKeys(), ...($ticket === null ? [] : [$ticket->id])];
 
         return app(ClientPresence::class)->states(array_values(array_unique(array_map(intval(...), $ids))));
-    }
-
-    /**
-     * O resumo da Fila vazia: quantos aguardam e quantos são do usuário, e o ticket com o prazo de resposta mais perto (ou já vencido).
-     * Só olha tickets que o usuário vê, sem os filtros da lista: é um retrato do dia, não da busca.
-     *
-     * @param  array{pendentes: int, aguardando: int, meus: int}  $counts
-     * @return array{waiting: int, mine: int, nearest: ?Ticket}
-     */
-    private function summary(User $user, array $counts): array
-    {
-        return [
-            'waiting' => $counts['aguardando'],
-            'mine' => $counts['meus'],
-            'nearest' => Ticket::query()->open()->visibleTo($user)->whereNotNull('waiting_since')->whereNotNull('sla_due_at')
-                ->with('contact')->orderBy('sla_due_at')->orderBy('id')->first(),
-        ];
     }
 
     public function render(): View
@@ -402,7 +387,7 @@ class Inbox extends Component
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
             ->when($this->tab === 'meus', fn (Builder $q) => $q->where('assigned_user_id', $user->id))
             ->when($this->tagId !== null, fn (Builder $q) => TicketQueue::withTag($q, (int) $this->tagId))
-            ->searchContactOrProtocol($this->search)
+            ->tap(fn (Builder $q) => TicketTextSearch::apply($q, $this->search))
             ->orderBy('last_inbound_at')
             ->get();
 
@@ -423,10 +408,9 @@ class Inbox extends Component
             'clientPresence' => $this->clientPresence($list, $ticket),
             'tabCounts' => $counts,
             // Sem ticket aberto a coluna do meio mostra o resumo do dia (ver `summary`).
-            'summary' => $ticket === null ? $this->summary($user, $counts) : null,
+            'summary' => QueueOverview::summary($ticket, $user, $counts),
+            'showSector' => QueueOverview::showSector($list),
             // O selo do número só ajuda quando há mais de um número ativo.
-            // O setor no card só ajuda quando há mais de um setor recebendo tickets e a lista mostrada mistura setores: repetir o mesmo em todo card só polui.
-            'showSector' => Sector::query()->receivingTickets()->count() >= 2 && $list->pluck('sector_id')->unique()->count() > 1,
             'showChannel' => Channel::query()->where('active', true)->count() >= 2,
             'ticket' => $ticket,
             'replyTo' => $this->replyBar($ticket?->id),
