@@ -67,7 +67,7 @@
                     <span class="min-w-0 flex-1">
                         <span class="flex items-baseline justify-between gap-2">
                             <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
-                            <span class="font-mono text-[10px] text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m/Y') }}</span>
+                            <span class="font-mono text-xs text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m/Y') }}</span>
                         </span>
                         <x-contact-chips :contact="$item->contact" testid="history-chip" class="mt-0.5" />
                         <span class="mt-0.5 block truncate text-xs text-ink-2">
@@ -103,7 +103,7 @@
 
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-semibold text-ink">{{ $ticket->contact->label() }}</p>
-                    <p class="truncate font-mono text-[11px] text-ink-3">{{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }}</p>
+                    <p class="truncate font-mono text-xs text-ink-3">{{ $ticket->protocol }} · {{ $ticket->contact->phoneLabel() }}</p>
                     <x-contact-chips :contact="$ticket->contact" testid="history-panel-chip" class="mt-0.5" />
                 </div>
 

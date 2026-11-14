@@ -42,6 +42,59 @@ class ViewConventionsTest extends TestCase
         }
     }
 
+    /**
+     * Piso de legibilidade: nenhum texto abaixo de 12 px (`text-xs`) nas views nem nas classes montadas em JS. Pega `text-[10px]`,
+     * `text-[8.5px]` e `text-[0.6875rem]`; texto de 10 e 11 px não se lê em tela comum nem de celular.
+     */
+    public function test_nenhum_texto_abaixo_de_12px(): void
+    {
+        $small = '/text-\[(?:(?:[0-9]|1[01])(?:\.\d+)?px|0?\.(?:[0-6]\d*|7[0-4]\d*)rem)\]/';
+
+        // A própria guarda: o que ela deve e o que não deve pegar.
+        foreach (['text-[10px]', 'text-[11px]', 'text-[8.5px]', 'text-[9px]', 'text-[0.6875rem]'] as $bad) {
+            $this->assertSame(1, preg_match($small, $bad), $bad);
+        }
+        foreach (['text-[12px]', 'text-[13px]', 'text-[0.75rem]', 'text-xs', 'text-[var(--tag-fg)]'] as $good) {
+            $this->assertSame(0, preg_match($small, $good), $good);
+        }
+
+        foreach ($this->views() as $path => $html) {
+            $this->assertDoesNotMatchRegularExpression($small, $html, "{$path}: texto abaixo de 12 px (use text-xs)");
+        }
+
+        foreach (glob(dirname(__DIR__, 2).'/resources/js/*.js') ?: [] as $file) {
+            $this->assertDoesNotMatchRegularExpression($small, (string) file_get_contents($file), basename($file).': texto abaixo de 12 px');
+        }
+    }
+
+    /**
+     * Piso de toque: link de protocolo sublinhado e os controles pequenos conhecidos têm alvo de ao menos 24 px (WCAG 2.2, 2.5.8).
+     * É uma guarda de convenção: vê o padrão `underline-offset-2` do app (link novo sublinhado de outro jeito não entra); o script de
+     * auditoria `docs/superpowers/audit/ux-audit.js` mede todos os alvos no navegador.
+     */
+    public function test_alvos_de_clique_pequenos_tem_ao_menos_24px(): void
+    {
+        $min24 = '/(?<![\w-])min-h-6!?(?![\w-])/';
+
+        // A própria guarda: `min-h-60` e `min-h-64` não valem como 24 px.
+        $this->assertSame(1, preg_match($min24, 'inline-flex min-h-6 items-center'));
+        $this->assertSame(0, preg_match($min24, 'inline-flex min-h-60 items-center'));
+        $this->assertSame(0, preg_match($min24, 'min-h-64'));
+
+        foreach ($this->views() as $path => $html) {
+            preg_match_all('/class="([^"]*underline-offset-2[^"]*)"/', $html, $links);
+
+            foreach ($links[1] as $class) {
+                $this->assertMatchesRegularExpression($min24, $class, "{$path}: link sublinhado precisa de min-h-6 (alvo de 24 px)");
+            }
+        }
+
+        $views = $this->views();
+        $this->assertMatchesRegularExpression('/data-testid="message-menu-button"[^>]*class="[^"]*(?=[^"]*min-h-6)(?=[^"]*min-w-6)/', $views['livewire/inbox/transcript.blade.php'], 'botão Ações da mensagem');
+        $this->assertMatchesRegularExpression('/min-h-6[^\n]*aria-label="Renomear|aria-label="Renomear[^\n]*min-h-6/', $views['livewire/settings/sectors.blade.php'], 'botão Renomear');
+        $this->assertMatchesRegularExpression('/id="alert-volume"[^\n]*class="[^"]*(?<![\w-])h-6(?![\w-])/', $views['pages/settings/⚡alerts.blade.php'], 'controle de volume');
+    }
+
     /** Só `flux:button`: o `x-ui.button` próprio foi migrado e removido (regra em docs/ui-botoes.md). */
     public function test_nenhuma_view_usa_x_ui_button(): void
     {

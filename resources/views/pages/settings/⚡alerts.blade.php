@@ -81,7 +81,7 @@ new #[Title('Meus alertas')] class extends Component {
     <x-pages::settings.layout heading="Meus alertas" subheading="Som, repetição e balão do navegador. Valem só para o seu usuário.">
         <form wire:submit="save" class="space-y-6">
             <div class="space-y-3">
-                <p class="font-mono text-[11px] font-semibold tracking-wider text-ink-3 uppercase">Som por tipo</p>
+                <p class="text-xs font-semibold text-ink-3">Som por tipo</p>
                 <flux:switch wire:model="soundMessage" label="Mensagem em ticket meu" />
                 <flux:switch wire:model="soundQueue" label="Ticket novo na minha fila" />
                 <flux:switch wire:model="soundAssigned" label="Ticket atribuído ou transferido a mim" />
@@ -89,7 +89,7 @@ new #[Title('Meus alertas')] class extends Component {
             </div>
 
             <div class="space-y-3">
-                <p class="font-mono text-[11px] font-semibold tracking-wider text-ink-3 uppercase">Repetição e balão</p>
+                <p class="text-xs font-semibold text-ink-3">Repetição e balão</p>
                 <flux:switch wire:model="repeat" label="Repetir até resolver" description="Só SLA estourado e WhatsApp caído repetem." />
                 <div
                     x-data="desktopAlerts"
@@ -99,16 +99,16 @@ new #[Title('Meus alertas')] class extends Component {
             </div>
 
             <div class="space-y-2">
-                <label for="alert-volume" class="font-mono text-[11px] font-semibold tracking-wider text-ink-3 uppercase">Volume</label>
+                <label for="alert-volume" class="text-xs font-semibold text-ink-3">Volume</label>
                 <div class="flex items-center gap-3">
-                    <input id="alert-volume" type="range" min="0" max="100" step="5" wire:model.live.debounce.300ms="volume" class="w-full accent-accent" />
+                    <input id="alert-volume" type="range" min="0" max="100" step="5" wire:model.live.debounce.300ms="volume" class="h-6 w-full accent-accent" />
                     <span class="w-10 text-end text-sm font-semibold">{{ $volume }}%</span>
                 </div>
                 <flux:error name="volume" />
             </div>
 
             <div class="space-y-2">
-                <p class="font-mono text-[11px] font-semibold tracking-wider text-ink-3 uppercase">Silenciar o alerta crítico</p>
+                <p class="text-xs font-semibold text-ink-3">Silenciar o alerta crítico</p>
                 <flux:text size="sm">Cala só o som do WhatsApp caído. A faixa vermelha continua até a conexão voltar.</flux:text>
                 <div class="flex flex-wrap items-center gap-2">
                     <flux:button type="button" wire:click="mute(15)" icon="bell-slash" size="sm">15 minutos</flux:button>
@@ -120,7 +120,7 @@ new #[Title('Meus alertas')] class extends Component {
             </div>
 
             <div class="space-y-2">
-                <p class="font-mono text-[11px] font-semibold tracking-wider text-ink-3 uppercase">Prévia dos sons</p>
+                <p class="text-xs font-semibold text-ink-3">Prévia dos sons</p>
                 <div class="flex flex-wrap gap-2">
                     @foreach (['comum' => 'Comum', 'sla' => 'SLA', 'critico' => 'Crítico'] as $kind => $label)
                         <flux:button type="button" icon="speaker-wave" size="sm" x-on:click="$dispatch('alerts-preview', { kind: '{{ $kind }}' })">{{ $label }}</flux:button>

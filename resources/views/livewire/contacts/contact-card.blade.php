@@ -46,12 +46,12 @@
                     @php($number = $past->channel?->phoneLabel() ?? $past->channel?->name ?? '')
                     <li class="text-xs" wire:key="history-{{ $past->id }}">
                         @if ($mine && $closed)
-                            <a href="{{ route('historico', ['ticketId' => $past->id]) }}" wire:navigate class="font-mono text-ink underline-offset-2 hover:underline">{{ $past->protocol }}</a>
+                            <a href="{{ route('historico', ['ticketId' => $past->id]) }}" wire:navigate class="inline-flex min-h-6 items-center font-mono text-ink underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @elseif ($mine && ! $readonly)
                             {{-- Só a Fila tem `select`; no Histórico (somente leitura) o pai é outro componente. --}}
-                            <button type="button" wire:click="$parent.select({{ $past->id }})" class="font-mono text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</button>
+                            <button type="button" wire:click="$parent.select({{ $past->id }})" class="inline-flex min-h-6 items-center font-mono text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</button>
                         @elseif ($mine)
-                            <a href="{{ route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="font-mono text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</a>
+                            <a href="{{ route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="inline-flex min-h-6 items-center font-mono text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @else
                             <span class="font-mono text-ink">{{ $past->protocol }}</span>
                         @endif
@@ -97,7 +97,7 @@
 @else
 <form wire:submit="save" class="space-y-3 text-sm">
     <div>
-        <h2 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Contato</h2>
+        <h2 class="text-xs font-semibold text-ink-3">Contato</h2>
         <p class="mt-1 font-mono text-ink">{{ $contact->phoneLabel() }}</p>
     </div>
 
@@ -144,13 +144,13 @@
 
     @unless ($compact)
     <div class="border-t border-line pt-3">
-        <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Atendimentos</h3>
+        <h3 class="text-xs font-semibold text-ink-3">Atendimentos</h3>
         <ul class="mt-2 space-y-2">
             @forelse ($history as $past)
                 <li class="text-xs" wire:key="history-{{ $past->id }}">
                     <p class="font-mono text-ink">
                         @if (in_array($past->id, $openable, true))
-                            <a href="{{ $past->status === \App\Enums\TicketStatus::ENCERRADO ? route('historico', ['ticketId' => $past->id]) : route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</a>
+                            <a href="{{ $past->status === \App\Enums\TicketStatus::ENCERRADO ? route('historico', ['ticketId' => $past->id]) : route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="inline-flex min-h-6 items-center text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</a>
                         @else
                             {{ $past->protocol }}
                         @endif

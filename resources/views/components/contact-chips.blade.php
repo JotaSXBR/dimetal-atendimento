@@ -12,7 +12,7 @@
             <x-tag-chip :tag="$tag" :data-testid="$testid" :title="$tag->name" />
         @endforeach
         @if ($rest->isNotEmpty())
-            <span class="shrink-0 text-[11px] text-ink-3"><span aria-hidden="true" title="{{ $rest->pluck('name')->join(', ') }}">+{{ $rest->count() }}</span><span class="sr-only">mais etiquetas: {{ $rest->pluck('name')->join(', ') }}</span></span>
+            <span class="shrink-0 text-xs text-ink-3"><span aria-hidden="true" title="{{ $rest->pluck('name')->join(', ') }}">+{{ $rest->count() }}</span><span class="sr-only">mais etiquetas: {{ $rest->pluck('name')->join(', ') }}</span></span>
         @endif
     </span>
 @endif

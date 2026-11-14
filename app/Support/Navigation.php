@@ -29,12 +29,14 @@ class Navigation
             $item('Contatos', 'contatos', null, $work, '', 'user-group'),
             $item('Histórico', 'historico', null, $work, '', 'archive-box'),
             $item('Relatórios', 'relatorios', 'supervisor', $follow, '', 'chart-bar'),
+            // Supervisor e admin mexem nos workflows toda semana: fica na barra, não dentro de Configuração. A barra é plana (a seção só separa
+            // Configuração do resto), então `$work` ou `$follow` não muda o que aparece; a ordem do array é a ordem da barra.
+            $item('Automação', 'automacao', 'supervisor', $work, '', 'cpu-chip', 'automacao*'),
             $item('Auditoria', 'auditoria', 'admin', $follow, '', 'shield-check', 'auditoria*'),
             $item('Setores', 'configuracoes.setores', 'admin', $config, 'Atendimento', 'squares-2x2'),
             $item('Horário e SLA', 'configuracoes.horario', 'admin', $config, 'Atendimento', 'clock'),
             $item('Respostas rápidas', 'configuracoes.respostas', 'supervisor', $config, 'Atendimento', 'bolt'),
             $item('Etiquetas', 'configuracoes.etiquetas', 'supervisor', $config, 'Atendimento', 'tag'),
-            $item('Automação', 'automacao', 'supervisor', $config, 'Atendimento', 'cpu-chip', 'automacao*'),
             $item('Usuários', 'configuracoes.usuarios', 'supervisor', $config, 'Equipe', 'users'),
             $item('Canais', 'configuracoes.canais', 'admin', $config, 'Conexões', 'chat-bubble-left-right'),
             $item('Google Contatos', 'configuracoes.google', 'admin', $config, 'Conexões', 'link', 'configuracoes.google*'),
@@ -99,7 +101,7 @@ class Navigation
         return $this->settingsItems($user)[0] ?? null;
     }
 
-    /** A rota atual é de Configuração (inclui `automacao.editar` e o retorno do Google, que não têm item próprio). */
+    /** A rota atual é de Configuração (inclui o retorno do Google, que não tem item próprio). A Automação tem item próprio na barra e não conta. */
     public function settingsActive(User $user): bool
     {
         foreach ($this->settingsItems($user) as $item) {

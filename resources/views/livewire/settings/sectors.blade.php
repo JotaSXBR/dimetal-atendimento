@@ -22,7 +22,7 @@
                         <p x-show="! editing" class="flex items-center gap-1 text-sm font-semibold text-ink">
                             <span class="me-1 font-mono text-xs text-ink-3">{{ $loop->iteration }}</span>
                             <span class="truncate">{{ $sector->name }}</span>
-                            <flux:button size="xs" variant="subtle" icon="pencil-square" x-on:click="start()" aria-label="Renomear {{ $sector->name }}" />
+                            <flux:button size="xs" variant="subtle" icon="pencil-square" class="min-h-6! min-w-6!" x-on:click="start()" aria-label="Renomear {{ $sector->name }}" />
                         </p>
                         <form x-show="editing" x-cloak class="flex items-center gap-1" x-on:submit.prevent="save({{ $sector->id }})" x-on:keydown.escape="cancel(@js($sector->name))">
                             <input x-ref="field" x-model="name" maxlength="60" aria-label="Novo nome de {{ $sector->name }}" class="min-w-0 flex-1 rounded-lg border border-line bg-surface px-2 py-1 text-sm text-ink">

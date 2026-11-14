@@ -1,18 +1,18 @@
-<x-settings-page route="automacao" title="Automação" subtitle="Workflows do pré-atendimento: o bot conversa com o cliente e entrega o ticket à fila do setor. Cada número usa um workflow ativo." width="5xl">
-    <x-slot:actions>
+<section class="mx-auto w-full max-w-5xl space-y-6 p-6">
+    <x-page-header title="Automação" subtitle="Workflows do pré-atendimento: o bot conversa com o cliente e entrega o ticket à fila do setor. Cada número usa um workflow ativo.">
         <flux:button variant="primary" icon="plus" wire:click="$set('showNew', true)">Novo workflow</flux:button>
-    </x-slot:actions>
+    </x-page-header>
 
     @if ($error)
-        <div class="mt-4 rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">{{ $error }}</div>
+        <div class="rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">{{ $error }}</div>
     @endif
 
     @if ($notice)
-        <div class="mt-4 rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="status">{{ $notice }}</div>
+        <div class="rounded-md border border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="status">{{ $notice }}</div>
     @endif
 
     @if ($showNew)
-        <form wire:submit="create" class="mt-4 space-y-3 rounded-[14px] border border-line bg-surface p-4">
+        <form wire:submit="create" class="space-y-3 rounded-[14px] border border-line bg-surface p-4">
             <flux:input label="Nome" wire:model="newName" maxlength="120" />
             <fieldset class="space-y-2">
                 <legend class="text-sm font-medium text-ink">Começar de</legend>
@@ -87,4 +87,4 @@
             <li class="rounded-[14px] border border-line bg-surface"><x-empty-state icon="bolt" title="Nenhum workflow ainda." description="Crie o primeiro a partir do modelo." /></li>
         @endforelse
     </ul>
-</x-settings-page>
+</section>

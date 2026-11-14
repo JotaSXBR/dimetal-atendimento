@@ -4,7 +4,7 @@
 <span data-testid="message-time" data-time-mode="{{ $mode }}" @class([
     // `whitespace-nowrap`: no modo `inline` o trecho está dentro de um `<p class="whitespace-pre-wrap">` e herdaria o `pre-wrap`, que
     // preserva as quebras de linha e os recuos deste arquivo (a hora subia, os tiques ficavam no meio e abria um vão entre os dois).
-    'items-center gap-1 font-mono text-[10px] whitespace-nowrap',
+    'items-center gap-1 font-mono text-xs whitespace-nowrap',
     'float-right ms-3 mt-2 inline-flex text-ink-2' => $mode === 'inline',
     'mt-1 flex justify-end text-ink-2' => $mode === 'below',
     'absolute end-0 bottom-0 inline-flex leading-4 text-ink-2' => $mode === 'audio',

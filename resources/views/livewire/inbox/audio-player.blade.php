@@ -45,13 +45,13 @@
         type="button"
         x-on:click="cycleSpeed()"
         aria-label="Velocidade de reprodução"
-        class="col-start-3 row-start-1 inline-flex min-h-6 shrink-0 items-center self-center rounded-full px-2 py-0.5 text-[11px] font-semibold text-ink-2 tabular-nums ring-1 ring-ink/20 transition-colors hover:bg-ink/5 hover:text-ink"
+        class="col-start-3 row-start-1 inline-flex min-h-6 shrink-0 items-center self-center rounded-full px-2 py-0.5 text-xs font-semibold text-ink-2 tabular-nums ring-1 ring-ink/20 transition-colors hover:bg-ink/5 hover:text-ink"
         x-text="speed + '×'"
     >1×</button>
 
     {{-- A duração fica à esquerda; a hora e os tiques da bolha ficam à direita da mesma linha (`message-time`, modo `audio`, que o
          `media.blade.php` põe fora deste `wire:ignore` para os tiques seguirem atualizando). --}}
     <div data-testid="audio-meta" class="col-start-2 flex items-center">
-        <span class="font-mono text-[11px] leading-4 text-ink-2 tabular-nums" x-text="timeLabel">0:00</span>
+        <span class="font-mono text-xs leading-4 text-ink-2 tabular-nums" x-text="timeLabel">0:00</span>
     </div>
 </div>

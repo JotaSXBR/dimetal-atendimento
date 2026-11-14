@@ -37,10 +37,10 @@
 
     <div class="flex min-h-0 flex-1">
         <aside class="w-44 shrink-0 space-y-1 overflow-y-auto border-e border-line bg-surface p-3" aria-label="Blocos">
-            <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Adicionar bloco</p>
+            <p class="text-xs font-semibold text-ink-3">Adicionar bloco</p>
             <template x-for="(block, index) in palette" x-bind:key="block.key">
                 <div>
-                    <p x-show="index === 0 || palette[index - 1].group !== block.group" class="mt-2 font-mono text-[10px] tracking-wider text-ink-3 uppercase" x-text="block.group"></p>
+                    <p x-show="index === 0 || palette[index - 1].group !== block.group" class="mt-2 text-xs font-semibold text-ink-3" x-text="block.group"></p>
                     <button type="button" class="w-full rounded-md border border-line px-2 py-1.5 text-start text-xs text-ink hover:bg-canvas" x-on:click="add(block)" x-text="block.label"></button>
                 </div>
             </template>
@@ -76,7 +76,7 @@
                 </template>
                 <template x-if="menu && !menu.nodeId">
                     <div class="flex flex-col gap-0.5">
-                        <p class="px-2 py-1 font-mono text-[10px] tracking-wider text-ink-3 uppercase">Adicionar bloco</p>
+                        <p class="px-2 py-1 text-xs font-semibold text-ink-3">Adicionar bloco</p>
                         <template x-for="block in palette" x-bind:key="block.key">
                             <flux:button size="sm" variant="ghost" class="w-full justify-start" x-on:click="menuAdd(block)" x-text="block.label"></flux:button>
                         </template>
@@ -145,7 +145,7 @@
             </form>
 
             <div x-show="simTrail.length > 0">
-                <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Blocos percorridos</p>
+                <p class="text-xs font-semibold text-ink-3">Blocos percorridos</p>
                 <ol class="mt-1 list-decimal space-y-0.5 ps-5 text-xs text-ink-2">
                     <template x-for="(id, index) in simTrail" x-bind:key="index + id">
                         <li x-bind:class="id === testCurrent() && 'font-semibold text-ink'" x-text="testLabel(id)"></li>
@@ -154,7 +154,7 @@
             </div>
 
             <div x-show="testVars().length > 0">
-                <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Variáveis</p>
+                <p class="text-xs font-semibold text-ink-3">Variáveis</p>
                 <dl class="mt-1 space-y-0.5 text-xs">
                     <template x-for="item in testVars()" x-bind:key="item.key">
                         <div class="flex gap-2"><dt class="font-mono text-ink-3" x-text="item.key"></dt><dd class="min-w-0 break-words text-ink" x-text="item.value"></dd></div>
@@ -167,7 +167,7 @@
             <template x-if="selected">
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-ink" x-text="blockLabel(selected.type)"></p>
-                    <p class="font-mono text-[10px] text-ink-3" x-text="'id: ' + selected.id"></p>
+                    <p class="font-mono text-xs text-ink-3" x-text="'id: ' + selected.id"></p>
 
                     <template x-for="field in fields()" x-bind:key="selected.id + field.key">
                         <label class="block text-xs text-ink-2">
@@ -222,7 +222,7 @@
                         </label>
                     </template>
 
-                    <p x-show="selected.type === 'mensagem' || selected.type === 'pergunta' || selected.type === 'menu' || selected.type === 'menu_setores'" class="text-[11px] text-ink-3">
+                    <p x-show="selected.type === 'mensagem' || selected.type === 'pergunta' || selected.type === 'menu' || selected.type === 'menu_setores'" class="text-xs text-ink-3">
                         Variáveis: &#123;&#123;nome&#125;&#125;, &#123;&#123;empresa&#125;&#125;, &#123;&#123;protocolo&#125;&#125;, &#123;&#123;setor&#125;&#125;, &#123;&#123;horario&#125;&#125;, &#123;&#123;proximo_horario&#125;&#125; e as das perguntas.
                     </p>
 
@@ -235,8 +235,8 @@
                 <hr class="border-line">
 
                 <div class="space-y-3">
-                    <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Mensagens do bot</p>
-                    <p class="text-[11px] text-ink-3">O que o bot diz sozinho. Em branco vale o texto padrão (mostrado cinza). O aviso de um bloco, quando preenchido, vale mais que estes.</p>
+                    <p class="text-xs font-semibold text-ink-3">Mensagens do bot</p>
+                    <p class="text-xs text-ink-3">O que o bot diz sozinho. Em branco vale o texto padrão (mostrado cinza). O aviso de um bloco, quando preenchido, vale mais que estes.</p>
 
                     <template x-for="item in catalog" x-bind:key="item.key">
                         <div class="text-xs text-ink-2">
@@ -254,7 +254,7 @@
                         </div>
                     </template>
 
-                    <p class="text-[11px] text-ink-3">
+                    <p class="text-xs text-ink-3">
                         Variáveis: &#123;&#123;nome&#125;&#125;, &#123;&#123;empresa&#125;&#125;, &#123;&#123;protocolo&#125;&#125;, &#123;&#123;setor&#125;&#125; (só nos avisos de encaminhamento), &#123;&#123;horario&#125;&#125; e &#123;&#123;proximo_horario&#125;&#125;.
                     </p>
                 </div>
@@ -263,7 +263,7 @@
             <hr class="border-line">
 
             <div>
-                <p class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Versões publicadas</p>
+                <p class="text-xs font-semibold text-ink-3">Versões publicadas</p>
                 <ul class="mt-2 space-y-2">
                     <template x-for="version in versions" x-bind:key="version.id">
                         <li class="text-xs">
