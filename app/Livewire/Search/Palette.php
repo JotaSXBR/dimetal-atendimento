@@ -47,9 +47,9 @@ class Palette extends Component
     /** @return list<array{label: string, detail: string, url: string}> */
     private function contacts(string $term): array
     {
-        return Contact::query()->search($term)->orderBy('name')->limit(self::LIMIT)->get()
-            ->map(fn (Contact $contact): array => ['label' => $contact->label(), 'detail' => $contact->phoneLabel(), 'url' => route('contatos', ['contato' => $contact->id])])
-            ->all();
+        return array_values(Contact::query()->search($term)->orderBy('name')->limit(self::LIMIT)->get()
+            ->map(fn (Contact $contact) => ['label' => $contact->label(), 'detail' => $contact->phoneLabel(), 'url' => route('contatos', ['contato' => $contact->id])])
+            ->all());
     }
 
     /** @return list<array{label: string, detail: string, url: string}> */
@@ -57,9 +57,9 @@ class Palette extends Component
     {
         $like = '%'.addcslashes($term, '%_\\').'%';
 
-        return Ticket::query()->readableBy($user)->whereRaw('protocol ilike ?', [$like])->with('contact')->latest('opened_at')->limit(self::LIMIT)->get()
-            ->map(fn (Ticket $ticket): array => ['label' => (string) $ticket->protocol, 'detail' => $ticket->contact?->label() ?? '', 'url' => route('inbox', ['ticket' => $ticket->id])])
-            ->all();
+        return array_values(Ticket::query()->readableBy($user)->whereRaw('protocol ilike ?', [$like])->with('contact')->latest('opened_at')->limit(self::LIMIT)->get()
+            ->map(fn (Ticket $ticket) => ['label' => (string) $ticket->protocol, 'detail' => $ticket->contact?->label() ?? '', 'url' => route('inbox', ['ticket' => $ticket->id])])
+            ->all());
     }
 
     public function render(): View
