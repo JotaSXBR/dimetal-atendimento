@@ -12,10 +12,18 @@
 >
     {{-- Lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
-        <header class="border-b border-line p-4">
+        <header class="border-b border-line p-4" x-data="queueSearch" data-open="{{ $search !== '' ? '1' : '0' }}" x-on:keydown.escape="escape">
             <div class="flex items-center justify-between gap-2">
                 <h1 class="text-base font-semibold text-ink">Fila</h1>
-                <flux:button size="sm" variant="primary" icon="plus" x-on:click="$dispatch('start-conversation')">Nova conversa</flux:button>
+                <div class="flex items-center gap-1">
+                    <flux:button size="sm" variant="subtle" icon="magnifying-glass" aria-label="Buscar na fila" tooltip="Buscar na fila" x-on:click="toggle" x-bind:aria-expanded="open" />
+                    <flux:button size="sm" variant="primary" icon="plus" x-on:click="$dispatch('start-conversation')">Nova conversa</flux:button>
+                </div>
+            </div>
+
+            {{-- A busca só estreita o que o usuário já vê (nome, telefone ou protocolo); fechar o campo a limpa. --}}
+            <div x-show="open" x-cloak class="mt-3">
+                <flux:input x-ref="field" data-testid="queue-search-field" size="sm" icon="magnifying-glass" wire:model.live.debounce.300ms="search" placeholder="Nome, telefone ou protocolo" aria-label="Buscar na fila" autocomplete="off" />
             </div>
 
             {{-- Três visões do dia a dia sempre à mão; as duas raras (triagem do bot e histórico recente) ficam no menu "Mais". --}}

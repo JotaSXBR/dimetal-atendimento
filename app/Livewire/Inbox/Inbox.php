@@ -68,6 +68,9 @@ class Inbox extends Component
     #[Url]
     public string $tab = 'todos';
 
+    /** Busca da Fila por nome, telefone ou protocolo (a lupa do cabeçalho); vazia não filtra. */
+    public string $search = '';
+
     /** Filtro da lista por etiqueta. */
     #[Url]
     public ?int $tagId = null;
@@ -351,6 +354,7 @@ class Inbox extends Component
 
         return Ticket::query()->inHistoryOf($user)->where('closed_at', '>=', now()->subDays(self::CLOSED_TAB_DAYS))
             ->where(fn (Builder $q) => $q->whereNull('closed_reason')->orWhere('closed_reason', '<>', ClosedReason::IMPORTADO->value))
+            ->searchContactOrProtocol($this->search)
             ->with('contact')->orderByDesc('closed_at')->orderByDesc('id')->limit(self::CLOSED_TAB_LIMIT)->get();
     }
 
@@ -381,6 +385,7 @@ class Inbox extends Component
             ->when($this->tab === 'aguardando', fn (Builder $q) => $q->where('status', TicketStatus::AGUARDANDO->value))
             ->when($this->tab === 'meus', fn (Builder $q) => $q->where('assigned_user_id', $user->id))
             ->when($this->tagId !== null, fn (Builder $q) => TicketQueue::withTag($q, (int) $this->tagId))
+            ->searchContactOrProtocol($this->search)
             ->orderBy('last_inbound_at')
             ->get();
 

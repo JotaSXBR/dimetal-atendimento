@@ -91,7 +91,7 @@ document.addEventListener('alpine:init', () => {
             if (method !== undefined) {
                 this.$wire[method](id);
             } else {
-                this.$wire.set(model, id === '' ? null : id);
+                this.$wire.$set(model, id === '' ? null : id);
             }
 
             this.close();
