@@ -4,7 +4,7 @@
 @if ($contactTags->isNotEmpty() || (! $readonly && $availableTags->isNotEmpty()))
     <div data-testid="contact-tags" @class(['flex items-start gap-2' => $row])>
         @if ($row)
-            <span data-testid="tags-row-contato" class="w-16 shrink-0 pt-1 text-xs text-ink-3">{{ $row }}</span>
+            <span data-testid="tags-row-contato" class="w-14 shrink-0 pt-1.5 text-xs text-ink-3">{{ $row }}</span>
         @else
             <h3 class="text-xs font-semibold text-ink-3">Etiquetas</h3>
         @endif
@@ -19,7 +19,7 @@
                     </span>
                 @endforeach
                 @if (! $readonly && $availableTags->isNotEmpty())
-                    <x-tag-picker :tags="$availableTags" label="Adicionar etiqueta ao contato" method="addTag" class="w-full" />
+                    <x-tag-picker :tags="$availableTags" label="Adicionar etiqueta ao contato" method="addTag" placeholder="Adicionar…" class="w-full" />
                 @endif
             </div>
             @error('tag')

@@ -44,10 +44,12 @@
             x-bind:aria-expanded="open"
             x-bind:aria-activedescendant="activeId"
             @class([
-                'h-8 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-3',
+                'h-8 w-full rounded-lg border border-line bg-surface ps-3 pe-8 text-sm text-ink placeholder:text-ink-3',
                 'placeholder:text-ink' => $selected !== null,
             ])
         />
+
+        <flux:icon.chevron-up-down variant="micro" class="pointer-events-none absolute end-2 top-2.5 text-ink-3" />
 
         <ul id="{{ $listId }}" role="listbox" aria-label="{{ $label }}" x-show="open" x-cloak class="absolute inset-x-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-lg">
             <template x-for="item in items" x-bind:key="item.key">

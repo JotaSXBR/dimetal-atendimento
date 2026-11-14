@@ -207,9 +207,11 @@
                     @php
                         $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
                     @endphp
-                    <p data-testid="header-line" class="truncate font-mono text-xs text-ink-3" title="{{ $line }}">
-                        <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>{{ mb_substr($line, mb_strlen($ticket->protocol)) }}
-                    </p>
+                    {{-- `div`, não `p`: o conteúdo do tooltip do Flux é um bloco, e bloco dentro de `p` faz o navegador fechar o `p` antes dele. --}}
+                    <div data-testid="header-line" data-line="{{ $line }}" class="flex min-w-0 font-mono text-xs text-ink-3">
+                        <flux:tooltip class="shrink-0" content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
+                        <span class="truncate" title="{{ $line }}">&nbsp;{{ mb_substr($line, mb_strlen($ticket->protocol) + 1) }}</span>
+                    </div>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
                             @if ($ticket->close_outcome)
@@ -523,10 +525,12 @@
                     </div>
 
                     @if ($nearest)
-                        <flux:button data-testid="summary-nearest" variant="filled" class="h-auto! w-full flex-col! items-start! gap-0.5! py-2!" wire:click="select({{ $nearest->id }})">
-                            <span class="text-xs text-ink-3">SLA mais perto de estourar</span>
-                            <span class="font-mono text-sm text-ink">{{ $nearest->protocol }} · {{ $nearest->contact->label() }}</span>
-                            <span class="text-xs {{ $nearest->sla_due_at->isPast() ? 'text-danger' : 'text-ink-2' }}">{{ $nearest->sla_due_at->isPast() ? 'Venceu ' : 'Responder até ' }}{{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($nearest->sla_due_at, now()) }}</span>
+                        <flux:button data-testid="summary-nearest" variant="filled" class="h-auto! w-full justify-start! py-2!" wire:click="select({{ $nearest->id }})">
+                            <span class="flex min-w-0 flex-col items-start gap-0.5 text-start">
+                                <span class="text-xs text-ink-3">SLA mais perto de estourar</span>
+                                <span class="max-w-full truncate font-mono text-sm text-ink">{{ $nearest->protocol }} · {{ $nearest->contact->label() }}</span>
+                                <span class="text-xs {{ $nearest->sla_due_at->isPast() ? 'text-danger' : 'text-ink-2' }}">{{ $nearest->sla_due_at->isPast() ? 'Venceu ' : 'Responder até ' }}{{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($nearest->sla_due_at, now()) }}</span>
+                            </span>
                         </flux:button>
                     @endif
 

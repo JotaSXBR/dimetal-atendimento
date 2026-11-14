@@ -2,7 +2,7 @@
 <div>
     @if ($applied->isNotEmpty() || ($editable && $available->isNotEmpty()))
         <div data-testid="ticket-tags" class="flex items-start gap-2">
-            <span data-testid="tags-row-conversa" class="w-16 shrink-0 pt-1 text-xs text-ink-3">Conversa</span>
+            <span data-testid="tags-row-conversa" class="w-14 shrink-0 pt-1.5 text-xs text-ink-3">Conversa</span>
             <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
                 @foreach ($applied as $tag)
                     <span class="inline-flex items-center gap-0.5" wire:key="ticket-tag-{{ $tag->id }}">
@@ -13,7 +13,7 @@
                     </span>
                 @endforeach
                 @if ($editable && $available->isNotEmpty())
-                    <x-tag-picker :tags="$available" label="Adicionar etiqueta à conversa" method="addTag" class="w-full" />
+                    <x-tag-picker :tags="$available" label="Adicionar etiqueta à conversa" method="addTag" placeholder="Adicionar…" class="w-full" />
                 @endif
             </div>
         </div>

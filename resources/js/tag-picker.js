@@ -1,37 +1,31 @@
 // Seletor de etiquetas com busca (resources/views/components/tag-picker.blade.php). Fica aqui, e não num `x-data` inline, porque o build
 // CSP do Alpine não aceita método dentro do atributo. A lista é lida de `data-tags` a cada uso: o Livewire pode trocá-la ao renderizar.
-import { filterTags } from './tag-filter.js';
+// `this.$el` muda conforme o elemento que dispara o evento (o campo, a opção): a raiz do componente fica guardada em `root`.
+import { buildRows } from './tag-filter.js';
 
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('tagPicker', () => ({
+        root: null,
         open: false,
         query: '',
         active: 0,
 
+        init() {
+            this.root = this.$el;
+        },
+
         get all() {
-            return JSON.parse(this.$el.dataset.tags);
+            return JSON.parse(this.root.dataset.tags);
         },
 
-        get filtering() {
-            return this.$el.dataset.model !== undefined;
-        },
-
-        /** Linhas da lista, já com tudo o que o modelo precisa (o build CSP não faz conta dentro do atributo). */
+        /** Linhas da lista: o filtro, o título dos grupos e a linha "Todas" do modo filtro (ver `buildRows`). */
         get items() {
-            const found = filterTags(this.all, this.query);
-            const rows = this.filtering && this.query.trim() === '' ? [{ id: '', name: this.$el.dataset.clear, color: '', group: '' }, ...found] : found;
-
-            return rows.map((tag, index) => ({
-                ...tag,
-                index,
-                key: `${tag.id}`,
-                domId: `${this.$el.dataset.listId}-${index}`,
-                header: tag.group !== '' && (index === 0 || rows[index - 1].group !== tag.group),
-                active: index === this.active,
-                hasDot: tag.color !== '',
-                dotClass: `tag-${tag.color}`,
-                rowClass: index === this.active ? 'bg-canvas' : '',
-            }));
+            return buildRows(this.all, this.query, {
+                filtering: this.root.dataset.model !== undefined,
+                clearLabel: this.root.dataset.clear,
+                active: this.active,
+                listId: this.root.dataset.listId,
+            });
         },
 
         get empty() {
@@ -57,7 +51,7 @@ document.addEventListener('alpine:init', () => {
 
         /** O foco saiu do conjunto (campo e lista): fecha. Clicar numa opção não tira o foco do campo (`mousedown.prevent`). */
         leave(event) {
-            if (!this.$el.contains(event.relatedTarget)) {
+            if (!this.root.contains(event.relatedTarget)) {
                 this.close();
             }
         },
@@ -86,7 +80,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         pick(id) {
-            const { method, model } = this.$el.dataset;
+            const { method, model } = this.root.dataset;
 
             if (method !== undefined) {
                 this.$wire[method](id);

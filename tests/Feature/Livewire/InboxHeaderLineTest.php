@@ -30,10 +30,10 @@ class InboxHeaderLineTest extends TestCase
 
         $this->assertNotNull($node, 'linha do cabeçalho ausente');
 
-        // O `title` repete a linha inteira (o texto visível leva também o tooltip do protocolo).
+        // `data-line` repete a linha inteira (o texto visível leva também o tooltip do protocolo).
         $this->assertInstanceOf(\DOMElement::class, $node);
 
-        return (string) preg_replace('/\s+/', ' ', trim($node->getAttribute('title')));
+        return (string) preg_replace('/\s+/', ' ', trim($node->getAttribute('data-line')));
     }
 
     public function test_linha_traz_protocolo_telefone_canal_setor_e_responsavel(): void
