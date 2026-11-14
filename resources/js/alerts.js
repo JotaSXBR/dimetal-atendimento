@@ -31,6 +31,7 @@ function start(id) {
     let audio = openAudio(AudioClass);
     let leader = false;
     let offline = false;
+    let drops = 0; // quantas vezes a conexão com o servidor caiu: a assinatura da faixa, para a dispensa não valer numa queda nova
     const loops = new Map();
 
     const openTicket = () => {
@@ -251,6 +252,12 @@ function start(id) {
 
         if (down !== offline) {
             offline = down;
+
+            if (down) {
+                drops += 1;
+                document.getElementById('alerts-offline')?.setAttribute('data-signature', String(drops));
+            }
+
             sync();
 
             if (!down && window.Livewire) {
