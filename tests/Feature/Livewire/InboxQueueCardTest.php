@@ -181,7 +181,12 @@ class InboxQueueCardTest extends TestCase
 
         $this->ticket(['sector_id' => $suporte->id]);
 
-        $this->assertStringContainsString('Vendas', $this->part($this->html(), 'card-sector'));
+        // Os dois cards têm o mesmo `last_inbound_at`: a ordem entre eles não é definida, então olha os dois chips, não o primeiro.
+        preg_match_all('/data-testid="card-sector"[^>]*>(.*?)<\/span>/s', $this->html(), $sectors);
+        $names = array_map('trim', $sectors[1]);
+        sort($names);
+
+        $this->assertSame(['Suporte', 'Vendas'], $names);
     }
 
     public function test_um_so_setor_no_sistema_nunca_mostra_o_setor(): void
