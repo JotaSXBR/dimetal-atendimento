@@ -14,8 +14,12 @@ use App\Models\TicketNote;
 use App\Models\User;
 use App\Services\Inbox\SpecialContent;
 use App\Support\PhoneFormat;
+use Carbon\CarbonImmutable;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
@@ -28,6 +32,9 @@ use Livewire\Component;
 class Transcript extends Component
 {
     private const LIMIT = 200;
+
+    /** Quanto tempo o "Desfazer" de uma nota apagada vale. */
+    private const UNDO_SECONDS = 60;
 
     #[Locked]
     public int $ticketId;
@@ -86,7 +93,10 @@ class Transcript extends Component
     #[On('realtime-reconnected')]
     public function refresh(): void {}
 
-    /** Só o autor apaga a própria nota; fica o rastro na auditoria do ticket. */
+    /**
+     * Só o autor apaga a própria nota; fica o rastro na auditoria do ticket. Sem confirmação: o aviso oferece "Desfazer" por 60 s
+     * (a nota fica guardada no cache do usuário sob um token aleatório).
+     */
     public function deleteNote(int $noteId): void
     {
         $note = TicketNote::query()->where('ticket_id', $this->ticketId)->find($noteId);
@@ -97,10 +107,44 @@ class Transcript extends Component
 
         $this->authorize('delete', $note);
 
+        $token = Str::random(32);
+        Cache::put(self::undoKey($token), ['ticket_id' => $note->ticket_id, 'user_id' => $note->user_id, 'origin' => $note->origin->value, 'body' => $note->body, 'created_at' => $note->created_at->toIso8601String()], self::UNDO_SECONDS);
+
         $note->delete();
         TicketEvent::create(['ticket_id' => $this->ticketId, 'type' => 'note_deleted', 'actor_user_id' => auth()->id(), 'payload' => ['note_id' => $noteId]]);
+        $this->touchTicket();
 
+        Flux::toast(text: 'Nota apagada.', duration: 8000, action: ['label' => 'Desfazer', 'event' => 'undo-note-delete', 'params' => ['token' => $token]]);
+    }
+
+    /** O "Desfazer" do aviso: recria a nota idêntica (mesmo autor, origem e horário), uma vez só, e só neste ticket. */
+    #[On('undo-note-delete')]
+    public function restoreNote(string $token): void
+    {
+        $saved = Cache::pull(self::undoKey($token));
+
+        if (! is_array($saved) || $saved['ticket_id'] !== $this->ticketId) {
+            return;
+        }
+
+        $note = new TicketNote(['ticket_id' => $this->ticketId, 'user_id' => $saved['user_id'], 'origin' => $saved['origin'], 'body' => $saved['body']]);
+        $note->created_at = CarbonImmutable::parse($saved['created_at']);
+        $note->save();
+
+        TicketEvent::create(['ticket_id' => $this->ticketId, 'type' => 'note_restored', 'actor_user_id' => auth()->id(), 'payload' => ['note_id' => $note->id]]);
+        $this->touchTicket();
+    }
+
+    /** Por usuário: o token de outra pessoa não acha nada. */
+    private static function undoKey(string $token): string
+    {
+        return 'undo-note:'.auth()->id().':'.$token;
+    }
+
+    private function touchTicket(): void
+    {
         $ticket = Ticket::find($this->ticketId);
+
         if ($ticket !== null) {
             TicketUpdated::dispatch($ticket);
         }

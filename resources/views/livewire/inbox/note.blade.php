@@ -6,6 +6,6 @@
     </p>
     <p class="break-words whitespace-pre-wrap">{{ \App\Support\WhatsAppText::html($note->body) }}</p>
     @if ($note->user_id === auth()->id())
-        <flux:button type="button" size="xs" variant="ghost" class="mt-1" wire:click="deleteNote({{ $note->id }})" data-confirm="Apagar esta nota?" data-confirm-label="Apagar" data-confirm-tone="danger">Apagar</flux:button>
+        <flux:button type="button" size="xs" variant="ghost" class="mt-1" wire:click="deleteNote({{ $note->id }})">Apagar</flux:button>
     @endif
 </div>
