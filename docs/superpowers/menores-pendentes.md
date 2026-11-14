@@ -29,7 +29,13 @@ As fatias A, B e C fecharam sem menores. As fatias D, E e F estão abaixo.
 
 ### Fatia F: gráfico de barras nos Relatórios (branch `feat/ux-grafico-relatorios`, 14/11)
 
-Preencher ao fechar a fatia (PR em andamento).
+| # | Onde | O quê | Por quê / cenário | Decisão |
+|---|------|-------|-------------------|---------|
+| F1 | `tests/Feature/Components/BarChartTest.php` (`test_a_barra_do_maior_enche_...`) | `width="100"` passa sempre: a trilha do `<rect>` já tem 100 | Se a barra do maior vazasse, o teste não pegaria; casar com `class="fill-accent"` | — (só teste) |
+| F2 | `tests/Feature/Components/BarChartTest.php` (`test_rotulo_e_escapado`) | Só confere `<script>`; não prova o escape de aspas em `title=""` e no `<title>` do SVG | Protege de regressão para `{!! !!}`: afirmar `&lt;script&gt;` e `&quot;` | — (só teste) |
+| F3 | `resources/views/components/bar-chart.blade.php:127` | `round(valor/max*100)` zera a barra de valores pequenos (1 ao lado de 300 dá `width="0"`) | Visual: a barra some, número e dica seguem certos. Piso de 1 quando valor > 0 | Dono: barra mínima visível? |
+| F4 | `resources/views/components/bar-chart.blade.php:124` | `preserveAspectRatio="none"` estica o `rx="2"` (pontas elípticas em 360 px) | Só estético | Dono: aceitar? |
+| F5 | `resources/views/components/bar-chart.blade.php` (`<title>` do SVG) | A dica nativa só aparece com mouse (a lista é `aria-hidden`); teclado e toque não a veem | Quem precisa lê a tabela `sr-only`; aceito no Ruling. Dica própria (JS) só se pedirem | Dono: precisa de dica no toque? |
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
