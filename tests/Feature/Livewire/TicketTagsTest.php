@@ -71,11 +71,11 @@ class TicketTagsTest extends TestCase
             ->call('removeTag', $tag->id)->assertDispatched('tags-changed');
     }
 
-    public function test_o_seletor_aplica_e_volta_a_vazio(): void
+    public function test_escolher_no_seletor_grava_o_vinculo(): void
     {
         $tag = Tag::factory()->create();
 
-        $this->block()->set('addTagId', (string) $tag->id)->assertSet('addTagId', '');
+        $this->block()->call('addTag', $tag->id);
 
         $this->assertSame(1, $this->ticket->tags()->count());
     }
@@ -150,8 +150,9 @@ class TicketTagsTest extends TestCase
 
         $html = $this->block()->html();
 
-        $this->assertStringContainsString('Livre</option>', $html);
-        $this->assertStringNotContainsString('Aplicada</option>', $html);
+        // O seletor leva as etiquetas oferecidas em `data-tags` (JSON no atributo): a aplicada aparece só como chip.
+        $this->assertStringContainsString('&quot;name&quot;:&quot;Livre&quot;', $html);
+        $this->assertStringNotContainsString('&quot;name&quot;:&quot;Aplicada&quot;', $html);
         $this->assertStringNotContainsString('DoContato', $html);
     }
 

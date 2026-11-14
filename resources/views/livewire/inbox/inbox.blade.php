@@ -45,23 +45,7 @@
 
             @if ($contactTags->isNotEmpty() || $ticketTags->isNotEmpty())
                 <div class="mt-3">
-                    <flux:select wire:model.live="tagId" size="sm" aria-label="Filtrar por etiqueta">
-                        <flux:select.option value="">Todas as etiquetas</flux:select.option>
-                        @if ($contactTags->isNotEmpty())
-                            <optgroup label="Do contato">
-                                @foreach ($contactTags as $tag)
-                                    <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-                        @if ($ticketTags->isNotEmpty())
-                            <optgroup label="Da conversa">
-                                @foreach ($ticketTags as $tag)
-                                    <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-                    </flux:select>
+                    <x-tag-picker :tags="$contactTags->concat($ticketTags)" grouped label="Filtrar por etiqueta" model="tagId" :selected="$tagId" placeholder="Todas as etiquetas" />
                 </div>
             @endif
         </header>

@@ -28,12 +28,7 @@
 
         @if ($tags->isNotEmpty())
             <div class="mt-3">
-                <flux:select wire:model.live="tagId" size="sm" aria-label="Filtrar por etiqueta">
-                    <flux:select.option value="">Todas as etiquetas</flux:select.option>
-                    @foreach ($tags as $tag)
-                        <flux:select.option :value="$tag->id">{{ $tag->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
+                <x-tag-picker :tags="$tags" label="Filtrar por etiqueta" model="tagId" :selected="$tagId" placeholder="Todas as etiquetas" />
             </div>
         @endif
 
