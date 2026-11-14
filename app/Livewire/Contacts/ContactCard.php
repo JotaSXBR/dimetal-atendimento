@@ -4,6 +4,7 @@ namespace App\Livewire\Contacts;
 
 use App\Actions\Contacts\SaveContact;
 use App\Enums\TicketStatus;
+use App\Events\TicketUpdated;
 use App\Jobs\SyncContactToGoogleJob;
 use App\Livewire\Forms\ContactForm;
 use App\Models\Contact;
@@ -120,14 +121,30 @@ class ContactCard extends Component
 
         $this->resetErrorBag('tag');
         $contact->tags()->attach($tag->id);
+        $this->tagsChanged();
     }
 
     public function removeTag(int $tagId): void
     {
         abort_if($this->readonly, 403);
 
-        $this->contact()->tags()->detach($tagId);
+        $removed = $this->contact()->tags()->detach($tagId) > 0;
         $this->resetErrorBag('tag');
+
+        if ($removed) {
+            $this->tagsChanged();
+        }
+    }
+
+    /**
+     * O card da fila mostra as etiquetas do contato: o navegador de quem editou se atualiza na hora e os demais atendentes pelo
+     * Reverb (um aviso por ticket aberto do contato; encerrado não aparece na fila).
+     */
+    private function tagsChanged(): void
+    {
+        $this->dispatch('tags-changed');
+
+        Ticket::query()->open()->where('contact_id', $this->contactId)->each(fn (Ticket $ticket) => TicketUpdated::dispatch($ticket));
     }
 
     public function addUrl(): void

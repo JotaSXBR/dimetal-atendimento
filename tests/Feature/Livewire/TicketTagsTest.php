@@ -62,6 +62,15 @@ class TicketTagsTest extends TestCase
         Event::assertDispatched(TicketUpdated::class);
     }
 
+    public function test_mudar_a_etiqueta_avisa_a_fila_na_hora_so_quando_algo_mudou(): void
+    {
+        $tag = Tag::factory()->create();
+
+        $this->block()->call('addTag', $tag->id)->assertDispatched('tags-changed')
+            ->call('addTag', $tag->id)->assertNotDispatched('tags-changed')
+            ->call('removeTag', $tag->id)->assertDispatched('tags-changed');
+    }
+
     public function test_o_seletor_aplica_e_volta_a_vazio(): void
     {
         $tag = Tag::factory()->create();

@@ -2,12 +2,18 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Events\TicketUpdated;
 use App\Livewire\Contacts\ContactCard;
+use App\Livewire\Inbox\Inbox;
+use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Tag;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
@@ -18,6 +24,8 @@ class ContactCardTagsTest extends TestCase
     use RefreshDatabase;
 
     private Contact $contact;
+
+    private ?Channel $channel = null;
 
     protected function setUp(): void
     {
@@ -100,5 +108,54 @@ class ContactCardTagsTest extends TestCase
         Tag::factory()->create(['name' => 'Só da conversa']);
 
         $this->card()->assertDontSee('Adicionar etiqueta');
+    }
+
+    private function ticketOf(Contact $contact, TicketStatus $status): Ticket
+    {
+        $this->channel ??= Channel::factory()->create();
+
+        return Ticket::factory()->create(['channel_id' => $this->channel->id, 'contact_id' => $contact->id, 'status' => $status]);
+    }
+
+    public function test_mudar_a_etiqueta_avisa_a_fila_na_hora_e_os_outros_atendentes_so_dos_tickets_abertos(): void
+    {
+        Event::fake([TicketUpdated::class]);
+        $open = $this->ticketOf($this->contact, TicketStatus::AGUARDANDO);
+        $closed = $this->ticketOf($this->contact, TicketStatus::ENCERRADO);
+        $tag = Tag::factory()->contato()->create();
+
+        $this->card()->call('addTag', $tag->id)->assertDispatched('tags-changed');
+        $this->card()->call('removeTag', $tag->id)->assertDispatched('tags-changed');
+
+        Event::assertDispatched(TicketUpdated::class, fn (TicketUpdated $event): bool => $event->ticketId === $open->id);
+        Event::assertNotDispatched(TicketUpdated::class, fn (TicketUpdated $event): bool => $event->ticketId === $closed->id);
+    }
+
+    public function test_etiqueta_que_ja_esta_no_contato_nao_avisa_ninguem(): void
+    {
+        Event::fake([TicketUpdated::class]);
+        $this->ticketOf($this->contact, TicketStatus::AGUARDANDO);
+        $tag = Tag::factory()->contato()->create();
+        $this->contact->tags()->attach($tag);
+
+        $this->card()->call('addTag', $tag->id)->assertNotDispatched('tags-changed');
+
+        Event::assertNotDispatched(TicketUpdated::class);
+    }
+
+    public function test_a_fila_se_atualiza_quando_o_painel_avisa_que_as_etiquetas_mudaram(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::ADMIN]);
+        $this->ticketOf($this->contact, TicketStatus::AGUARDANDO);
+        $tag = Tag::factory()->contato()->create(['name' => 'Revenda']);
+
+        $inbox = Livewire::actingAs($user)->test(Inbox::class);
+        // O nome também aparece no filtro de etiquetas da fila: o que conta é o chip a mais no card.
+        $before = substr_count($inbox->html(), 'Revenda');
+        $this->contact->tags()->attach($tag);
+
+        $inbox->dispatch('tags-changed');
+
+        $this->assertGreaterThan($before, substr_count($inbox->html(), 'Revenda'));
     }
 }
