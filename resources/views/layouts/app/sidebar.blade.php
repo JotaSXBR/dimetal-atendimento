@@ -22,6 +22,12 @@
             @endphp
 
             <flux:sidebar.nav>
+                {{-- Busca Ctrl+K (resources/js/command-palette.js): o atalho abre o mesmo modal. --}}
+                <flux:sidebar.item icon="magnifying-glass" as="button" type="button" data-palette-open aria-keyshortcuts="Control+K Meta+K" data-test="palette-open">
+                    Buscar
+                    <x-slot:icon-trailing><span aria-hidden="true" class="font-mono text-xs text-ink-3">Ctrl K</span></x-slot:icon-trailing>
+                </flux:sidebar.item>
+
                 @foreach ($nav->primary(auth()->user()) as $item)
                     @php
                         // Fechada, o texto do item some e o `aria-label` vira o nome do link; ele substitui o conteúdo, então leva as contagens do selo.
@@ -136,6 +142,10 @@
         {{ $slot }}
 
         <x-confirm-dialog />
+
+        <dialog id="command-palette" aria-label="Busca" class="m-auto mt-[12vh] w-[calc(100vw-2rem)] max-w-lg rounded-xl border border-line bg-surface p-4 text-ink shadow-xl backdrop:bg-black/40">
+            <livewire:search.palette />
+        </dialog>
 
         @persist('toast')
             <flux:toast.group>
