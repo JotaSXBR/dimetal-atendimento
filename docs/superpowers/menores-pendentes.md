@@ -38,11 +38,6 @@ As fatias A, B e C fecharam sem menores. As fatias D, E e F estão abaixo.
 
 | # | Onde | O quê | Por quê / cenário | Decisão |
 |---|------|-------|-------------------|---------|
-| G1 | `resources/js/command-palette.js` (Enter) | Enter sem seta abre o primeiro resultado, sem destaque visual dele | Pode abrir um contato quando se queria uma tela; marcar o primeiro como `data-active` por padrão | Dono: abrir o primeiro é o desejado? |
-| G2 | `app/Livewire/Contacts/Index.php` (`mount`) | `?contato=ID` continua na URL: fechar a ficha e dar F5 reabre o contato | Não vaza dado, só inconsistência; trocar por `#[Url]` com limpeza ao fechar | — |
-| G3 | `resources/js/command-palette.js` (`open`) | O atalho só checa o `confirm-dialog`; com a ficha de Contatos (`flux:modal`) aberta, o Ctrl+K empilha a busca por cima | Funciona (é `<dialog>` modal), pode não ser a intenção | Dono |
-| G4 | `resources/views/layouts/app/sidebar.blade.php` | O rótulo "Ctrl K" é fixo; no Mac o atalho é ⌘K | Trocar por ⌘K via `navigator.platform` | — |
-| G5 | `resources/views/layouts/app/sidebar.blade.php` (`<livewire:search.palette />`) | O palette vai em toda página (HTML + snapshot Livewire), sem consulta ao banco com `q` vazio | Custo pequeno; `lazy` ou montar ao abrir se pesar | — |
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 

@@ -58,7 +58,7 @@
     </div>
 
     {{-- A ficha abre numa gaveta lateral (igual no celular): a lista fica com a largura toda e não sobra coluna vazia. --}}
-    <flux:modal wire:model.self="showCard" variant="flyout" position="right" class="w-full max-w-md" data-testid="contact-drawer">
+    <flux:modal wire:model.self.live="showCard" variant="flyout" position="right" class="w-full max-w-md" data-testid="contact-drawer">
         @if ($selectedId)
             <livewire:contacts.contact-card :contact-id="$selectedId" :key="'contact-'.$selectedId" />
         @endif

@@ -27,3 +27,13 @@ test('isShortcut: Ctrl+K e ⌘K, em qualquer caixa, e nada com Alt ou Shift', ()
     assert.equal(isShortcut({ ctrlKey: true, metaKey: false, altKey: false, shiftKey: true, key: 'k' }), false);
     assert.equal(isShortcut({ ctrlKey: true, metaKey: false, altKey: false, shiftKey: false, key: 'j' }), false);
 });
+
+test('shortcutLabel: ⌘K no Mac e no iOS, Ctrl K no resto', async () => {
+    const { shortcutLabel } = await import('../../resources/js/command-palette.js');
+
+    assert.equal(shortcutLabel('MacIntel'), '⌘K');
+    assert.equal(shortcutLabel('iPhone'), '⌘K');
+    assert.equal(shortcutLabel('Win32'), 'Ctrl K');
+    assert.equal(shortcutLabel('Linux x86_64'), 'Ctrl K');
+    assert.equal(shortcutLabel(undefined), 'Ctrl K');
+});
