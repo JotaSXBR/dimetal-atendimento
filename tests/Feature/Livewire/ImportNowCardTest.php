@@ -76,6 +76,6 @@ class ImportNowCardTest extends TestCase
     {
         $this->card(Channel::factory()->connected()->create())
             ->assertSee('Importar agora')
-            ->assertSeeHtml('wire:confirm=');
+            ->assertSeeHtml('data-confirm=');
     }
 }

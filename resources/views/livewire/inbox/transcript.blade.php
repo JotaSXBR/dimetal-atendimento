@@ -130,7 +130,7 @@
             @if ($resend === 'safe')
                 <flux:button type="button" size="xs" variant="subtle" class="mt-1" wire:click="$parent.resend({{ $message->id }}, true)">Reenviar</flux:button>
             @elseif ($resend === 'confirm')
-                <flux:button type="button" size="xs" variant="subtle" class="mt-1" wire:click="$parent.resend({{ $message->id }}, true)" wire:confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?">Reenviar</flux:button>
+                <flux:button type="button" size="xs" variant="subtle" class="mt-1" wire:click="$parent.resend({{ $message->id }}, true)" data-confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" data-confirm-label="Reenviar" data-confirm-tone="primary">Reenviar</flux:button>
             @endif
 
             @if (! $readonly && ! $message->revoked_at)
@@ -181,7 +181,7 @@
                                 <button type="button" role="menuitem" x-on:click="startEdit(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m13.9 3.6 2.5 2.5a1 1 0 0 1 0 1.4l-8.2 8.2-3.6.9a.5.5 0 0 1-.6-.6l.9-3.6 8.2-8.2a1 1 0 0 1 1.4 0Z"/></svg>Editar</button>
                             @endcan
                             @can('revoke', $message)
-                                <button type="button" role="menuitem" wire:click="$parent.revoke({{ $message->id }})" wire:confirm="Apagar esta mensagem para todos? O cliente deixa de vê-la; o painel guarda o original." class="mt-1 flex w-full items-center gap-2 rounded border-t border-line px-2 py-1 pt-1.5 text-start text-danger hover:bg-canvas"><svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 2a1 1 0 0 0-1 1v1H4.5a.75.75 0 0 0 0 1.5h.4l.7 10a2 2 0 0 0 2 1.9h4.8a2 2 0 0 0 2-1.9l.7-10h.4a.75.75 0 0 0 0-1.5H13V3a1 1 0 0 0-1-1H8Zm1 2V3.5h2V4H9Z" clip-rule="evenodd"/></svg>Apagar para todos</button>
+                                <button type="button" role="menuitem" wire:click="$parent.revoke({{ $message->id }})" data-confirm="Apagar esta mensagem para todos? O cliente deixa de vê-la; o painel guarda o original." data-confirm-label="Apagar para todos" data-confirm-tone="danger" class="mt-1 flex w-full items-center gap-2 rounded border-t border-line px-2 py-1 pt-1.5 text-start text-danger hover:bg-canvas"><svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 2a1 1 0 0 0-1 1v1H4.5a.75.75 0 0 0 0 1.5h.4l.7 10a2 2 0 0 0 2 1.9h4.8a2 2 0 0 0 2-1.9l.7-10h.4a.75.75 0 0 0 0-1.5H13V3a1 1 0 0 0-1-1H8Zm1 2V3.5h2V4H9Z" clip-rule="evenodd"/></svg>Apagar para todos</button>
                             @endcan
                         </div>
                     </div>

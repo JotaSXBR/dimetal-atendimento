@@ -39,7 +39,7 @@
                         </flux:select>
                     </div>
 
-                    <flux:button size="xs" variant="subtle" icon="trash" wire:click="remove({{ $sector->id }})" wire:confirm="Apagar o setor {{ $sector->name }}? Os tickets antigos continuam mostrando o nome." aria-label="Apagar {{ $sector->name }}" />
+                    <flux:button size="xs" variant="subtle" icon="trash" wire:click="remove({{ $sector->id }})" data-confirm="Apagar o setor {{ $sector->name }}? Os tickets antigos continuam mostrando o nome." data-confirm-label="Apagar" data-confirm-tone="danger" aria-label="Apagar {{ $sector->name }}" />
                 </div>
 
                 @error('rename.'.$sector->id)

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inbox;
 
+use App\Enums\NoteOrigin;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Jobs\SendTicketMessageJob;
@@ -14,8 +15,10 @@ use App\Models\TicketEvent;
 use App\Models\TicketNote;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -94,5 +97,101 @@ class SaveNoteTest extends TestCase
         $screen->call('deleteNote', $note->id);
         $this->assertDatabaseMissing('ticket_notes', ['id' => $note->id]);
         $this->assertTrue(TicketEvent::query()->where(['ticket_id' => $ticket->id, 'type' => 'note_deleted', 'actor_user_id' => $autor->id])->exists());
+    }
+
+    /** @return array{0: User, 1: Ticket, 2: TicketNote} */
+    private function noteOf(): array
+    {
+        $autor = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $ticket = $this->ticket($autor);
+        $note = TicketNote::factory()->for($ticket)->create(['user_id' => $autor->id, 'body' => 'Ligar amanhã', 'created_at' => now()->subHour()->startOfSecond()]);
+
+        return [$autor, $ticket, $note];
+    }
+
+    private function undoToken(Testable $screen): string
+    {
+        $params = json_encode(collect($screen->effects['dispatches'] ?? [])->firstWhere('name', 'toast-show')['params'] ?? [], JSON_UNESCAPED_UNICODE);
+        preg_match('/"token":"([A-Za-z0-9]{32})"/', (string) $params, $match);
+
+        return $match[1] ?? '';
+    }
+
+    public function test_apagar_a_nota_oferece_desfazer(): void
+    {
+        [$autor, $ticket, $note] = $this->noteOf();
+
+        $screen = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->call('deleteNote', $note->id);
+
+        $screen->assertDispatched('toast-show', fn (string $event, array $params): bool => str_contains(json_encode($params, JSON_UNESCAPED_UNICODE), 'Nota apagada.') && str_contains(json_encode($params), 'undo-note-delete'));
+        $this->assertNotSame('', $this->undoToken($screen));
+        $this->assertDatabaseMissing('ticket_notes', ['id' => $note->id]);
+    }
+
+    public function test_desfazer_recria_a_nota_identica_e_registra_o_evento(): void
+    {
+        [$autor, $ticket, $note] = $this->noteOf();
+        $screen = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->call('deleteNote', $note->id);
+
+        $screen->call('restoreNote', $this->undoToken($screen));
+
+        $restored = TicketNote::query()->where('ticket_id', $ticket->id)->sole();
+        $this->assertSame(['Ligar amanhã', $autor->id, NoteOrigin::EQUIPE], [$restored->body, $restored->user_id, $restored->origin]);
+        $this->assertTrue($note->created_at->equalTo($restored->created_at));
+        $this->assertTrue(TicketEvent::query()->where(['ticket_id' => $ticket->id, 'type' => 'note_restored', 'actor_user_id' => $autor->id])->exists());
+    }
+
+    public function test_o_mesmo_token_nao_recria_duas_vezes(): void
+    {
+        [$autor, $ticket, $note] = $this->noteOf();
+        $screen = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->call('deleteNote', $note->id);
+        $token = $this->undoToken($screen);
+
+        $screen->call('restoreNote', $token)->call('restoreNote', $token);
+
+        $this->assertSame(1, TicketNote::query()->where('ticket_id', $ticket->id)->count());
+        $this->assertSame(1, TicketEvent::query()->where('type', 'note_restored')->count());
+    }
+
+    public function test_token_de_outro_usuario_ou_inventado_ou_vencido_nao_faz_nada(): void
+    {
+        [$autor, $ticket, $note] = $this->noteOf();
+        $screen = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->call('deleteNote', $note->id);
+        $token = $this->undoToken($screen);
+        $outro = User::factory()->create(['role' => UserRole::ADMIN]);
+
+        Livewire::actingAs($outro)->test(Transcript::class, ['ticketId' => $ticket->id])->call('restoreNote', $token);
+        $screen->call('restoreNote', str_repeat('x', 32));
+        $this->assertSame(0, TicketNote::query()->count());
+
+        Cache::forget("undo-note:{$autor->id}:{$token}");
+        $screen->call('restoreNote', $token);
+        $this->assertSame(0, TicketNote::query()->count());
+    }
+
+    public function test_desfazer_so_recria_no_ticket_do_proprio_componente(): void
+    {
+        [$autor, $ticket, $note] = $this->noteOf();
+        $outroTicket = $this->ticket($autor);
+        $screen = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->call('deleteNote', $note->id);
+
+        $token = $this->undoToken($screen);
+        Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $outroTicket->id])->call('restoreNote', $token);
+
+        $this->assertSame(0, TicketNote::query()->count());
+
+        // O painel de outro ticket não gasta o token: voltar ao ticket certo ainda desfaz.
+        $screen->call('restoreNote', $token);
+        $this->assertSame(1, TicketNote::query()->where('ticket_id', $ticket->id)->count());
+    }
+
+    public function test_o_botao_apagar_da_nota_nao_pede_confirmacao(): void
+    {
+        [$autor, $ticket] = $this->noteOf();
+
+        $html = Livewire::actingAs($autor)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+
+        $this->assertStringContainsString('deleteNote(', $html);
+        $this->assertStringNotContainsString('data-confirm="Apagar esta nota', $html);
     }
 }

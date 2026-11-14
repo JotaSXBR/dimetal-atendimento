@@ -101,7 +101,7 @@ new #[Title('Perfil')] class extends Component {
         <div class="mt-6">
             <x-avatar-uploader model="photo" action="saveAvatar" :current="auth()->user()->avatarUrl()" :name="auth()->user()->name" shape="round">
                 @if (auth()->user()->avatar_path)
-                    <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" wire:confirm="Remover a sua foto?">Remover</flux:button>
+                    <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" data-confirm="Remover a sua foto?" data-confirm-label="Remover" data-confirm-tone="danger">Remover</flux:button>
                 @endif
             </x-avatar-uploader>
         </div>

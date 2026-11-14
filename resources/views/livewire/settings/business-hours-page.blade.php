@@ -63,7 +63,7 @@
                     @forelse ($holidays as $holiday)
                         <li class="flex items-center justify-between py-2" wire:key="holiday-{{ $holiday->id }}">
                             <span><span class="font-mono text-xs text-ink-3">{{ $holiday->date->format('d/m/Y') }}</span> · {{ $holiday->name }}</span>
-                            <flux:button type="button" size="xs" variant="subtle" icon="trash" wire:click="removeHoliday({{ $holiday->id }})" wire:confirm="Remover este feriado?" aria-label="Remover feriado" />
+                            <flux:button type="button" size="xs" variant="subtle" icon="trash" wire:click="removeHoliday({{ $holiday->id }})" data-confirm="Remover este feriado?" data-confirm-label="Remover" data-confirm-tone="danger" aria-label="Remover feriado" />
                         </li>
                     @empty
                         <li class="py-2 text-xs text-ink-3">Nenhum feriado cadastrado.</li>

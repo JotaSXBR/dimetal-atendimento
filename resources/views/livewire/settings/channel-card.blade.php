@@ -91,7 +91,7 @@
                     <flux:select.option value="15">Últimos 15 dias</flux:select.option>
                     <flux:select.option value="30">Últimos 30 dias</flux:select.option>
                 </flux:select>
-                <flux:button size="sm" variant="filled" wire:click="importNow" wire:confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." wire:loading.attr="disabled">Importar agora</flux:button>
+                <flux:button size="sm" variant="filled" wire:click="importNow" data-confirm="Importar o histórico agora? Conversas que já existem no sistema são ignoradas; as demais entram como histórico encerrado." data-confirm-label="Importar" data-confirm-tone="primary" wire:loading.attr="disabled">Importar agora</flux:button>
                 @error('importDays')
                     <p class="basis-full text-xs text-danger">{{ $message }}</p>
                 @enderror

@@ -221,4 +221,12 @@ class TicketTimelineTest extends TestCase
 
         $this->assertSame(2, $queries, 'um select de setores e um de usuários, não um por evento');
     }
+
+    public function test_nota_restaurada_tem_rotulo_e_frase(): void
+    {
+        $event = $this->event('note_restored', $this->ana);
+
+        $this->assertSame('Nota interna restaurada', TicketEventText::label('note_restored'));
+        $this->assertSame('Ana Atendente restaurou uma nota interna', $this->timeline([$event])->sentence($event));
+    }
 }

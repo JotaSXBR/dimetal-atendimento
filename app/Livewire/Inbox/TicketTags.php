@@ -8,6 +8,7 @@ use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketEvent;
 use App\Models\User;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +48,22 @@ class TicketTags extends Component
 
     public function removeTag(int $tagId): void
     {
-        $this->change($tagId, 'tag_removed', Tag::query(), fn (Ticket $ticket, Tag $tag): bool => $ticket->tags()->detach($tag->id) > 0);
+        $tag = $this->change($tagId, 'tag_removed', Tag::query(), fn (Ticket $ticket, Tag $tag): bool => $ticket->tags()->detach($tag->id) > 0);
+
+        if ($tag !== null) {
+            Flux::toast(text: 'Etiqueta «'.$tag->name.'» removida.', duration: 6000, action: [
+                'label' => 'Desfazer', 'event' => 'undo-ticket-tag', 'params' => ['ownerId' => $this->ticketId, 'tagId' => $tag->id],
+            ]);
+        }
+    }
+
+    /** O "Desfazer" do aviso de remoção (o evento chega a todo painel aberto: só age o do próprio ticket). Reaproveita as regras do `addTag`. */
+    #[On('undo-ticket-tag')]
+    public function undoRemove(int $ownerId, int $tagId): void
+    {
+        if ($ownerId === $this->ticketId) {
+            $this->addTag($tagId);
+        }
     }
 
     /**
@@ -56,15 +72,16 @@ class TicketTags extends Component
      *
      * @param  Builder<Tag>  $tags
      * @param  callable(Ticket, Tag): bool  $apply  true se mudou algo
+     * @return Tag|null a etiqueta, se esta chamada de fato mudou algo
      */
-    private function change(int $tagId, string $type, Builder $tags, callable $apply): void
+    private function change(int $tagId, string $type, Builder $tags, callable $apply): ?Tag
     {
         abort_if($this->readonly, 403);
 
         $tag = $tags->find($tagId);
 
         if ($tag === null) {
-            return;
+            return null;
         }
 
         $ticket = DB::transaction(function () use ($tag, $type, $apply): ?Ticket {
@@ -84,7 +101,11 @@ class TicketTags extends Component
             TicketUpdated::dispatch($ticket);
             // O aviso pelo Reverb chega a todos; este, ao navegador de quem editou, atualiza o card da fila sem depender dele.
             $this->dispatch('tags-changed');
+
+            return $tag;
         }
+
+        return null;
     }
 
     /** O filho não confia no pai: confere de novo se o usuário vê o ticket. */

@@ -32,7 +32,7 @@
                     <p class="mt-1 text-sm whitespace-pre-wrap text-ink-2">{{ $reply->body }}</p>
                 </div>
                 <flux:button size="xs" variant="subtle" icon="pencil-square" wire:click="edit({{ $reply->id }})" aria-label="Editar /{{ $reply->shortcut }}" />
-                <flux:button size="xs" variant="subtle" icon="trash" wire:click="delete({{ $reply->id }})" wire:confirm="Apagar esta resposta rápida?" aria-label="Apagar /{{ $reply->shortcut }}" />
+                <flux:button size="xs" variant="subtle" icon="trash" wire:click="delete({{ $reply->id }})" data-confirm="Apagar esta resposta rápida?" data-confirm-label="Apagar" data-confirm-tone="danger" aria-label="Apagar /{{ $reply->shortcut }}" />
             </li>
         @empty
             <li><x-empty-state icon="chat-bubble-bottom-center-text" title="Nenhuma resposta cadastrada." description="Cadastre atalhos para as respostas mais comuns." /></li>

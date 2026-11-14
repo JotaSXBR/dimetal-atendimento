@@ -241,4 +241,53 @@ class TicketTagsTest extends TestCase
         $this->assertStringContainsString('adicionou a etiqueta Urgente', $sentences[0]);
         $this->assertStringContainsString('removeu a etiqueta Urgente', $sentences[1]);
     }
+
+    public function test_remover_oferece_desfazer_so_quando_removeu(): void
+    {
+        $tag = Tag::factory()->create(['name' => 'Urgente']);
+        $this->ticket->tags()->attach($tag);
+
+        $this->block()->call('removeTag', Tag::factory()->create()->id)->assertNotDispatched('toast-show');
+        $this->block()->call('removeTag', $tag->id)
+            ->assertDispatched('toast-show', fn (string $event, array $params): bool => str_contains(json_encode($params, JSON_UNESCAPED_UNICODE), 'Etiqueta «Urgente» removida.')
+                && str_contains(json_encode($params), 'undo-ticket-tag'));
+    }
+
+    public function test_desfazer_recoloca_a_etiqueta_e_grava_o_evento(): void
+    {
+        $tag = Tag::factory()->create();
+        $this->ticket->tags()->attach($tag);
+
+        $this->block()->call('removeTag', $tag->id)->call('undoRemove', $this->ticket->id, $tag->id);
+
+        $this->assertSame([$tag->id], $this->ticket->tags()->pluck('tags.id')->all());
+        $this->assertSame(1, TicketEvent::query()->where('ticket_id', $this->ticket->id)->where('type', 'tag_added')->count());
+    }
+
+    public function test_desfazer_de_outro_ticket_nao_faz_nada(): void
+    {
+        $tag = Tag::factory()->create();
+
+        $this->block()->call('undoRemove', $this->ticket->id + 1000, $tag->id);
+
+        $this->assertSame(0, $this->ticket->tags()->count());
+    }
+
+    public function test_desfazer_em_ticket_encerrado_da_403_e_nao_recoloca(): void
+    {
+        $tag = Tag::factory()->create();
+        $this->ticket->forceFill(['status' => TicketStatus::ENCERRADO, 'closed_at' => now()])->save();
+
+        $this->block()->call('undoRemove', $this->ticket->id, $tag->id)->assertForbidden();
+        $this->assertSame(0, $this->ticket->tags()->count());
+    }
+
+    public function test_desfazer_com_a_etiqueta_apagada_no_meio_nao_quebra(): void
+    {
+        $tag = Tag::factory()->create();
+        $tag->delete();
+
+        $this->block()->call('undoRemove', $this->ticket->id, $tag->id)->assertOk();
+        $this->assertSame(0, $this->ticket->tags()->count());
+    }
 }

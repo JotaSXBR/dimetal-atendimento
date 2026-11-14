@@ -96,6 +96,23 @@ class ViewConventionsTest extends TestCase
     }
 
     /** Só `flux:button`: o `x-ui.button` próprio foi migrado e removido (regra em docs/ui-botoes.md). */
+    public function test_nenhuma_view_usa_wire_confirm(): void
+    {
+        foreach ($this->views() as $path => $html) {
+            $this->assertStringNotContainsString('wire:confirm', $html, "{$path}: use data-confirm (diálogo do app, resources/js/confirm-dialog.js), não o confirm() do navegador");
+        }
+    }
+
+    public function test_todo_data_confirm_tem_rotulo_e_tom_conhecidos(): void
+    {
+        foreach ($this->views() as $path => $html) {
+            $confirms = substr_count($html, 'data-confirm="');
+
+            $this->assertSame($confirms, substr_count($html, 'data-confirm-label="'), "{$path}: todo data-confirm precisa de data-confirm-label");
+            $this->assertSame($confirms, preg_match_all('/data-confirm-tone="(?:danger|primary)"/', $html), "{$path}: todo data-confirm precisa de data-confirm-tone danger|primary");
+        }
+    }
+
     public function test_nenhuma_view_usa_x_ui_button(): void
     {
         foreach ($this->views() as $path => $html) {

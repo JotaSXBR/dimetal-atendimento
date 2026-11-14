@@ -245,7 +245,7 @@
                     @endif
 
                     @if ($canTakeover)
-                        <flux:button size="sm" icon="arrow-uturn-left" wire:click="takeover({{ $ticket->assigned_user_id }})" wire:confirm="Tomar este ticket de {{ $ticket->assignee?->name }}?">Tomar</flux:button>
+                        <flux:button size="sm" icon="arrow-uturn-left" wire:click="takeover({{ $ticket->assigned_user_id }})" data-confirm="Tomar este ticket de {{ $ticket->assignee?->name }}?" data-confirm-label="Tomar" data-confirm-tone="primary">Tomar</flux:button>
                     @endif
 
                     {{-- Ações menos frequentes num menu: o cabeçalho fica com Assumir/Tomar/Encerrar e libera espaço em coluna estreita. Cada item respeita a mesma permissão de antes. --}}
