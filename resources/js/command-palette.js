@@ -74,14 +74,19 @@ if (typeof document !== 'undefined') {
         root.querySelector('input[type="search"]')?.setAttribute('aria-activedescendant', items[0].id);
     };
 
-    let watching = false;
+    // O <dialog> não persiste entre páginas (wire:navigate troca o body): reobserva quando a lista é outro nó.
+    let observer = null;
+    let observed = null;
 
     const watch = (root) => {
         const list = root.querySelector('[data-palette-list]');
 
-        if (!watching && list) {
-            watching = true;
-            new MutationObserver(() => markFirst(root)).observe(list, { childList: true, subtree: true });
+        if (list && list !== observed) {
+            observer?.disconnect();
+            observed = list;
+            // `data-active` também: um morph que só tira a marca (mesmos itens) refaz o destaque.
+            observer = new MutationObserver(() => markFirst(root));
+            observer.observe(list, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-active'] });
         }
     };
 

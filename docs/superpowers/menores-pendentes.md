@@ -5,8 +5,8 @@ incluir; o item sai no commit que o corrige. **Decisão:** quem precisa responde
 
 ## Menores de revisão
 
-Nenhum pendente. Os menores das fatias D, E, F e G da série "UX simplificação" foram resolvidos (ou aceitos e fechados) no branch
-`fix/ux-menores` em 14/11/2026, por rulings do advisor registrados no ledger (`Ruling:`); o plano é
+Nenhum pendente. Os menores das fatias D, E, F e G da série "UX simplificação", e os da revisão do próprio `fix/ux-menores`, foram
+resolvidos (ou aceitos e fechados) em 14/11/2026, com rulings do advisor registrados no ledger (`Ruling:`); o plano é
 `docs/superpowers/plans/2026-11-14-ux-menores.md`. Os menores das fatias A, B e C fecharam sem pendências.
 
 ## Pendências maiores já combinadas (não são menores de revisão)

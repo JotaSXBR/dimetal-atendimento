@@ -14,9 +14,11 @@ export function splitConfirm(message) {
     return { title: text.slice(0, cut + 1).trim(), text: text.slice(cut + 1).trim() };
 }
 
-/** O que identifica a ação do elemento: `wire:click` e a mensagem. Se, entre abrir o diálogo e confirmar, o morph do Livewire reaproveitar o nó para outro item, a chave muda. */
+/** O que identifica a ação do elemento: os `wire:click` (com ou sem modificador) e a mensagem. Se, entre abrir o diálogo e confirmar, o morph do Livewire reaproveitar o nó para outro item, a chave muda. */
 export function actionKey(element) {
-    return `${element.getAttribute('wire:click') ?? ''}\u001f${element.getAttribute('data-confirm') ?? ''}`;
+    const clicks = [...element.attributes].filter((attr) => attr.name.startsWith('wire:click')).map((attr) => `${attr.name}=${attr.value}`).sort();
+
+    return `${clicks.join('\u001e')}\u001f${element.getAttribute('data-confirm') ?? ''}`;
 }
 
 export function sameAction(key, element) {

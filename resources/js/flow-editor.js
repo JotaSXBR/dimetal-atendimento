@@ -209,7 +209,11 @@ document.addEventListener('alpine:init', () => {
 
             apply() {
                 api?.updateData(this.selected.id, JSON.parse(JSON.stringify(this.selected.data)));
-                this.refreshVariables();
+
+                // Só a pergunta cria variável: nos demais blocos a lista não muda a cada tecla.
+                if (this.selected.type === 'pergunta') {
+                    this.refreshVariables();
+                }
             },
 
             undo() {

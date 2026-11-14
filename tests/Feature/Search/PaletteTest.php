@@ -156,4 +156,9 @@ class PaletteTest extends TestCase
 
         $this->assertContains(Url::class, $attributes);
     }
+
+    public function test_contato_na_url_que_nao_e_numero_nao_quebra_a_tela(): void
+    {
+        $this->actingAs($this->atendente())->get('/contatos?contato=abc')->assertOk();
+    }
 }

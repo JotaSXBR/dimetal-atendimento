@@ -67,7 +67,8 @@ class TicketTags extends Component
             return;
         }
 
-        // A conversa pode ter sido encerrada depois da remoção: aviso, e não o 403 (modal de erro) do `addTag`.
+        // A conversa pode ter sido encerrada depois da remoção: aviso, e não o 403 (modal de erro) do `addTag`. Se ela sumiu ou deixou de ser
+        // visível, o painel inteiro já responde 404 (`ticket()`), e nenhum aviso chegaria.
         if ($this->ticket()->status === TicketStatus::ENCERRADO) {
             Flux::toast(variant: 'warning', text: 'A conversa foi encerrada; a etiqueta não voltou.');
 
