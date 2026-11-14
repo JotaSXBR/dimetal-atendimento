@@ -42,6 +42,14 @@ class ViewConventionsTest extends TestCase
         }
     }
 
+    /** Piso de legibilidade: nenhum texto abaixo de 12 px (`text-xs`) nas views. Texto de 10 e 11 px não se lê em tela comum nem de celular. */
+    public function test_nenhum_texto_abaixo_de_12px(): void
+    {
+        foreach ($this->views() as $path => $html) {
+            $this->assertDoesNotMatchRegularExpression('/text-\[(?:[0-9]|1[01])px\]/', $html, "{$path}: texto abaixo de 12 px (use text-xs)");
+        }
+    }
+
     /** Só `flux:button`: o `x-ui.button` próprio foi migrado e removido (regra em docs/ui-botoes.md). */
     public function test_nenhuma_view_usa_x_ui_button(): void
     {

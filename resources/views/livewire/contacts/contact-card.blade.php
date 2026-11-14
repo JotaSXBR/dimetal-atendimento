@@ -97,7 +97,7 @@
 @else
 <form wire:submit="save" class="space-y-3 text-sm">
     <div>
-        <h2 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Contato</h2>
+        <h2 class="text-xs font-semibold text-ink-3">Contato</h2>
         <p class="mt-1 font-mono text-ink">{{ $contact->phoneLabel() }}</p>
     </div>
 
@@ -144,7 +144,7 @@
 
     @unless ($compact)
     <div class="border-t border-line pt-3">
-        <h3 class="font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">Atendimentos</h3>
+        <h3 class="text-xs font-semibold text-ink-3">Atendimentos</h3>
         <ul class="mt-2 space-y-2">
             @forelse ($history as $past)
                 <li class="text-xs" wire:key="history-{{ $past->id }}">

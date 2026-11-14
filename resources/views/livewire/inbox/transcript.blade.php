@@ -64,11 +64,11 @@
             default => 'border border-line bg-surface',
         } }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
-                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-bot uppercase">Bot · resposta automática</p>
+                <p class="mb-0.5 font-mono text-xs tracking-wide text-bot uppercase">Bot · resposta automática</p>
             @endif
 
             @if ($outside)
-                <p class="mb-0.5 flex items-center gap-1 font-mono text-[10px] tracking-wide text-ink-2 uppercase"><flux:icon.device-phone-mobile class="size-3" />Celular · fora do painel</p>
+                <p class="mb-0.5 flex items-center gap-1 font-mono text-xs tracking-wide text-ink-2 uppercase"><flux:icon.device-phone-mobile class="size-3" />Celular · fora do painel</p>
             @endif
 
             @if ($message->quoted_snapshot)
@@ -78,7 +78,7 @@
             @endif
 
             @if ($message->revoked_at)
-                <p class="mb-0.5 font-mono text-[10px] tracking-wide text-danger uppercase">{{ $out ? ($message->origin === \App\Enums\MessageOrigin::PAINEL ? 'Mensagem apagada pelo atendente' : 'Mensagem apagada no celular') : 'Mensagem apagada pelo cliente' }}</p>
+                <p class="mb-0.5 font-mono text-xs tracking-wide text-danger uppercase">{{ $out ? ($message->origin === \App\Enums\MessageOrigin::PAINEL ? 'Mensagem apagada pelo atendente' : 'Mensagem apagada no celular') : 'Mensagem apagada pelo cliente' }}</p>
             @endif
 
             @if ($message->hasMedia() || in_array($message->type, ['view_once', 'location', 'contact'], true))
@@ -105,7 +105,7 @@
             @if ($message->edits->isNotEmpty())
                 <div class="mt-1 space-y-0.5 border-l-2 border-line pl-2 text-xs text-ink-2">
                     @foreach ($message->edits as $edit)
-                        <p class="break-words whitespace-pre-wrap"><span class="font-mono text-[10px] uppercase">Antes:</span> {{ $edit->previous_body }}</p>
+                        <p class="break-words whitespace-pre-wrap"><span class="font-mono text-xs uppercase">Antes:</span> {{ $edit->previous_body }}</p>
                     @endforeach
                 </div>
             @endif
@@ -164,7 +164,7 @@
                                 @endcan
                             @endif
                             <button type="button" role="menuitem" x-on:click.stop="info = ! info" x-bind:aria-expanded="info" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.25v3.25a.75.75 0 0 0 1.5 0V9.75A.75.75 0 0 0 10 9H9Z" clip-rule="evenodd"/></svg>Dados da mensagem</button>
-                            <dl x-cloak x-show="info" class="mx-2 mb-1 space-y-0.5 border-l-2 border-line ps-2 font-mono text-[10px] text-ink-3">
+                            <dl x-cloak x-show="info" class="mx-2 mb-1 space-y-0.5 border-l-2 border-line ps-2 font-mono text-xs text-ink-3">
                                 @if ($out)
                                     <div class="flex justify-between gap-3"><dt>Enviada</dt><dd>{{ $message->sent_at->timezone($tz)->format('d/m H:i') }}</dd></div>
                                     @if ($message->delivered_at)

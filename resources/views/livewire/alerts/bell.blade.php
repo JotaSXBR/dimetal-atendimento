@@ -8,7 +8,7 @@
         class="relative flex size-8 items-center justify-center rounded-lg bg-white/10 text-sb-ink-1 hover:bg-white/20">
         <flux:icon.bell variant="micro" class="size-4" />
         @if ($unread > 0)
-            <span class="absolute -end-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-4 font-bold text-danger-foreground" aria-hidden="true">{{ $unread > 9 ? '9+' : $unread }}</span>
+            <span class="absolute -end-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-xs leading-4 font-bold text-danger-foreground" aria-hidden="true">{{ $unread > 9 ? '9+' : $unread }}</span>
         @endif
     </button>
 
@@ -32,7 +32,7 @@
                             @if ($item['detail'] !== '')
                                 <span class="block truncate text-xs text-ink-3">{{ $item['detail'] }}</span>
                             @endif
-                            <time datetime="{{ $item['at'] }}" x-data="relativeTime('{{ $item['at'] }}')" x-text="label" class="block text-[11px] text-ink-3">{{ $item['time'] }}</time>
+                            <time datetime="{{ $item['at'] }}" x-data="relativeTime('{{ $item['at'] }}')" x-text="label" class="block text-xs text-ink-3">{{ $item['time'] }}</time>
                         </span>
                         @if ($item['unread'])
                             <span class="mt-1 size-2 shrink-0 rounded-full bg-accent"><span class="sr-only">não lido</span></span>
@@ -44,6 +44,6 @@
             @endforelse
         </ul>
 
-        <p class="border-t border-line px-3.5 py-2.5 text-center text-[11px] text-ink-3">Os alertas ficam guardados por 7 dias</p>
+        <p class="border-t border-line px-3.5 py-2.5 text-center text-xs text-ink-3">Os alertas ficam guardados por 7 dias</p>
     </div>
 </div>

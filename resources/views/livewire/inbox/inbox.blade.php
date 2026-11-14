@@ -75,7 +75,7 @@
                         <span class="min-w-0 flex-1">
                             <span class="flex items-baseline justify-between gap-2">
                                 <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
-                                <span class="font-mono text-[10px] text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m H:i') }}</span>
+                                <span class="font-mono text-xs text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m H:i') }}</span>
                             </span>
                             <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->protocol }} · {{ $item->close_outcome?->label() ?? $item->closed_reason?->label() }}</span>
                         </span>
@@ -94,7 +94,7 @@
             @else
             @foreach ([['Pendente', $pending, 'text-ink-3'], ['Aguardando', $waiting, 'text-warn'], ['Em atendimento', $active, 'text-accent-content']] as [$heading, $group, $tone])
                 @if ($group->isNotEmpty())
-                    <p class="px-4 pt-4 pb-1 font-mono text-[10px] font-semibold tracking-wider uppercase {{ $tone }}">
+                    <p class="px-4 pt-4 pb-1 text-xs font-semibold {{ $tone }}">
                         {{ $heading }} · {{ $group->count() }}
                     </p>
 
@@ -134,7 +134,7 @@
                                             <x-tag-chip :tag="$tag" :conversation="$tag->scope === \App\Enums\TagScope::CONVERSA" :data-testid="$tag->scope === \App\Enums\TagScope::CONTATO ? 'card-chip-contact' : 'card-chip-ticket'" />
                                         @endforeach
                                         @if ($chipsRest->isNotEmpty())
-                                            <span data-testid="card-tags-more" class="shrink-0 text-[11px] text-ink-3"><span aria-hidden="true" title="{{ $chipsRest->pluck('name')->join(', ') }}">+{{ $chipsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $chipsRest->pluck('name')->join(', ') }}</span></span>
+                                            <span data-testid="card-tags-more" class="shrink-0 text-xs text-ink-3"><span aria-hidden="true" title="{{ $chipsRest->pluck('name')->join(', ') }}">+{{ $chipsRest->count() }}</span><span class="sr-only">mais etiquetas: {{ $chipsRest->pluck('name')->join(', ') }}</span></span>
                                         @endif
                                     </span>
                                 @endif
@@ -143,21 +143,21 @@
                                     <span x-show="! $store.clientPresence.label({{ $item->id }})">{{ \App\Support\WhatsAppText::html((string) $item->preview) }}</span>
                                 </span>
                                 @if ($hasMeta)
-                                    <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-ink-3">
+                                    <span data-testid="card-meta" class="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-xs text-ink-3">
                                         @if ($showChannel)
-                                            <span class="truncate font-mono text-[10px]">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
+                                            <span class="truncate font-mono text-xs">{{ $item->channel->name }} · {{ $item->channel->phoneLabel() ?? 'sem número' }}</span>
                                         @endif
                                     </span>
                                 @endif
                             </span>
 
                             <span class="flex shrink-0 flex-col items-end gap-1">
-                                <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="font-mono text-[10px] text-ink-3">{{ \App\Support\WaitLabel::narrow($at, now()) }}</span>
+                                <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="font-mono text-xs text-ink-3">{{ \App\Support\WaitLabel::narrow($at, now()) }}</span>
                                 @if ($showSector && $item->sector)
-                                    <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-[10px] text-ink-2">{{ $item->sector->name }}</span>
+                                    <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-xs text-ink-2">{{ $item->sector->name }}</span>
                                 @endif
                                 @if ($item->assignee && $tab !== 'meus')
-                                    <span class="inline-flex max-w-24 items-center gap-1 text-[10px] text-ink-2">
+                                    <span class="inline-flex max-w-24 items-center gap-1 text-xs text-ink-2">
                                         <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
                                         @php
                                             $fullName = trim((string) preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', $item->assignee->name));
@@ -167,7 +167,7 @@
                                     </span>
                                 @endif
                                 @if ($unread > 0)
-                                    <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-[10px] font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>
+                                    <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-xs font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>
                                 @endif
                             </span>
                         </button>
@@ -221,10 +221,10 @@
                     {{-- `div`, não `p`: o conteúdo do tooltip do Flux é um bloco, e bloco dentro de `p` faz o navegador fechar o `p` antes dele. --}}
                     <div data-testid="header-line" data-line="{{ $line }}" class="min-w-0 font-mono text-xs break-words text-ink-3">
                         <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
-                        <span>&nbsp;{{ mb_substr($line, mb_strlen($ticket->protocol) + 1) }}</span>
+                        <span>{{ mb_substr($line, mb_strlen($ticket->protocol)) }}</span>
                     </div>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
-                        <p class="max-h-16 overflow-y-auto text-[11px] break-words text-ink-2">
+                        <p class="max-h-16 overflow-y-auto text-xs break-words text-ink-2">
                             @if ($ticket->close_outcome)
                                 <x-status-badge :status="$ticket->close_outcome" class="me-1" />
                             @elseif ($ticket->closed_reason)

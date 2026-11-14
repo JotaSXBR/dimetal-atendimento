@@ -16,7 +16,7 @@
             <div class="flex gap-6 overflow-x-auto lg:flex-col lg:gap-5 lg:overflow-visible">
                 @foreach ($groups as $group => $items)
                     <div class="shrink-0">
-                        <p data-test="settings-group-title" class="px-3 pb-1 font-mono text-[10px] font-semibold tracking-wider text-ink-3 uppercase">{{ $group }}</p>
+                        <p data-test="settings-group-title" class="px-3 pb-1 text-xs font-semibold text-ink-3">{{ $group }}</p>
                         <ul class="flex gap-1 lg:flex-col">
                             @foreach ($items as $item)
                                 <li>
