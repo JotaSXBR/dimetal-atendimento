@@ -28,6 +28,9 @@ class Index extends Component
 
     public ?int $selectedId = null;
 
+    /** A gaveta com a ficha do contato escolhido (`flux:modal` flyout). Fechar (Esc, ✕, clique fora) limpa a seleção. */
+    public bool $showCard = false;
+
     public bool $showNew = false;
 
     public string $newPhone = '';
@@ -49,7 +52,15 @@ class Index extends Component
     public function select(int $id): void
     {
         $this->selectedId = Contact::query()->findOrFail($id)->id;
+        $this->showCard = true;
         $this->notice = '';
+    }
+
+    public function updatedShowCard(bool $open): void
+    {
+        if (! $open) {
+            $this->selectedId = null;
+        }
     }
 
     public function createContact(CreateContact $createContact): void
@@ -71,6 +82,7 @@ class Index extends Component
         }
 
         $this->selectedId = $result['contact']->id;
+        $this->showCard = true;
         $this->notice = $result['created'] ? '' : 'Este número já estava cadastrado: abri o contato existente.';
         $this->reset('newPhone', 'newName', 'showNew');
     }

@@ -1,4 +1,4 @@
-<section class="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+<section class="mx-auto grid w-full max-w-4xl grid-cols-[minmax(0,1fr)] gap-6 p-6">
     <div>
         <x-page-header title="Contatos" subtitle="Quem fala com a Dimetal. Edite o nome e os dados; contatos editados vão para o Google Contacts.">
             <flux:button variant="primary" icon="plus" wire:click="$toggle('showNew')">Novo contato</flux:button>
@@ -57,13 +57,12 @@
         <div class="mt-4">{{ $contacts->links() }}</div>
     </div>
 
-    <aside class="rounded-[14px] border border-line bg-surface p-4">
+    {{-- A ficha abre numa gaveta lateral (igual no celular): a lista fica com a largura toda e não sobra coluna vazia. --}}
+    <flux:modal wire:model.self="showCard" variant="flyout" position="right" class="w-full max-w-md" data-testid="contact-drawer">
         @if ($selectedId)
             <livewire:contacts.contact-card :contact-id="$selectedId" :key="'contact-'.$selectedId" />
-        @else
-            <p class="text-sm text-ink-3">Selecione um contato para ver e editar a ficha.</p>
         @endif
-    </aside>
+    </flux:modal>
 
     <livewire:inbox.new-conversation />
 </section>
