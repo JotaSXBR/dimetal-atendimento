@@ -116,4 +116,24 @@ class PaletteTest extends TestCase
 
         Livewire::withQueryParams(['contato' => 999999])->actingAs($user)->test(ContactsIndex::class)->assertSet('showCard', false);
     }
+
+    public function test_o_markup_e_um_combobox_com_listbox_e_opcoes_com_id(): void
+    {
+        $html = $this->palette(User::factory()->create(['role' => UserRole::ADMIN]), 'rel')->html();
+
+        $this->assertStringContainsString('role="combobox"', $html);
+        $this->assertStringContainsString('aria-controls="palette-list"', $html);
+        $this->assertStringContainsString('id="palette-list"', $html);
+        $this->assertStringContainsString('role="listbox"', $html);
+        $this->assertStringContainsString('id="palette-option-0"', $html);
+        $this->assertStringContainsString('role="group"', $html);
+    }
+
+    public function test_nada_encontrado_fica_fora_do_listbox_e_e_anunciado(): void
+    {
+        $html = $this->palette($this->atendente(), 'zzzz')->html();
+
+        $this->assertStringContainsString('role="status"', $html);
+        $this->assertStringNotContainsString('id="palette-option-0"', $html);
+    }
 }

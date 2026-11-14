@@ -23,6 +23,40 @@ if (typeof document !== 'undefined') {
     const dialog = () => document.getElementById('command-palette');
     const options = (root) => [...root.querySelectorAll('[data-palette-option]')];
 
+    // Enquanto uma busca nova não voltou do servidor, a lista na tela é a antiga: o Enter espera a resposta em vez de abrir o resultado velho.
+    let pending = false;
+    let enterQueued = false;
+
+    const activate = (root) => {
+        const items = options(root);
+        const current = items.findIndex((item) => item.hasAttribute('data-active'));
+        const target = items[current] ?? items[0];
+
+        if (target) {
+            target.click();
+        }
+    };
+
+    const settle = () => {
+        pending = false;
+
+        const root = dialog();
+
+        if (enterQueued && root?.open) {
+            enterQueued = false;
+            activate(root);
+        }
+
+        enterQueued = false;
+    };
+
+    document.addEventListener('livewire:init', () => {
+        window.Livewire.hook('commit', ({ succeed, fail }) => {
+            succeed(settle);
+            fail(settle);
+        });
+    });
+
     const open = () => {
         const root = dialog();
 
@@ -36,6 +70,7 @@ if (typeof document !== 'undefined') {
         if (input && input.value !== '') {
             input.value = '';
             input.dispatchEvent(new Event('input', { bubbles: true }));
+            pending = true;
         }
 
         root.showModal();
@@ -72,15 +107,27 @@ if (typeof document !== 'undefined') {
 
             const next = stepActive(current, items.length, event.key);
 
+            const input = root.querySelector('input[type="search"]');
+
             items.forEach((item, index) => item.toggleAttribute('data-active', index === next));
             items[next]?.scrollIntoView({ block: 'nearest' });
-        } else if (event.key === 'Enter') {
-            const target = items[current] ?? items[0];
+            input?.setAttribute('aria-activedescendant', items[next]?.id ?? '');
+        } else if (event.key === 'Enter' && !event.isComposing) {
+            event.preventDefault();
 
-            if (target) {
-                event.preventDefault();
-                target.click();
+            if (pending) {
+                enterQueued = true;
+                // Rede de segurança: se nenhuma resposta chegar (conexão caída), não deixa o Enter preso para sempre.
+                setTimeout(settle, 2000);
+            } else {
+                activate(root);
             }
+        }
+    });
+
+    document.addEventListener('input', (event) => {
+        if (dialog()?.contains(event.target)) {
+            pending = true;
         }
     });
 
