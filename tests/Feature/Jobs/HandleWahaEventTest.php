@@ -8,6 +8,7 @@ use App\Models\Channel;
 use App\Models\Message;
 use App\Models\WahaEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class HandleWahaEventTest extends TestCase
@@ -91,6 +92,42 @@ class HandleWahaEventTest extends TestCase
 
         $this->assertSame('Oi', Message::query()->sole()->body);
         $this->assertSame(ChannelStatus::WORKING, $channel->fresh()->status);
+    }
+
+    public function test_evento_sem_canal_acha_o_canal_pela_sessao(): void
+    {
+        $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
+        $event = WahaEvent::create([
+            'waha_event_id' => 'evt_sem_canal',
+            'channel_id' => null,
+            'event' => 'message',
+            'session' => 'main',
+            'payload' => ['payload' => ['id' => 'false_5516997524950@c.us_SC', 'from' => '5516997524950@c.us', 'fromMe' => false, 'body' => 'Oi', 'timestamp' => 1_793_000_000]],
+            'received_at' => now(),
+        ]);
+
+        (new HandleWahaEvent($event->id))->handle();
+
+        $this->assertSame($channel->id, $event->fresh()->channel_id);
+        $this->assertSame(1, Message::query()->count());
+    }
+
+    public function test_evento_de_sessao_desconhecida_deixa_aviso_no_log(): void
+    {
+        Log::spy();
+        $event = WahaEvent::create([
+            'waha_event_id' => 'evt_orfao',
+            'channel_id' => null,
+            'event' => 'message',
+            'session' => 'nao-existe',
+            'payload' => ['payload' => ['id' => 'false_1@c.us_X', 'from' => '1@c.us', 'fromMe' => false, 'body' => 'Oi', 'timestamp' => 1_793_000_000]],
+            'received_at' => now(),
+        ]);
+
+        (new HandleWahaEvent($event->id))->handle();
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => ($context['waha_event_id'] ?? null) === $event->id && ($context['session'] ?? null) === 'nao-existe');
+        $this->assertSame(0, Message::query()->count());
     }
 
     public function test_job_tenta_de_novo_antes_de_ir_para_failed_jobs(): void

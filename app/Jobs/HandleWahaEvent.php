@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\ChannelStatus;
+use App\Models\Channel;
 use App\Models\WahaEvent;
 use App\Services\Inbox\ApplyAck;
 use App\Services\Inbox\ApplyMessageChange;
@@ -37,7 +38,13 @@ class HandleWahaEvent implements ShouldQueue
     {
         $event = WahaEvent::find($this->wahaEventId);
 
-        if ($event === null || $event->channel === null) {
+        if ($event === null) {
+            return;
+        }
+
+        if ($event->channel === null && ! $this->channelFor($event)) {
+            Log::warning('Evento do WAHA sem canal: descartado', ['waha_event_id' => $event->id, 'session' => $event->session]);
+
             return;
         }
 
@@ -50,6 +57,21 @@ class HandleWahaEvent implements ShouldQueue
             'message.revoked' => $this->retryUnlessDone(app(ApplyMessageChange::class)->revoked($event), $event, 'Apagamento descartado: mensagem nunca apareceu'),
             default => null,
         };
+    }
+
+    /** O canal pode ter sido criado depois da chegada do webhook: tenta de novo pela sessão e grava no evento. */
+    private function channelFor(WahaEvent $event): bool
+    {
+        $id = $event->session === null ? null : Channel::query()->where('waha_session', $event->session)->value('id');
+
+        if (! is_int($id)) {
+            return false;
+        }
+
+        $event->update(['channel_id' => $id]);
+        $event->unsetRelation('channel');
+
+        return true;
     }
 
     /** Ack, reação, edição e apagamento podem chegar antes da mensagem ser gravada: tenta de novo e, esgotadas as tentativas, descarta. */
