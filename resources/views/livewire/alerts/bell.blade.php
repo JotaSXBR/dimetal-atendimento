@@ -23,7 +23,7 @@
         <ul class="max-h-96 divide-y divide-line overflow-y-auto">
             @forelse ($items as $item)
                 <li wire:key="alert-{{ $item['id'] }}">
-                    <button type="button" wire:click="markRead('{{ $item['id'] }}')" class="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-start hover:bg-canvas">
+                    <button type="button" wire:click="open('{{ $item['id'] }}')" class="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-start hover:bg-canvas">
                         <span class="flex size-7 shrink-0 items-center justify-center rounded-full {{ $tones[$item['tone']] }}">
                             <flux:icon :name="$item['icon']" variant="micro" class="size-3.5" />
                         </span>

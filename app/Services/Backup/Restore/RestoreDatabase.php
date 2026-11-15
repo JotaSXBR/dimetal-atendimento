@@ -180,7 +180,7 @@ class RestoreDatabase
         $from = $backupAt->greaterThan($floor) ? $backupAt : $floor;
 
         Channel::query()->where('active', true)->where('status', ChannelStatus::WORKING->value)->get()
-            ->each(fn (Channel $channel) => RecoverMessagesJob::dispatch($channel->id, $from, $now, true));
+            ->each(fn (Channel $channel) => RecoverMessagesJob::dispatch($channel->id, $from, $now, false));
     }
 
     private function succeed(RestoreRun $run): void

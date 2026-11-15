@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Alertas;
 
+use App\Enums\TicketStatus;
+use App\Enums\UserRole;
 use App\Livewire\Alerts\Bell;
 use App\Models\Channel;
+use App\Models\Sector;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\ChannelDown;
@@ -119,5 +122,56 @@ class BellTest extends TestCase
     public function test_o_menu_mostra_o_sino(): void
     {
         $this->actingAs(User::factory()->create())->get(route('inbox'))->assertOk()->assertSee('Alertas');
+    }
+
+    public function test_clicar_no_alerta_de_sla_marca_como_lido_e_abre_o_ticket(): void
+    {
+        $eu = User::factory()->create(['role' => UserRole::ADMIN]);
+        $ticket = Ticket::factory()->create(['protocol' => '2026-000777']);
+        $eu->notify(new SlaBreached($ticket));
+        $id = $eu->notifications()->firstOrFail()->id;
+
+        $this->actingAs($eu);
+
+        Livewire::test(Bell::class)->call('open', $id)->assertRedirect(route('inbox', ['ticket' => $ticket->id]));
+        $this->assertNotNull($eu->notifications()->firstOrFail()->read_at);
+    }
+
+    public function test_alerta_sem_ticket_so_marca_como_lido(): void
+    {
+        $eu = User::factory()->create();
+        $eu->notify(new ChannelDown(Channel::factory()->create()));
+        $id = $eu->notifications()->firstOrFail()->id;
+
+        $this->actingAs($eu);
+
+        Livewire::test(Bell::class)->call('open', $id)->assertNoRedirect();
+        $this->assertNotNull($eu->notifications()->firstOrFail()->read_at);
+    }
+
+    public function test_ticket_que_o_usuario_nao_ve_mais_nao_ganha_link(): void
+    {
+        $atendente = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $ticket = Ticket::factory()->create(['sector_id' => Sector::factory()->create()->id, 'status' => TicketStatus::EM_ATENDIMENTO]);
+        $atendente->notify(new SlaBreached($ticket));
+        $id = $atendente->notifications()->firstOrFail()->id;
+
+        $this->actingAs($atendente);
+
+        Livewire::test(Bell::class)->call('open', $id)->assertNoRedirect();
+        $this->assertNotNull($atendente->notifications()->firstOrFail()->read_at);
+    }
+
+    public function test_abrir_alerta_de_outro_usuario_nao_marca_nada(): void
+    {
+        $dono = User::factory()->create();
+        $outro = User::factory()->create(['role' => UserRole::ADMIN]);
+        $dono->notify(new SlaBreached(Ticket::factory()->create()));
+        $id = $dono->notifications()->firstOrFail()->id;
+
+        $this->actingAs($outro);
+
+        Livewire::test(Bell::class)->call('open', $id)->assertNoRedirect();
+        $this->assertNull($dono->notifications()->firstOrFail()->read_at);
     }
 }

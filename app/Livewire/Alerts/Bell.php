@@ -29,6 +29,25 @@ class Bell extends Component
         Auth::user()?->unreadNotifications()->whereKey($id)->first()?->markAsRead();
     }
 
+    /** O clique no alerta: marca como lido e, se ele fala de um ticket que o usuário ainda pode ver, abre a conversa. */
+    public function open(string $id): void
+    {
+        $user = Auth::user();
+        $notification = $user?->notifications()->whereKey($id)->first();
+
+        if ($user === null || $notification === null) {
+            return;
+        }
+
+        $notification->markAsRead();
+
+        $ticketId = $this->ticketId($notification->data);
+
+        if ($ticketId > 0 && Ticket::query()->readableBy($user)->whereKey($ticketId)->exists()) {
+            $this->redirect(route('inbox', ['ticket' => $ticketId]), navigate: true);
+        }
+    }
+
     public function markAllRead(): void
     {
         Auth::user()?->unreadNotifications()->update(['read_at' => now()]);
