@@ -9,7 +9,7 @@
 <div>
     <div role="alert" aria-live="assertive">
         @if ($down->isNotEmpty())
-            <div class="{{ $edge }} flex items-center gap-x-3 max-sm:flex-wrap max-sm:gap-y-1 bg-danger px-5 py-1.5 text-xs text-danger-foreground" data-alert="connection-down">
+            <div class="{{ $edge }} flex items-center gap-x-3 max-sm:flex-wrap max-sm:gap-y-1 bg-danger px-5 py-1.5 text-xs text-danger-foreground" data-alert="connection-down" data-dismiss="whatsapp" data-signature="{{ $downSignature }}">
                 <flux:icon.exclamation-triangle variant="mini" class="size-4 shrink-0" />
                 <p class="min-w-0 flex-1 sm:truncate" title="WhatsApp desconectado · {{ $downRest }}"><strong>WhatsApp desconectado</strong> · {{ $downRest }}</p>
                 <div class="flex shrink-0 items-center gap-2 max-sm:w-full max-sm:flex-wrap">
@@ -18,6 +18,7 @@
                     @if ($canSeeChannels)
                         <flux:button size="xs" variant="ghost" :href="route('configuracoes.canais')" wire:navigate class="border border-white text-danger-foreground! hover:bg-white/10!">Ver canais</flux:button>
                     @endif
+                    <x-alert-dismiss label="Dispensar aviso de WhatsApp desconectado" class="text-danger-foreground! hover:bg-white/10!" />
                 </div>
             </div>
         @endif
@@ -34,10 +35,11 @@
         @endif
 
         @if ($breached > 0)
-            <div class="{{ $edge }} flex items-center gap-x-3 max-sm:flex-wrap max-sm:gap-y-1 border-b border-line bg-danger/10 px-5 py-1.5 text-xs text-danger" data-alert="sla-breached">
+            <div class="{{ $edge }} flex items-center gap-x-3 max-sm:flex-wrap max-sm:gap-y-1 border-b border-line bg-danger/10 px-5 py-1.5 text-xs text-danger" data-alert="sla-breached" data-dismiss="sla" data-signature="{{ $breached }}">
                 <flux:icon.clock variant="mini" class="size-4 shrink-0" />
                 <p class="min-w-0 flex-1 sm:truncate" title="SLA estourado · {{ $breachedRest }}"><strong>SLA estourado</strong> · {{ $breachedRest }}</p>
                 <flux:button size="xs" variant="danger" :href="route('inbox')" wire:navigate class="shrink-0">Abrir atendimento</flux:button>
+                <x-alert-dismiss label="Dispensar aviso de SLA estourado" class="text-danger!" />
             </div>
         @endif
     </div>

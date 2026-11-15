@@ -63,6 +63,8 @@ class Banner extends Component
 
         return view('livewire.alerts.banner', [
             'down' => $down,
+            // Muda quando outro canal cai ou o mesmo cai de novo: a faixa dispensada volta (resources/js/alert-dismiss.js).
+            'downSignature' => $down->map(fn (Channel $channel): string => $channel->id.'@'.($channel->down_since->timestamp ?? 0))->sort()->values()->join(','),
             // Voltou, mas outro canal segue caído: a faixa crítica já diz isso, não mostra a confirmação por cima.
             'recovered' => $down->isEmpty() ? $this->recovered : '',
             'breached' => $user === null ? 0 : app(AlertRecipients::class)->breachedFor($user)->count(),

@@ -31,6 +31,7 @@ function start(id) {
     let audio = openAudio(AudioClass);
     let leader = false;
     let offline = false;
+    let dropToken = '0'; // identifica a queda atual da conexão com o servidor (a assinatura da faixa): uma queda nova tem outro token
     const loops = new Map();
 
     const openTicket = () => {
@@ -162,6 +163,8 @@ function start(id) {
 
         if (off) {
             off.hidden = !offline;
+            // O `wire:navigate` troca o body e a faixa nova nasce com assinatura "0": reaplica a da queda atual.
+            off.dataset.signature = dropToken;
         }
 
         if (strip) {
@@ -251,6 +254,11 @@ function start(id) {
 
         if (down !== offline) {
             offline = down;
+
+            if (down) {
+                dropToken = String(Date.now());
+            }
+
             sync();
 
             if (!down && window.Livewire) {

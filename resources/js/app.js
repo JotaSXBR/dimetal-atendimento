@@ -20,6 +20,7 @@ import './tag-picker';
 import './popover';
 import './confirm-dialog';
 import './command-palette';
+import './alert-dismiss';
 import './queue-search';
 import './message-menu';
 import './settings-ui';

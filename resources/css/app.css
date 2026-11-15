@@ -215,3 +215,8 @@ flow-node { display: block; }
 @media (min-width: 1100px) {
     .flow-canvas rete-minimap { display: block; filter: grayscale(1); }
 }
+
+/* Faixa de aviso dispensada (resources/js/alert-dismiss.js): some da tela e do leitor de tela, mas fica no DOM (o som repetido depende dela). */
+[data-dismissed] {
+    display: none !important;
+}

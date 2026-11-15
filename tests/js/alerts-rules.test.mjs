@@ -112,3 +112,80 @@ test('com alerta crítico ativo e o áudio ainda bloqueado, a faixa volta mesmo 
     assert.equal(audioStripHidden(comSom, { state: 'running' }, true, true), true);
     assert.equal(audioStripHidden({ sound: {} }, { state: 'suspended' }, true, true), true);
 });
+
+test('DISMISSALS: os tempos combinados (1, 2 e 3 min; som só até a próxima visita)', async () => {
+    const { DISMISSALS } = await import('../../resources/js/alerts-rules.js');
+
+    assert.equal(DISMISSALS.offline.ms, 60000);
+    assert.equal(DISMISSALS.whatsapp.ms, 120000);
+    assert.equal(DISMISSALS.sla.ms, 180000);
+    assert.equal(DISMISSALS.audio.ms, null);
+    assert.equal(DISMISSALS.audio.store, 'session');
+    assert.equal(DISMISSALS.offline.store, 'local');
+});
+
+test('isDismissed: vale dentro do prazo e volta quando vence', async () => {
+    const { dismissEntry, isDismissed } = await import('../../resources/js/alerts-rules.js');
+    const entry = dismissEntry('offline', NOW, '1');
+
+    assert.equal(entry.until, NOW + 60000);
+    assert.equal(isDismissed(entry, NOW + 59999, '1', 'offline'), true);
+    assert.equal(isDismissed(entry, NOW + 60000, '1', 'offline'), false);
+});
+
+test('isDismissed: assinatura diferente (conexão caiu de novo, outro canal) volta antes do prazo', async () => {
+    const { dismissEntry, isDismissed } = await import('../../resources/js/alerts-rules.js');
+
+    assert.equal(isDismissed(dismissEntry('offline', NOW, '1'), NOW + 1000, '2', 'offline'), false);
+    assert.equal(isDismissed(dismissEntry('whatsapp', NOW, '3@100'), NOW + 1000, '3@100,4@200', 'whatsapp'), false);
+    assert.equal(isDismissed(dismissEntry('whatsapp', NOW, '3@100'), NOW + 1000, '3@100', 'whatsapp'), true);
+});
+
+test('isDismissed: SLA só volta quando o número aumenta (15 → 14 segue escondida)', async () => {
+    const { dismissEntry, isDismissed } = await import('../../resources/js/alerts-rules.js');
+    const entry = dismissEntry('sla', NOW, '15');
+
+    assert.equal(isDismissed(entry, NOW + 1000, '15', 'sla'), true);
+    assert.equal(isDismissed(entry, NOW + 1000, '14', 'sla'), true);
+    assert.equal(isDismissed(entry, NOW + 1000, '16', 'sla'), false);
+});
+
+test('isDismissed: o som dispensado não vence no mesmo acesso', async () => {
+    const { dismissEntry, isDismissed } = await import('../../resources/js/alerts-rules.js');
+    const entry = dismissEntry('audio', NOW, '');
+
+    assert.equal(entry.until, null);
+    assert.equal(isDismissed(entry, NOW + 10 * 3600 * 1000, '', 'audio'), true);
+});
+
+test('isDismissed: entrada ausente, corrompida ou de tipo errado não esconde nada', async () => {
+    const { isDismissed } = await import('../../resources/js/alerts-rules.js');
+
+    for (const entry of [null, undefined, 'x', 1, {}, { until: 'amanhã', signature: '1' }, { until: NOW + 1000 }, { until: NaN, signature: '1' }]) {
+        assert.equal(isDismissed(entry, NOW, '1', 'offline'), false);
+    }
+
+    assert.equal(isDismissed({ until: NOW + 1000, signature: '1' }, NOW, '1', 'desconhecido'), false);
+});
+
+test('isDismissed: prazo absurdamente no futuro (relógio mudou) não esconde para sempre', async () => {
+    const { isDismissed } = await import('../../resources/js/alerts-rules.js');
+
+    assert.equal(isDismissed({ until: NOW + 365 * 24 * 3600 * 1000, signature: '1' }, NOW, '1', 'offline'), false);
+});
+
+test('isDismissed: WhatsApp só volta com canal novo ou queda nova; um canal que se recupera não reabre', async () => {
+    const { dismissEntry, isDismissed } = await import('../../resources/js/alerts-rules.js');
+    const entry = dismissEntry('whatsapp', NOW, '3@100,4@200');
+
+    assert.equal(isDismissed(entry, NOW + 1000, '4@200', 'whatsapp'), true);
+    assert.equal(isDismissed(entry, NOW + 1000, '3@100,4@200', 'whatsapp'), true);
+    assert.equal(isDismissed(entry, NOW + 1000, '3@100,4@200,5@300', 'whatsapp'), false);
+    assert.equal(isDismissed(entry, NOW + 1000, '3@999', 'whatsapp'), false);
+});
+
+test('isDismissed: assinatura de SLA que não é número não esconde nada', async () => {
+    const { isDismissed } = await import('../../resources/js/alerts-rules.js');
+
+    assert.equal(isDismissed({ until: NOW + 1000, signature: 'abc' }, NOW, '16', 'sla'), false);
+});

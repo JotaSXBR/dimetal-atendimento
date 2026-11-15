@@ -79,3 +79,55 @@ export function audioStripHidden(settings, audio, remembered = false, critical =
 
     return silent || (remembered && !critical);
 }
+
+// Dispensar uma faixa do topo: esconde por um tempo e ela volta sozinha. `ms: null` = até a próxima visita (sessionStorage).
+// `grows`: só volta quando o número aumenta (SLA). `set`: a assinatura é uma lista (canais fora do ar) e só volta com item novo (um canal que se
+// recupera não reabre a faixa). Nos demais, qualquer assinatura diferente (o problema mudou) traz a faixa de volta.
+export const DISMISSALS = {
+    offline: { ms: 60000, store: 'local' },
+    whatsapp: { ms: 120000, store: 'local', set: true },
+    sla: { ms: 180000, store: 'local', grows: true },
+    audio: { ms: null, store: 'session' },
+};
+
+/** A entrada que o navegador guarda ao dispensar a faixa `kind`. */
+export function dismissEntry(kind, now, signature) {
+    const ms = DISMISSALS[kind]?.ms ?? null;
+
+    return { until: ms === null ? null : now + ms, signature: String(signature) };
+}
+
+/** A dispensa ainda vale? Entrada inválida, vencida, de prazo absurdo ou com o problema pior não esconde nada. */
+export function isDismissed(entry, now, signature, kind) {
+    const rule = DISMISSALS[kind];
+
+    if (!rule || typeof entry !== 'object' || entry === null || typeof entry.signature !== 'string') {
+        return false;
+    }
+
+    const { until } = entry;
+
+    if (until !== null) {
+        // Relógio mudado para trás: um prazo além do dobro do combinado é lixo, não dispensa.
+        if (typeof until !== 'number' || !Number.isFinite(until) || now >= until || until - now > rule.ms * 2) {
+            return false;
+        }
+    } else if (rule.ms !== null) {
+        return false;
+    }
+
+    if (rule.grows) {
+        const saved = Number(entry.signature);
+
+        // Assinatura guardada que não é número (entrada corrompida) não esconde nada.
+        return Number.isFinite(saved) && entry.signature !== '' && !(Number(signature) > saved);
+    }
+
+    if (rule.set) {
+        const saved = new Set(entry.signature.split(','));
+
+        return signature.split(',').every((item) => saved.has(item));
+    }
+
+    return signature === entry.signature;
+}
