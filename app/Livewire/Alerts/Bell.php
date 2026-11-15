@@ -15,6 +15,9 @@ class Bell extends Component
 {
     private const LIMIT = 20;
 
+    /** Quantos alertas recentes entram na conta antes de juntar os de SLA repetidos. */
+    private const WINDOW = 200;
+
     /** @return array<string, string> */
     public function getListeners(): array
     {
@@ -26,7 +29,31 @@ class Bell extends Component
 
     public function markRead(string $id): void
     {
-        Auth::user()?->unreadNotifications()->whereKey($id)->first()?->markAsRead();
+        $notification = Auth::user()?->unreadNotifications()->whereKey($id)->first();
+
+        if ($notification !== null) {
+            $this->read($notification);
+        }
+    }
+
+    /** Marca como lido e, no SLA, também os outros do mesmo ticket (a lista mostra só o mais recente por ticket). */
+    private function read(DatabaseNotification $notification): void
+    {
+        $notification->markAsRead();
+
+        $ticketId = $this->slaTicketId($notification);
+
+        if ($ticketId > 0) {
+            Auth::user()?->unreadNotifications()->get()
+                ->filter(fn (DatabaseNotification $other): bool => $this->slaTicketId($other) === $ticketId)
+                ->each(fn (DatabaseNotification $other) => $other->markAsRead());
+        }
+    }
+
+    /** O ticket de um alerta de SLA (aviso ou estouro); 0 nos demais alertas. */
+    private function slaTicketId(DatabaseNotification $notification): int
+    {
+        return in_array($notification->data['kind'] ?? null, ['sla_warn', 'sla_breached'], true) ? $this->ticketId($notification->data) : 0;
     }
 
     /** O clique no alerta: marca como lido e, se ele fala de um ticket que o usuário ainda pode ver, abre a conversa. */
@@ -39,7 +66,7 @@ class Bell extends Component
             return;
         }
 
-        $notification->markAsRead();
+        $this->read($notification);
 
         $ticketId = $this->ticketId($notification->data);
 
@@ -61,11 +88,29 @@ class Bell extends Component
             return view('livewire.alerts.bell', ['items' => [], 'unread' => 0]);
         }
 
-        $items = $user->notifications()
+        // O relógio de SLA avisa uma vez por espera: um ticket que volta a esperar gera outro par aviso + estouro. A lista mostra só o mais
+        // recente por ticket (o estouro vem depois do aviso) e o contador desconta os que ficaram escondidos.
+        $all = $user->notifications()
             ->where('created_at', '>=', now()->subDays(PurgeNotificationsCommand::RETENTION_DAYS))
             ->latest()
-            ->limit(self::LIMIT)
+            ->limit(self::WINDOW)
             ->get();
+
+        $seen = [];
+        $hiddenUnread = 0;
+        $items = $all->filter(function (DatabaseNotification $n) use (&$seen, &$hiddenUnread): bool {
+            $ticketId = $this->slaTicketId($n);
+
+            if ($ticketId === 0 || ! isset($seen[$ticketId])) {
+                $seen[$ticketId] = true;
+
+                return true;
+            }
+
+            $hiddenUnread += $n->read_at === null ? 1 : 0;
+
+            return false;
+        })->take(self::LIMIT)->values();
 
         $ids = $items->map(fn (DatabaseNotification $n): int => $this->ticketId($n->data))->filter()->unique()->values()->all();
         // Só mostra o protocolo de ticket que o usuário ainda pode ver (o ticket pode ter sido transferido depois do alerta).
@@ -74,7 +119,7 @@ class Bell extends Component
 
         return view('livewire.alerts.bell', [
             'items' => $items->map(fn (DatabaseNotification $n): array => $this->present($n, $tickets))->all(),
-            'unread' => $user->unreadNotifications()->count(),
+            'unread' => max(0, $user->unreadNotifications()->count() - $hiddenUnread),
         ]);
     }
 
