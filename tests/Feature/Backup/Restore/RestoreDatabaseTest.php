@@ -335,7 +335,8 @@ class RestoreDatabaseTest extends TestCase
         Queue::assertPushed(RecoverMessagesJob::class, fn (RecoverMessagesJob $job): bool => $job->channelId === $ok->id
             && $job->from->equalTo(CarbonImmutable::parse('2026-11-12 16:00:00', 'UTC'))
             && $job->to->equalTo(CarbonImmutable::parse(self::NOW, 'UTC'))
-            && $job->notifyAlways);
+            // Recuperação pós-restauração que não trouxe nada não vira alerta ("0 mensagens em 0 conversas" no sino de todo mundo).
+            && ! $job->notifyAlways);
     }
 
     public function test_backup_antigo_recupera_no_maximo_72h(): void

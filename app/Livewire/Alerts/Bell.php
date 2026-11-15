@@ -4,6 +4,7 @@ namespace App\Livewire\Alerts;
 
 use App\Console\Commands\PurgeNotificationsCommand;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
@@ -14,6 +15,9 @@ use Livewire\Component;
 class Bell extends Component
 {
     private const LIMIT = 20;
+
+    /** Quantos alertas recentes entram na conta antes de juntar os de SLA repetidos. */
+    private const WINDOW = 200;
 
     /** @return array<string, string> */
     public function getListeners(): array
@@ -26,7 +30,50 @@ class Bell extends Component
 
     public function markRead(string $id): void
     {
-        Auth::user()?->unreadNotifications()->whereKey($id)->first()?->markAsRead();
+        $notification = Auth::user()?->unreadNotifications()->whereKey($id)->first();
+
+        if ($notification !== null) {
+            $this->read($notification);
+        }
+    }
+
+    /** Marca como lido e, no SLA, também os outros do mesmo ticket (a lista mostra só o mais recente por ticket). */
+    private function read(DatabaseNotification $notification): void
+    {
+        $notification->markAsRead();
+
+        $ticketId = $this->slaTicketId($notification);
+
+        if ($ticketId > 0) {
+            Auth::user()?->unreadNotifications()->get()
+                ->filter(fn (DatabaseNotification $other): bool => $this->slaTicketId($other) === $ticketId)
+                ->each(fn (DatabaseNotification $other) => $other->markAsRead());
+        }
+    }
+
+    /** O ticket de um alerta de SLA (aviso ou estouro); 0 nos demais alertas. */
+    private function slaTicketId(DatabaseNotification $notification): int
+    {
+        return in_array($notification->data['kind'] ?? null, ['sla_warn', 'sla_breached'], true) ? $this->ticketId($notification->data) : 0;
+    }
+
+    /** O clique no alerta: marca como lido e, se ele fala de um ticket que o usuário ainda pode ver, abre a conversa. */
+    public function open(string $id): void
+    {
+        $user = Auth::user();
+        $notification = $user?->notifications()->whereKey($id)->first();
+
+        if ($user === null || $notification === null) {
+            return;
+        }
+
+        $this->read($notification);
+
+        $ticketId = $this->ticketId($notification->data);
+
+        if ($ticketId > 0 && Ticket::query()->readableBy($user)->whereKey($ticketId)->exists()) {
+            $this->redirect(route('inbox', ['ticket' => $ticketId]), navigate: true);
+        }
     }
 
     public function markAllRead(): void
@@ -42,11 +89,26 @@ class Bell extends Component
             return view('livewire.alerts.bell', ['items' => [], 'unread' => 0]);
         }
 
-        $items = $user->notifications()
+        // O relógio de SLA avisa uma vez por espera: um ticket que volta a esperar gera outro par aviso + estouro. A lista mostra só o mais
+        // recente por ticket (o estouro vem depois do aviso) e o contador desconta os que ficaram escondidos.
+        $all = $user->notifications()
             ->where('created_at', '>=', now()->subDays(PurgeNotificationsCommand::RETENTION_DAYS))
             ->latest()
-            ->limit(self::LIMIT)
+            ->limit(self::WINDOW)
             ->get();
+
+        $seen = [];
+        $items = $all->filter(function (DatabaseNotification $n) use (&$seen): bool {
+            $ticketId = $this->slaTicketId($n);
+
+            if ($ticketId === 0 || ! isset($seen[$ticketId])) {
+                $seen[$ticketId] = true;
+
+                return true;
+            }
+
+            return false;
+        })->take(self::LIMIT)->values();
 
         $ids = $items->map(fn (DatabaseNotification $n): int => $this->ticketId($n->data))->filter()->unique()->values()->all();
         // Só mostra o protocolo de ticket que o usuário ainda pode ver (o ticket pode ter sido transferido depois do alerta).
@@ -55,8 +117,17 @@ class Bell extends Component
 
         return view('livewire.alerts.bell', [
             'items' => $items->map(fn (DatabaseNotification $n): array => $this->present($n, $tickets))->all(),
-            'unread' => $user->unreadNotifications()->count(),
+            'unread' => $this->unreadCount($user),
         ]);
+    }
+
+    /** O selo: um por ticket de SLA (como a lista) e um por alerta dos demais, sobre todos os não lidos, sem janela. */
+    private function unreadCount(User $user): int
+    {
+        $unread = $user->unreadNotifications()->get(['id', 'data']);
+        $slaTickets = $unread->map(fn (DatabaseNotification $n): int => $this->slaTicketId($n))->filter()->unique()->count();
+
+        return $slaTickets + $unread->filter(fn (DatabaseNotification $n): bool => $this->slaTicketId($n) === 0)->count();
     }
 
     /** @param  array<mixed>  $data */
