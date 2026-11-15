@@ -243,4 +243,20 @@ class BellTest extends TestCase
 
         $this->assertCount(2, Livewire::test(Bell::class)->viewData('items'));
     }
+
+    public function test_o_selo_conta_um_por_ticket_mesmo_com_o_alerta_antigo_fora_da_janela(): void
+    {
+        $eu = User::factory()->create(['role' => UserRole::ADMIN]);
+        $ticket = Ticket::factory()->create();
+        $this->notifyAt($eu, new SlaBreached($ticket), now()->subDays(10)->toDateTimeString());
+        $this->notifyAt($eu, new SlaBreached($ticket), now()->subMinutes(5)->toDateTimeString());
+        $this->notifyAt($eu, new ChannelDown($ticket->channel), now()->subMinutes(2)->toDateTimeString());
+
+        $this->actingAs($eu);
+
+        $screen = Livewire::test(Bell::class);
+
+        $this->assertCount(2, $screen->viewData('items'));
+        $screen->assertViewHas('unread', 2);
+    }
 }

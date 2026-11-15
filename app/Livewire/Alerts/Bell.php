@@ -4,6 +4,7 @@ namespace App\Livewire\Alerts;
 
 use App\Console\Commands\PurgeNotificationsCommand;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
@@ -97,8 +98,7 @@ class Bell extends Component
             ->get();
 
         $seen = [];
-        $hiddenUnread = 0;
-        $items = $all->filter(function (DatabaseNotification $n) use (&$seen, &$hiddenUnread): bool {
+        $items = $all->filter(function (DatabaseNotification $n) use (&$seen): bool {
             $ticketId = $this->slaTicketId($n);
 
             if ($ticketId === 0 || ! isset($seen[$ticketId])) {
@@ -106,8 +106,6 @@ class Bell extends Component
 
                 return true;
             }
-
-            $hiddenUnread += $n->read_at === null ? 1 : 0;
 
             return false;
         })->take(self::LIMIT)->values();
@@ -119,8 +117,17 @@ class Bell extends Component
 
         return view('livewire.alerts.bell', [
             'items' => $items->map(fn (DatabaseNotification $n): array => $this->present($n, $tickets))->all(),
-            'unread' => max(0, $user->unreadNotifications()->count() - $hiddenUnread),
+            'unread' => $this->unreadCount($user),
         ]);
+    }
+
+    /** O selo: um por ticket de SLA (como a lista) e um por alerta dos demais, sobre todos os não lidos, sem janela. */
+    private function unreadCount(User $user): int
+    {
+        $unread = $user->unreadNotifications()->get(['id', 'data']);
+        $slaTickets = $unread->map(fn (DatabaseNotification $n): int => $this->slaTicketId($n))->filter()->unique()->count();
+
+        return $slaTickets + $unread->filter(fn (DatabaseNotification $n): bool => $this->slaTicketId($n) === 0)->count();
     }
 
     /** @param  array<mixed>  $data */
