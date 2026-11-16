@@ -49,8 +49,7 @@
             $audio => 'audio',
             default => 'below',
         };
-        // Com o menu (chevron de 24 px no canto), a bolha curta ganha largura para o horário não ficar por baixo dele:
-        // texto ~19 + folga 12 + horário ~48 + chevron além do padding 16 + padding 12 = ~107 px, logo min-w-28 (112 px).
+        // Com o menu, o botão (24 px a 4 px da borda) fica no padding: pe-9 (36 px) reserva o espaço e nem texto nem horário passam por baixo dele.
         $hasMenu = ! $readonly && ! $message->revoked_at && (auth()->user()?->can('reply', $message) ?? false);
         $resend = $out && ! $readonly && $message->delivery_status === \App\Enums\DeliveryStatus::FAILED
             ? app(\App\Services\Inbox\ResendTicketMessage::class)->kind($message, auth()->user())
@@ -58,7 +57,7 @@
     @endphp
 
     <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }} {{ $message->reactions->isNotEmpty() ? 'mb-3' : '' }}">
-        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $hasMenu ? 'min-w-28' : '' }} {{ match (true) {
+        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl py-2 text-sm text-ink {{ $hasMenu ? 'ps-3 pe-9' : 'px-3' }} {{ match (true) {
             // Cada tipo tem a sua cara: cliente (branca com borda), nossa (neutro suave), bot (tom do bot) e enviada pelo celular
             // (tracejada). O âmbar fica só para nota interna e aviso.
             $outside => 'border border-dashed border-ink-3 bg-surface',
@@ -136,59 +135,57 @@
                 <flux:button type="button" size="xs" variant="subtle" class="mt-1" wire:click="$parent.resend({{ $message->id }}, true)" data-confirm="Esta mensagem pode já ter sido enviada. Confira no celular do cliente antes de reenviar. Reenviar mesmo assim?" data-confirm-label="Reenviar" data-confirm-tone="primary">Reenviar</flux:button>
             @endif
 
-            @if (! $readonly && ! $message->revoked_at)
-                @can('reply', $message)
-                    {{-- O menu é `fixed`: dentro da área rolável da conversa ele seria cortado pelo `overflow` e passaria por baixo do campo de resposta.
-                         A posição vem do botão: abaixo dele, ou acima se não couber, e sempre dentro da tela. --}}
-                    <div
-                        x-data="messageMenu"
-                        x-on:scroll.window.capture="open = false"
-                        x-on:resize.window="open = false"
-                        class="absolute end-1 top-1"
-                    >
-                        <button type="button" data-testid="message-menu-button" x-ref="button" x-on:click="toggle()" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="inline-flex min-h-6 min-w-6 items-center justify-center rounded bg-surface/80 px-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-ink focus-visible:opacity-100 [@media(hover:none)]:opacity-100">
-                            <svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
-                        </button>
-                        <div x-ref="menu" x-cloak x-show="open" x-bind:style="style" x-bind:class="placed ? 'opacity-100 scale-100' : 'opacity-0 scale-95'" x-transition:leave="transition duration-100 ease-out" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="fixed z-50 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]">
-                            @can('react', $message)
-                                <div class="flex gap-0.5 rounded-full border border-line bg-canvas px-1 py-0.5" role="group" aria-label="Reagir">
-                                    @foreach (\App\Services\Inbox\ReactToMessage::EMOJIS as $emoji)
-                                        <button type="button" role="menuitem" wire:click="$parent.react({{ $message->id }}, '{{ $emoji }}')" class="rounded px-1 py-0.5 text-base hover:bg-canvas">{{ $emoji }}</button>
-                                    @endforeach
-                                </div>
+            @if ($hasMenu)
+                {{-- O menu é `fixed`: dentro da área rolável da conversa ele seria cortado pelo `overflow` e passaria por baixo do campo de resposta.
+                     A posição vem do botão: abaixo dele, ou acima se não couber, e sempre dentro da tela. --}}
+                <div
+                    x-data="messageMenu"
+                    x-on:scroll.window.capture="open = false"
+                    x-on:resize.window="open = false"
+                    class="absolute end-1 top-1"
+                >
+                    <button type="button" data-testid="message-menu-button" x-ref="button" x-on:click="toggle()" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="inline-flex min-h-6 min-w-6 items-center justify-center rounded bg-surface/80 px-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-ink focus-visible:opacity-100 [@media(hover:none)]:opacity-100">
+                        <svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
+                    </button>
+                    <div x-ref="menu" x-cloak x-show="open" x-bind:style="style" x-bind:class="placed ? 'opacity-100 scale-100' : 'opacity-0 scale-95'" x-transition:leave="transition duration-100 ease-out" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="fixed z-50 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]">
+                        @can('react', $message)
+                            <div class="flex gap-0.5 rounded-full border border-line bg-canvas px-1 py-0.5" role="group" aria-label="Reagir">
+                                @foreach (\App\Services\Inbox\ReactToMessage::EMOJIS as $emoji)
+                                    <button type="button" role="menuitem" wire:click="$parent.react({{ $message->id }}, '{{ $emoji }}')" class="rounded px-1 py-0.5 text-base hover:bg-canvas">{{ $emoji }}</button>
+                                @endforeach
+                            </div>
+                        @endcan
+                        <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="mt-1 flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.7 3.3a.75.75 0 0 1 0 1.06L4.86 7.2H11a5 5 0 0 1 5 5v2.05a.75.75 0 0 1-1.5 0V12.2a3.5 3.5 0 0 0-3.5-3.5H4.86L7.7 11.54a.75.75 0 1 1-1.06 1.06l-4.12-4.12a.75.75 0 0 1 0-1.06l4.12-4.12a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/></svg>Responder</button>
+                        @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
+                            <button type="button" role="menuitem" x-on:click="copy(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h6A1.5 1.5 0 0 1 16 3.5v8a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 7 11.5v-8Z"/><path d="M4 6a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 17h6a1.5 1.5 0 0 0 1.5-1.5V15H8.5A3.5 3.5 0 0 1 5 11.5V6H4Z"/></svg>Copiar</button>
+                        @endif
+                        @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
+                            @can('reply', $message->ticket)
+                                <button type="button" role="menuitem" x-on:click="noteFrom(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 0-2 2v9.5a.5.5 0 0 0 .8.4L5.67 11H16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm2 3.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 5.25Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd"/></svg>Adicionar texto às notas</button>
                             @endcan
-                            <button type="button" role="menuitem" wire:click="$parent.reply({{ $message->id }})" class="mt-1 flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.7 3.3a.75.75 0 0 1 0 1.06L4.86 7.2H11a5 5 0 0 1 5 5v2.05a.75.75 0 0 1-1.5 0V12.2a3.5 3.5 0 0 0-3.5-3.5H4.86L7.7 11.54a.75.75 0 1 1-1.06 1.06l-4.12-4.12a.75.75 0 0 1 0-1.06l4.12-4.12a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/></svg>Responder</button>
-                            @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                                <button type="button" role="menuitem" x-on:click="copy(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h6A1.5 1.5 0 0 1 16 3.5v8a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 7 11.5v-8Z"/><path d="M4 6a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 17h6a1.5 1.5 0 0 0 1.5-1.5V15H8.5A3.5 3.5 0 0 1 5 11.5V6H4Z"/></svg>Copiar</button>
-                            @endif
-                            @if ($message->body !== '' && ! in_array($message->type, ['location', 'contact'], true))
-                                @can('reply', $message->ticket)
-                                    <button type="button" role="menuitem" x-on:click="noteFrom(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 0-2 2v9.5a.5.5 0 0 0 .8.4L5.67 11H16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm2 3.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 5.25Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd"/></svg>Adicionar texto às notas</button>
-                                @endcan
-                            @endif
-                            <button type="button" role="menuitem" x-on:click.stop="info = ! info" x-bind:aria-expanded="info" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.25v3.25a.75.75 0 0 0 1.5 0V9.75A.75.75 0 0 0 10 9H9Z" clip-rule="evenodd"/></svg>Dados da mensagem</button>
-                            <dl x-cloak x-show="info" class="mx-2 mb-1 space-y-0.5 border-l-2 border-line ps-2 font-mono text-xs text-ink-3">
-                                @if ($out)
-                                    <div class="flex justify-between gap-3"><dt>Enviada</dt><dd>{{ $message->sent_at->timezone($tz)->format('d/m H:i') }}</dd></div>
-                                    @if ($message->delivered_at)
-                                        <div class="flex justify-between gap-3"><dt>Entregue</dt><dd>{{ $message->delivered_at->timezone($tz)->format('d/m H:i') }}</dd></div>
-                                    @endif
-                                    @if ($message->read_at)
-                                        <div class="flex justify-between gap-3"><dt>Lida</dt><dd>{{ $message->read_at->timezone($tz)->format('d/m H:i') }}</dd></div>
-                                    @endif
-                                @else
-                                    <div class="flex justify-between gap-3"><dt>Recebida</dt><dd>{{ $message->sent_at->timezone($tz)->format('d/m H:i') }}</dd></div>
+                        @endif
+                        <button type="button" role="menuitem" x-on:click.stop="info = ! info" x-bind:aria-expanded="info" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.25v3.25a.75.75 0 0 0 1.5 0V9.75A.75.75 0 0 0 10 9H9Z" clip-rule="evenodd"/></svg>Dados da mensagem</button>
+                        <dl x-cloak x-show="info" class="mx-2 mb-1 space-y-0.5 border-l-2 border-line ps-2 font-mono text-xs text-ink-3">
+                            @if ($out)
+                                <div class="flex justify-between gap-3"><dt>Enviada</dt><dd>{{ $message->sent_at->timezone($tz)->format('d/m H:i') }}</dd></div>
+                                @if ($message->delivered_at)
+                                    <div class="flex justify-between gap-3"><dt>Entregue</dt><dd>{{ $message->delivered_at->timezone($tz)->format('d/m H:i') }}</dd></div>
                                 @endif
-                            </dl>
-                            @can('edit', $message)
-                                <button type="button" role="menuitem" x-on:click="startEdit(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m13.9 3.6 2.5 2.5a1 1 0 0 1 0 1.4l-8.2 8.2-3.6.9a.5.5 0 0 1-.6-.6l.9-3.6 8.2-8.2a1 1 0 0 1 1.4 0Z"/></svg>Editar</button>
-                            @endcan
-                            @can('revoke', $message)
-                                <button type="button" role="menuitem" wire:click="$parent.revoke({{ $message->id }})" data-confirm="Apagar esta mensagem para todos? O cliente deixa de vê-la; o painel guarda o original." data-confirm-label="Apagar para todos" data-confirm-tone="danger" class="mt-1 flex w-full items-center gap-2 rounded border-t border-line px-2 py-1 pt-1.5 text-start text-danger hover:bg-canvas"><svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 2a1 1 0 0 0-1 1v1H4.5a.75.75 0 0 0 0 1.5h.4l.7 10a2 2 0 0 0 2 1.9h4.8a2 2 0 0 0 2-1.9l.7-10h.4a.75.75 0 0 0 0-1.5H13V3a1 1 0 0 0-1-1H8Zm1 2V3.5h2V4H9Z" clip-rule="evenodd"/></svg>Apagar para todos</button>
-                            @endcan
-                        </div>
+                                @if ($message->read_at)
+                                    <div class="flex justify-between gap-3"><dt>Lida</dt><dd>{{ $message->read_at->timezone($tz)->format('d/m H:i') }}</dd></div>
+                                @endif
+                            @else
+                                <div class="flex justify-between gap-3"><dt>Recebida</dt><dd>{{ $message->sent_at->timezone($tz)->format('d/m H:i') }}</dd></div>
+                            @endif
+                        </dl>
+                        @can('edit', $message)
+                            <button type="button" role="menuitem" x-on:click="startEdit(@js($message->body))" class="flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-canvas"><svg class="size-4 text-ink-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m13.9 3.6 2.5 2.5a1 1 0 0 1 0 1.4l-8.2 8.2-3.6.9a.5.5 0 0 1-.6-.6l.9-3.6 8.2-8.2a1 1 0 0 1 1.4 0Z"/></svg>Editar</button>
+                        @endcan
+                        @can('revoke', $message)
+                            <button type="button" role="menuitem" wire:click="$parent.revoke({{ $message->id }})" data-confirm="Apagar esta mensagem para todos? O cliente deixa de vê-la; o painel guarda o original." data-confirm-label="Apagar para todos" data-confirm-tone="danger" class="mt-1 flex w-full items-center gap-2 rounded border-t border-line px-2 py-1 pt-1.5 text-start text-danger hover:bg-canvas"><svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 2a1 1 0 0 0-1 1v1H4.5a.75.75 0 0 0 0 1.5h.4l.7 10a2 2 0 0 0 2 1.9h4.8a2 2 0 0 0 2-1.9l.7-10h.4a.75.75 0 0 0 0-1.5H13V3a1 1 0 0 0-1-1H8Zm1 2V3.5h2V4H9Z" clip-rule="evenodd"/></svg>Apagar para todos</button>
+                        @endcan
                     </div>
-                @endcan
+                </div>
             @endif
 
             @if ($timeMode === 'below')

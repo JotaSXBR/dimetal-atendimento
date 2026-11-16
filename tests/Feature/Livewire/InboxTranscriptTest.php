@@ -250,17 +250,20 @@ class InboxTranscriptTest extends TestCase
         $this->assertStringNotContainsString('mt-1 flex justify-end', $html, 'o menu não ocupa mais uma linha entre o texto e o horário');
     }
 
-    public function test_bolha_com_menu_tem_largura_minima(): void
+    public function test_bolha_com_menu_reserva_espaco_para_o_botao(): void
     {
         [$me, $ticket] = $this->mine();
         $this->say($ticket, 'Ok')->update(['wa_message_id' => 'W1']);
+        $apagada = $this->say($ticket, 'Oi');
+        $apagada->update(['wa_message_id' => 'W2', 'revoked_at' => now()]);
 
         $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
-        $this->assertStringContainsString('min-w-28', $html, 'o chevron (24 px) não cobre o horário na bolha curta');
+        $this->assertSame(1, substr_count($html, 'ps-3 pe-9'), 'só a bolha com menu reserva o espaço do botão (24 px + 4 de folga + 8)');
+        $this->assertStringNotContainsString('min-w-28', $html);
 
         $this->actingAs($me);
         $readonly = view('livewire.inbox.transcript', ['messages' => $ticket->messages()->get(), 'readonly' => true])->render();
-        $this->assertStringNotContainsString('min-w-28', $readonly);
+        $this->assertStringNotContainsString('pe-9', $readonly);
     }
 
     public function test_mensagem_apagada_nao_tem_menu(): void
