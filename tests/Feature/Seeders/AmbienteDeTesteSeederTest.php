@@ -104,8 +104,11 @@ class AmbienteDeTesteSeederTest extends TestCase
     {
         $this->seed(AmbienteDeTesteSeeder::class);
 
+        $admin = User::query()->where('email', AmbienteDeTesteSeeder::ADMIN_EMAIL)->firstOrFail();
         foreach (['Oi', 'Ok'] as $corpo) {
-            $this->assertNotSame(TicketStatus::ENCERRADO, Message::query()->where('body', $corpo)->firstOrFail()->ticket->status, $corpo);
+            $ticket = Message::query()->where('body', $corpo)->firstOrFail()->ticket;
+            $this->assertSame(TicketStatus::EM_ATENDIMENTO, $ticket->status, $corpo);
+            $this->assertSame($admin->id, $ticket->assigned_user_id, $corpo);
         }
         $citacao = Message::query()->whereNotNull('quoted_wa_message_id')->firstOrFail();
         $alvo = Message::query()->where('wa_message_id', $citacao->quoted_wa_message_id)->firstOrFail();

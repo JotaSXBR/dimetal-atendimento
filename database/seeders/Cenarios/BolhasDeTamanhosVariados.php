@@ -14,7 +14,7 @@ class BolhasDeTamanhosVariados extends Seeder
 {
     public function run(): void
     {
-        $ticket = Ticket::factory()->create(['channel_id' => CanalConectado::canal()->id, 'status' => TicketStatus::AGUARDANDO]);
+        $ticket = Ticket::factory()->create(['channel_id' => CanalConectado::canal()->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => UsuariosDeTeste::admin()->id]); // só o responsável abre o menu da bolha
         $saida = ['ticket_id' => $ticket->id, 'direction' => MessageDirection::OUT, 'origin' => MessageOrigin::PAINEL];
 
         Message::factory()->create(['ticket_id' => $ticket->id, 'body' => 'Oi']);
