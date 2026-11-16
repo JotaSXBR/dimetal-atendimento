@@ -7,6 +7,6 @@ final class BackupSkipped extends AlertNotification
 {
     public function toArray(object $notifiable): array
     {
-        return ['kind' => 'backup', 'level' => 'critico', 'state' => 'skipped'];
+        return ['kind' => 'backup', 'level' => 'grave', 'state' => 'skipped'];
     }
 }

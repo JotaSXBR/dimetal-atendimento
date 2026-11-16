@@ -61,6 +61,7 @@ class BackupAlertsTest extends TestCase
 
         $this->assertSame(['kind' => 'backup', 'level' => 'critico', 'state' => 'failed'], (new BackupFailed)->toArray($user));
         $this->assertSame(['kind' => 'backup', 'level' => 'critico', 'state' => 'stale'], (new BackupStale)->toArray($user));
+        $this->assertSame(['kind' => 'backup', 'level' => 'grave', 'state' => 'skipped'], (new BackupSkipped)->toArray($user));
     }
 
     public function test_bell_mostra_backup_que_nao_rodou(): void
