@@ -157,7 +157,7 @@
             </p>
         @endif
 
-        <details class="group mt-4 border-t border-line pt-3">
+        <details wire:ignore.self class="group mt-4 border-t border-line pt-3">
             <summary class="cursor-pointer text-xs font-semibold text-ink-2 hover:text-ink">Mais opções</summary>
 
             <div class="mt-3 space-y-5">
