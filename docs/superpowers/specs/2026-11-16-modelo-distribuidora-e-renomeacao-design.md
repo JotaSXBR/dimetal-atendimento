@@ -112,13 +112,12 @@ Houve duas escolhas: como entregar os dois projetos e de que forma o modelo do b
 
 1. **Dono:** cria a organização `fluxie-tech` no GitHub (pela conta JotaSXBR) e transfere o repositório, renomeando-o para
    `fluxie-inbox`. O GitHub redireciona `JotaSXBR/dimetal-atendimento`, e o `origin` local é atualizado.
-2. **Fonte do Coolify do beta** (conferido pela API em 16/11): os quatro apps PHP (app, worker, scheduler, reverb) puxam
-   `JotaSXBR/dimetal-atendimento`, branch `beta`, pelo **GitHub App do Coolify**, com build por Dockerfile. Depois da transferência:
-   - **Dono:** instala o GitHub App do Coolify na organização `fluxie-tech`, com acesso ao `fluxie-inbox`.
-   - **Eu, com o OK do dono:** troco o repositório dos quatro apps para `fluxie-tech/fluxie-inbox` (pela API ou pela interface)
-     e disparo um deploy do beta **antes** do PR da renomeação, para provar que a fonte nova funciona.
-   - Os segredos do Actions (`COOLIFY_URL`, `COOLIFY_API_TOKEN`) vão junto na transferência; conferir na primeira execução do
-     `deploy-beta`. Dependabot e proteção de branch: conferir na aba Settings do repositório novo.
+2. **Coolify** (revisto em 16/11): os apps do beta usavam a fonte "Public GitHub" (clone público pela URL, sem GitHub App),
+   então a transferência não exige instalar nada na organização. O dono decidiu **apagar os projetos `dimetal-beta` e
+   `dimetal-main` e recriar do zero no projeto 2**; não se repontam os apps antigos. O repositório precisa seguir público.
+   Feito em 16/11: repositório em `fluxie-tech/fluxie-inbox`, `origin` local atualizado, segredos do Actions
+   (`COOLIFY_URL`, `COOLIFY_API_TOKEN`) transferidos junto. O `deploy-beta` deixa de ter alvo quando o beta for apagado
+   e deve ser desativado nessa hora.
 3. **Eu:** disparo o workflow `base-image` no repositório novo, já com o nome novo da imagem, para publicar
    `ghcr.io/fluxie-tech/fluxie-php-base:8.5`. A imagem antiga continua existindo para o beta até o merge.
    **Dono:** torna o pacote público em Packages > Package settings da organização (o pacote nasce privado e o workflow não
@@ -148,9 +147,9 @@ Houve duas escolhas: como entregar os dois projetos e de que forma o modelo do b
 
 ### Efeitos colaterais conhecidos
 
-- `APP_NAME` muda o prefixo do cache e o nome do cookie de sessão onde o `.env` não o fixa. O beta define
-  `APP_NAME="Dimetal Distribuidora"` e `DB_DATABASE=dimetal` no Coolify (conferido em 16/11), então o merge não desloga ninguém
-  e o beta segue como "Dimetal" até ser substituído no projeto 2. Nada a mudar no beta.
+- `APP_NAME` muda o prefixo do cache e o nome do cookie de sessão onde o `.env` não o fixa. O beta definia
+  `APP_NAME="Dimetal Distribuidora"` e `DB_DATABASE=dimetal` no Coolify (conferido em 16/11); como ele será apagado, não há
+  efeito a tratar.
 - Os nomes padrão (`fluxie`, `fluxie_test`) só valem para instalações novas e para os testes.
 - Suíte local: depois do merge, recriar o Postgres de teste com `fluxie`/`fluxie_test` (comando novo no `CLAUDE.md`) e migrar
   uma vez. O banco de dev `dimetal_local` não muda, porque o `.env` local manda nele.
@@ -170,9 +169,7 @@ Houve duas escolhas: como entregar os dois projetos e de que forma o modelo do b
 - **Projeto 0:**
   - portão 7 completo;
   - no servidor local, criar um workflow "Atendimento padrão" e simular dentro e fora do horário;
-  - no beta, depois do merge, conferir que o workflow "Padrão" que já existe não mudou.
 - **Projeto 1:**
   - portão 7 completo;
   - nenhum `dimetal` fora das exceções (`git grep -i dimetal` sem `docs/superpowers` nem `docs/ux-audit`, conferido à mão);
-  - deploy do beta verde depois do merge;
-  - lista de backups do beta mostrando os antigos `dimetal-*` e um backup novo `fluxie-*`.
+  - teste automatizado da lista de backups com os dois prefixos (o beta não existirá mais para a prova manual).

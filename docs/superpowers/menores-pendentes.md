@@ -9,6 +9,14 @@ Nenhum pendente. Os menores do sino (S1 a S4, `fix/ux-sino-alertas`) foram desca
 conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores da série "UX simplificação" fecharam em 14/11/2026
 (plano `docs/superpowers/plans/2026-11-14-ux-menores.md`).
 
+## Menores adiados do Atendimento padrão (16/11/2026)
+
+Branch `feat/modelo-distribuidora`, revisão final.
+
+| # | Onde | O quê | Decisão |
+|---|------|-------|---------|
+| A1 | `app/Livewire/Automation/Index.php` (`create`) e `WorkflowTemplates::resolve` | Chave de modelo desconhecida (ex.: `horario`, de uma galeria antiga em cache) cria rascunho em branco sem aviso. Endurecer com `in:` das chaves de `WorkflowTemplates::all()` | dono |
+
 ## Achados do teste de UI no beta (16/11/2026)
 
 | # | Onde | O quê | Decisão |
