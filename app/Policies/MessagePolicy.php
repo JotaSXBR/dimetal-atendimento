@@ -41,16 +41,18 @@ class MessagePolicy
             : Response::deny('O WhatsApp só permite editar até '.Message::EDIT_WINDOW_MINUTES.' minutos depois do envio.', self::DEADLINE);
     }
 
-    /** A própria mensagem do painel, até 2 dias depois do envio (prazo do WhatsApp para apagar para todos). */
+    /** A própria mensagem do painel, até 48 h depois do envio (prazo do WhatsApp para apagar para todos). */
     public function revoke(User $user, Message $message): Response
     {
         if (! $this->own($user, $message)) {
             return Response::deny();
         }
 
+        $dias = intdiv(Message::REVOKE_WINDOW_HOURS, 24);
+
         return $message->sent_at->gte(now()->subHours(Message::REVOKE_WINDOW_HOURS))
             ? Response::allow()
-            : Response::deny('O WhatsApp só permite apagar para todos até 2 dias depois do envio.', self::DEADLINE);
+            : Response::deny('O WhatsApp só permite apagar para todos até '.$dias.($dias === 1 ? ' dia' : ' dias').' depois do envio.', self::DEADLINE);
     }
 
     private function own(User $user, Message $message): bool

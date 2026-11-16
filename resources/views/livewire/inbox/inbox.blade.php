@@ -209,7 +209,7 @@
                             @php
                                 $slaState = $ticket->slaState();
                             @endphp
-                            <span data-testid="header-sla" class="text-xs font-medium {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
+                            <span data-testid="header-sla" class="text-xs font-medium whitespace-nowrap {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
                                 @if ($slaState === 'estourou')
                                     SLA estourado: venceu {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
                                 @else
@@ -222,7 +222,7 @@
                         $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
                     @endphp
                     {{-- `div`, não `p`: o conteúdo do tooltip do Flux é um bloco, e bloco dentro de `p` faz o navegador fechar o `p` antes dele. --}}
-                    <div data-testid="header-line" data-line="{{ $line }}" class="min-w-0 font-mono text-xs truncate text-ink-3">
+                    <div data-testid="header-line" data-line="{{ $line }}" title="{{ $line }}" class="min-w-0 font-mono text-xs truncate text-ink-3">
                         <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
                         <span>{{ mb_substr($line, mb_strlen($ticket->protocol)) }}</span>
                     </div>

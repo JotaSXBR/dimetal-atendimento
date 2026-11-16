@@ -109,6 +109,14 @@ class InboxHeaderTest extends TestCase
         $this->assertSame('status', $sla->getAttribute('role'));
     }
 
+    public function test_sla_do_cabecalho_nao_quebra_linha(): void
+    {
+        $sla = $this->xpath()->query('//*[@data-testid="header-sla"]')->item(0);
+
+        $this->assertNotNull($sla);
+        $this->assertStringContainsString('whitespace-nowrap', $sla->getAttribute('class'));
+    }
+
     public function test_ticket_encerrado_nao_mostra_acoes_nem_sla(): void
     {
         $xpath = $this->xpath(TicketStatus::ENCERRADO);

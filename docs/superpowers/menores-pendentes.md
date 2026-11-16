@@ -18,19 +18,13 @@ conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores d
 
 Adiados nas fatias do redesenho (#73, #74, #83, #87, #88, #100). Podem ter sido resolvidos pelas fatias seguintes: conferir antes de corrigir.
 
-| # | Origem | O quê | Decisão |
-|---|--------|-------|---------|
-| U2 | #83 | Faixa do hub de Configuração com rolagem horizontal no celular (`settings-page.blade.php:16`, `overflow-x-auto`): conferir no navegador | — |
-| U6 | #87 | Prefixo da chave `history-*`: sem conflito hoje (ramos exclusivos em `contact-card`, componentes distintos); só nomenclatura | — |
+Nenhum pendente. U2 fechado (conferido no navegador em 16/11 em 360 px: a página não rola de lado e a faixa rola por dentro); U6 fechado (prefixo `history-*` é só nome, sem conflito).
 
 ## Menores adiados da leva de menores baratos (16/11/2026)
 
 Branch `chore/claude-md`, revisão final.
 
-| # | Onde | O quê | Decisão |
-|---|------|-------|---------|
-| L8 | `resources/views/livewire/inbox/inbox.blade.php` | Span do SLA sem `whitespace-nowrap` no cabeçalho em 2xl | — |
-| L9 | `resources/views/livewire/inbox/inbox.blade.php` | Linha de metadados truncada sem `title` | — |
+Nenhum pendente. L8 e L9 corrigidos (SLA sem quebra de linha; `title` na linha de metadados).
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
