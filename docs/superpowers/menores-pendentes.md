@@ -13,7 +13,6 @@ conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores d
 
 | # | Onde | O quê | Decisão |
 |---|------|-------|---------|
-| B2 | Sino de alertas | Dois alertas "0 mensagens em 0 conversas" apesar do #128: ver se são de antes do deploy ou novos (`systematic-debugging`) | — |
 | B3 | Cabeçalho da conversa | Abrir Detalhes reorganiza a barra e o "Encerrar" cai sob o cursor | — |
 
 ## Menores de UX antigos a reconferir (06/11 a 11/11)
@@ -22,18 +21,11 @@ Adiados nas fatias do redesenho (#73, #74, #83, #87, #88, #100). Podem ter sido 
 
 | # | Origem | O quê | Decisão |
 |---|--------|-------|---------|
-| U1 | #83 | `aria-label` do botão "Mais" da Fila sem o nome visível (WCAG 2.5.3) | — |
-| U2 | #83 | Faixa do hub de Configuração com rolagem horizontal no celular | — |
-| U3 | #83 | Token `ink-foreground` sem uso nas views | — |
-| U4 | #83 | Estados de sucesso ainda fora do token `ok` do status-badge | — |
-| U5 | #87 | Ordenação das etiquetas sensível a acento | — |
-| U6 | #87 | Prefixo da chave `history-*` | — |
-| U7 | #87 | `title` duplica o `sr-only` do "+N etiquetas" | — |
-| U8 | #88 | Ícone do slot da barra lateral ignora `icon:variant`; `ring-zinc` fixo no ponto da Fila | — |
+| U2 | #83 | Faixa do hub de Configuração com rolagem horizontal no celular (`settings-page.blade.php:16`, `overflow-x-auto`): conferir no navegador | — |
+| U6 | #87 | Prefixo da chave `history-*`: sem conflito hoje (ramos exclusivos em `contact-card`, componentes distintos); só nomenclatura | — |
 | U9 | #88 | `basis-56` pode quebrar as ações do cabeçalho em `lg` com Detalhes aberto (ver também B3) | — |
-| U10 | #73 | Chevron do menu cobre o fim da 1ª linha em bolha curta | — |
-| U11 | #74 | Rascunhos antigos sem limpeza; `localStorage` indisponível não tratado | — |
-| U12 | #100 | Estilo do shadow DOM do seletor de emoji sob a CSP em enforce (não aberto no teste de 16/11) | — |
+| U10 | #73 | Chevron do menu da bolha (`transcript.blade.php:146`, `absolute end-1 top-1`) cobre o fim da 1ª linha em bolha curta no hover; precisa reservar espaço na bolha (layout): conferir no navegador | — |
+| U11 | #74 | Rascunhos antigos sem limpeza de `localStorage` (o storage bloqueado já foi tratado, `445fd7d`); a limpeza precisa de regra de validade | — |
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
