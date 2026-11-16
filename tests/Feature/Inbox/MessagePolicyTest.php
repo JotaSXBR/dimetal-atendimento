@@ -10,6 +10,7 @@ use App\Models\Channel;
 use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Policies\MessagePolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -104,6 +105,14 @@ class MessagePolicyTest extends TestCase
     {
         $this->assertTrue($this->me->can('revoke', $this->message($this->mine(['sent_at' => now()->subHours(47)]))));
         $this->assertFalse($this->me->can('revoke', $this->message($this->mine(['sent_at' => now()->subHours(49)]))));
+    }
+
+    public function test_rotulo_do_prazo_em_dias_ou_horas(): void
+    {
+        $this->assertSame('2 dias', MessagePolicy::windowLabel(48));
+        $this->assertSame('1 dia', MessagePolicy::windowLabel(24));
+        $this->assertSame('36 horas', MessagePolicy::windowLabel(36));
+        $this->assertSame('1 hora', MessagePolicy::windowLabel(1));
     }
 
     public function test_so_texto_se_edita_mas_anexo_se_apaga(): void
