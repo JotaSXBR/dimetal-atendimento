@@ -66,7 +66,7 @@
             default => 'border border-line bg-surface',
         } }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
-                <p class="mb-0.5 font-mono text-xs tracking-wide text-bot uppercase">Bot · resposta automática</p>
+                <p class="mb-0.5 font-mono text-xs tracking-wide text-bot uppercase">Automação · resposta automática</p>
             @endif
 
             @if ($outside)

@@ -224,7 +224,7 @@ class Editor extends Component
             count($nodes) > self::MAX_NODES || count($edges) > self::MAX_EDGES => 'O workflow passou do tamanho máximo.',
             strlen((string) json_encode($graph)) > self::MAX_BYTES => 'O workflow passou do tamanho máximo.',
             array_filter($nodes, fn (mixed $n): bool => ! $this->knownNode($n)) !== [] => 'O workflow tem um bloco de tipo desconhecido.',
-            ! $this->validSettings($graph['settings'] ?? null) => 'As mensagens do bot são inválidas.',
+            ! $this->validSettings($graph['settings'] ?? null) => 'As mensagens da Automação são inválidas.',
             default => null,
         };
 

@@ -82,7 +82,7 @@ final class FlowValidator
         }
 
         if ($this->hasLoopWithoutWaiting($flow, array_keys($reachable))) {
-            $errors[] = 'Há um ciclo sem bloco que espere o cliente (Menu, Menu de setores ou Pergunta): o bot ficaria em laço.';
+            $errors[] = 'Há um ciclo sem bloco que espere o cliente (Menu, Menu de setores ou Pergunta): a Automação ficaria em laço.';
         }
 
         return $errors;

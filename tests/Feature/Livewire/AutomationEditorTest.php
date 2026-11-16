@@ -207,7 +207,7 @@ class AutomationEditorTest extends TestCase
     public function test_pagina_do_editor_traz_o_painel_de_mensagens(): void
     {
         Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])
-            ->assertSee('Mensagens do bot')
+            ->assertSee('Mensagens da Automação')
             ->assertSee('encaminhamento_setor')
             ->assertSee('rodape_sair');
     }

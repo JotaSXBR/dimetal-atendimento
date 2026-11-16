@@ -1,5 +1,5 @@
 <section class="mx-auto w-full max-w-5xl space-y-6 p-6">
-    <x-page-header title="Automação" subtitle="Workflows do pré-atendimento: o bot conversa com o cliente e entrega o ticket à fila do setor. Cada número usa um workflow ativo.">
+    <x-page-header title="Automação" subtitle="Workflows do pré-atendimento: a Automação conversa com o cliente e entrega o ticket à fila do setor. Cada número usa um workflow ativo.">
         <flux:button variant="primary" icon="plus" wire:click="$set('showNew', true)">Novo workflow</flux:button>
     </x-page-header>
 

@@ -107,12 +107,12 @@ final class TicketTimeline
         };
     }
 
-    /** "Bot encaminhou para Comercial (cliente pediu atendente)". */
+    /** "Automação encaminhou para Comercial (cliente pediu atendente)". */
     private function botHandoff(TicketEvent $event): string
     {
         $payload = $event->payload ?? [];
         $reason = is_string($payload['reason'] ?? null) ? (self::HANDOFF_REASONS[$payload['reason']] ?? null) : null;
-        $sentence = 'Bot encaminhou para '.$this->sector($payload['sector_id'] ?? null);
+        $sentence = 'Automação encaminhou para '.$this->sector($payload['sector_id'] ?? null);
 
         return $reason === null ? $sentence : $sentence.' ('.$reason.')';
     }

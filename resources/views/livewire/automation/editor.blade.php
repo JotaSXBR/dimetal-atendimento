@@ -245,8 +245,8 @@
                 <hr class="border-line">
 
                 <div class="space-y-3">
-                    <p class="text-xs font-semibold text-ink-3">Mensagens do bot</p>
-                    <p class="text-xs text-ink-3">O que o bot diz sozinho. Em branco vale o texto padrão (mostrado cinza). O aviso de um bloco, quando preenchido, vale mais que estes.</p>
+                    <p class="text-xs font-semibold text-ink-3">Mensagens da Automação</p>
+                    <p class="text-xs text-ink-3">O que a Automação diz sozinha. Em branco vale o texto padrão (mostrado cinza). O aviso de um bloco, quando preenchido, vale mais que estes.</p>
 
                     <template x-for="item in catalog" x-bind:key="item.key">
                         <div class="text-xs text-ink-2">

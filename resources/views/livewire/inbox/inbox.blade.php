@@ -332,7 +332,7 @@
             @endif
 
             @if ($ticket->status === \App\Enums\TicketStatus::PENDENTE)
-                <div class="border-b border-line bg-surface px-4 py-2 text-xs text-ink-2" role="status">Em triagem automática: o bot ainda conduz esta conversa. Você pode ler e transferir.</div>
+                <div class="border-b border-line bg-surface px-4 py-2 text-xs text-ink-2" role="status">Em triagem automática: a Automação ainda conduz esta conversa. Você pode ler e transferir.</div>
             @endif
 
             @if ($previous)

@@ -106,7 +106,7 @@ document.addEventListener('alpine:init', () => {
             },
 
             get simOutcomeText() {
-                return this.simOutcome === 'fila' ? 'Desfecho: foi para a fila de atendimento.' : 'Desfecho: conversa encerrada pelo bot.';
+                return this.simOutcome === 'fila' ? 'Desfecho: foi para a fila de atendimento.' : 'Desfecho: conversa encerrada pela Automação.';
             },
 
             // Menu de clique direito: posição (já puxada para dentro da tela por `fitMenu`).

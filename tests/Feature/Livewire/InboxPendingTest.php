@@ -73,6 +73,7 @@ class InboxPendingTest extends TestCase
         Livewire::actingAs($me)->test(Inbox::class)
             ->call('select', $ticket->id)
             ->assertSee('Em triagem automática')
+            ->assertSee('a Automação ainda conduz')
             ->assertSee('Transferir')
             ->assertDontSee('Assumir')
             ->assertViewHas('canReply', false)

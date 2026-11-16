@@ -12,7 +12,7 @@ enum NoteOrigin: string
     {
         return match ($this) {
             self::EQUIPE => 'Equipe',
-            self::BOT => 'Bot',
+            self::BOT => 'Automação',
         };
     }
 }
