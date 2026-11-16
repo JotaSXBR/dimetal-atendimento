@@ -56,11 +56,6 @@ FROM base AS runtime
 
 USER root
 
-# CVE HIGH no apt da base (CVE-2026-109518, corrigida na 2.6.2): a base só é republicada às segundas. Remover quando ela vier atualizada.
-RUN apt-get update -qq \
-    && apt-get install -y -qq --only-upgrade apt \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY --from=assets --chown=www-data:www-data /build/public/build ./public/build
 
 RUN chown -R www-data:www-data storage bootstrap/cache
@@ -74,7 +69,7 @@ RUN sed -i '/add_header Cache-Control "public, max-age=31536000, immutable";/i\ 
     && test "$(grep -c 'include /etc/nginx/static-security-headers.conf' /etc/nginx/server-opts.d/performance.conf)" = 2
 
 # Cliente PostgreSQL 18 (pg_dump/pg_restore) em todos os estágios: o backup roda no worker e no scheduler e a restauração pela tela
-# lê o arquivo no app. O Debian da base traz o cliente 15 e o pg_dump recusa servidor de versão maior, então vem do repositório
+# lê o arquivo no app. O cliente do Debian é antigo para o servidor 18 (o pg_dump recusa servidor de versão maior), então vem do repositório
 # oficial PGDG. Sobe junto com o servidor: se o Postgres virar 19, trocar para postgresql-client-19.
 # A chave vai para um arquivo (e não direto no `gpg` por um pipe) com `--retry`: o `curl` já caiu no meio do download (HTTP/2 stream
 # não fechada) e o `gpg` recebeu um arquivo vazio, o que derrubou o build do Reverb em 13/11/2026. Num pipe o retry não desfaz o que
@@ -84,7 +79,7 @@ RUN apt-get update -qq \
     && curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 -o /tmp/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
     && gpg --dearmor -o /usr/share/keyrings/pgdg.gpg /tmp/pgdg.asc \
     && rm /tmp/pgdg.asc \
-    && echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update -qq \
     && apt-get install -y -qq --no-install-recommends postgresql-client-18 \
     && rm -rf /var/lib/apt/lists/*
