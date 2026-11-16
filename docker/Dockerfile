@@ -3,7 +3,7 @@
 # Base: nginx + php-fpm no mesmo container, unprivileged por padrão, com as extensões já compiladas
 # (docker/base/Dockerfile, publicada pelo workflow base-image).
 # O Vite precisa de vendor/livewire/flux/dist/flux.css, então o Composer roda antes dos assets.
-FROM ghcr.io/jotasxbr/dimetal-php-base:8.5 AS base
+FROM ghcr.io/fluxie-tech/fluxie-php-base:8.5 AS base
 
 # Produção por padrão: sem isso a imagem avisa a cada boot que o OPcache está off.
 # Código é imutável (vem da imagem), então o OPcache nunca precisa revalidar timestamps.

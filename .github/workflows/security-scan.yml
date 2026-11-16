@@ -36,7 +36,7 @@ jobs:
       # A referência é lida do docker/Dockerfile para não ficar fixa numa versão do PHP.
       - name: Build the base image from this branch
         if: github.event_name == 'pull_request'
-        run: docker build -t dimetal-base:ci docker/base
+        run: docker build -t fluxie-base:ci docker/base
 
       - name: Build the runtime image
         env:
@@ -45,16 +45,16 @@ jobs:
           args=()
           if [ "$EVENT_NAME" = "pull_request" ]; then
             base_ref="$(sed -nE 's#^FROM ([^ ]+) AS base$#\1#p' docker/Dockerfile)"
-            args+=(--build-context "${base_ref}=docker-image://dimetal-base:ci")
+            args+=(--build-context "${base_ref}=docker-image://fluxie-base:ci")
           fi
-          docker build --target runtime -f docker/Dockerfile "${args[@]}" -t dimetal-scan:ci .
+          docker build --target runtime -f docker/Dockerfile "${args[@]}" -t fluxie-scan:ci .
 
       # Falha só com vulnerabilidade CRÍTICA ou ALTA que já tenha correção: o que não tem correção publicada
       # não é acionável e deixaria o job vermelho para sempre.
       - name: Scan the image for vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: dimetal-scan:ci
+          image-ref: fluxie-scan:ci
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
