@@ -89,13 +89,13 @@ Laravel 13, Livewire 4.4, Flux 2, Reverb, Fortify, PostgreSQL 18, Redis 8. Vers�
   `/livewire/livewire/v4.4.8`, Flux `/websites/fluxui_dev` (documenta a versão mais nova; conferir em `vendor/livewire/flux`
   se o recurso existe na instalada). Atualizar o ID ao subir a dependência.
 - Postgres de teste (sem ele o teste trava em vez de falhar):
-  `docker run -d --name pg-test -e POSTGRES_USER=dimetal -e POSTGRES_PASSWORD=secret -e POSTGRES_DB=dimetal_test -p 5432:5432 postgres:18-alpine`,
+  `docker run -d --name pg-test -e POSTGRES_USER=fluxie -e POSTGRES_PASSWORD=secret -e POSTGRES_DB=fluxie_test -p 5432:5432 postgres:18-alpine`,
   depois migrar uma vez:
-  `DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=dimetal_test DB_USERNAME=dimetal DB_PASSWORD=secret DB_URL= php artisan migrate --force`.
-  Remover no fim com `docker rm -f pg-test`. Não rodar testes enquanto um servidor local de verificação usa o `dimetal_test`.
+  `DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=fluxie_test DB_USERNAME=fluxie DB_PASSWORD=secret DB_URL= php artisan migrate --force`.
+  Remover no fim com `docker rm -f pg-test`. Não rodar testes enquanto um servidor local de verificação usa o `fluxie_test`.
 - Ambiente de teste local: `php artisan migrate:fresh --seed --seeder=AmbienteDeTesteSeeder` (banco dimetal_local); cenário novo de conferência
   visual = classe nova em `database/seeders/Cenarios/` chamada pelo agregador, com assert no `AmbienteDeTesteSeederTest`.
-- Suíte do dia a dia: `php artisan test --parallel` (um banco `dimetal_test_test_N` por processo; fila `sync`). Teste que
+- Suíte do dia a dia: `php artisan test --parallel` (um banco `fluxie_test_test_N` por processo; fila `sync`). Teste que
   abre processo filho passa `DB_DATABASE` a ele (ver `ClaimConcurrencyTest`).
 - Suíte com Redis (espelho do CI): teste com `travel()` ou TTL passa no `array` e falha no Redis; simular expiração com
   `Cache::forget`, nunca `travel()`.

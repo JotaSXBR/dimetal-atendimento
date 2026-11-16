@@ -54,9 +54,9 @@ class RunBackupTest extends TestCase
 
         $file = $this->run_();
 
-        $this->assertSame('dimetal-2026-11-11-0215-diario.dump', $file?->name);
-        $this->assertSame('dump-bytes', Storage::disk('backups')->get('dimetal-2026-11-11-0215-diario.dump'));
-        $this->assertSame(['dimetal-2026-11-11-0215-diario.dump'], $this->names());
+        $this->assertSame('fluxie-2026-11-11-0215-diario.dump', $file?->name);
+        $this->assertSame('dump-bytes', Storage::disk('backups')->get('fluxie-2026-11-11-0215-diario.dump'));
+        $this->assertSame(['fluxie-2026-11-11-0215-diario.dump'], $this->names());
         $this->assertNull(BackupStatus::lastError());
         $this->assertNotNull(BackupStatus::lastSuccessAt());
         $this->assertSame([], $this->leftoverDumps());
@@ -71,10 +71,10 @@ class RunBackupTest extends TestCase
         $this->run_();
 
         $this->assertEqualsCanonicalizing(
-            ['dimetal-2026-11-15-2230-diario.dump', 'dimetal-2026-11-15-2230-semanal.dump'],
+            ['fluxie-2026-11-15-2230-diario.dump', 'fluxie-2026-11-15-2230-semanal.dump'],
             $this->names(),
         );
-        $this->assertSame('dump-bytes', Storage::disk('backups')->get('dimetal-2026-11-15-2230-semanal.dump'));
+        $this->assertSame('dump-bytes', Storage::disk('backups')->get('fluxie-2026-11-15-2230-semanal.dump'));
     }
 
     public function test_dia_comum_nao_cria_semanal(): void
@@ -84,7 +84,7 @@ class RunBackupTest extends TestCase
 
         $this->run_();
 
-        $this->assertSame(['dimetal-2026-11-12-0215-diario.dump'], $this->names());
+        $this->assertSame(['fluxie-2026-11-12-0215-diario.dump'], $this->names());
     }
 
     public function test_manual_grava_com_sufixo_manual_e_nunca_cria_semanal(): void
@@ -94,8 +94,8 @@ class RunBackupTest extends TestCase
 
         $file = $this->run_(BackupKind::Manual);
 
-        $this->assertSame('dimetal-2026-11-15-1200-manual.dump', $file?->name);
-        $this->assertSame(['dimetal-2026-11-15-1200-manual.dump'], $this->names());
+        $this->assertSame('fluxie-2026-11-15-1200-manual.dump', $file?->name);
+        $this->assertSame(['fluxie-2026-11-15-1200-manual.dump'], $this->names());
     }
 
     public function test_poda_depois_do_sucesso(): void
@@ -111,8 +111,8 @@ class RunBackupTest extends TestCase
         $this->run_();
 
         $this->assertCount(7, $this->names());
-        $this->assertContains('dimetal-2026-11-12-0215-diario.dump', $this->names());
-        $this->assertNotContains('dimetal-2026-11-05-0215-diario.dump', $this->names());
+        $this->assertContains('fluxie-2026-11-12-0215-diario.dump', $this->names());
+        $this->assertNotContains('fluxie-2026-11-05-0215-diario.dump', $this->names());
     }
 
     public function test_falha_nao_poda_nao_apaga_backup_bom_e_avisa_so_os_admins(): void
@@ -169,8 +169,8 @@ class RunBackupTest extends TestCase
 
         Exceptions::assertReported(fn (DumpFailed $e): bool => str_contains($e->getMessage(), 'semanal'));
 
-        $this->assertSame('dimetal-2026-11-15-2230-diario.dump', $file?->name);
-        $this->assertSame(['dimetal-2026-11-15-2230-diario.dump'], $this->names());
+        $this->assertSame('fluxie-2026-11-15-2230-diario.dump', $file?->name);
+        $this->assertSame(['fluxie-2026-11-15-2230-diario.dump'], $this->names());
         $this->assertNull(BackupStatus::lastError());
         $this->assertNotNull(BackupStatus::lastSuccessAt());
         Notification::assertNothingSent();
@@ -189,7 +189,7 @@ class RunBackupTest extends TestCase
 
         Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'listagem recusada');
 
-        $this->assertSame('dimetal-2026-11-12-0215-diario.dump', $file?->name);
+        $this->assertSame('fluxie-2026-11-12-0215-diario.dump', $file?->name);
         $this->assertSame(10, $file?->size);
         $this->assertNull(BackupStatus::lastError());
         $this->assertNotNull(BackupStatus::lastSuccessAt());

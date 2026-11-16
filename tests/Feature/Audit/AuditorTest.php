@@ -17,7 +17,7 @@ class AuditorTest extends TestCase
 
     public function test_grava_ator_rotulo_ip_assunto_e_detalhe(): void
     {
-        $ana = User::factory()->create(['name' => 'Ana Souza', 'email' => 'ana@dimetal.test']);
+        $ana = User::factory()->create(['name' => 'Ana Souza', 'email' => 'ana@fluxie.test']);
         request()->server->set('REMOTE_ADDR', '10.9.8.7');
 
         Auditor::record(AuditAction::UserCreated, $ana, 'Beto', ['role' => 'atendente']);
@@ -25,7 +25,7 @@ class AuditorTest extends TestCase
         $log = AuditLog::query()->sole();
         $this->assertSame('user.created', $log->action);
         $this->assertSame($ana->id, $log->actor_user_id);
-        $this->assertSame('Ana Souza <ana@dimetal.test>', $log->actor_label);
+        $this->assertSame('Ana Souza <ana@fluxie.test>', $log->actor_label);
         $this->assertSame('Beto', $log->subject);
         $this->assertSame('10.9.8.7', $log->ip);
         $this->assertSame(['role' => 'atendente'], $log->detail);
@@ -34,11 +34,11 @@ class AuditorTest extends TestCase
 
     public function test_sem_ator_e_com_rotulo_explicito(): void
     {
-        Auditor::record(AuditAction::RestoreSucceeded, null, 'backup.dump', ['mode' => 'restore'], 'Admin <admin@dimetal.test>');
+        Auditor::record(AuditAction::RestoreSucceeded, null, 'backup.dump', ['mode' => 'restore'], 'Admin <admin@fluxie.test>');
 
         $log = AuditLog::query()->sole();
         $this->assertNull($log->actor_user_id);
-        $this->assertSame('Admin <admin@dimetal.test>', $log->actor_label);
+        $this->assertSame('Admin <admin@fluxie.test>', $log->actor_label);
     }
 
     public function test_assunto_e_rotulo_gigantes_sao_truncados_em_255(): void

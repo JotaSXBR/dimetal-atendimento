@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Settings\CompanySettings;
 
 /**
- * A assinatura do atendente nas mensagens do painel (como no Chatwoot): `*Jessé @ Dimetal:*` e o texto na linha de baixo.
+ * A assinatura do atendente nas mensagens do painel (como no Chatwoot): `*Jessé @ Empresa:*` e o texto na linha de baixo.
  * Vale sempre que a empresa liga a assinatura (não há escolha por atendente). A mensagem é gravada já assinada: o eco `fromMe` do WhatsApp
  * traz o mesmo texto e casa com a linha.
  */

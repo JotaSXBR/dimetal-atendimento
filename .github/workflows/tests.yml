@@ -22,13 +22,13 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_DB: dimetal_test
-          POSTGRES_USER: dimetal
+          POSTGRES_DB: fluxie_test
+          POSTGRES_USER: fluxie
           POSTGRES_PASSWORD: secret
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U dimetal -d dimetal_test"
+          --health-cmd "pg_isready -U fluxie -d fluxie_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -47,8 +47,8 @@ jobs:
       DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
-      DB_DATABASE: dimetal_test
-      DB_USERNAME: dimetal
+      DB_DATABASE: fluxie_test
+      DB_USERNAME: fluxie
       DB_PASSWORD: secret
       REDIS_CLIENT: predis
       REDIS_HOST: 127.0.0.1

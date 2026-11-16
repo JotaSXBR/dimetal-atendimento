@@ -44,14 +44,14 @@ function start(id) {
     // O navegador lembra que o som já foi liberado aqui (localStorage pode estar bloqueado: nesse caso a faixa só segue o estado real).
     const remembered = () => {
         try {
-            return localStorage.getItem('dimetal-alerts-audio') === '1';
+            return localStorage.getItem('fluxie-alerts-audio') === '1';
         } catch {
             return false;
         }
     };
     const remember = () => {
         try {
-            localStorage.setItem('dimetal-alerts-audio', '1');
+            localStorage.setItem('fluxie-alerts-audio', '1');
         } catch {
             // sem armazenamento: a faixa volta a cada refresh, como antes
         }
@@ -105,7 +105,7 @@ function start(id) {
             : ['SLA estourado', 'Há tickets esperando além do prazo.'];
 
         // Sem texto de cliente, de propósito.
-        new Notification(title, { body, tag: `dimetal-${kind}`, silent: true });
+        new Notification(title, { body, tag: `fluxie-${kind}`, silent: true });
     }
 
     function once(kind, ctx = {}) {
@@ -182,7 +182,7 @@ function start(id) {
 
     // Uma aba só toca: a primeira que pega o lock; sem Web Locks, um batimento no localStorage.
     if (navigator.locks) {
-        navigator.locks.request('dimetal-alerts-leader', () => {
+        navigator.locks.request('fluxie-alerts-leader', () => {
             leader = true;
             sync();
 
@@ -191,12 +191,12 @@ function start(id) {
     } else {
         const tab = Math.random().toString(36).slice(2);
         const claim = () => {
-            const held = JSON.parse(localStorage.getItem('dimetal-alerts-leader') ?? 'null');
+            const held = JSON.parse(localStorage.getItem('fluxie-alerts-leader') ?? 'null');
 
             leader = !held || held.tab === tab || Date.now() - held.at > 3000;
 
             if (leader) {
-                localStorage.setItem('dimetal-alerts-leader', JSON.stringify({ tab, at: Date.now() }));
+                localStorage.setItem('fluxie-alerts-leader', JSON.stringify({ tab, at: Date.now() }));
             }
         };
         claim();

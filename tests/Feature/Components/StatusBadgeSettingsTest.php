@@ -87,7 +87,7 @@ class StatusBadgeSettingsTest extends TestCase
         foreach ([[GoogleConnectionStatus::CONNECTED, 'ok'], [GoogleConnectionStatus::NEEDS_REAUTH, 'warn']] as [$status, $tone]) {
             GoogleConnection::query()->delete();
             GoogleConnection::query()->create([
-                'account_email' => 'dimetal@gmail.com', 'access_token' => 'a', 'refresh_token' => 'r', 'expires_at' => now()->addHour(), 'status' => $status, 'connected_at' => now(),
+                'account_email' => 'fluxie@gmail.com', 'access_token' => 'a', 'refresh_token' => 'r', 'expires_at' => now()->addHour(), 'status' => $status, 'connected_at' => now(),
             ]);
 
             $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(GoogleContacts::class)->html());

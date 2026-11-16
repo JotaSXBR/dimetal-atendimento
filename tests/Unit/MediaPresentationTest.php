@@ -20,7 +20,7 @@ class MediaPresentationTest extends TestCase
 
     public function test_extensao_pelo_nome_e_depois_pelo_mime(): void
     {
-        $this->assertSame('DOCX', MediaPresentation::extension('COTAÇÃO DIMETAL.docx', null));
+        $this->assertSame('DOCX', MediaPresentation::extension('COTAÇÃO FLUXIE.docx', null));
         $this->assertSame('XLSX', MediaPresentation::extension('planilha.final.xlsx', 'application/octet-stream'));
         $this->assertSame('PDF', MediaPresentation::extension(null, 'application/pdf'));
         $this->assertSame('PDF', MediaPresentation::extension('sem-extensao', 'application/pdf'));

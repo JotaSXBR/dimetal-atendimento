@@ -42,14 +42,14 @@ class UsersPageTest extends TestCase
         Livewire::actingAs($this->as(UserRole::SUPERVISOR))->test(Users::class)
             ->call('newUser')
             ->set('name', 'Ana Atendente')
-            ->set('email', 'ana@dimetal.com.br')
+            ->set('email', 'ana@fluxie.com.br')
             ->set('password', 'senha-boa-123')
             ->set('sectorIds', [$sector->id])
             ->set('canTransfer', true)
             ->call('save')
             ->assertHasNoErrors();
 
-        $user = User::query()->where('email', 'ana@dimetal.com.br')->sole();
+        $user = User::query()->where('email', 'ana@fluxie.com.br')->sole();
         $this->assertSame(UserRole::ATENDENTE, $user->role);
         $this->assertTrue($user->active);
         $this->assertTrue($user->can_transfer);
@@ -63,13 +63,13 @@ class UsersPageTest extends TestCase
         Livewire::actingAs($this->as(UserRole::ADMIN))->test(Users::class)
             ->call('newUser')
             ->set('name', 'Sergio Supervisor')
-            ->set('email', 'sergio@dimetal.com.br')
+            ->set('email', 'sergio@fluxie.com.br')
             ->set('role', 'supervisor')
             ->set('password', 'senha-boa-123')
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertSame(UserRole::SUPERVISOR, User::query()->where('email', 'sergio@dimetal.com.br')->sole()->role);
+        $this->assertSame(UserRole::SUPERVISOR, User::query()->where('email', 'sergio@fluxie.com.br')->sole()->role);
     }
 
     public function test_supervisor_forjando_o_papel_admin_leva_403_e_nada_e_criado(): void
@@ -77,13 +77,13 @@ class UsersPageTest extends TestCase
         Livewire::actingAs($this->as(UserRole::SUPERVISOR))->test(Users::class)
             ->call('newUser')
             ->set('name', 'Intruso')
-            ->set('email', 'intruso@dimetal.com.br')
+            ->set('email', 'intruso@fluxie.com.br')
             ->set('role', 'admin')
             ->set('password', 'senha-boa-123')
             ->call('save')
             ->assertForbidden();
 
-        $this->assertSame(0, User::query()->where('email', 'intruso@dimetal.com.br')->count());
+        $this->assertSame(0, User::query()->where('email', 'intruso@fluxie.com.br')->count());
     }
 
     public function test_supervisor_nao_abre_para_editar_admin_nem_supervisor(): void

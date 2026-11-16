@@ -27,8 +27,8 @@ class DatabaseDumperTest extends TestCase
         config([
             'database.connections.pgsql.host' => 'pg-beta',
             'database.connections.pgsql.port' => '5432',
-            'database.connections.pgsql.database' => 'dimetal',
-            'database.connections.pgsql.username' => 'dimetal_user',
+            'database.connections.pgsql.database' => 'fluxie',
+            'database.connections.pgsql.username' => 'fluxie_user',
             'database.connections.pgsql.password' => self::PASSWORD,
         ]);
         DB::purge('pgsql');
@@ -47,8 +47,8 @@ class DatabaseDumperTest extends TestCase
             return $command[0] === 'pg_dump'
                 && array_slice($command, 1, 2) === ['-Fc', '--compress=zstd:3']
                 && in_array('pg-beta', $command, true)
-                && in_array('dimetal_user', $command, true)
-                && in_array('dimetal', $command, true)
+                && in_array('fluxie_user', $command, true)
+                && in_array('fluxie', $command, true)
                 && in_array($path, $command, true)
                 && ! str_contains(implode(' ', $command), self::PASSWORD)
                 && ($process->environment['PGPASSWORD'] ?? null) === self::PASSWORD;

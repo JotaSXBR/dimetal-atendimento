@@ -40,11 +40,22 @@ class BackupDownloadTest extends TestCase
         $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
     }
 
+    public function test_admin_baixa_arquivo_com_prefixo_fluxie(): void
+    {
+        $name = 'fluxie-2026-11-16-0300-diario.dump';
+        Storage::disk('backups')->put($name, 'dump-fluxie');
+
+        $response = $this->actingAs($this->admin())->get(route('configuracoes.backups.baixar', $name));
+
+        $response->assertOk()->assertDownload($name);
+        $this->assertSame('dump-fluxie', $response->streamedContent());
+    }
+
     public function test_nome_forjado_da_404(): void
     {
         $admin = $this->actingAs($this->admin());
 
-        foreach (['..', '.env', 'lixo.txt', 'dimetal-2026-01-01-0000-diario.dump', 'dimetal-2026-11-12-0215-diario.dump.bak'] as $name) {
+        foreach (['..', '.env', 'lixo.txt', 'dimetal-2026-01-01-0000-diario.dump', 'dimetal-2026-11-12-0215-diario.dump.bak', 'fluxie-2026-01-01-0300-diario.dump.bak'] as $name) {
             $admin->get('/configuracoes/backups/'.$name)->assertNotFound();
         }
 

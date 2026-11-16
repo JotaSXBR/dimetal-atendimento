@@ -16,7 +16,7 @@ class LoginRateLimitTest extends TestCase
     {
         parent::setUp();
 
-        $this->email = 'limite-'.bin2hex(random_bytes(6)).'@dimetal.test';
+        $this->email = 'limite-'.bin2hex(random_bytes(6)).'@fluxie.test';
     }
 
     private function attempt(string $email, ?string $ip = null): int
@@ -49,7 +49,7 @@ class LoginRateLimitTest extends TestCase
     public function test_outro_e_mail_nao_e_afetado(): void
     {
         config(['security.login_per_hour_per_email' => 2]);
-        $other = 'outro-'.bin2hex(random_bytes(6)).'@dimetal.test';
+        $other = 'outro-'.bin2hex(random_bytes(6)).'@fluxie.test';
 
         $this->attempt($this->email);
         $this->attempt($this->email);

@@ -18,7 +18,7 @@ class DumpInspectorTest extends TestCase
     {
         parent::setUp();
 
-        $this->path = sys_get_temp_dir().'/dimetal-inspect-'.Str::random(10).'.dump';
+        $this->path = sys_get_temp_dir().'/fluxie-inspect-'.Str::random(10).'.dump';
         file_put_contents($this->path, 'conteudo-do-dump');
     }
 
@@ -74,15 +74,15 @@ class DumpInspectorTest extends TestCase
     public static function estranhos(): array
     {
         return [
-            'função' => ['9001; 1255 99999 FUNCTION public evil() dimetal'],
-            'gatilho' => ['9002; 2620 99999 TRIGGER public users trg dimetal'],
+            'função' => ['9001; 1255 99999 FUNCTION public evil() fluxie'],
+            'gatilho' => ['9002; 2620 99999 TRIGGER public users trg fluxie'],
             'extensão que não é pg_trgm' => ['9003; 3079 99999 EXTENSION - pgcrypto '],
-            'visão' => ['9004; 1259 99999 VIEW public v dimetal'],
-            'regra' => ['9005; 2618 99999 RULE public r dimetal'],
-            'linguagem' => ['9006; 2612 99999 PROCEDURAL LANGUAGE - plpythonu dimetal'],
-            'tabela de outro esquema' => ['9007; 1259 99999 TABLE pg_catalog x dimetal'],
-            'anexo de partição' => ['9008; 1259 99999 TABLE ATTACH public x dimetal'],
-            'comentário solto' => ['9009; 0 0 COMMENT public TABLE users dimetal'],
+            'visão' => ['9004; 1259 99999 VIEW public v fluxie'],
+            'regra' => ['9005; 2618 99999 RULE public r fluxie'],
+            'linguagem' => ['9006; 2612 99999 PROCEDURAL LANGUAGE - plpythonu fluxie'],
+            'tabela de outro esquema' => ['9007; 1259 99999 TABLE pg_catalog x fluxie'],
+            'anexo de partição' => ['9008; 1259 99999 TABLE ATTACH public x fluxie'],
+            'comentário solto' => ['9009; 0 0 COMMENT public TABLE users fluxie'],
             'linha desconhecida' => ['9010; 0 0 ALGO ESTRANHO'],
         ];
     }
@@ -127,7 +127,7 @@ class DumpInspectorTest extends TestCase
 
     public function test_toc_sem_cabecalho_legivel_e_recusada(): void
     {
-        $this->fakeToc("; sem cabecalho\n1; 1259 1 TABLE public a dimetal\n");
+        $this->fakeToc("; sem cabecalho\n1; 1259 1 TABLE public a fluxie\n");
 
         $this->expectException(InvalidDump::class);
 

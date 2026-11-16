@@ -3,7 +3,7 @@
 // porque o som repetido do alerta (alerts.js) depende dele estar lá.
 import { DISMISSALS, dismissEntry, isDismissed } from './alerts-rules';
 
-const keyOf = (kind) => `dimetal-dismiss:${kind}`;
+const keyOf = (kind) => `fluxie-dismiss:${kind}`;
 // Sem storage (modo privado, bloqueado), a dispensa vale só nesta visita, em memória.
 const memory = new Map();
 

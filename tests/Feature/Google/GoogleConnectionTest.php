@@ -40,7 +40,7 @@ class GoogleConnectionTest extends TestCase
     private function connection(array $override = []): GoogleConnection
     {
         return GoogleConnection::query()->create(array_replace([
-            'account_email' => 'dimetal@gmail.com',
+            'account_email' => 'fluxie@gmail.com',
             'access_token' => 'access-1',
             'refresh_token' => 'refresh-1',
             'expires_at' => now()->addHour(),
@@ -73,7 +73,7 @@ class GoogleConnectionTest extends TestCase
         $this->assertSame('cid', $query['client_id']);
     }
 
-    private function fakeGoogleUser(string $email = 'dimetal@gmail.com'): void
+    private function fakeGoogleUser(string $email = 'fluxie@gmail.com'): void
     {
         $user = (new SocialiteUser)->map(['email' => $email]);
         $user->token = 'access-new';
@@ -92,7 +92,7 @@ class GoogleConnectionTest extends TestCase
         $this->actingAs($this->admin())->get('/configuracoes/google/callback?code=abc')->assertRedirect('/configuracoes/google');
 
         $connection = GoogleConnection::query()->firstOrFail();
-        $this->assertSame('dimetal@gmail.com', $connection->account_email);
+        $this->assertSame('fluxie@gmail.com', $connection->account_email);
         $this->assertSame(GoogleConnectionStatus::CONNECTED, $connection->status);
         $this->assertSame('access-new', $connection->access_token);
         $this->assertSame('refresh-new', $connection->refresh_token);
@@ -199,7 +199,7 @@ class GoogleConnectionTest extends TestCase
         Contact::factory()->create();
 
         Livewire::actingAs($this->admin())->test(GoogleContacts::class)
-            ->assertSee('dimetal@gmail.com')
+            ->assertSee('fluxie@gmail.com')
             ->assertSee('Conectado')
             ->assertSee('1 sincronizado')
             ->assertSee('1 pendente');

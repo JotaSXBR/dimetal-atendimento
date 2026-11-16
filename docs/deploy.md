@@ -1,5 +1,7 @@
 # Deploy no Coolify — `main` e `beta`
 
+O ambiente beta descrito aqui será substituído no projeto 2 (instalação por compose). Os nomes `dimetal-*` de projeto, rede, domínio e buckets do beta são os de hoje e ficam até lá.
+
 Dois projetos no mesmo VPS, cada um completo e independente: seis recursos separados, cada um com
 start/stop, logs, terminal e limites próprios.
 
@@ -48,8 +50,11 @@ WAHA_API_KEY=<mesma chave do container waha>
 
 O restante é fixo e igual nos três serviços PHP: `APP_ENV=production`, `APP_DEBUG=false`,
 `APP_TIMEZONE=UTC` (as telas exibem em `APP_DISPLAY_TIMEZONE`, padrão `America/Sao_Paulo`), `LOG_CHANNEL=stderr`, `DB_CONNECTION=pgsql`, `DB_PORT=5432`,
-`DB_DATABASE=dimetal`, `DB_USERNAME=dimetal`, `REDIS_CLIENT=phpredis`, `REDIS_PORT=6379`,
+`DB_DATABASE=fluxie`, `DB_USERNAME=fluxie`, `REDIS_CLIENT=phpredis`, `REDIS_PORT=6379`,
 `SESSION_DRIVER=redis`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis`.
+
+Em instalação existente, não troque `APP_NAME`: ele é a base dos prefixos de cache, Redis e do cookie de sessão, e trocar
+desloga todos e deixa o cache órfão. Se precisar trocar, fixe antes `CACHE_PREFIX`, `REDIS_PREFIX` e `SESSION_COOKIE` com os valores atuais.
 
 `AUTORUN_ENABLED=true` roda migrate/caches/storage link no start do `app`. Ligar isso em worker ou
 scheduler faz três migrações concorrentes.
@@ -114,10 +119,10 @@ ajustar; se algum dia essas variáveis forem reduzidas, mantenha ao menos 20 MB.
 
 ### Imagem base do PHP
 
-O `docker/Dockerfile` parte de `ghcr.io/jotasxbr/dimetal-php-base:8.5`, com `intl`, `gd`, `bcmath` e as demais extensões já
+O `docker/Dockerfile` parte de `ghcr.io/fluxie-tech/fluxie-php-base:8.5`, com `intl`, `gd`, `bcmath` e as demais extensões já
 compiladas (`docker/base/Dockerfile`). Compilá-las a cada deploy custava ~95 s, porque o Coolify descarta o cache de build.
 O workflow `base-image` reconstrói e publica a imagem quando `docker/base/**` muda, toda segunda-feira (correções do
-sistema) e sob demanda. **Uma vez só:** o pacote `dimetal-php-base` precisa estar público (GitHub → Packages → Package settings
+sistema) e sob demanda. **Uma vez só:** o pacote `fluxie-php-base` precisa estar público (GitHub → Packages → Package settings
 → Change visibility), senão o Coolify não consegue baixá-lo; em "Manage Actions access" o repositório deve ter permissão de escrita.
 Os assets são gerados com Node 26 (`node:26-alpine`), o mesmo do CI. **Versões:** o PHP do CI vem do `FROM serversideup/php`
 de `docker/base/Dockerfile` e o Node do `FROM node` de `docker/Dockerfile` (ação `.github/actions/versions`); o Dependabot atualiza esses
@@ -135,7 +140,7 @@ antiga só cai depois que a nova fica saudável.
 2. Preencha as variáveis da seção 2 em cada recurso.
 3. Deploy nos Databases, depois `waha`, depois `app`. `worker` e `scheduler` por último.
 4. No terminal do `app`: `php artisan db:seed --force` (cinco setores) e
-   `php artisan app:create-user email@dimetal.com.br "Nome" --role=admin`.
+   `php artisan app:create-user email@exemplo.com.br "Nome" --role=admin`.
 5. **Canais** → decidir sobre "Importar histórico" (desmarcado) → **Conectar** → QR ou código de
    pareamento.
 6. Confirmar **Conectado** e enviar o texto de teste.

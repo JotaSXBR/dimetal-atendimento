@@ -118,7 +118,7 @@ class ContactCardTest extends TestCase
     private function connectGoogle(): void
     {
         GoogleConnection::query()->create([
-            'account_email' => 'dimetal@gmail.com', 'access_token' => 'tok', 'refresh_token' => 'ref',
+            'account_email' => 'fluxie@gmail.com', 'access_token' => 'tok', 'refresh_token' => 'ref',
             'expires_at' => now()->addHour(), 'status' => GoogleConnectionStatus::CONNECTED, 'connected_at' => now(),
         ]);
     }

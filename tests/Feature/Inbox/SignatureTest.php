@@ -38,7 +38,7 @@ class SignatureTest extends TestCase
         Queue::fake();
         Storage::fake('local');
         RateLimiter::clear('send-message:1');
-        CompanySettings::save(['name' => 'Dimetal Distribuidora', 'signatureEnabled' => true, 'signatureTemplate' => CompanySettings::DEFAULT_TEMPLATE, 'signaturePosition' => 'inicio', 'slaMinutes' => 10]);
+        CompanySettings::save(['name' => 'Fluxie Distribuidora', 'signatureEnabled' => true, 'signatureTemplate' => CompanySettings::DEFAULT_TEMPLATE, 'signaturePosition' => 'inicio', 'slaMinutes' => 10]);
 
         $this->me = User::factory()->create(['role' => UserRole::ATENDENTE, 'name' => 'Jessé']);
         $this->ticket = Ticket::factory()->create([
@@ -52,12 +52,12 @@ class SignatureTest extends TestCase
 
     private function save(array $override): void
     {
-        CompanySettings::save(array_replace(['name' => 'Dimetal Distribuidora', 'signatureEnabled' => true, 'signatureTemplate' => CompanySettings::DEFAULT_TEMPLATE, 'signaturePosition' => 'inicio', 'slaMinutes' => 10], $override));
+        CompanySettings::save(array_replace(['name' => 'Fluxie Distribuidora', 'signatureEnabled' => true, 'signatureTemplate' => CompanySettings::DEFAULT_TEMPLATE, 'signaturePosition' => 'inicio', 'slaMinutes' => 10], $override));
     }
 
     public function test_assinatura_no_inicio_como_no_chatwoot(): void
     {
-        $this->assertSame("*Jessé @ Dimetal Distribuidora:*\nBom dia! Tudo bem?", Signature::apply('Bom dia! Tudo bem?', $this->me, null));
+        $this->assertSame("*Jessé @ Fluxie Distribuidora:*\nBom dia! Tudo bem?", Signature::apply('Bom dia! Tudo bem?', $this->me, null));
     }
 
     public function test_assinatura_no_fim_com_setor(): void
@@ -71,7 +71,7 @@ class SignatureTest extends TestCase
     {
         $this->me->forceFill(['sign_messages' => false])->save();
 
-        $this->assertSame('*Jessé @ Dimetal Distribuidora:*
+        $this->assertSame('*Jessé @ Fluxie Distribuidora:*
 Oi', Signature::apply('Oi', $this->me->fresh() ?? $this->me, null));
     }
 
@@ -95,7 +95,7 @@ Oi', Signature::apply('Oi', $this->me->fresh() ?? $this->me, null));
     {
         Livewire::actingAs($this->me)->test(Inbox::class)->set('ticketId', $this->ticket->id)->set('draft', 'Bom dia!')->call('send');
 
-        $this->assertSame("*Jessé @ Dimetal Distribuidora:*\nBom dia!", Message::query()->firstOrFail()->body);
+        $this->assertSame("*Jessé @ Fluxie Distribuidora:*\nBom dia!", Message::query()->firstOrFail()->body);
     }
 
     public function test_nao_ha_controle_de_assinatura_na_tela_e_o_envio_sai_assinado(): void
@@ -109,7 +109,7 @@ Oi', Signature::apply('Oi', $this->me->fresh() ?? $this->me, null));
 
         $component->set('draft', 'Bom dia!')->call('send');
 
-        $this->assertSame('*Jessé @ Dimetal Distribuidora:*
+        $this->assertSame('*Jessé @ Fluxie Distribuidora:*
 Bom dia!', Message::query()->firstOrFail()->body);
     }
 
@@ -128,7 +128,7 @@ Bom dia!', Message::query()->firstOrFail()->body);
     {
         $this->me->name = 'Jé*s_s~é';
 
-        $this->assertSame("*Jéssé @ Dimetal Distribuidora:*\nOi", Signature::apply('Oi', $this->me, null));
+        $this->assertSame("*Jéssé @ Fluxie Distribuidora:*\nOi", Signature::apply('Oi', $this->me, null));
     }
 
     public function test_rascunho_mais_assinatura_acima_de_4096_e_recusado_sem_enviar(): void

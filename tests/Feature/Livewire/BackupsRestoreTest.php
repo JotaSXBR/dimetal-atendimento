@@ -60,7 +60,7 @@ class BackupsRestoreTest extends TestCase
 
         $this->inspector = $this->mock(DumpInspector::class);
         $this->inspector->shouldReceive('inspect')->andReturnUsing(
-            fn (string $path, string $name) => new DumpInfo($name, CarbonImmutable::parse('2026-11-12 05:15:00', 'UTC'), 'dimetal', '18.6', '18.5', 'zstd', 269, 1_500_000),
+            fn (string $path, string $name) => new DumpInfo($name, CarbonImmutable::parse('2026-11-12 05:15:00', 'UTC'), 'fluxie', '18.6', '18.5', 'zstd', 269, 1_500_000),
         )->byDefault();
 
         $this->user = User::factory()->create(['role' => UserRole::ADMIN, 'name' => 'Jessé', 'email' => 'jotasx@example.com']);
@@ -71,7 +71,7 @@ class BackupsRestoreTest extends TestCase
         return Livewire::actingAs($this->user)->test(Backups::class);
     }
 
-    private function stored(string $name = 'dimetal_antes_202611131000'): StoredDatabase
+    private function stored(string $name = 'fluxie_antes_202611131000'): StoredDatabase
     {
         return new StoredDatabase($name, CarbonImmutable::parse('2026-11-13 10:00:00', 'America/Sao_Paulo'), 2_500_000);
     }
@@ -82,10 +82,21 @@ class BackupsRestoreTest extends TestCase
             ->assertSet('source', 'bucket:'.self::NAME)
             ->assertSee(self::NAME)
             ->assertSee('12/11/2026 02:15')
-            ->assertSee('dimetal')
+            ->assertSee('fluxie')
             ->assertSee('18.6')
             ->assertSee('zstd')
             ->assertSee('1,5 MB')
+            ->assertSee('Digite RESTAURAR');
+    }
+
+    public function test_arquivo_com_prefixo_fluxie_aparece_na_lista_e_abre_a_conferencia(): void
+    {
+        $name = 'fluxie-2026-11-16-0300-diario.dump';
+        Storage::disk('backups')->put($name, 'conteudo');
+
+        $this->page()->assertSee($name)
+            ->call('chooseBackup', $name)
+            ->assertSet('source', 'bucket:'.$name)
             ->assertSee('Digite RESTAURAR');
     }
 
@@ -190,11 +201,11 @@ class BackupsRestoreTest extends TestCase
     {
         $this->admin->shouldReceive('stored')->andReturn([$this->stored()]);
 
-        $this->page()->call('chooseStored', 'dimetal_antes_202611131000')->set('confirm', 'RESTAURAR')->call('switchBack');
+        $this->page()->call('chooseStored', 'fluxie_antes_202611131000')->set('confirm', 'RESTAURAR')->call('switchBack');
 
         $log = AuditLog::query()->sole();
         $this->assertSame('restore.switched', $log->action);
-        $this->assertSame('dimetal_antes_202611131000', $log->subject);
+        $this->assertSame('fluxie_antes_202611131000', $log->subject);
     }
 
     public function test_recusa_com_restauracao_em_andamento(): void
@@ -290,7 +301,7 @@ class BackupsRestoreTest extends TestCase
     {
         $this->admin->shouldReceive('stored')->andReturn([$this->stored()]);
 
-        $this->page()->assertSee('dimetal_antes_202611131000')->assertSee('13/11/2026 10:00')->assertSee('2,5 MB')->assertSee('Voltar para este');
+        $this->page()->assertSee('fluxie_antes_202611131000')->assertSee('13/11/2026 10:00')->assertSee('2,5 MB')->assertSee('Voltar para este');
     }
 
     public function test_nome_de_banco_guardado_forjado_e_recusado(): void
@@ -307,11 +318,11 @@ class BackupsRestoreTest extends TestCase
     {
         $this->admin->shouldReceive('stored')->andReturn([$this->stored()]);
 
-        $this->page()->call('chooseStored', 'dimetal_antes_202611131000')->assertSee('Digite RESTAURAR')
+        $this->page()->call('chooseStored', 'fluxie_antes_202611131000')->assertSee('Digite RESTAURAR')
             ->set('confirm', 'RESTAURAR')->call('switchBack')->assertRedirect(route('restauracao'));
 
         Queue::assertPushed(RestoreDatabaseJob::class, fn (RestoreDatabaseJob $job): bool => $job->request->mode === 'switch'
-            && $job->request->source === 'dimetal_antes_202611131000');
+            && $job->request->source === 'fluxie_antes_202611131000');
     }
 
     public function test_ultima_restauracao_aparece(): void

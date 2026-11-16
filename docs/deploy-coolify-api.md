@@ -20,8 +20,8 @@ Servidor: `zto0f9qx9d6opovqflr26doe`. Projetos: `kh6g9vki7tpji1nfagbw0utu` (main
 curl -s -X POST "$COOLIFY_URL/api/v1/databases/postgresql" \
   -H "Authorization: Bearer $COOLIFY_API" -H "Content-Type: application/json" \
   -d '{"server_uuid":"...","project_uuid":"...","environment_name":"production",
-       "name":"pg-beta","image":"postgres:18-alpine","postgres_user":"dimetal",
-       "postgres_db":"dimetal","postgres_password":"<senha>","is_public":false}'
+       "name":"pg-beta","image":"postgres:18-alpine","postgres_user":"fluxie",
+       "postgres_db":"fluxie","postgres_password":"<senha>","is_public":false}'
 
 curl -s -X POST "$COOLIFY_URL/api/v1/databases/redis" \
   -H "Authorization: Bearer $COOLIFY_API" -H "Content-Type: application/json" \
@@ -41,7 +41,7 @@ curl -s -X POST "$COOLIFY_URL/api/v1/applications/public" \
   -H "Authorization: Bearer $COOLIFY_API" -H "Content-Type: application/json" \
   -d '{
     "project_uuid":"...","server_uuid":"...","environment_name":"production",
-    "name":"app-beta","git_repository":"https://github.com/JotaSXBR/dimetal-atendimento",
+    "name":"app-beta","git_repository":"https://github.com/fluxie-tech/fluxie-inbox",
     "git_branch":"beta","build_pack":"dockerfile",
     "dockerfile_location":"/docker/Dockerfile","base_directory":"/",
     "ports_exposes":"8080","domains":"https://dimetal-beta.fluxie.com.br",

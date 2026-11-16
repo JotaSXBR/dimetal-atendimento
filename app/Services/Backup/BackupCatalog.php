@@ -11,17 +11,18 @@ use League\Flysystem\FileAttributes;
 /** O que há no bucket de backup: nomes, listagem e rotação. Só arquivos com o nome do padrão existem para o catálogo. */
 class BackupCatalog
 {
-    private const PATTERN = '/^dimetal-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual|antes)\.dump$/';
+    // `dimetal-` é o prefixo antigo: só leitura, nunca mais gravado.
+    private const PATTERN = '/^(?:dimetal|fluxie)-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual|antes)\.dump$/';
 
     public function disk(): Filesystem
     {
         return Storage::disk(config()->string('backup.disk'));
     }
 
-    /** `dimetal-AAAA-MM-DD-HHMM-<tipo>.dump`, no fuso de exibição. */
+    /** `fluxie-AAAA-MM-DD-HHMM-<tipo>.dump`, no fuso de exibição. */
     public function name(BackupKind $kind, CarbonImmutable $at): string
     {
-        return 'dimetal-'.$at->setTimezone(config()->string('app.display_timezone'))->format('Y-m-d-Hi').'-'.$kind->value.'.dump';
+        return 'fluxie-'.$at->setTimezone(config()->string('app.display_timezone'))->format('Y-m-d-Hi').'-'.$kind->value.'.dump';
     }
 
     /** @return list<BackupFile> do mais novo ao mais velho */

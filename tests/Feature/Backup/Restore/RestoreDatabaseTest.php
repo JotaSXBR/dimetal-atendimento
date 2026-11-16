@@ -46,9 +46,9 @@ class RestoreDatabaseTest extends TestCase
 
     private const NOW = '2026-11-12 18:00:00';
 
-    private const STAGING = 'dimetal_restaurando_202611121500';
+    private const STAGING = 'fluxie_restaurando_202611121500';
 
-    private const ARCHIVE = 'dimetal_antes_202611121500';
+    private const ARCHIVE = 'fluxie_antes_202611121500';
 
     /** @var list<string> */
     private array $calls = [];
@@ -94,7 +94,7 @@ class RestoreDatabaseTest extends TestCase
         $this->inspector->shouldReceive('inspect')->andReturnUsing(function (string $path, string $name) {
             $this->calls[] = 'inspect';
 
-            return new DumpInfo($name, CarbonImmutable::parse('2026-11-12 16:00:00', 'UTC'), 'dimetal', '18.6', '18.6', 'zstd', 269, 1000);
+            return new DumpInfo($name, CarbonImmutable::parse('2026-11-12 16:00:00', 'UTC'), 'fluxie', '18.6', '18.6', 'zstd', 269, 1000);
         })->byDefault();
 
         $this->backup = $this->mock(RunBackup::class);
@@ -105,7 +105,7 @@ class RestoreDatabaseTest extends TestCase
         })->byDefault();
 
         $this->admin = $this->mock(AdminDatabase::class);
-        $this->admin->shouldReceive('active')->andReturn('dimetal')->byDefault();
+        $this->admin->shouldReceive('active')->andReturn('fluxie')->byDefault();
         $this->admin->shouldReceive('exists')->andReturn(false)->byDefault();
         $this->admin->shouldReceive('create')->andReturnUsing(fn (string $name) => $this->calls[] = 'create:'.$name)->byDefault();
         $this->admin->shouldReceive('drop')->andReturnUsing(fn (string $name) => $this->calls[] = 'drop:'.$name)->byDefault();
@@ -149,7 +149,7 @@ class RestoreDatabaseTest extends TestCase
 
         $this->assertSame([
             'fetch', 'inspect', 'backup:antes', 'create:'.self::STAGING, 'restore:'.self::STAGING, 'verify:'.self::STAGING,
-            'enter', 'swap:dimetal,'.self::STAGING.','.self::ARCHIVE, 'migrate', 'restart', 'leave', 'discard',
+            'enter', 'swap:fluxie,'.self::STAGING.','.self::ARCHIVE, 'migrate', 'restart', 'leave', 'discard',
         ], $this->calls);
         $state = $this->state();
         $this->assertSame('done', $state['status']);
@@ -173,10 +173,10 @@ class RestoreDatabaseTest extends TestCase
 
     public function test_voltar_ao_banco_guardado_grava_o_modo_switch(): void
     {
-        $stored = new StoredDatabase('dimetal_antes_202611110900', CarbonImmutable::parse('2026-11-11 09:00:00', 'America/Sao_Paulo'), 1000);
+        $stored = new StoredDatabase('fluxie_antes_202611110900', CarbonImmutable::parse('2026-11-11 09:00:00', 'America/Sao_Paulo'), 1000);
         $this->admin->shouldReceive('stored')->andReturn([$stored]);
 
-        $this->run_($this->request('switch', 'dimetal_antes_202611110900'));
+        $this->run_($this->request('switch', 'fluxie_antes_202611110900'));
 
         $log = AuditLog::query()->sole();
         $this->assertSame('restore.succeeded', $log->action);
@@ -286,7 +286,7 @@ class RestoreDatabaseTest extends TestCase
         $this->run_();
 
         $swaps = array_values(array_filter($this->calls, fn (string $call): bool => str_starts_with($call, 'swap:')));
-        $this->assertSame(['swap:dimetal,'.self::STAGING.','.self::ARCHIVE, 'swap:dimetal,'.self::ARCHIVE.','.self::STAGING], $swaps);
+        $this->assertSame(['swap:fluxie,'.self::STAGING.','.self::ARCHIVE, 'swap:fluxie,'.self::ARCHIVE.','.self::STAGING], $swaps);
         $this->assertContains('leave', $this->calls);
         $this->assertContains('drop:'.self::STAGING, $this->calls);
         $this->assertSame('failed', $this->state()['status']);
@@ -342,7 +342,7 @@ class RestoreDatabaseTest extends TestCase
     public function test_backup_antigo_recupera_no_maximo_72h(): void
     {
         Channel::factory()->connected()->create(['waha_session' => 'a']);
-        $this->inspector->shouldReceive('inspect')->andReturn(new DumpInfo('x.dump', CarbonImmutable::parse('2026-11-01 10:00:00', 'UTC'), 'dimetal', '18.6', '18.6', 'zstd', 1, 1));
+        $this->inspector->shouldReceive('inspect')->andReturn(new DumpInfo('x.dump', CarbonImmutable::parse('2026-11-01 10:00:00', 'UTC'), 'fluxie', '18.6', '18.6', 'zstd', 1, 1));
 
         $this->run_();
 
@@ -351,13 +351,13 @@ class RestoreDatabaseTest extends TestCase
 
     public function test_switch_nao_restaura_nem_faz_backup_de_seguranca(): void
     {
-        $stored = new StoredDatabase('dimetal_antes_202611110900', CarbonImmutable::parse('2026-11-11 09:00:00', 'America/Sao_Paulo'), 1000);
+        $stored = new StoredDatabase('fluxie_antes_202611110900', CarbonImmutable::parse('2026-11-11 09:00:00', 'America/Sao_Paulo'), 1000);
         $this->admin->shouldReceive('stored')->andReturn([$stored]);
         Channel::factory()->connected()->create(['waha_session' => 'a']);
 
-        $this->run_($this->request('switch', 'dimetal_antes_202611110900'));
+        $this->run_($this->request('switch', 'fluxie_antes_202611110900'));
 
-        $this->assertSame(['enter', 'swap:dimetal,dimetal_antes_202611110900,'.self::ARCHIVE, 'migrate', 'restart', 'leave'], $this->calls);
+        $this->assertSame(['enter', 'swap:fluxie,fluxie_antes_202611110900,'.self::ARCHIVE, 'migrate', 'restart', 'leave'], $this->calls);
         $this->assertSame('done', $this->state()['status']);
         $this->assertSame(['swap', 'migrate', 'resume', 'recover'], array_column($this->state()['steps'], 'key'));
         Queue::assertPushed(RecoverMessagesJob::class, fn (RecoverMessagesJob $job): bool => $job->from->equalTo($stored->createdAt));
@@ -370,7 +370,7 @@ class RestoreDatabaseTest extends TestCase
 
         $this->run_();
 
-        $this->assertContains('swap:dimetal,'.self::STAGING.',dimetal_antes_202611121501', $this->calls);
+        $this->assertContains('swap:fluxie,'.self::STAGING.',fluxie_antes_202611121501', $this->calls);
         $this->assertSame('done', $this->state()['status']);
     }
 
@@ -382,13 +382,13 @@ class RestoreDatabaseTest extends TestCase
 
         $this->run_($this->request('switch', self::ARCHIVE));
 
-        $this->assertContains('swap:dimetal,'.self::ARCHIVE.',dimetal_antes_202611121501', $this->calls);
+        $this->assertContains('swap:fluxie,'.self::ARCHIVE.',fluxie_antes_202611121501', $this->calls);
         $this->assertSame('done', $this->state()['status']);
     }
 
     public function test_switch_com_nome_forjado_e_recusado(): void
     {
-        $this->admin->shouldReceive('stored')->andReturn([new StoredDatabase('dimetal_antes_202611110900', CarbonImmutable::now(), 1)]);
+        $this->admin->shouldReceive('stored')->andReturn([new StoredDatabase('fluxie_antes_202611110900', CarbonImmutable::now(), 1)]);
 
         $this->run_($this->request('switch', 'postgres'));
 
@@ -410,7 +410,7 @@ class RestoreDatabaseTest extends TestCase
 
     public function test_nome_de_banco_que_nao_cabe_nas_regras_aborta_antes_das_etapas_caras(): void
     {
-        $this->admin->shouldReceive('active')->andReturn('Dimetal-Prod');
+        $this->admin->shouldReceive('active')->andReturn('Fluxie-Prod');
 
         $this->run_();
 

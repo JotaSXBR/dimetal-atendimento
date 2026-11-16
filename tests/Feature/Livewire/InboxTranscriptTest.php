@@ -158,9 +158,9 @@ class InboxTranscriptTest extends TestCase
     {
         $ticket = $this->ticket();
 
-        $html = $this->quotedReply($ticket, ['author' => 'Maria', 'type' => 'media', 'excerpt' => 'COTAÇÃO DIMETAL.docx', 'media' => ['message_id' => 1, 'kind' => 'document', 'name' => 'COTAÇÃO DIMETAL.docx']]);
+        $html = $this->quotedReply($ticket, ['author' => 'Maria', 'type' => 'media', 'excerpt' => 'COTAÇÃO FLUXIE.docx', 'media' => ['message_id' => 1, 'kind' => 'document', 'name' => 'COTAÇÃO FLUXIE.docx']]);
 
-        $this->assertStringContainsString('COTAÇÃO DIMETAL.docx', $html);
+        $this->assertStringContainsString('COTAÇÃO FLUXIE.docx', $html);
         $this->assertStringNotContainsString('size-14', $html);
     }
 

@@ -168,13 +168,13 @@ class EngineCoreTest extends TestCase
 
     public function test_aviso_de_encaminhamento_do_workflow_vence_o_padrao(): void
     {
-        CompanySettings::save(['name' => 'Dimetal Distribuidora']);
+        CompanySettings::save(['name' => 'Fluxie Distribuidora']);
         $session = app(BotEngine::class)->start($this->ticket, $this->withMessages(['encaminhamento_setor' => 'Oi {{nome}}, {{empresa}} vai te atender em {{setor}} (protocolo {{protocolo}}) {{xyz}}']));
 
         $this->say($session, '#sair');
 
         $texts = $this->botTexts();
-        $this->assertSame('Oi Maria, Dimetal Distribuidora vai te atender em Vendas (protocolo '.$this->ticket->protocol.') {{xyz}}', end($texts));
+        $this->assertSame('Oi Maria, Fluxie Distribuidora vai te atender em Vendas (protocolo '.$this->ticket->protocol.') {{xyz}}', end($texts));
     }
 
     public function test_aviso_de_encaminhamento_geral_do_workflow(): void
@@ -235,7 +235,7 @@ class EngineCoreTest extends TestCase
 
     public function test_empresa_e_variavel_das_mensagens_do_bot(): void
     {
-        CompanySettings::save(['name' => 'Dimetal Distribuidora']);
+        CompanySettings::save(['name' => 'Fluxie Distribuidora']);
         $version = $this->version(
             [['i', 'inicio', []], ['g', 'mensagem', ['texto' => 'Bem-vindo a {{empresa}}']], ['t', 'encerrar', []]],
             [['i', 'out', 'g'], ['g', 'out', 't']],
@@ -243,7 +243,7 @@ class EngineCoreTest extends TestCase
 
         app(BotEngine::class)->start($this->ticket, $version);
 
-        $this->assertSame(['Bem-vindo a Dimetal Distribuidora'], $this->botTexts());
+        $this->assertSame(['Bem-vindo a Fluxie Distribuidora'], $this->botTexts());
     }
 
     public function test_numero_com_assinatura_do_cliente_escolhe_o_setor(): void

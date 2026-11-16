@@ -1,1 +1,1 @@
-CREATE DATABASE dimetal_test;
+CREATE DATABASE fluxie_test;

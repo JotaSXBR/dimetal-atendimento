@@ -75,11 +75,11 @@ class QuoteSnapshotTest extends TestCase
 
     public function test_documento_sem_legenda_usa_o_nome_do_arquivo_como_trecho(): void
     {
-        $named = $this->message(['type' => 'media', 'body' => '', 'media_mime' => 'application/pdf', 'media_name' => 'COTAÇÃO DIMETAL.docx']);
+        $named = $this->message(['type' => 'media', 'body' => '', 'media_mime' => 'application/pdf', 'media_name' => 'COTAÇÃO FLUXIE.docx']);
         $unnamed = $this->message(['type' => 'media', 'body' => '', 'media_mime' => 'application/pdf', 'media_name' => null]);
         $photo = $this->message(['type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'foto.jpg']);
 
-        $this->assertSame('COTAÇÃO DIMETAL.docx', Quote::snapshot($named)['excerpt']);
+        $this->assertSame('COTAÇÃO FLUXIE.docx', Quote::snapshot($named)['excerpt']);
         $this->assertSame('Arquivo', Quote::snapshot($unnamed)['excerpt']);
         $this->assertSame('Foto', Quote::snapshot($photo)['excerpt'], 'foto segue com o rótulo; a miniatura é que a mostra');
     }

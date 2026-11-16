@@ -61,10 +61,10 @@ class AdminDatabaseTest extends TestCase
 
     public function test_nomes_validos_e_invalidos(): void
     {
-        AdminDatabase::assertName('dimetal');
-        AdminDatabase::assertName('dimetal_antes_202611121000');
+        AdminDatabase::assertName('fluxie');
+        AdminDatabase::assertName('fluxie_antes_202611121000');
 
-        foreach (['a; drop database x', 'Dimetal', '1abc', '', str_repeat('a', 64), 'a-b', 'a b', 'a"b'] as $bad) {
+        foreach (['a; drop database x', 'Fluxie', '1abc', '', str_repeat('a', 64), 'a-b', 'a b', 'a"b'] as $bad) {
             try {
                 AdminDatabase::assertName($bad);
                 $this->fail('devia recusar '.$bad);
@@ -78,8 +78,8 @@ class AdminDatabaseTest extends TestCase
     {
         $at = CarbonImmutable::parse('2026-11-13 05:15:00', 'UTC');
 
-        $this->assertSame('dimetal_antes_202611130215', AdminDatabase::archiveName('dimetal', $at));
-        $this->assertSame('dimetal_restaurando_202611130215', AdminDatabase::stagingName('dimetal', $at));
+        $this->assertSame('fluxie_antes_202611130215', AdminDatabase::archiveName('fluxie', $at));
+        $this->assertSame('fluxie_restaurando_202611130215', AdminDatabase::stagingName('fluxie', $at));
     }
 
     public function test_cria_e_apaga_um_banco(): void

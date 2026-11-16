@@ -35,7 +35,7 @@ class AuditActionTest extends TestCase
         foreach (AuditAction::cases() as $action) {
             $log = new AuditLog([
                 'action' => $action->value,
-                'actor_label' => 'Ana Souza <ana@dimetal.test>',
+                'actor_label' => 'Ana Souza <ana@fluxie.test>',
                 'subject' => 'Alvo',
                 'detail' => ['role' => 'atendente', 'from' => 'atendente', 'to' => 'supervisor', 'fields' => ['name', 'sectors'], 'mode' => 'restore', 'message' => 'Concluída.', 'password' => 'senha-secreta-123', 'token' => 'tok-secreto'],
             ]);
@@ -51,13 +51,13 @@ class AuditActionTest extends TestCase
 
     public function test_frases_conhecidas(): void
     {
-        $text = fn (AuditAction $a, ?string $subject, array $detail = [], ?string $actor = 'Ana Souza <ana@dimetal.test>'): string => AuditLogText::sentence(new AuditLog(['action' => $a->value, 'actor_label' => $actor, 'subject' => $subject, 'detail' => $detail]));
+        $text = fn (AuditAction $a, ?string $subject, array $detail = [], ?string $actor = 'Ana Souza <ana@fluxie.test>'): string => AuditLogText::sentence(new AuditLog(['action' => $a->value, 'actor_label' => $actor, 'subject' => $subject, 'detail' => $detail]));
 
-        $this->assertSame('Ana Souza <ana@dimetal.test> entrou no sistema', $text(AuditAction::Login, null));
-        $this->assertSame('Login recusado para ana@dimetal.test', $text(AuditAction::LoginFailed, 'ana@dimetal.test', [], null));
-        $this->assertSame('Ana Souza <ana@dimetal.test> mudou o papel de Beto: '.UserRole::ATENDENTE->label().' → '.UserRole::SUPERVISOR->label(), $text(AuditAction::UserRoleChanged, 'Beto', ['from' => 'atendente', 'to' => 'supervisor']));
-        $this->assertSame('Ana Souza <ana@dimetal.test> alterou o usuário Beto (nome, setores)', $text(AuditAction::UserUpdated, 'Beto', ['fields' => ['name', 'sectors']]));
-        $this->assertSame('Ana Souza <ana@dimetal.test> criou o usuário Beto ('.UserRole::ATENDENTE->label().')', $text(AuditAction::UserCreated, 'Beto', ['role' => 'atendente']));
+        $this->assertSame('Ana Souza <ana@fluxie.test> entrou no sistema', $text(AuditAction::Login, null));
+        $this->assertSame('Login recusado para ana@fluxie.test', $text(AuditAction::LoginFailed, 'ana@fluxie.test', [], null));
+        $this->assertSame('Ana Souza <ana@fluxie.test> mudou o papel de Beto: '.UserRole::ATENDENTE->label().' → '.UserRole::SUPERVISOR->label(), $text(AuditAction::UserRoleChanged, 'Beto', ['from' => 'atendente', 'to' => 'supervisor']));
+        $this->assertSame('Ana Souza <ana@fluxie.test> alterou o usuário Beto (nome, setores)', $text(AuditAction::UserUpdated, 'Beto', ['fields' => ['name', 'sectors']]));
+        $this->assertSame('Ana Souza <ana@fluxie.test> criou o usuário Beto ('.UserRole::ATENDENTE->label().')', $text(AuditAction::UserCreated, 'Beto', ['role' => 'atendente']));
     }
 
     public function test_acao_desconhecida_aparece_pelo_proprio_nome(): void

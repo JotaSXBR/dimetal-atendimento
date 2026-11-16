@@ -30,7 +30,7 @@ class SyncContactToGoogleTest extends TestCase
     private function connect(GoogleConnectionStatus $status = GoogleConnectionStatus::CONNECTED): void
     {
         GoogleConnection::query()->create([
-            'account_email' => 'dimetal@gmail.com', 'access_token' => 'tok', 'refresh_token' => 'ref',
+            'account_email' => 'fluxie@gmail.com', 'access_token' => 'tok', 'refresh_token' => 'ref',
             'expires_at' => now()->addHour(), 'status' => $status, 'connected_at' => now(),
         ]);
     }

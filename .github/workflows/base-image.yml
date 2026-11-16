@@ -62,7 +62,7 @@ jobs:
           build-args: SECURITY_REFRESH=${{ github.run_id }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/jotasxbr/dimetal-php-base:${{ steps.versions.outputs.php }}
-            ghcr.io/jotasxbr/dimetal-php-base:sha-${{ github.sha }}
+            ghcr.io/fluxie-tech/fluxie-php-base:${{ steps.versions.outputs.php }}
+            ghcr.io/fluxie-tech/fluxie-php-base:sha-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
