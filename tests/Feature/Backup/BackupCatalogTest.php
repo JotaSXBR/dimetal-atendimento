@@ -40,9 +40,9 @@ class BackupCatalogTest extends TestCase
     {
         $at = CarbonImmutable::parse('2026-11-13 05:15:00', 'UTC');
 
-        $this->assertSame('dimetal-2026-11-13-0215-diario.dump', $this->catalog()->name(BackupKind::Diario, $at));
-        $this->assertSame('dimetal-2026-11-13-0215-semanal.dump', $this->catalog()->name(BackupKind::Semanal, $at));
-        $this->assertSame('dimetal-2026-11-13-0215-manual.dump', $this->catalog()->name(BackupKind::Manual, $at));
+        $this->assertSame('fluxie-2026-11-13-0215-diario.dump', $this->catalog()->name(BackupKind::Diario, $at));
+        $this->assertSame('fluxie-2026-11-13-0215-semanal.dump', $this->catalog()->name(BackupKind::Semanal, $at));
+        $this->assertSame('fluxie-2026-11-13-0215-manual.dump', $this->catalog()->name(BackupKind::Manual, $at));
     }
 
     public function test_lista_do_mais_novo_ao_mais_velho_e_ignora_arquivo_estranho(): void
@@ -142,7 +142,7 @@ class BackupCatalogTest extends TestCase
     {
         $at = CarbonImmutable::parse('2026-11-13 05:15:00', 'UTC');
 
-        $this->assertSame('dimetal-2026-11-13-0215-antes.dump', $this->catalog()->name(BackupKind::Antes, $at));
+        $this->assertSame('fluxie-2026-11-13-0215-antes.dump', $this->catalog()->name(BackupKind::Antes, $at));
         $this->assertSame('Antes de restaurar', BackupKind::Antes->label());
     }
 
@@ -167,5 +167,50 @@ class BackupCatalogTest extends TestCase
         $left = collect($this->catalog()->all());
         $this->assertCount(2, $left->where('kind', BackupKind::Antes));
         $this->assertCount(3, $left->where('kind', BackupKind::Manual));
+    }
+
+    public function test_nome_novo_usa_o_prefixo_fluxie(): void
+    {
+        $at = CarbonImmutable::parse('2026-11-16 15:30', 'America/Sao_Paulo');
+
+        $this->assertSame('fluxie-2026-11-16-1530-manual.dump', $this->catalog()->name(BackupKind::Manual, $at));
+    }
+
+    public function test_lista_backups_antigos_dimetal_junto_com_os_novos_por_data(): void
+    {
+        Storage::disk('backups')->put('dimetal-2026-11-10-0300-diario.dump', 'x');
+        Storage::disk('backups')->put('fluxie-2026-11-16-0300-diario.dump', 'x');
+
+        $this->assertSame(
+            ['fluxie-2026-11-16-0300-diario.dump', 'dimetal-2026-11-10-0300-diario.dump'],
+            array_map(fn ($file) => $file->name, $this->catalog()->all()),
+        );
+    }
+
+    public function test_find_acha_backup_antigo_dimetal(): void
+    {
+        Storage::disk('backups')->put('dimetal-2026-11-10-0300-diario.dump', 'x');
+
+        $this->assertNotNull($this->catalog()->find('dimetal-2026-11-10-0300-diario.dump'));
+    }
+
+    public function test_prune_conta_os_dois_prefixos_no_mesmo_tipo(): void
+    {
+        config(['backup.keep.diario' => 1]);
+        Storage::disk('backups')->put('dimetal-2026-11-10-0300-diario.dump', 'x');
+        Storage::disk('backups')->put('fluxie-2026-11-16-0300-diario.dump', 'x');
+
+        $this->assertSame(1, $this->catalog()->prune());
+        Storage::disk('backups')->assertMissing('dimetal-2026-11-10-0300-diario.dump');
+        Storage::disk('backups')->assertExists('fluxie-2026-11-16-0300-diario.dump');
+    }
+
+    public function test_nomes_fora_do_padrao_continuam_fora(): void
+    {
+        foreach (['fluxiex-2026-11-16-0300-diario.dump', 'dimetal-2026-11-10-0300-outro.dump', 'fluxie-2026-11-16-0300-diario.dump.tmp'] as $name) {
+            Storage::disk('backups')->put($name, 'x');
+        }
+
+        $this->assertSame([], $this->catalog()->all());
     }
 }
