@@ -38,4 +38,5 @@ compose*.yaml
 docker/*
 !docker/nginx
 !docker/worker.sh
+!docker/entrypoint
 *.md

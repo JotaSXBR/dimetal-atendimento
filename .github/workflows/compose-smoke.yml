@@ -1,0 +1,45 @@
+name: compose-smoke
+
+# Sobe o docker-compose.yml com a imagem construída do código e confere o stack; também roda o teste dos scripts do Coolify.
+on:
+  pull_request:
+    paths:
+      - 'docker/**'
+      - 'docker-compose.yml'
+      - '.github/scripts/**'
+      - 'tests/scripts/**'
+      - '.github/workflows/compose-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'docker-compose.yml'
+      - '.github/scripts/**'
+      - 'tests/scripts/**'
+      - '.github/workflows/compose-smoke.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Coolify scripts test
+        run: bash tests/scripts/coolify-test.sh
+
+      # A base vem do GHCR (pública); o runtime é construído aqui.
+      - name: Build the runtime image
+        run: docker build --target runtime -f docker/Dockerfile -t fluxie-smoke:ci .
+
+      - name: Compose smoke test
+        run: bash docker/smoke/compose-smoke.sh fluxie-smoke:ci
