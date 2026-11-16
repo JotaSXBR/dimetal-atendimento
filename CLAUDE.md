@@ -48,6 +48,7 @@ os hooks do projeto.
 | `revisor-final` | opus, low | revisão do branch inteiro no portão 6 (molde `code-reviewer.md`) |
 | `Explore` | haiku, low | busca só fora do índice do CodeGraph: `vendor/` (Livewire, Flux), Blade, migrations, `docs/` |
 | `leitor-web-logs` | haiku, low | páginas da web na pesquisa e logs grandes (Coolify, WAHA, saída de teste) |
+| `conferente-visual` | sonnet, medium | conferência no navegador pelo Claude in Chrome (servidor local ou beta): layout, foco, medidas, console e CSP |
 
 Builder-check do brainstorming e investigações em paralelo: subagente comum com `sonnet`, `medium`. Ciclo de correção da SDD
 nas rodadas 4 e 5: um modelo acima do implementador. Mudar um destes é decisão do dono.
