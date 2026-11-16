@@ -233,3 +233,21 @@ desloga e para) a tira da lista. Mesma distinção no Evolution API (logout mant
   sair sem gravar o estado (o canal fica `STOPPED`).
 - [ ] **Step 4:** testes do cartão, do job e de webhook passam; suíte `--parallel` passa.
 - [ ] **Step 5:** commit `fix: canal desativado tem a sessão apagada no WAHA e não volta ao reiniciar`.
+
+### Task 12: cenário do seed com conversa da Automação (para a conferência visual da Task 8)
+
+A conferência visual não achou mensagem de origem `bot` nem nota da Automação no seed: os itens 1 e 3 da Task 8 ficaram sem prova.
+
+**Files:**
+- Create: `database/seeders/Cenarios/ConversaDaAutomacao.php`
+- Modify: `database/seeders/AmbienteDeTesteSeeder.php` (chamar o cenário)
+- Test: `tests/Feature/Seeders/AmbienteDeTesteSeederTest.php`
+
+- [ ] **Step 1: teste que falha** `test_tem_conversa_da_automacao`: depois do seed existe `Message` com `origin = MessageOrigin::BOT` e
+  `TicketNote` com origem da Automação (`NoteOrigin::BOT`, na coluna que o modelo usa), no mesmo ticket, que tem também mensagem do cliente.
+- [ ] **Step 2:** ver falhar.
+- [ ] **Step 3:** cenário no molde de `NotaInterna`/`BolhasDeTamanhosVariados`: ticket `AGUARDANDO` no `CanalConectado::canal()`, uma
+  mensagem do cliente ("Oi, quero falar com vendas"), uma resposta `OUT`/`BOT` com texto de menu de várias linhas e uma nota da Automação
+  com o que ela coletou ("Nome: Ana · Setor escolhido: Vendas"). Guarda `exigirAmbienteDeTeste()`.
+- [ ] **Step 4:** teste do seed passa.
+- [ ] **Step 5:** commit `test: cenário do seed com conversa da Automação`.
