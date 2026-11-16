@@ -27,7 +27,7 @@
 
 ---
 
-### Tarefa 1: "Atendimento padrão" vira o fluxo do beta e o "com horário" sai
+### Task 1: "Atendimento padrão" vira o fluxo do beta e o "com horário" sai
 
 **Arquivos:**
 - Modificar: `app/Services/Bot/DefaultWorkflow.php` (`graph()` novo; remove `withHours()`; docblocks)
