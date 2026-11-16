@@ -192,7 +192,7 @@ test('fitPlan: fluxo pequeno mantém o zoom e só desce meia barra', async () =>
 test('fitPlan: fluxo médio, acima do piso, não ancora o Início', async () => {
     const { fitPlan } = await import('../../resources/js/flow-editor/appearance.js');
 
-    assert.deepEqual(fitPlan({ k: 0.95, x: 0, y: 0, inset: 0, positions: [{ type: 'inicio', x: 100, y: 50 }] }), { scale: 0.95, x: 0, y: 0 });
+    assert.deepEqual(fitPlan({ k: 0.95, x: 5, y: 10, inset: 56, positions: [{ type: 'inicio', x: 100, y: 50 }] }), { scale: 0.95, x: 5, y: 38 });
 });
 
 test('fitPlan: fluxo alto cai no piso e ancora o Início abaixo da barra', async () => {

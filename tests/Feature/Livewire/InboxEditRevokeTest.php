@@ -138,9 +138,7 @@ class InboxEditRevokeTest extends TestCase
     {
         $old = $this->own(['wa_message_id' => 'OLD1', 'sent_at' => now()->subHours(49)]);
 
-        $this->inbox()->call('revoke', $old->id)
-            ->assertSet('notice', 'O WhatsApp só permite apagar para todos até 2 dias depois do envio.')
-            ->assertOk();
+        $this->inbox()->call('revoke', $old->id)->assertOk(); // o texto do aviso, pela constante, fica em test_aviso_de_apagar_usa_o_prazo_da_constante
 
         Http::assertNothingSent();
     }
