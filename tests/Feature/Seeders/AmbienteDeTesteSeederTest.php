@@ -4,6 +4,8 @@ namespace Tests\Feature\Seeders;
 
 use App\Enums\ChannelStatus;
 use App\Enums\MessageDirection;
+use App\Enums\MessageOrigin;
+use App\Enums\NoteOrigin;
 use App\Enums\SectorStatus;
 use App\Enums\TagScope;
 use App\Enums\TicketStatus;
@@ -199,6 +201,17 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertSame(0, User::query()->count());
         $this->assertSame(0, Channel::query()->count());
         $this->assertSame(0, Ticket::query()->count());
+    }
+
+    public function test_tem_conversa_da_automacao(): void
+    {
+        $this->seed(AmbienteDeTesteSeeder::class);
+
+        $resposta = Message::query()->where('origin', MessageOrigin::BOT)->firstOrFail();
+        $nota = TicketNote::query()->where('origin', NoteOrigin::BOT)->firstOrFail();
+        $this->assertSame($resposta->ticket_id, $nota->ticket_id);
+        $this->assertNull($nota->user_id);
+        $this->assertTrue(Message::query()->where('ticket_id', $resposta->ticket_id)->where('direction', MessageDirection::IN)->exists());
     }
 
     public function test_cria_tickets_com_sla_estourado_e_a_vencer(): void
