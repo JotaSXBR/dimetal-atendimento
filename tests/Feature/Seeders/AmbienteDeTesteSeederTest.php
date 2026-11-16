@@ -154,4 +154,23 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertSame(0, User::query()->count());
         $this->assertSame(0, Sector::query()->count());
     }
+
+    public function test_cada_cenario_recusa_rodar_em_producao(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        foreach (glob(database_path('seeders/Cenarios/*.php')) as $arquivo) {
+            $classe = (new \ReflectionClass(UsuariosDeTeste::class))->getNamespaceName().'\\'.basename($arquivo, '.php');
+            try {
+                $this->app->make($classe)->run();
+                $this->fail($classe.' deveria recusar em produção.');
+            } catch (RuntimeException $e) {
+                $this->assertStringContainsString('local', $e->getMessage(), $classe);
+            }
+        }
+
+        $this->assertSame(0, User::query()->count());
+        $this->assertSame(0, Channel::query()->count());
+        $this->assertSame(0, Ticket::query()->count());
+    }
 }

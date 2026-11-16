@@ -7,12 +7,17 @@ use App\Models\Sector;
 use App\Models\User;
 use Database\Seeders\AmbienteDeTesteSeeder;
 use Database\Seeders\SectorSeeder;
+use Database\Seeders\SoRodaEmAmbienteDeTeste;
 use Illuminate\Database\Seeder;
 
 class UsuariosDeTeste extends Seeder
 {
+    use SoRodaEmAmbienteDeTeste;
+
     public function run(): void
     {
+        $this->exigirAmbienteDeTeste();
+
         if (! Sector::query()->exists()) {
             $this->call(SectorSeeder::class);
         }
