@@ -174,9 +174,9 @@ class InboxMediaTest extends TestCase
 
     public function test_documento_vira_cartao_com_icone_nome_tipo_e_tamanho(): void
     {
-        $this->screen(['media_ref' => 'c.docx', 'media_mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'media_name' => 'COTAÇÃO DIMETAL.docx', 'media_size' => 22528])
+        $this->screen(['media_ref' => 'c.docx', 'media_mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'media_name' => 'COTAÇÃO FLUXIE.docx', 'media_size' => 22528])
             ->assertSeeHtml('data-document-card')
-            ->assertSee('COTAÇÃO DIMETAL.docx')
+            ->assertSee('COTAÇÃO FLUXIE.docx')
             ->assertSee('DOCX · 22 KB')
             ->assertSeeHtml('bg-blue-600');
     }

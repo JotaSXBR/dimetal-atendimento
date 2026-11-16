@@ -377,22 +377,22 @@ class SidebarTest extends TestCase
 
     public function test_o_nome_acessivel_da_marca_contem_o_texto_visivel(): void
     {
-        CompanySettings::save(['name' => 'Dimetal Distribuidora']);
+        CompanySettings::save(['name' => 'Fluxie Distribuidora']);
 
         $brand = $this->xpath($this->page(UserRole::ATENDENTE))->query('//a[@data-flux-sidebar-brand]')->item(0);
 
         $this->assertNotNull($brand);
         // O texto visível é o monograma (a inicial) mais o nome; o nome acessível precisa começar por ele (WCAG 2.5.3).
-        $this->assertSame('D Dimetal Distribuidora', $brand->getAttribute('aria-label'));
+        $this->assertSame('F Fluxie Distribuidora', $brand->getAttribute('aria-label'));
     }
 
     public function test_o_rotulo_da_marca_ignora_espacos_nas_pontas_do_nome(): void
     {
-        CompanySettings::save(['name' => '  Dimetal  ']);
+        CompanySettings::save(['name' => '  Fluxie  ']);
 
         $brand = $this->xpath($this->page(UserRole::ATENDENTE))->query('//a[@data-flux-sidebar-brand]')->item(0);
 
-        $this->assertSame('D Dimetal', $brand?->getAttribute('aria-label'));
+        $this->assertSame('F Fluxie', $brand?->getAttribute('aria-label'));
     }
 
     public function test_sem_aviso_com_canal_conectado(): void

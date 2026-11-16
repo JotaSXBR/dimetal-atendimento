@@ -33,7 +33,7 @@ class UserAuditTest extends TestCase
 
         Livewire::actingAs($admin)->test(Users::class)
             ->call('newUser')
-            ->set('name', 'Beto Souza')->set('email', 'beto@dimetal.test')->set('role', 'supervisor')->set('password', 'senha-inicial-123')
+            ->set('name', 'Beto Souza')->set('email', 'beto@fluxie.test')->set('role', 'supervisor')->set('password', 'senha-inicial-123')
             ->call('save')->assertHasNoErrors();
 
         $log = AuditLog::query()->sole();

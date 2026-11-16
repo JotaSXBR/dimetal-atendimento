@@ -30,7 +30,7 @@ class GoogleSyncTriggersTest extends TestCase
     private function connect(GoogleConnectionStatus $status = GoogleConnectionStatus::CONNECTED): void
     {
         GoogleConnection::query()->create([
-            'account_email' => 'dimetal@gmail.com', 'access_token' => 'tok', 'refresh_token' => 'ref',
+            'account_email' => 'fluxie@gmail.com', 'access_token' => 'tok', 'refresh_token' => 'ref',
             'expires_at' => now()->addHour(), 'status' => $status, 'connected_at' => now(),
         ]);
     }
@@ -109,7 +109,7 @@ class GoogleSyncTriggersTest extends TestCase
         Queue::fake();
         config(['services.google' => ['client_id' => 'cid', 'client_secret' => 'secret', 'redirect' => 'http://localhost/cb']]);
         $waiting = $this->pending();
-        $user = (new SocialiteUser)->map(['email' => 'dimetal@gmail.com']);
+        $user = (new SocialiteUser)->map(['email' => 'fluxie@gmail.com']);
         $user->token = 'access';
         $user->refreshToken = 'refresh';
         $user->expiresIn = 3600;

@@ -24,7 +24,7 @@ class SystemLogPageTest extends TestCase
     }
 
     /** @param  array<string, mixed>|null  $detail */
-    private function log(string $action, ?string $subject = null, ?CarbonInterface $at = null, ?string $actor = 'Ana Souza <ana@dimetal.test>', ?array $detail = null, ?int $userId = null, ?string $ip = '10.0.0.9'): void
+    private function log(string $action, ?string $subject = null, ?CarbonInterface $at = null, ?string $actor = 'Ana Souza <ana@fluxie.test>', ?array $detail = null, ?int $userId = null, ?string $ip = '10.0.0.9'): void
     {
         DB::table('audit_logs')->insert([
             'action' => $action, 'subject' => $subject, 'actor_label' => $actor, 'actor_user_id' => $userId, 'ip' => $ip,
@@ -44,9 +44,9 @@ class SystemLogPageTest extends TestCase
     {
         $this->travelTo(now()->setDate(2026, 10, 30)->setTime(12, 0));
         $this->log('auth.logout', null, now()->subHour());
-        $this->log('backup.manual_requested', null, now()->subMinutes(5), 'Beto <beto@dimetal.test>', null, null, '10.1.2.3');
+        $this->log('backup.manual_requested', null, now()->subMinutes(5), 'Beto <beto@fluxie.test>', null, null, '10.1.2.3');
 
-        $this->page()->assertSeeInOrder(['Beto <beto@dimetal.test> pediu um backup manual', 'Ana Souza <ana@dimetal.test> saiu do sistema'])
+        $this->page()->assertSeeInOrder(['Beto <beto@fluxie.test> pediu um backup manual', 'Ana Souza <ana@fluxie.test> saiu do sistema'])
             ->assertSee('10.1.2.3')
             ->assertSee('30/10 08:55');
     }
@@ -64,8 +64,8 @@ class SystemLogPageTest extends TestCase
     public function test_filtro_de_grupo_e_de_usuario(): void
     {
         $ana = User::factory()->create(['name' => 'Ana Souza']);
-        $this->log('auth.logout', null, now(), 'Ana Souza <ana@dimetal.test>', null, $ana->id);
-        $this->log('backup.downloaded', 'arquivo-x.dump', now(), 'Beto <beto@dimetal.test>');
+        $this->log('auth.logout', null, now(), 'Ana Souza <ana@fluxie.test>', null, $ana->id);
+        $this->log('backup.downloaded', 'arquivo-x.dump', now(), 'Beto <beto@fluxie.test>');
 
         $this->page()->set('group', 'Backup')->assertSee('baixou o backup arquivo-x.dump')->assertDontSee('saiu do sistema');
         $this->page()->set('userId', $ana->id)->assertSee('saiu do sistema')->assertDontSee('arquivo-x.dump');
@@ -85,7 +85,7 @@ class SystemLogPageTest extends TestCase
 
     public function test_nunca_mostra_o_detalhe_bruto_nem_segredo(): void
     {
-        $this->log('restore.succeeded', 'dump.dump', now(), 'Ana Souza <ana@dimetal.test>', ['mode' => 'restore', 'message' => 'Concluída.', 'password' => 'segredo-xyz']);
+        $this->log('restore.succeeded', 'dump.dump', now(), 'Ana Souza <ana@fluxie.test>', ['mode' => 'restore', 'message' => 'Concluída.', 'password' => 'segredo-xyz']);
 
         $html = $this->page()->assertSee('Restauração concluída')->html();
 
@@ -97,9 +97,9 @@ class SystemLogPageTest extends TestCase
 
     public function test_ator_apagado_aparece_pelo_rotulo_gravado(): void
     {
-        $this->log('user.deactivated', 'Beto', now(), 'Fulano Apagado <fulano@dimetal.test>');
+        $this->log('user.deactivated', 'Beto', now(), 'Fulano Apagado <fulano@fluxie.test>');
 
-        $this->page()->assertSee('Fulano Apagado <fulano@dimetal.test> desativou o usuário Beto');
+        $this->page()->assertSee('Fulano Apagado <fulano@fluxie.test> desativou o usuário Beto');
     }
 
     public function test_as_duas_paginas_de_auditoria_tem_as_abas(): void

@@ -23,9 +23,9 @@ class CompanyPageTest extends TestCase
 
     public function test_padroes_quando_nada_foi_salvo(): void
     {
-        config(['app.name' => 'Dimetal']);
+        config(['app.name' => 'Fluxie']);
 
-        $this->assertSame('Dimetal', CompanySettings::name());
+        $this->assertSame('Fluxie', CompanySettings::name());
         $this->assertTrue(CompanySettings::signatureEnabled());
         $this->assertSame('*{{atendente}} @ {{empresa}}:*', CompanySettings::signatureTemplate());
         $this->assertSame('inicio', CompanySettings::signaturePosition());
@@ -35,14 +35,14 @@ class CompanyPageTest extends TestCase
     public function test_admin_salva_e_a_configuracao_e_relida(): void
     {
         $this->page()
-            ->set('name', 'Dimetal Distribuidora')
+            ->set('name', 'Fluxie Distribuidora')
             ->set('signatureEnabled', false)
             ->set('signatureTemplate', '_{{atendente}}_ ({{setor}})')
             ->set('signaturePosition', 'fim')
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertSame('Dimetal Distribuidora', CompanySettings::name());
+        $this->assertSame('Fluxie Distribuidora', CompanySettings::name());
         $this->assertFalse(CompanySettings::signatureEnabled());
         $this->assertSame('_{{atendente}}_ ({{setor}})', CompanySettings::signatureTemplate());
         $this->assertSame('fim', CompanySettings::signaturePosition());
@@ -70,8 +70,8 @@ class CompanyPageTest extends TestCase
         $admin = User::factory()->create(['role' => UserRole::ADMIN, 'name' => 'Jessé']);
 
         Livewire::actingAs($admin)->test(Company::class)
-            ->set('name', 'Dimetal Distribuidora')
-            ->assertSeeHtml('<strong>Jessé @ Dimetal Distribuidora:</strong>')
+            ->set('name', 'Fluxie Distribuidora')
+            ->assertSeeHtml('<strong>Jessé @ Fluxie Distribuidora:</strong>')
             ->set('signaturePosition', 'fim')
             ->assertSeeHtml('Bom dia! Tudo bem?');
     }
@@ -79,10 +79,10 @@ class CompanyPageTest extends TestCase
     public function test_a_previa_acompanha_a_posicao_da_assinatura(): void
     {
         $admin = User::factory()->create(['role' => UserRole::ADMIN, 'name' => 'Jessé']);
-        $signature = '<strong>Jessé @ Dimetal Distribuidora:</strong>';
+        $signature = '<strong>Jessé @ Fluxie Distribuidora:</strong>';
 
         Livewire::actingAs($admin)->test(Company::class)
-            ->set('name', 'Dimetal Distribuidora')
+            ->set('name', 'Fluxie Distribuidora')
             ->set('signaturePosition', 'fim')
             ->assertSeeHtmlInOrder(['Bom dia! Tudo bem?', $signature])
             ->set('signaturePosition', 'inicio')

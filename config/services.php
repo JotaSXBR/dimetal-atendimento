@@ -35,7 +35,7 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    // Conta que recebe os contatos. A de teste e a da Dimetal trocam só pelo .env.
+    // Conta que recebe os contatos. A de teste e a da empresa trocam só pelo .env.
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

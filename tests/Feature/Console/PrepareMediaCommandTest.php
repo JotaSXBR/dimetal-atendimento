@@ -20,8 +20,8 @@ class PrepareMediaCommandTest extends TestCase
     private function s3Disk(MockHandler $mock): void
     {
         $client = new S3Client(['region' => 'us-east-1', 'version' => 'latest', 'credentials' => ['key' => 'k', 'secret' => 's'], 'handler' => $mock]);
-        $adapter = new AwsS3V3Adapter($client, 'dimetal-beta-media');
-        Storage::set('rustfs', new LaravelS3Adapter(new Filesystem($adapter), $adapter, ['bucket' => 'dimetal-beta-media'], $client));
+        $adapter = new AwsS3V3Adapter($client, 'fluxie-beta-media');
+        Storage::set('rustfs', new LaravelS3Adapter(new Filesystem($adapter), $adapter, ['bucket' => 'fluxie-beta-media'], $client));
         config(['media.disk' => 'rustfs']);
     }
 
@@ -33,7 +33,7 @@ class PrepareMediaCommandTest extends TestCase
         ]);
         $this->s3Disk($mock);
 
-        $this->artisan('app:prepare-media')->expectsOutputToContain('dimetal-beta-media')->assertSuccessful();
+        $this->artisan('app:prepare-media')->expectsOutputToContain('fluxie-beta-media')->assertSuccessful();
 
         $this->assertCount(0, $mock, 'as duas chamadas (existe? e criar) foram feitas');
         $this->assertSame('CreateBucket', $mock->getLastCommand()?->getName());
@@ -53,8 +53,8 @@ class PrepareMediaCommandTest extends TestCase
     private function s3BackupDisk(MockHandler $mock): void
     {
         $client = new S3Client(['region' => 'us-east-1', 'version' => 'latest', 'credentials' => ['key' => 'k', 'secret' => 's'], 'handler' => $mock]);
-        $adapter = new AwsS3V3Adapter($client, 'dimetal-beta-backups');
-        Storage::set('rustfs-backups', new LaravelS3Adapter(new Filesystem($adapter), $adapter, ['bucket' => 'dimetal-beta-backups'], $client));
+        $adapter = new AwsS3V3Adapter($client, 'fluxie-beta-backups');
+        Storage::set('rustfs-backups', new LaravelS3Adapter(new Filesystem($adapter), $adapter, ['bucket' => 'fluxie-beta-backups'], $client));
         config(['backup.disk' => 'rustfs-backups']);
         Storage::fake('media');
         config(['media.disk' => 'media']);
@@ -68,7 +68,7 @@ class PrepareMediaCommandTest extends TestCase
         ]);
         $this->s3BackupDisk($mock);
 
-        $this->artisan('app:prepare-media')->expectsOutputToContain('dimetal-beta-backups')->assertSuccessful();
+        $this->artisan('app:prepare-media')->expectsOutputToContain('fluxie-beta-backups')->assertSuccessful();
 
         $this->assertCount(0, $mock);
         $this->assertSame('CreateBucket', $mock->getLastCommand()?->getName());

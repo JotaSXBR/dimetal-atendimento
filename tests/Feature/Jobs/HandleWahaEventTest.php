@@ -118,7 +118,7 @@ class HandleWahaEventTest extends TestCase
             'channel_id' => $channel->id,
             'event' => 'session.status',
             'session' => 'main',
-            'payload' => ['me' => ['id' => '5516999990001@c.us', 'pushName' => 'Dimetal'], 'payload' => ['status' => 'WORKING']],
+            'payload' => ['me' => ['id' => '5516999990001@c.us', 'pushName' => 'Fluxie'], 'payload' => ['status' => 'WORKING']],
             'received_at' => now(),
         ]);
 

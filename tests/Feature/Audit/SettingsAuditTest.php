@@ -32,7 +32,7 @@ class SettingsAuditTest extends TestCase
         return User::factory()->create(['role' => UserRole::ADMIN]);
     }
 
-    private function fakeGoogleUser(string $email = 'dimetal@gmail.com'): void
+    private function fakeGoogleUser(string $email = 'fluxie@gmail.com'): void
     {
         $user = (new SocialiteUser)->map(['email' => $email]);
         $user->token = 'access-token-secreto';
@@ -53,7 +53,7 @@ class SettingsAuditTest extends TestCase
 
         $log = AuditLog::query()->sole();
         $this->assertSame('google.connected', $log->action);
-        $this->assertSame('dimetal@gmail.com', $log->subject);
+        $this->assertSame('fluxie@gmail.com', $log->subject);
         $this->assertSame($admin->id, $log->actor_user_id);
         $this->assertStringNotContainsString('secreto', (string) json_encode(AuditLog::query()->get()->toArray()));
     }
@@ -67,13 +67,13 @@ class SettingsAuditTest extends TestCase
 
     public function test_desconectar_o_google_grava_a_conta_que_saiu(): void
     {
-        GoogleConnection::query()->create(['account_email' => 'dimetal@gmail.com', 'access_token' => 'a', 'refresh_token' => 'r', 'expires_at' => now()->addHour(), 'status' => GoogleConnectionStatus::CONNECTED, 'connected_at' => now()]);
+        GoogleConnection::query()->create(['account_email' => 'fluxie@gmail.com', 'access_token' => 'a', 'refresh_token' => 'r', 'expires_at' => now()->addHour(), 'status' => GoogleConnectionStatus::CONNECTED, 'connected_at' => now()]);
 
         Livewire::actingAs($this->admin())->test(GoogleContacts::class)->call('disconnect');
 
         $log = AuditLog::query()->sole();
         $this->assertSame('google.disconnected', $log->action);
-        $this->assertSame('dimetal@gmail.com', $log->subject);
+        $this->assertSame('fluxie@gmail.com', $log->subject);
     }
 
     public function test_criar_canal_grava_e_sessao_duplicada_nao(): void

@@ -16,7 +16,7 @@ class WhatsAppTextTest extends TestCase
             'italico' => ['Oi _tudo_ bem', 'Oi <em>tudo</em> bem'],
             'tachado' => ['Oi ~tudo~ bem', 'Oi <s>tudo</s> bem'],
             'monoespacado' => ['Use ```um codigo``` aqui', 'Use <code>um codigo</code> aqui'],
-            'aninhado' => ['*_Jessé_ @ Dimetal:*', '<strong><em>Jessé</em> @ Dimetal:</strong>'],
+            'aninhado' => ['*_Jessé_ @ Fluxie:*', '<strong><em>Jessé</em> @ Fluxie:</strong>'],
             'asterisco solto' => ['2 * 3 = 6', '2 * 3 = 6'],
             'snake_case nao vira italico' => ['o campo nome_do_cliente e unico', 'o campo nome_do_cliente e unico'],
             'marca com espaco por dentro nao vale' => ['* nao *', '* nao *'],

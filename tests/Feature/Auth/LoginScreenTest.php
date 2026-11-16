@@ -10,7 +10,7 @@ class LoginScreenTest extends TestCase
     {
         $this->get('/login')
             ->assertOk()
-            ->assertSee('Dimetal Distribuidora')
+            ->assertSee('Fluxie Inbox')
             ->assertSee('Entrar')
             ->assertDontSee('Criar conta')
             ->assertDontSee('Esqueci minha senha');

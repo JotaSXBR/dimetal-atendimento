@@ -30,7 +30,7 @@ trait FakesPgDump
     /** Uma pasta temporária própria por teste: os testes rodam em paralelo e `storage/app/tmp` seria compartilhada entre processos. */
     private function isolateTemporaryDumps(): void
     {
-        $directory = sys_get_temp_dir().'/dimetal-backup-test-'.Str::random(12);
+        $directory = sys_get_temp_dir().'/fluxie-backup-test-'.Str::random(12);
         config(['backup.tmp_path' => $directory]);
         $this->beforeApplicationDestroyed(fn () => File::deleteDirectory($directory));
     }

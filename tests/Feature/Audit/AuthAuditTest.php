@@ -54,10 +54,10 @@ class AuthAuditTest extends TestCase
 
     public function test_e_mail_inexistente_ou_gigante_nao_quebra(): void
     {
-        $unknown = 'naoexiste-'.bin2hex(random_bytes(6)).'@dimetal.test';
+        $unknown = 'naoexiste-'.bin2hex(random_bytes(6)).'@fluxie.test';
 
         $this->login($unknown, 'qualquer-coisa');
-        $this->login(str_repeat('a', 400).'@dimetal.test', 'qualquer-coisa');
+        $this->login(str_repeat('a', 400).'@fluxie.test', 'qualquer-coisa');
 
         $this->assertSame(2, AuditLog::query()->where('action', 'auth.login_failed')->count());
         $this->assertSame($unknown, AuditLog::query()->orderBy('id')->firstOrFail()->subject);

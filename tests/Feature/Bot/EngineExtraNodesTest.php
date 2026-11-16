@@ -243,10 +243,10 @@ class EngineExtraNodesTest extends TestCase
         ]);
         $session = app(BotEngine::class)->start($this->ticket, $version);
 
-        $this->answer($session, 'Dimetal Ltda');
+        $this->answer($session, 'Fluxie Ltda');
 
         $contact = $this->contact->fresh();
-        $this->assertSame('Dimetal Ltda', $contact?->company);
+        $this->assertSame('Fluxie Ltda', $contact?->company);
         $this->assertNotNull($contact?->edited_at);
     }
 

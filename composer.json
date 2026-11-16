@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "dimetal/atendimento",
+    "name": "fluxie/inbox",
     "type": "project",
-    "description": "Central de atendimento via WhatsApp da Dimetal Distribuidora.",
+    "description": "Central de atendimento via WhatsApp do Fluxie Inbox.",
     "keywords": [
         "laravel",
         "livewire",
