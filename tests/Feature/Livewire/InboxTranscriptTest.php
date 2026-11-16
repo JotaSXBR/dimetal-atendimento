@@ -180,6 +180,15 @@ class InboxTranscriptTest extends TestCase
         $this->assertStringContainsString('&lt;b&gt;x&lt;/b&gt;.docx', $html);
     }
 
+    public function test_trecho_citado_encolhe_e_trunca(): void
+    {
+        $html = $this->quotedReply($this->ticket(), ['author' => 'Maria', 'type' => 'text', 'excerpt' => 'Trecho longo da citação']);
+
+        $this->assertSame(1, preg_match('/<span class="([^"]*)">Trecho longo da citação<\/span>/', $html, $trecho));
+        $this->assertStringContainsString('min-w-0', $trecho[1], 'sem min-w-0 o item flex não encolhe e o trecho passa sob o botão do menu');
+        $this->assertStringContainsString('truncate', $trecho[1]);
+    }
+
     public function test_transcript_refresh_atualiza(): void
     {
         $ticket = $this->ticket();
