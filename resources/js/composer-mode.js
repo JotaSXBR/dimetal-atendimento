@@ -5,7 +5,7 @@
 // O "digitando…" ao cliente só vale no modo Responder (ver o `x-on:input` do campo e o evento `composer-mode`).
 
 import { insertAt } from './composer-insert.js';
-import { draftTicketIds, parseDraft, staleDraftKeys } from './draft-store.js';
+import { draftTicketId, draftTicketIds, parseDraft, staleDraftKeys } from './draft-store.js';
 
 const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -17,14 +17,15 @@ document.addEventListener('alpine:init', () => {
             try {
                 const store = window.localStorage;
                 const keys = Array.from({ length: store.length }, (_, i) => store.key(i));
-                const stale = staleDraftKeys(keys.map((key) => [key, store.getItem(key)]), userId, Date.now(), DRAFT_MAX_AGE_MS);
+                const entries = keys.map((key) => [key, store.getItem(key)]);
+                const stale = staleDraftKeys(entries, userId, Date.now(), DRAFT_MAX_AGE_MS);
                 stale.forEach((key) => store.removeItem(key));
 
-                const ids = draftTicketIds(keys.filter((key) => !stale.includes(key)), userId).slice(0, 200);
+                const ids = draftTicketIds(entries.filter(([key]) => !stale.includes(key)), userId).slice(0, 200);
 
                 if (ids.length > 0) {
                     $wire.closedDraftTickets(ids).then((closed) => {
-                        keys.filter((key) => closed.includes(draftTicketIds([key], userId)[0])).forEach((key) => store.removeItem(key));
+                        keys.filter((key) => closed.includes(draftTicketId(key, userId))).forEach((key) => store.removeItem(key));
                     }).catch(() => {});
                 }
             } catch {

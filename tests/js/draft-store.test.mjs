@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { draftTicketIds, parseDraft, staleDraftKeys } from '../../resources/js/draft-store.js';
+import { draftTicketId, draftTicketIds, parseDraft, staleDraftKeys } from '../../resources/js/draft-store.js';
 
 const DAY = 86_400_000;
 const WEEK = 7 * DAY;
@@ -26,7 +26,20 @@ test('staleDraftKeys devolve só as chaves do usuário vencidas; sem data não v
     assert.deepEqual(staleDraftKeys(entries, 1, NOW, WEEK), ['rascunho:1:10:reply']);
 });
 
-test('draftTicketIds extrai os ids únicos do usuário', () => {
-    const keys = ['rascunho:1:10:reply', 'rascunho:1:10:note', 'rascunho:1:11:reply', 'rascunho:2:12:reply', 'x'];
-    assert.deepEqual(draftTicketIds(keys, 1), [10, 11]);
+test('draftTicketId lê o id da chave do usuário, ou null', () => {
+    assert.equal(draftTicketId('rascunho:1:10:reply', 1), 10);
+    assert.equal(draftTicketId('rascunho:2:10:reply', 1), null);
+    assert.equal(draftTicketId('rascunho:1:x:reply', 1), null);
+});
+
+test('draftTicketIds ordena do mais antigo e põe o formato antigo primeiro', () => {
+    const at = (n) => JSON.stringify({ text: 'a', at: n });
+    const entries = [
+        ['rascunho:1:30:reply', at(300)],
+        ['rascunho:1:10:reply', at(100)],
+        ['rascunho:1:20:reply', 'texto cru'],
+        ['rascunho:1:10:note', at(500)],
+        ['rascunho:2:40:reply', at(50)],
+    ];
+    assert.deepEqual(draftTicketIds(entries, 1), [20, 10, 30]);
 });

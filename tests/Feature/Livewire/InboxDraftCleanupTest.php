@@ -30,6 +30,15 @@ class InboxDraftCleanupTest extends TestCase
             ->assertReturned([$closed->id]);
     }
 
+    public function test_usuario_inativo_nao_recebe_nenhum_id(): void
+    {
+        $closed = Ticket::factory()->create(['status' => TicketStatus::ENCERRADO]);
+
+        Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN, 'active' => false]))->test(Inbox::class)
+            ->call('closedDraftTickets', [$closed->id])
+            ->assertReturned([]);
+    }
+
     public function test_ignora_ids_invalidos_e_corta_em_200(): void
     {
         $closed = Ticket::factory()->create(['status' => TicketStatus::ENCERRADO]);

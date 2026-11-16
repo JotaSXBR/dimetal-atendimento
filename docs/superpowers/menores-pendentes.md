@@ -30,9 +30,6 @@ Nenhum pendente. L8 e L9 corrigidos (SLA sem quebra de linha; `title` na linha d
 
 Branch `fix/menores-leva-2`, revisão final e conferência visual.
 
-- `resources/js/draft-store.js`: o corte de 200 ids na limpeza de rascunhos segue a ordem do storage, não a do mais antigo.
-- `resources/js/composer-mode.js` e `draft-store.js`: `draftTicketIds` é chamado por chave; legibilidade.
-- `tests/Feature/Livewire/InboxDraftCleanupTest.php`: falta teste de usuário inativo em `closedDraftTickets`.
 - `app/Livewire/Automation/Index.php:141`: `is_numeric` aceita '1e3' e '5.7' na contagem de setores; `FILTER_VALIDATE_INT` seria mais rigoroso.
 - `tests/Feature/Livewire/`: o teste de `setor_id` string é só regressão, não prova o caso.
 - `app/Livewire/Automation/Index.php:141`: cadeia de `where/pluck/filter/map/filter` longa demais numa linha.
