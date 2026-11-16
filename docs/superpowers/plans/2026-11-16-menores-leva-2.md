@@ -128,6 +128,18 @@
 - [ ] **Step 4: Rodar e ver passar** os arquivos tocados, pint, phpstan.
 - [ ] **Step 5: Commit** `fix: SLA e metadados do cabeçalho e aviso de apagar pela constante (L8, L9)`; no mesmo commit, tirar L8, L9 e fechar U2 e U6 no arquivo de menores com o motivo (U2 conferido no navegador em 16/11; U6 só nomenclatura).
 
+### Task 8: Trecho citado não vaza da bolha (botão do menu sobre a citação)
+
+Causa (conferência no navegador + leitura): em `resources/views/livewire/inbox/quote-preview.blade.php`, o `<span class="truncate">` do trecho fica dentro de `flex items-center gap-1` sem `min-w-0`; como item flex ele não encolhe abaixo do conteúdo, o texto passa da largura do bloco citado e da reserva `pe-9` da bolha e fica por baixo do botão do menu (e a bolha com citação estica até o máximo).
+
+**Files:** Modify `resources/views/livewire/inbox/quote-preview.blade.php`; Test `tests/Feature/Livewire/InboxTranscriptTest.php` (ou o teste da citação existente); `docs/superpowers/menores-pendentes.md` (tirar o item da citação).
+
+- [ ] **Step 1: Teste que falha** `test_trecho_citado_encolhe_e_trunca`: o span do trecho no preview da citação leva `min-w-0` junto do `truncate`.
+- [ ] **Step 2: Rodar e ver falhar.**
+- [ ] **Step 3: Corrigir** com `min-w-0` no span do trecho (e no do autor, se for item flex sem ele); nada mais muda. A barra "Respondendo a…" usa o mesmo partial: conferir que segue igual.
+- [ ] **Step 4: Rodar e ver passar** (transcript, testes da citação, `ThemeTokensTest`, `ViewConventionsTest`), `npm run build`. Conferência visual com o controlador.
+- [ ] **Step 5: Commit** `fix: trecho citado trunca dentro da bolha e não passa sob o botão do menu`.
+
 ### Verificação final (controlador, portão 7)
 
 `vendor/bin/pint --parallel --test --cache-file=.pint.cache`, `vendor/bin/phpstan analyse --no-progress`, `vendor/bin/phpmd analyze app --format text --ruleset phpmd.xml`, `node --test tests/js`, `npm run build` e a suíte com Redis, lendo o código de saída de cada um. Conferência visual (U10, U11, cabeçalho) pelo `conferente-visual` no servidor local com o seed, e o servidor parado no fim.
