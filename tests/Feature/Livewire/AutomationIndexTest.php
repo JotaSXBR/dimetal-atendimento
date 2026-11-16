@@ -127,7 +127,7 @@ class AutomationIndexTest extends TestCase
     {
         $publisher = app(WorkflowPublisher::class);
         $publisher->create('Padrão', $this->user, template: 'padrao');
-        $publisher->create('Com horário', $this->user, template: 'padrao');
+        $publisher->create('Outro padrão', $this->user, template: 'padrao');
         [$s3, $s4] = Sector::factory()->count(2)->create();
         Workflow::factory()->create(['name' => 'Fixos', 'draft' => ['nodes' => [
             ['id' => 'a', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $s3->id]],
@@ -136,7 +136,7 @@ class AutomationIndexTest extends TestCase
         ], 'edges' => []]]);
 
         $this->page()
-            ->assertSeeInOrder(['Com horário', '8 blocos', 'Fixos', '3 blocos', '2 setores', 'Padrão', '8 blocos']);
+            ->assertSeeInOrder(['Fixos', '3 blocos', '2 setores', 'Outro padrão', '8 blocos', 'Padrão', '8 blocos']);
     }
 
     /** @param  list<int|string>  $fixed */

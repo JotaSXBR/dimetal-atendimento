@@ -167,7 +167,7 @@ class WorkflowTemplatesTest extends TestCase
         $this->assertNull($fresh?->sector_id);
     }
 
-    /** @return list<string> */
+    /** @return array{0: list<string>, 1: ?string} textos do bot e o outcome */
     private function simulatedBotTexts(string $clock, string ...$replies): array
     {
         $graph = WorkflowTemplates::graph(WorkflowTemplates::STANDARD);
@@ -178,27 +178,24 @@ class WorkflowTemplatesTest extends TestCase
             $state = $sim->reply($graph, $state, $reply);
         }
 
-        $this->outcome = $state->outcome;
-
-        return array_values(array_map(fn (array $l): string => $l['text'], array_filter($state->log, fn (array $l): bool => $l['kind'] === 'bot')));
+        return [array_values(array_map(fn (array $l): string => $l['text'], array_filter($state->log, fn (array $l): bool => $l['kind'] === 'bot'))), $state->outcome];
     }
-
-    private ?string $outcome = 'nao-rodou';
 
     public function test_padrao_resposta_invalida_repete_o_menu_com_o_aviso_do_beta(): void
     {
-        $texts = $this->simulatedBotTexts('aberto', '9');
+        [$texts, $outcome] = $this->simulatedBotTexts('aberto', '9');
 
         $this->assertContains('Resposta inválida.', $texts);
-        $this->assertNull($this->outcome);
+        $this->assertNull($outcome);
     }
 
     public function test_padrao_sem_nome_de_empresa_nao_deixa_variavel_crua(): void
     {
-        foreach ($this->simulatedBotTexts('fechado') as $text) {
+        [$texts] = $this->simulatedBotTexts('fechado');
+        foreach ($texts as $text) {
             $this->assertStringNotContainsString('{{empresa}}', $text);
         }
-        $this->assertStringContainsString('Bem-vindo a ', $this->simulatedBotTexts('fechado')[0]);
+        $this->assertStringContainsString('Bem-vindo a ', $texts[0]);
     }
 
     public function test_padrao_traz_a_mensagem_de_encaminhamento_do_beta(): void
