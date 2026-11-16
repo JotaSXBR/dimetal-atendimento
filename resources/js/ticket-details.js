@@ -23,7 +23,9 @@ document.addEventListener('alpine:init', () => {
             this.details = !this.details;
             try {
                 window.localStorage.setItem(KEY, this.details ? '1' : '0');
-            } catch {} // storage bloqueado: vale só nesta página
+            } catch {
+                // storage bloqueado: vale só nesta página
+            }
         },
     }));
 

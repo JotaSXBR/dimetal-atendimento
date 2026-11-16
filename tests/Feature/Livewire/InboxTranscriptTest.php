@@ -180,6 +180,15 @@ class InboxTranscriptTest extends TestCase
         $this->assertStringContainsString('&lt;b&gt;x&lt;/b&gt;.docx', $html);
     }
 
+    public function test_trecho_citado_encolhe_e_trunca(): void
+    {
+        $html = $this->quotedReply($this->ticket(), ['author' => 'Maria', 'type' => 'text', 'excerpt' => 'Trecho longo da citação']);
+
+        $this->assertSame(1, preg_match('/<span class="([^"]*)">Trecho longo da citação<\/span>/', $html, $trecho));
+        $this->assertStringContainsString('min-w-0', $trecho[1], 'sem min-w-0 o item flex não encolhe e o trecho passa sob o botão do menu');
+        $this->assertStringContainsString('truncate', $trecho[1]);
+    }
+
     public function test_transcript_refresh_atualiza(): void
     {
         $ticket = $this->ticket();
@@ -248,6 +257,22 @@ class InboxTranscriptTest extends TestCase
 
         $this->assertStringContainsString('data-testid="message-menu-button"', $html);
         $this->assertStringNotContainsString('mt-1 flex justify-end', $html, 'o menu não ocupa mais uma linha entre o texto e o horário');
+    }
+
+    public function test_bolha_com_menu_reserva_espaco_para_o_botao(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Ok')->update(['wa_message_id' => 'W1']);
+        $apagada = $this->say($ticket, 'Oi');
+        $apagada->update(['wa_message_id' => 'W2', 'revoked_at' => now()]);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+        $this->assertSame(1, substr_count($html, 'ps-3 pe-9'), 'só a bolha com menu reserva o espaço do botão (24 px + 4 de folga + 8)');
+        $this->assertStringNotContainsString('min-w-28', $html);
+
+        $this->actingAs($me);
+        $readonly = view('livewire.inbox.transcript', ['messages' => $ticket->messages()->get(), 'readonly' => true])->render();
+        $this->assertStringNotContainsString('pe-9', $readonly);
     }
 
     public function test_mensagem_apagada_nao_tem_menu(): void

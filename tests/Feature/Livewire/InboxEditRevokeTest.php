@@ -138,9 +138,7 @@ class InboxEditRevokeTest extends TestCase
     {
         $old = $this->own(['wa_message_id' => 'OLD1', 'sent_at' => now()->subHours(49)]);
 
-        $this->inbox()->call('revoke', $old->id)
-            ->assertSet('notice', 'O WhatsApp só permite apagar para todos até 2 dias depois do envio.')
-            ->assertOk();
+        $this->inbox()->call('revoke', $old->id)->assertOk(); // o texto do aviso, pela constante, fica em test_aviso_de_apagar_usa_o_prazo_da_constante
 
         Http::assertNothingSent();
     }
@@ -154,6 +152,31 @@ class InboxEditRevokeTest extends TestCase
             ->assertOk();
 
         Http::assertNothingSent();
+    }
+
+    public function test_aviso_de_apagar_usa_o_prazo_da_constante(): void
+    {
+        $old = $this->own(['wa_message_id' => 'OLD1', 'sent_at' => now()->subHours(Message::REVOKE_WINDOW_HOURS + 1)]);
+        $dias = intdiv(Message::REVOKE_WINDOW_HOURS, 24);
+
+        $this->inbox()->call('revoke', $old->id)
+            ->assertSet('notice', 'O WhatsApp só permite apagar para todos até '.$dias.($dias === 1 ? ' dia' : ' dias').' depois do envio.');
+    }
+
+    public function test_apagar_vale_com_48_horas_exatas(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $msg = $this->own(['wa_message_id' => 'EDGE1', 'sent_at' => now()->subHours(Message::REVOKE_WINDOW_HOURS)]);
+
+        $this->assertStringContainsString('$parent.revoke('.$msg->id.')', $this->inbox()->html());
+    }
+
+    public function test_editar_vale_com_15_minutos_exatos(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $msg = $this->own(['wa_message_id' => 'EDGE2', 'sent_at' => now()->subMinutes(Message::EDIT_WINDOW_MINUTES)]);
+
+        $this->assertStringContainsString('saveEdit('.$msg->id.')', $this->inbox()->html());
     }
 
     public function test_rotulo_de_apagada_diz_quem_apagou(): void

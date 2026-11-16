@@ -5,8 +5,34 @@
 // O "digitando…" ao cliente só vale no modo Responder (ver o `x-on:input` do campo e o evento `composer-mode`).
 
 import { insertAt } from './composer-insert.js';
+import { draftTicketIds, parseDraft, staleDraftKeys } from './draft-store.js';
+
+const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 document.addEventListener('alpine:init', () => {
+    // Uma vez por carga do Inbox (fica na raiz, existe mesmo sem ticket aberto): apaga os rascunhos com mais de 7 dias e os
+    // dos tickets que o servidor diz estarem encerrados. Falha de storage ou de rede não atrapalha nada.
+    window.Alpine.data('draftCleanup', ($wire, userId) => ({
+        init() {
+            try {
+                const store = window.localStorage;
+                const keys = Array.from({ length: store.length }, (_, i) => store.key(i));
+                const stale = staleDraftKeys(keys.map((key) => [key, store.getItem(key)]), userId, Date.now(), DRAFT_MAX_AGE_MS);
+                stale.forEach((key) => store.removeItem(key));
+
+                const ids = draftTicketIds(keys.filter((key) => !stale.includes(key)), userId).slice(0, 200);
+
+                if (ids.length > 0) {
+                    $wire.closedDraftTickets(ids).then((closed) => {
+                        keys.filter((key) => closed.includes(draftTicketIds([key], userId)[0])).forEach((key) => store.removeItem(key));
+                    }).catch(() => {});
+                }
+            } catch {
+                // storage bloqueado: nada a limpar
+            }
+        },
+    }));
+
     window.Alpine.data('composerMode', ($wire, ticketId, userId) => ({
         mode: 'reply',
 
@@ -34,7 +60,7 @@ document.addEventListener('alpine:init', () => {
 
         load(mode) {
             try {
-                return window.localStorage.getItem(this.key(mode)) ?? '';
+                return parseDraft(window.localStorage.getItem(this.key(mode))).text;
             } catch {
                 return ''; // storage bloqueado: sem rascunho, o compositor segue
             }
@@ -42,7 +68,11 @@ document.addEventListener('alpine:init', () => {
 
         save(mode, value) {
             try {
-                value.trim() === '' ? window.localStorage.removeItem(this.key(mode)) : window.localStorage.setItem(this.key(mode), value);
+                if (value.trim() === '') {
+                    window.localStorage.removeItem(this.key(mode));
+                } else {
+                    window.localStorage.setItem(this.key(mode), JSON.stringify({ text: value, at: Date.now() }));
+                }
             } catch {
                 // storage bloqueado: o rascunho não persiste
             }

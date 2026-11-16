@@ -18,28 +18,30 @@ conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores d
 
 Adiados nas fatias do redesenho (#73, #74, #83, #87, #88, #100). Podem ter sido resolvidos pelas fatias seguintes: conferir antes de corrigir.
 
-| # | Origem | O quê | Decisão |
-|---|--------|-------|---------|
-| U2 | #83 | Faixa do hub de Configuração com rolagem horizontal no celular (`settings-page.blade.php:16`, `overflow-x-auto`): conferir no navegador | — |
-| U6 | #87 | Prefixo da chave `history-*`: sem conflito hoje (ramos exclusivos em `contact-card`, componentes distintos); só nomenclatura | — |
-| U10 | #73 | Chevron do menu da bolha (`transcript.blade.php:146`, `absolute end-1 top-1`) cobre o HORÁRIO (~16x12 px) nas bolhas curtas, só no hover; não cobre o texto; precisa reservar espaço na bolha (layout): conferir no navegador | — |
-| U11 | #74 | Rascunhos antigos sem limpeza de `localStorage` (o storage bloqueado já foi tratado, `445fd7d`); a limpeza precisa de regra de validade | — |
+Nenhum pendente. U2 fechado (conferido no navegador em 16/11 em 360 px: a página não rola de lado e a faixa rola por dentro); U6 fechado (prefixo `history-*` é só nome, sem conflito).
 
 ## Menores adiados da leva de menores baratos (16/11/2026)
 
 Branch `chore/claude-md`, revisão final.
 
-| # | Onde | O quê | Decisão |
-|---|------|-------|---------|
-| L1 | `app/Livewire/Automation/Index.php` | Contagem de setores: falta teste com `setor_id` string e com setor desativado/apagado; setor fixo apagado ainda conta | — |
-| L2 | `resources/js/flow-editor/editor.js` | `fitView` do editor sem teste de integração; fluxo com altura entre H−barra e H cai no piso | — |
-| L3 | `app/Livewire/Settings/Backups.php` | TTL de 30 s do lock `restore-dispatch` | — |
-| L4 | `resources/js/composer-mode.js:45` | Estilo: ternário usado como instrução | — |
-| L5 | `resources/js/ticket-details.js:26` | Estilo: `catch` vazio | — |
-| L6 | `tests/js/storage-blocked.test.mjs` | Mock de `window`/`document` sem restaurar ao fim | — |
-| L7 | seed de teste | `sync` dos setores dos usuários de teste; `UsuariosDeTeste` sozinho fica sem setores; "sobra etiqueta" por `count > 1` | — |
-| L8 | `resources/views/livewire/inbox/inbox.blade.php` | Span do SLA sem `whitespace-nowrap` no cabeçalho em 2xl | — |
-| L9 | `resources/views/livewire/inbox/inbox.blade.php` | Linha de metadados truncada sem `title` | — |
+Nenhum pendente. L8 e L9 corrigidos (SLA sem quebra de linha; `title` na linha de metadados).
+
+## Menores adiados da leva 2 (16/11/2026)
+
+Branch `fix/menores-leva-2`, revisão final e conferência visual.
+
+- `app/Policies/MessagePolicy.php:51`: `intdiv(REVOKE_WINDOW_HOURS, 24)` trunca o aviso se a constante deixar de ser múltiplo de 24.
+- `resources/js/draft-store.js`: o corte de 200 ids na limpeza de rascunhos segue a ordem do storage, não a do mais antigo.
+- `resources/js/composer-mode.js` e `draft-store.js`: `draftTicketIds` é chamado por chave; legibilidade.
+- `tests/Feature/Livewire/InboxDraftCleanupTest.php`: falta teste de usuário inativo em `closedDraftTickets`.
+- `app/Livewire/Automation/Index.php:141`: `is_numeric` aceita '1e3' e '5.7' na contagem de setores; `FILTER_VALIDATE_INT` seria mais rigoroso.
+- `tests/Feature/Livewire/`: o teste de `setor_id` string é só regressão, não prova o caso.
+- `app/Livewire/Automation/Index.php:141`: cadeia de `where/pluck/filter/map/filter` longa demais numa linha.
+- `resources/js/flow-editor/`: `positions` é montado sempre no `fitView`, mesmo quando o plano não o usa.
+- Teste da TTL de despacho da restauração confere só a constante, não o comportamento.
+- `tests/js/storage-blocked.test.mjs`: o `after` deixa `window` como `undefined` em vez de remover a propriedade.
+- `tests/Feature/Seeders/AmbienteDeTesteSeederTest.php`: o assert de etiqueta pega "o primeiro" contato/ticket etiquetado.
+- `app/Services/Setup/DefaultSectors.php`: borda com a marca já gravada (cenário sozinho, sem setores ativos).
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 

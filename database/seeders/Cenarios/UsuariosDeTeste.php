@@ -6,12 +6,22 @@ use App\Enums\UserRole;
 use App\Models\Sector;
 use App\Models\User;
 use Database\Seeders\AmbienteDeTesteSeeder;
+use Database\Seeders\SectorSeeder;
+use Database\Seeders\SoRodaEmAmbienteDeTeste;
 use Illuminate\Database\Seeder;
 
 class UsuariosDeTeste extends Seeder
 {
+    use SoRodaEmAmbienteDeTeste;
+
     public function run(): void
     {
+        $this->exigirAmbienteDeTeste();
+
+        if (! Sector::query()->exists()) {
+            $this->call(SectorSeeder::class);
+        }
+
         $setores = Sector::query()->orderBy('menu_order')->get();
 
         self::usuario(AmbienteDeTesteSeeder::ADMIN_EMAIL, 'Dev Admin', UserRole::ADMIN)->sectors()->sync($setores->pluck('id'));

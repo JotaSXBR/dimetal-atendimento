@@ -15,6 +15,7 @@ use App\Models\Ticket;
 use App\Models\TicketNote;
 use App\Models\User;
 use Database\Seeders\AmbienteDeTesteSeeder;
+use Database\Seeders\Cenarios\UsuariosDeTeste;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\Events\BroadcastNotificationCreated;
 use Illuminate\Support\Facades\Event;
@@ -38,6 +39,17 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertTrue($atendente->active);
         $this->assertTrue(Hash::check(AmbienteDeTesteSeeder::SENHA, $atendente->password));
         $this->assertTrue(Hash::check(AmbienteDeTesteSeeder::SENHA, $admin->password));
+    }
+
+    public function test_usuarios_de_teste_sozinho_tem_setores(): void
+    {
+        $this->seed(UsuariosDeTeste::class);
+
+        $admin = User::query()->where('email', AmbienteDeTesteSeeder::ADMIN_EMAIL)->firstOrFail();
+        $atendente = User::query()->where('email', AmbienteDeTesteSeeder::ATENDENTE_EMAIL)->firstOrFail();
+        $this->assertGreaterThan(2, Sector::query()->count());
+        $this->assertSame(Sector::query()->count(), $admin->sectors()->count());
+        $this->assertSame(2, $atendente->sectors()->count());
     }
 
     public function test_cobre_cada_cenario(): void
@@ -64,8 +76,10 @@ class AmbienteDeTesteSeederTest extends TestCase
 
         $this->assertTrue(Contact::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONTATO))->exists());
         $this->assertTrue(Ticket::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONVERSA))->exists());
-        $this->assertGreaterThan(1, Tag::query()->where('scope', TagScope::CONTATO)->count());
-        $this->assertGreaterThan(1, Tag::query()->where('scope', TagScope::CONVERSA)->count());
+        $contatoEtiquetado = Contact::query()->whereHas('tags')->firstOrFail();
+        $this->assertTrue(Tag::query()->where('scope', TagScope::CONTATO)->whereNotIn('id', $contatoEtiquetado->tags()->pluck('tags.id'))->exists());
+        $ticketEtiquetado = Ticket::query()->whereHas('tags')->firstOrFail();
+        $this->assertTrue(Tag::query()->where('scope', TagScope::CONVERSA)->whereNotIn('id', $ticketEtiquetado->tags()->pluck('tags.id'))->exists());
 
         $this->assertTrue(TicketNote::query()->whereHas('ticket', fn ($q) => $q->where('status', '!=', TicketStatus::ENCERRADO))->exists());
 
@@ -139,5 +153,33 @@ class AmbienteDeTesteSeederTest extends TestCase
 
         $this->assertSame(0, User::query()->count());
         $this->assertSame(0, Sector::query()->count());
+    }
+
+    public function test_cada_cenario_recusa_rodar_em_producao(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        foreach (glob(database_path('seeders/Cenarios/*.php')) as $arquivo) {
+            $classe = (new \ReflectionClass(UsuariosDeTeste::class))->getNamespaceName().'\\'.basename($arquivo, '.php');
+            try {
+                $this->app->make($classe)->run();
+                $this->fail($classe.' deveria recusar em produção.');
+            } catch (RuntimeException $e) {
+                $this->assertStringContainsString('local', $e->getMessage(), $classe);
+            }
+        }
+
+        $this->assertSame(0, User::query()->count());
+        $this->assertSame(0, Channel::query()->count());
+        $this->assertSame(0, Ticket::query()->count());
+    }
+
+    public function test_cria_tickets_com_sla_estourado_e_a_vencer(): void
+    {
+        $this->seed(AmbienteDeTesteSeeder::class);
+
+        $abertos = Ticket::query()->where('status', TicketStatus::AGUARDANDO)->whereNotNull('waiting_since')->whereNotNull('sla_due_at');
+        $this->assertTrue((clone $abertos)->where('sla_due_at', '<', now())->exists(), 'prazo estourado');
+        $this->assertTrue((clone $abertos)->where('sla_due_at', '>', now())->exists(), 'prazo a vencer');
     }
 }

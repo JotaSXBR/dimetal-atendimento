@@ -7,12 +7,17 @@ use App\Enums\TicketStatus;
 use App\Models\Contact;
 use App\Models\Tag;
 use App\Models\Ticket;
+use Database\Seeders\SoRodaEmAmbienteDeTeste;
 use Illuminate\Database\Seeder;
 
 class EtiquetasDosDoisEscopos extends Seeder
 {
+    use SoRodaEmAmbienteDeTeste;
+
     public function run(): void
     {
+        $this->exigirAmbienteDeTeste();
+
         $contato = Contact::factory()->create();
         $ticket = Ticket::factory()->create(['contact_id' => $contato->id, 'channel_id' => CanalConectado::canal()->id, 'status' => TicketStatus::AGUARDANDO]);
 

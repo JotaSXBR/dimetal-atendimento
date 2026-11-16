@@ -4,12 +4,17 @@ namespace Database\Seeders\Cenarios;
 
 use App\Enums\ChannelStatus;
 use App\Models\Channel;
+use Database\Seeders\SoRodaEmAmbienteDeTeste;
 use Illuminate\Database\Seeder;
 
 class CanalConectado extends Seeder
 {
+    use SoRodaEmAmbienteDeTeste;
+
     public function run(): void
     {
+        $this->exigirAmbienteDeTeste();
+
         self::canal();
     }
 

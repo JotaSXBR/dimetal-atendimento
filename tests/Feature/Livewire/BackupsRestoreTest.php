@@ -99,6 +99,11 @@ class BackupsRestoreTest extends TestCase
             ->assertDontSee('Digite RESTAURAR');
     }
 
+    public function test_trava_de_despacho_dura_120_segundos(): void
+    {
+        $this->assertSame(120, Backups::DISPATCH_LOCK_SECONDS);
+    }
+
     public function test_segundo_pedido_seguido_nao_despacha_outro_job(): void
     {
         $page = $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'RESTAURAR')->call('restore');

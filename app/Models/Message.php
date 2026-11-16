@@ -89,7 +89,7 @@ class Message extends Model
     /** Janela em que o WhatsApp deixa editar uma mensagem enviada. */
     public const EDIT_WINDOW_MINUTES = 15;
 
-    /** Janela em que o WhatsApp deixa apagar para todos (2 dias). */
+    /** Janela em que o WhatsApp deixa apagar para todos (48 h). */
     public const REVOKE_WINDOW_HOURS = 48;
 
     /**

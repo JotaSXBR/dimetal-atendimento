@@ -61,6 +61,20 @@ class InboxHeaderLineTest extends TestCase
         $this->assertSame("{$ticket->protocol} · {$contact->phoneLabel()} · Balcão · Fila geral · Não atribuído", $this->line($ticket));
     }
 
+    public function test_linha_de_metadados_mostra_o_texto_inteiro_no_title(): void
+    {
+        $ticket = Ticket::factory()->create(['status' => TicketStatus::AGUARDANDO]);
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $html = Livewire::actingAs($admin)->test(Inbox::class)->call('select', $ticket->id)->html();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+        $node = (new \DOMXPath($dom))->query('//*[@data-testid="header-line"]')->item(0);
+
+        $this->assertInstanceOf(\DOMElement::class, $node);
+        $this->assertNotSame('', $node->getAttribute('data-line'));
+        $this->assertSame($node->getAttribute('data-line'), $node->getAttribute('title'));
+    }
+
     /** A linha fica sempre numa linha só, cortada com reticências (decisão do dono, B3): em coluna estreita quebrar a desfigurava. */
     public function test_a_linha_fica_numa_linha_so_com_reticencias(): void
     {

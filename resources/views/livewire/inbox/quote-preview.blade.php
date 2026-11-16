@@ -21,7 +21,7 @@
             @elseif ($kind === 'audio')
                 <flux:icon.microphone class="size-3.5 shrink-0" />
             @endif
-            <span class="truncate">{{ \App\Support\WhatsAppText::html((string) ($quote['excerpt'] ?? '')) }}</span>
+            <span class="min-w-0 truncate">{{ \App\Support\WhatsAppText::html((string) ($quote['excerpt'] ?? '')) }}</span>
         </span>
     </span>
 
