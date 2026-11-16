@@ -124,6 +124,38 @@ class InboxEditRevokeTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_botao_apagar_some_depois_de_2_dias(): void
+    {
+        $old = $this->own(['wa_message_id' => 'OLD1', 'sent_at' => now()->subHours(49)]);
+
+        $html = $this->inbox()->html();
+
+        $this->assertStringNotContainsString('$parent.revoke('.$old->id.')', $html);
+        $this->assertStringContainsString('$parent.revoke('.$this->own(['wa_message_id' => 'NEW1', 'sent_at' => now()->subHour()])->id.')', $this->inbox()->html());
+    }
+
+    public function test_apagar_fora_do_prazo_avisa_sem_chamar_o_whatsapp(): void
+    {
+        $old = $this->own(['wa_message_id' => 'OLD1', 'sent_at' => now()->subHours(49)]);
+
+        $this->inbox()->call('revoke', $old->id)
+            ->assertSet('notice', 'O WhatsApp só permite apagar para todos até 2 dias depois do envio.')
+            ->assertOk();
+
+        Http::assertNothingSent();
+    }
+
+    public function test_editar_fora_do_prazo_avisa(): void
+    {
+        $late = $this->own(['wa_message_id' => 'LATE1', 'sent_at' => now()->subMinutes(16)]);
+
+        $this->inbox()->call('editMessage', $late->id, 'Texto novo')
+            ->assertSet('notice', 'O WhatsApp só permite editar até 15 minutos depois do envio.')
+            ->assertOk();
+
+        Http::assertNothingSent();
+    }
+
     public function test_rotulo_de_apagada_diz_quem_apagou(): void
     {
         $this->mine->update(['revoked_at' => now()]);

@@ -169,9 +169,9 @@ class EditRevokeMessageTest extends TestCase
         $this->assertSame('Texto original', $this->mine->body);
     }
 
-    public function test_apagar_nao_tem_janela_de_tempo(): void
+    public function test_apagar_vale_alem_dos_15_min_da_edicao(): void
     {
-        $old = $this->own(['wa_message_id' => 'OLD1', 'sent_at' => now()->subDays(5)]);
+        $old = $this->own(['wa_message_id' => 'OLD1', 'sent_at' => now()->subHours(47)]);
 
         $this->revoke($old);
 

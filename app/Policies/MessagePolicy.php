@@ -6,6 +6,7 @@ use App\Enums\MessageDirection;
 use App\Enums\MessageOrigin;
 use App\Models\Message;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 /**
  * O menu da bolha. Tudo exige poder responder ao ticket. Reagir vale para qualquer mensagem já enviada; editar e apagar só
@@ -13,6 +14,9 @@ use App\Models\User;
  */
 class MessagePolicy
 {
+    /** O código da negação por prazo: a tela mostra o texto em vez de 403. */
+    public const DEADLINE = 'prazo';
+
     public function reply(User $user, Message $message): bool
     {
         $ticket = $message->ticket;
@@ -25,18 +29,28 @@ class MessagePolicy
         return $message->wa_message_id !== null && $message->revoked_at === null && $this->reply($user, $message);
     }
 
-    /** Texto do painel, do próprio atendente, dentro da janela de edição do WhatsApp. */
-    public function edit(User $user, Message $message): bool
+    /** Texto do painel, do próprio atendente, dentro da janela de edição do WhatsApp (15 min). */
+    public function edit(User $user, Message $message): Response
     {
-        return $message->type === 'text'
-            && $message->sent_at->gte(now()->subMinutes(Message::EDIT_WINDOW_MINUTES))
-            && $this->own($user, $message);
+        if ($message->type !== 'text' || ! $this->own($user, $message)) {
+            return Response::deny();
+        }
+
+        return $message->sent_at->gte(now()->subMinutes(Message::EDIT_WINDOW_MINUTES))
+            ? Response::allow()
+            : Response::deny('O WhatsApp só permite editar até '.Message::EDIT_WINDOW_MINUTES.' minutos depois do envio.', self::DEADLINE);
     }
 
-    /** Sem janela nossa: o WhatsApp decide e a recusa mostra o motivo. */
-    public function revoke(User $user, Message $message): bool
+    /** A própria mensagem do painel, até 2 dias depois do envio (prazo do WhatsApp para apagar para todos). */
+    public function revoke(User $user, Message $message): Response
     {
-        return $this->own($user, $message);
+        if (! $this->own($user, $message)) {
+            return Response::deny();
+        }
+
+        return $message->sent_at->gte(now()->subHours(Message::REVOKE_WINDOW_HOURS))
+            ? Response::allow()
+            : Response::deny('O WhatsApp só permite apagar para todos até 2 dias depois do envio.', self::DEADLINE);
     }
 
     private function own(User $user, Message $message): bool
