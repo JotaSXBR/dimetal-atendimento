@@ -208,3 +208,28 @@ Sem implementador. Medir no `dimetal_local` com o seed.
 - [ ] Miniatura: tamanho e tempo da resposta da rota de mídia de imagem no transcript com as bolhas do cenário `BolhasDeTamanhosVariados`.
 - [ ] Levar os números ao dono. Correção barata (N+1, índice, `select` de colunas) vira tarefa nova com TDD; mudança grande (gerar
   miniatura no servidor) volta ao dono e sai desta leva.
+
+### Task 11: canal desativado não volta no WAHA (item 13, causa da Task 9)
+
+Causa (log do beta e docs do WAHA): `POST /api/sessions/{s}/logout` com a sessão rodando "desloga e inicia do zero" (fica em QR), e
+com `WHATSAPP_RESTART_ALL_SESSIONS=true` o WAHA religa toda sessão `STOPPED` ao reiniciar. Só apagar a sessão (`DELETE`, que também
+desloga e para) a tira da lista. Mesma distinção no Evolution API (logout mantém a instância; delete remove).
+
+**Files:**
+- Modify: `app/Livewire/Settings/ChannelCard.php:127-141` (`deactivate`), `app/Jobs/HandleWahaEvent.php:97-119` (`applyStatus`)
+- Test: o teste atual do `deactivate` do cartão (achar com `grep -rln "deactivate" tests/Feature`), `tests/Feature/Jobs/HandleWahaEventTest.php`
+  (ou onde ficam `test_status_da_sessao_atualiza_o_canal`)
+
+- [ ] **Step 1: testes que falham**
+  - Desativar chama `DELETE /api/sessions/{sessão}` (com `Http::fake`) e não `POST .../logout`; o canal fica `active = false`, `STOPPED`.
+  - `test_canal_desativado_que_volta_no_waha_e_apagado_de_novo`: canal `active = false`, `STOPPED`; evento `session.status` com
+    `SCAN_QR_CODE` (e outro com `WORKING`) → `Http::assertSent` do `DELETE` da sessão e o canal continua `STOPPED`.
+  - Canal desativado que recebe `STOPPED` não chama o WAHA.
+  - Reativar segue funcionando: com a sessão apagada (`GET` 404), `start()` cria a sessão (teste existente do `reactivate` deve
+    continuar verde; se não houver, criar um).
+- [ ] **Step 2:** ver falhar.
+- [ ] **Step 3:** `deactivate` usa `WahaClient::deleteSession()` no lugar de `logout()` (o aparelho sai dos dispositivos conectados do mesmo
+  jeito; atualizar o comentário do método). Em `applyStatus`, canal `active = false` com estado diferente de `STOPPED`: `deleteSession()` e
+  sair sem gravar o estado (o canal fica `STOPPED`).
+- [ ] **Step 4:** testes do cartão, do job e de webhook passam; suíte `--parallel` passa.
+- [ ] **Step 5:** commit `fix: canal desativado tem a sessão apagada no WAHA e não volta ao reiniciar`.
