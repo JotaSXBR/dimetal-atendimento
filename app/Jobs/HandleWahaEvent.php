@@ -112,6 +112,9 @@ class HandleWahaEvent implements ShouldQueue
         }
 
         // Canal desligado de propósito que reaparece no WAHA (reinício religou a sessão): apaga de novo; falha do WAHA refaz o job.
+        // Relê o `active`: o dono pode ter reativado o canal depois que o job o carregou.
+        $channel->refresh();
+
         if (! $channel->active && $status !== ChannelStatus::STOPPED) {
             (new WahaClient($channel))->deleteSession();
 

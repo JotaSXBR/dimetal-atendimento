@@ -7,6 +7,7 @@ use App\Jobs\HandleWahaEvent;
 use App\Models\Channel;
 use App\Models\Message;
 use App\Models\WahaEvent;
+use App\Services\Waha\WahaRequestException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -69,6 +70,33 @@ class HandleWahaEventTest extends TestCase
 
         Http::assertSentCount(2);
         Http::assertSent(fn ($request) => $request->method() === 'DELETE' && str_ends_with($request->url(), '/api/sessions/mainWORKING'));
+    }
+
+    public function test_canal_reativado_entre_a_leitura_e_a_decisao_nao_e_apagado(): void
+    {
+        Http::fake();
+        [$channel, $event] = $this->inactiveChannelEvent('WORKING');
+
+        // Simula o "Reativar" do dono logo depois que o job carregou o canal (ainda inativo na memória).
+        Channel::retrieved(function (Channel $carregado) use ($channel) {
+            Channel::query()->whereKey($channel->id)->update(['active' => true]);
+        });
+
+        (new HandleWahaEvent($event->id))->handle();
+
+        Http::assertNothingSent();
+        $this->assertSame(ChannelStatus::WORKING, $channel->fresh()->status);
+    }
+
+    public function test_falha_do_waha_ao_apagar_a_sessao_relanca_para_a_fila_tentar_de_novo(): void
+    {
+        config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
+        Http::fake(['*' => Http::response([], 500)]);
+        [, $event] = $this->inactiveChannelEvent('SCAN_QR_CODE');
+
+        $this->expectException(WahaRequestException::class);
+
+        (new HandleWahaEvent($event->id))->handle();
     }
 
     public function test_canal_desativado_que_recebe_stopped_nao_chama_o_waha(): void
