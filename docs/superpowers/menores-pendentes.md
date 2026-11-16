@@ -22,8 +22,24 @@ Adiados nas fatias do redesenho (#73, #74, #83, #87, #88, #100). Podem ter sido 
 |---|--------|-------|---------|
 | U2 | #83 | Faixa do hub de Configuração com rolagem horizontal no celular (`settings-page.blade.php:16`, `overflow-x-auto`): conferir no navegador | — |
 | U6 | #87 | Prefixo da chave `history-*`: sem conflito hoje (ramos exclusivos em `contact-card`, componentes distintos); só nomenclatura | — |
-| U10 | #73 | Chevron do menu da bolha (`transcript.blade.php:146`, `absolute end-1 top-1`) cobre o fim da 1ª linha em bolha curta no hover; precisa reservar espaço na bolha (layout): conferir no navegador | — |
+| U10 | #73 | Chevron do menu da bolha (`transcript.blade.php:146`, `absolute end-1 top-1`) cobre o HORÁRIO (~16x12 px) nas bolhas curtas, só no hover; não cobre o texto; precisa reservar espaço na bolha (layout): conferir no navegador | — |
 | U11 | #74 | Rascunhos antigos sem limpeza de `localStorage` (o storage bloqueado já foi tratado, `445fd7d`); a limpeza precisa de regra de validade | — |
+
+## Menores adiados da leva de menores baratos (16/11/2026)
+
+Branch `chore/claude-md`, revisão final.
+
+| # | Onde | O quê | Decisão |
+|---|------|-------|---------|
+| L1 | `app/Livewire/Automation/Index.php` | Contagem de setores: falta teste com `setor_id` string e com setor desativado/apagado; setor fixo apagado ainda conta | — |
+| L2 | `resources/js/flow-editor/editor.js` | `fitView` do editor sem teste de integração; fluxo com altura entre H−barra e H cai no piso | — |
+| L3 | `app/Livewire/Settings/Backups.php` | TTL de 30 s do lock `restore-dispatch` | — |
+| L4 | `resources/js/composer-mode.js:45` | Estilo: ternário usado como instrução | — |
+| L5 | `resources/js/ticket-details.js:26` | Estilo: `catch` vazio | — |
+| L6 | `tests/js/storage-blocked.test.mjs` | Mock de `window`/`document` sem restaurar ao fim | — |
+| L7 | seed de teste | `sync` dos setores dos usuários de teste; `UsuariosDeTeste` sozinho fica sem setores; "sobra etiqueta" por `count > 1` | — |
+| L8 | `resources/views/livewire/inbox/inbox.blade.php` | Span do SLA sem `whitespace-nowrap` no cabeçalho em 2xl | — |
+| L9 | `resources/views/livewire/inbox/inbox.blade.php` | Linha de metadados truncada sem `title` | — |
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
