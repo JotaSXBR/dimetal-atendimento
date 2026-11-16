@@ -3,7 +3,7 @@
 @endphp
 
 <div
-    class="grid h-dvh grid-cols-1 bg-surface {{ $ticket ? 'lg:grid-cols-[360px_minmax(0,1fr)_var(--details-w,280px)]' : 'lg:grid-cols-[360px_minmax(0,1fr)]' }}"
+    class="grid h-dvh grid-cols-1 bg-surface lg:grid-cols-[360px_minmax(0,1fr)] {{ $ticket ? 'xl:grid-cols-[360px_minmax(0,1fr)_var(--details-w,280px)]' : '' }}"
     x-data="ticketDetails"
     x-bind:style="details ? '' : '--details-w: 0px'"
 >
@@ -124,8 +124,8 @@
                     <x-contact-chips :contact="$ticket->contact" testid="history-panel-chip" class="mt-0.5" />
                 </div>
 
-                <flux:button size="sm" variant="subtle" icon="information-circle" class="lg:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
-                <flux:button size="sm" variant="subtle" icon="information-circle" class="max-lg:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
+                <flux:button size="sm" variant="subtle" icon="information-circle" class="xl:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
+                <flux:button size="sm" variant="subtle" icon="information-circle" class="max-xl:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
             </header>
 
             <div class="border-b border-line bg-surface-2 px-4 py-2 text-xs text-ink-2" role="status">

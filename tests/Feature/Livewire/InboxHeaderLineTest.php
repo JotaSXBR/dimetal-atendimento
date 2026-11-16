@@ -61,16 +61,15 @@ class InboxHeaderLineTest extends TestCase
         $this->assertSame("{$ticket->protocol} · {$contact->phoneLabel()} · Balcão · Fila geral · Não atribuído", $this->line($ticket));
     }
 
-    /** Setor e responsável são o fim da linha: cortá-los (só o `title` mostraria, e ele não funciona no toque) desfaz o objetivo de mostrá-los. */
-    public function test_a_linha_quebra_em_vez_de_cortar_setor_e_responsavel(): void
+    /** A linha fica sempre numa linha só, cortada com reticências (decisão do dono, B3): em coluna estreita quebrar a desfigurava. */
+    public function test_a_linha_fica_numa_linha_so_com_reticencias(): void
     {
         $ticket = Ticket::factory()->create(['status' => TicketStatus::AGUARDANDO]);
         $admin = User::factory()->create(['role' => UserRole::ADMIN]);
         $html = Livewire::actingAs($admin)->test(Inbox::class)->call('select', $ticket->id)->html();
 
-        $this->assertMatchesRegularExpression('/data-testid="header-line"[^>]*class="[^"]*\bbreak-words\b/', $html);
-        $this->assertDoesNotMatchRegularExpression('/data-testid="header-line"[^>]*class="[^"]*\btruncate\b/', $html);
-        $this->assertDoesNotMatchRegularExpression('/<span[^>]*class="[^"]*\btruncate\b[^"]*"[^>]*>\s*&nbsp;/', $html);
+        $this->assertMatchesRegularExpression('/data-testid="header-line"[^>]*class="[^"]*\btruncate\b/', $html);
+        $this->assertDoesNotMatchRegularExpression('/data-testid="header-line"[^>]*class="[^"]*\bbreak-words\b/', $html);
     }
 
     public function test_aberto_em_fica_no_tooltip_do_protocolo(): void

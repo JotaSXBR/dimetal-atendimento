@@ -123,7 +123,25 @@ class InboxHeaderTest extends TestCase
         $header = $xpath->query('//header[.//*[@data-testid="header-title"]]')->item(0);
         $text = $xpath->query('//*[@data-testid="header-title"]/..')->item(0);
 
-        $this->assertStringContainsString('lg:flex-nowrap', $header->getAttribute('class'));
-        $this->assertStringContainsString('lg:basis-0', $text->getAttribute('class'));
+        $actions = $xpath->query('.//button[@aria-controls="ticket-details"]/..', $header)->item(0);
+        $line = $xpath->query('//*[@data-testid="header-line"]')->item(0);
+
+        $this->assertStringContainsString('xl:flex-nowrap', $header->getAttribute('class'));
+        $this->assertStringContainsString('xl:basis-0', $text->getAttribute('class'));
+        $this->assertStringContainsString('xl:shrink-0', $actions->getAttribute('class'));
+        $this->assertStringContainsString('truncate', $line->getAttribute('class'));
+        $this->assertStringNotContainsString('break-words', $line->getAttribute('class'));
+    }
+
+    /** Detalhes lado a lado só a partir de xl; entre lg e xl abre por cima da conversa (sheet), como abaixo de lg. */
+    public function test_detalhes_so_ficam_lado_a_lado_a_partir_de_xl(): void
+    {
+        $xpath = $this->xpath();
+        $grid = $xpath->query('//*[@x-data="ticketDetails"]')->item(0)->getAttribute('class');
+
+        $this->assertStringContainsString('xl:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]', $grid);
+        $this->assertStringNotContainsString('lg:grid-cols-[340px_minmax(0,1fr)_var', $grid);
+        $this->assertSame(1, $xpath->query('//header//button[@aria-controls="ticket-details"][contains(concat(" ",@class," ")," xl:hidden ")]')->length);
+        $this->assertSame(1, $xpath->query('//header//button[@aria-controls="ticket-details"][contains(@class,"max-xl:hidden")]')->length);
     }
 }
