@@ -5,21 +5,40 @@ incluir; o item sai no commit que o corrige. **Decisão:** quem precisa responde
 
 ## Menores de revisão
 
-Do bug do sino (`fix/ux-sino-alertas`, 14/11), limites aceitos e sem efeito visível hoje:
+Nenhum pendente. Os menores do sino (S1 a S4, `fix/ux-sino-alertas`) foram descartados pelo dono em 16/11/2026; o S4 foi
+conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores da série "UX simplificação" fecharam em 14/11/2026
+(plano `docs/superpowers/plans/2026-11-14-ux-menores.md`).
+
+## Achados do teste de UI no beta (16/11/2026)
 
 | # | Onde | O quê | Decisão |
 |---|------|-------|---------|
-| S1 | `app/Livewire/Alerts/Bell.php` (`read`) | Carrega todos os não lidos do usuário a cada clique (poucos, pelo purge de 7 dias); dá para filtrar no banco por `data->ticket_id` | — |
-| S2 | `app/Livewire/Alerts/Bell.php` (`render`) | Hidrata até 200 alertas por render (3 consultas fixas, sem N+1); dá para selecionar só as colunas usadas | — |
-| S3 | `app/Livewire/Alerts/Bell.php` (`markRead`) | Não é mais chamado pela view (só pelos testes); remover e trocar os testes por `open` | — |
-| S4 | `Bell::open` x `render` | O link usa `readableBy` (inclui histórico) e a lista mostra o protocolo com `visibleTo`: ticket do histórico abre mas sem o protocolo no item | Dono: alinhar? |
+| B1 | Painel Detalhes, etiquetas da conversa | Depois de remover o chip, o foco vai para o `BODY` em vez de voltar ao seletor | — |
+| B2 | Sino de alertas | Dois alertas "0 mensagens em 0 conversas" apesar do #128: ver se são de antes do deploy ou novos (`systematic-debugging`) | — |
+| B3 | Cabeçalho da conversa | Abrir Detalhes reorganiza a barra e o "Encerrar" cai sob o cursor | — |
+| B4 | Editor do bot | A barra flutuante cobre o bloco "Início"; o card do fluxo "Padrão" diz "2 setores" e o menu do simulador lista 5 | — |
+| B5 | Configuração > Canais, card do canal | O menu "Mais opções" abre e fecha sozinho, sem dar tempo de chegar às outras opções (visto pelo dono) | `systematic-debugging` |
 
-Fora esses, nenhum pendente. Os menores das fatias D, E, F e G da série "UX simplificação", e os da revisão do próprio `fix/ux-menores`, foram
-resolvidos (ou aceitos e fechados) em 14/11/2026, com rulings do advisor registrados no ledger (`Ruling:`); o plano é
-`docs/superpowers/plans/2026-11-14-ux-menores.md`. Os menores das fatias A, B e C fecharam sem pendências.
+## Menores de UX antigos a reconferir (06/11 a 11/11)
+
+Adiados nas fatias do redesenho (#73, #74, #83, #87, #88, #100). Podem ter sido resolvidos pelas fatias seguintes: conferir antes de corrigir.
+
+| # | Origem | O quê | Decisão |
+|---|--------|-------|---------|
+| U1 | #83 | `aria-label` do botão "Mais" da Fila sem o nome visível (WCAG 2.5.3) | — |
+| U2 | #83 | Faixa do hub de Configuração com rolagem horizontal no celular | — |
+| U3 | #83 | Token `ink-foreground` sem uso nas views | — |
+| U4 | #83 | Estados de sucesso ainda fora do token `ok` do status-badge | — |
+| U5 | #87 | Ordenação das etiquetas sensível a acento | — |
+| U6 | #87 | Prefixo da chave `history-*` | — |
+| U7 | #87 | `title` duplica o `sr-only` do "+N etiquetas" | — |
+| U8 | #88 | Ícone do slot da barra lateral ignora `icon:variant`; `ring-zinc` fixo no ponto da Fila | — |
+| U9 | #88 | `basis-56` pode quebrar as ações do cabeçalho em `lg` com Detalhes aberto (ver também B3) | — |
+| U10 | #73 | Chevron do menu cobre o fim da 1ª linha em bolha curta | — |
+| U11 | #74 | Rascunhos antigos sem limpeza; `localStorage` indisponível não tratado | — |
+| U12 | #100 | Estilo do shadow DOM do seletor de emoji sob a CSP em enforce (não aberto no teste de 16/11) | — |
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
-- Achados do sino de alertas (alertas duplicados, "0 mensagens", clique no alerta de SLA abrir o ticket): depois da fatia H.
-- Modernizar o `phpmd.xml` com o PHPMD mais recente (nota em memória, 14/11).
-- Futuro app/parte mobile separado.
+- Modernizar o `phpmd.xml` com o PHPMD mais recente.
+- Futuro app/parte mobile separado (auditoria em `docs/ux-audit/2026-11-15-ux-audit-mobile.md`, branch local `docs/ux-audit-mobile`).
