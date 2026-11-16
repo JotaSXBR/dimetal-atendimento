@@ -13,8 +13,6 @@ final class WorkflowTemplates
 
     public const STANDARD = 'padrao';
 
-    public const WITH_HOURS = 'horario';
-
     public const BASIC_GROUP = 'Básicos';
 
     public const SEGMENT_GROUP = 'Por segmento';
@@ -27,8 +25,7 @@ final class WorkflowTemplates
     {
         $basic = [
             ['key' => self::BLANK, 'name' => 'Em branco', 'description' => 'Só o Início: você monta tudo.'],
-            ['key' => self::STANDARD, 'name' => 'Atendimento padrão', 'description' => 'Saudação, menu de setores e encaminhamento com o protocolo.'],
-            ['key' => self::WITH_HOURS, 'name' => 'Atendimento com horário', 'description' => 'Como o padrão, mas fora do expediente avisa o horário e coloca o cliente na fila.'],
+            ['key' => self::STANDARD, 'name' => 'Atendimento padrão', 'description' => 'Saudação com o nome da empresa, menu de setores e protocolo; fora do expediente avisa o horário e coloca o cliente na fila.'],
         ];
 
         return [
@@ -55,7 +52,6 @@ final class WorkflowTemplates
         return self::resolveGraph(match (true) {
             $segment !== null => $segment::graph(),
             $key === self::STANDARD => DefaultWorkflow::graph(),
-            $key === self::WITH_HOURS => DefaultWorkflow::withHours(),
             default => DefaultWorkflow::blank(),
         });
     }
