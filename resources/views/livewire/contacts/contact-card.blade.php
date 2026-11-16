@@ -1,5 +1,5 @@
 {{-- Compacto (Inbox): a raiz e o resumo não geram caixa (`contents`), para o rodapé `sticky` grudar no fim do `aside` de rolagem. --}}
-<div @class(['contents' => $compact && ! $editing])>
+<div @class(['contents' => $compact && ! $editing]) x-data="focusTagPicker" x-on:tag-removed.self="focus">
 @php($tz = config()->string('app.display_timezone'))
 @if ($compact && ! $editing)
     <div class="contents text-sm">

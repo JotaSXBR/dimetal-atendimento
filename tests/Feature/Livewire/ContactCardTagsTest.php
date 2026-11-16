@@ -159,6 +159,18 @@ class ContactCardTagsTest extends TestCase
         $this->assertGreaterThan($before, substr_count($inbox->html(), 'Revenda'));
     }
 
+    public function test_remover_etiqueta_pede_o_foco_de_volta_ao_seletor(): void
+    {
+        $tag = Tag::factory()->contato()->create();
+
+        $this->card()->call('addTag', $tag->id)->call('removeTag', $tag->id)->assertDispatched('tag-removed');
+    }
+
+    public function test_remover_etiqueta_que_nao_estava_nao_pede_foco(): void
+    {
+        $this->card()->call('removeTag', Tag::factory()->contato()->create()->id)->assertNotDispatched('tag-removed');
+    }
+
     public function test_remover_oferece_desfazer_so_quando_removeu(): void
     {
         $tag = Tag::factory()->contato()->create(['name' => 'Revenda']);
