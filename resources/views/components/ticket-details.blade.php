@@ -8,9 +8,9 @@
     id="ticket-details"
     aria-label="Detalhes do ticket"
     class="overflow-y-auto border-s border-line bg-surface p-4"
-    x-bind:class="sheet ? 'flex flex-col fixed inset-0 z-40' : (details ? 'hidden xl:flex xl:flex-col' : 'hidden')"
+    x-bind:class="sheet ? 'flex flex-col fixed inset-0 z-40' : (details ? 'hidden 2xl:flex 2xl:flex-col' : 'hidden')"
 >
-    <flux:button size="sm" variant="subtle" icon="arrow-left" class="mb-3 self-start xl:hidden" x-on:click="sheet = false">Voltar à conversa</flux:button>
+    <flux:button size="sm" variant="subtle" icon="arrow-left" class="mb-3 self-start 2xl:hidden" x-on:click="sheet = false">Voltar à conversa</flux:button>
 
     @if ($readonly)
         <x-disclosure title="Ticket" testid="details-ticket">

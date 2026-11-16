@@ -129,19 +129,22 @@ class InboxHeaderTest extends TestCase
         $this->assertStringContainsString('xl:flex-nowrap', $header->getAttribute('class'));
         $this->assertStringContainsString('xl:basis-0', $text->getAttribute('class'));
         $this->assertStringContainsString('xl:shrink-0', $actions->getAttribute('class'));
+        $title = $xpath->query('//*[@data-testid="header-title"]')->item(0);
+        $this->assertStringContainsString('2xl:flex-nowrap', $title->getAttribute('class'));
+        $this->assertStringContainsString('shrink-0', $xpath->query('//*[@data-testid="header-title"]/*[2]')->item(0)->getAttribute('class'));
         $this->assertStringContainsString('truncate', $line->getAttribute('class'));
         $this->assertStringNotContainsString('break-words', $line->getAttribute('class'));
     }
 
-    /** Detalhes lado a lado só a partir de xl; entre lg e xl abre por cima da conversa (sheet), como abaixo de lg. */
-    public function test_detalhes_so_ficam_lado_a_lado_a_partir_de_xl(): void
+    /** Detalhes lado a lado só a partir de 2xl; abaixo disso abre por cima da conversa (sheet), como abaixo de lg. */
+    public function test_detalhes_so_ficam_lado_a_lado_a_partir_de_2xl(): void
     {
         $xpath = $this->xpath();
         $grid = $xpath->query('//*[@x-data="ticketDetails"]')->item(0)->getAttribute('class');
 
-        $this->assertStringContainsString('xl:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]', $grid);
+        $this->assertStringContainsString('2xl:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]', $grid);
         $this->assertStringNotContainsString('lg:grid-cols-[340px_minmax(0,1fr)_var', $grid);
-        $this->assertSame(1, $xpath->query('//header//button[@aria-controls="ticket-details"][contains(concat(" ",@class," ")," xl:hidden ")]')->length);
-        $this->assertSame(1, $xpath->query('//header//button[@aria-controls="ticket-details"][contains(@class,"max-xl:hidden")]')->length);
+        $this->assertSame(1, $xpath->query('//header//button[@aria-controls="ticket-details"][contains(concat(" ",@class," ")," 2xl:hidden ")]')->length);
+        $this->assertSame(1, $xpath->query('//header//button[@aria-controls="ticket-details"][contains(@class,"max-2xl:hidden")]')->length);
     }
 }

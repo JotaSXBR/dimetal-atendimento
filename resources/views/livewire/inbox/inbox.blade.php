@@ -4,7 +4,7 @@
 
 <div
     data-open-ticket="{{ $ticketId }}"
-    class="grid min-h-0 flex-1 grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)] {{ $ticket ? 'xl:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]' : '' }}"
+    class="grid min-h-0 flex-1 grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)] {{ $ticket ? '2xl:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]' : '' }}"
     x-data="ticketDetails"
     x-bind:style="details ? '' : '--details-w: 0px'"
     data-client-presence="{{ json_encode($clientPresence, JSON_THROW_ON_ERROR) }}"
@@ -199,9 +199,9 @@
                 <x-avatar :src="$ticket->contact->avatarUrl()" :name="$name" shape="round" size="lg" decorative />
 
                 <div class="min-w-0 flex-1 basis-56 xl:basis-0">
-                    <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink">
-                        <span class="max-w-full truncate">{{ $name }}</span>
-                        <x-status-badge :status="$ticket->status" />
+                    <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink 2xl:flex-nowrap">
+                        <span class="max-w-full min-w-0 truncate">{{ $name }}</span>
+                        <x-status-badge :status="$ticket->status" class="shrink-0" />
                         @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
                             @php
                                 $slaState = $ticket->slaState();
@@ -237,8 +237,8 @@
 
                 {{-- Abaixo de xl as ações descem para a linha de baixo, à direita; em xl+ ficam na linha do nome (que trunca), para não pularem ao abrir Detalhes. --}}
                 <div class="ms-auto flex flex-wrap items-center justify-end gap-2 xl:shrink-0">
-                    <flux:button size="sm" variant="subtle" icon="information-circle" class="xl:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
-                    <flux:button size="sm" variant="subtle" icon="information-circle" class="max-xl:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
+                    <flux:button size="sm" variant="subtle" icon="information-circle" class="2xl:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
+                    <flux:button size="sm" variant="subtle" icon="information-circle" class="max-2xl:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
 
                     @if ($canClaim)
                         <flux:button variant="primary" size="sm" icon="check" wire:click="claim" wire:loading.attr="disabled">Assumir</flux:button>

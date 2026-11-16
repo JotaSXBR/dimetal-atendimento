@@ -160,7 +160,7 @@ class TicketDetailsBlocksTest extends TestCase
         $ticket = $this->ticket(TicketStatus::EM_ATENDIMENTO);
         $html = Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)->html();
 
-        $this->assertMatchesRegularExpression('/<aside[^>]*id="ticket-details"[^>]*x-bind:class="[^"]*xl:flex xl:flex-col/', $html);
+        $this->assertMatchesRegularExpression('/<aside[^>]*id="ticket-details"[^>]*x-bind:class="[^"]*hidden 2xl:flex 2xl:flex-col/', $html);
         $this->assertMatchesRegularExpression('/data-testid="contact-actions" class="[^"]*\bmt-auto\b/', $html);
     }
 
