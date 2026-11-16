@@ -81,10 +81,6 @@ composer ci:check        # o que o CI roda: estilo, tipos, complexidade e testes
 Os limites do PHPMD são os padrão da ferramenta; a única exceção é `TooManyPublicMethods` (15), porque o
 `WahaClient` tem um método por endpoint do WAHA. Subir um limite exige justificar no `phpmd.xml`.
 
-## Fluxo de branches
-
-- `main` protege o ambiente de produção; só recebe merge com CI verde.
-- `beta` publica o ambiente de testes no Coolify, com número de WhatsApp separado.
 ## Licença
 
 MIT. Veja [LICENSE](LICENSE).

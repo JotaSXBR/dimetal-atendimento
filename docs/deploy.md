@@ -53,6 +53,9 @@ O restante é fixo e igual nos três serviços PHP: `APP_ENV=production`, `APP_D
 `DB_DATABASE=fluxie`, `DB_USERNAME=fluxie`, `REDIS_CLIENT=phpredis`, `REDIS_PORT=6379`,
 `SESSION_DRIVER=redis`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis`.
 
+Em instalação existente, não troque `APP_NAME`: ele é a base dos prefixos de cache, Redis e do cookie de sessão, e trocar
+desloga todos e deixa o cache órfão. Se precisar trocar, fixe antes `CACHE_PREFIX`, `REDIS_PREFIX` e `SESSION_COOKIE` com os valores atuais.
+
 `AUTORUN_ENABLED=true` roda migrate/caches/storage link no start do `app`. Ligar isso em worker ou
 scheduler faz três migrações concorrentes.
 

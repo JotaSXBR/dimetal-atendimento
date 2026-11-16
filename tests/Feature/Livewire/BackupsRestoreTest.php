@@ -89,6 +89,17 @@ class BackupsRestoreTest extends TestCase
             ->assertSee('Digite RESTAURAR');
     }
 
+    public function test_arquivo_com_prefixo_fluxie_aparece_na_lista_e_abre_a_conferencia(): void
+    {
+        $name = 'fluxie-2026-11-16-0300-diario.dump';
+        Storage::disk('backups')->put($name, 'conteudo');
+
+        $this->page()->assertSee($name)
+            ->call('chooseBackup', $name)
+            ->assertSet('source', 'bucket:'.$name)
+            ->assertSee('Digite RESTAURAR');
+    }
+
     public function test_arquivo_estranho_mostra_o_erro_e_nao_abre_a_conferencia(): void
     {
         $this->inspector->shouldReceive('inspect')->andThrow(new InvalidDump('Este arquivo não é um backup deste sistema.'));
