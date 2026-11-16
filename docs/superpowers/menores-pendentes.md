@@ -15,7 +15,6 @@ conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores d
 |---|------|-------|---------|
 | B2 | Sino de alertas | Dois alertas "0 mensagens em 0 conversas" apesar do #128: ver se são de antes do deploy ou novos (`systematic-debugging`) | — |
 | B3 | Cabeçalho da conversa | Abrir Detalhes reorganiza a barra e o "Encerrar" cai sob o cursor | — |
-| B4 | Editor do bot | A barra flutuante cobre o bloco "Início"; o card do fluxo "Padrão" diz "2 setores" e o menu do simulador lista 5 | — |
 
 ## Menores de UX antigos a reconferir (06/11 a 11/11)
 

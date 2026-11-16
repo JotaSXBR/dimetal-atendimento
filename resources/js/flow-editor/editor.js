@@ -253,6 +253,9 @@ export async function createEditor(container, graph, hooks) {
     async function fitView() {
         await AreaExtensions.zoomAt(area, editor.getNodes());
 
+        // A barra flutuante cobre o topo do canvas (altura varia se quebrar linha): mede-se, não se fixa.
+        const toolbar = container.parentElement?.querySelector('[role="toolbar"]');
+        const inset = toolbar ? toolbar.offsetTop + toolbar.offsetHeight : 0;
         const { k } = area.area.transform;
         const target = fitScale(k);
 
@@ -262,10 +265,15 @@ export async function createEditor(container, graph, hooks) {
 
                 return view ? [{ type: node.type, x: view.position.x, y: view.position.y }] : [];
             });
-            const { x, y } = anchorTranslate(positions, target);
+            const { x, y } = anchorTranslate(positions, target, inset);
 
             await area.area.zoom(target);
             await area.area.translate(x, y);
+        } else {
+            // zoomAt não aceita recuo: desce o enquadramento meia barra, que centra o fluxo na parte livre do canvas.
+            const { x, y } = area.area.transform;
+
+            await area.area.translate(x, y + inset / 2);
         }
     }
 
