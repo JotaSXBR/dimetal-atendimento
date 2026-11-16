@@ -93,6 +93,8 @@ Laravel 13, Livewire 4.4, Flux 2, Reverb, Fortify, PostgreSQL 18, Redis 8. Vers�
   depois migrar uma vez:
   `DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=dimetal_test DB_USERNAME=dimetal DB_PASSWORD=secret DB_URL= php artisan migrate --force`.
   Remover no fim com `docker rm -f pg-test`. Não rodar testes enquanto um servidor local de verificação usa o `dimetal_test`.
+- Ambiente de teste local: `php artisan migrate:fresh --seed --seeder=AmbienteDeTesteSeeder` (banco dimetal_local); cenário novo de conferência
+  visual = classe nova em `database/seeders/Cenarios/` chamada pelo agregador, com assert no `AmbienteDeTesteSeederTest`.
 - Suíte do dia a dia: `php artisan test --parallel` (um banco `dimetal_test_test_N` por processo; fila `sync`). Teste que
   abre processo filho passa `DB_DATABASE` a ele (ver `ClaimConcurrencyTest`).
 - Suíte com Redis (espelho do CI): teste com `travel()` ou TTL passa no `array` e falha no Redis; simular expiração com
