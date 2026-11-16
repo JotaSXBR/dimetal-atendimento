@@ -199,7 +199,7 @@
                 <x-avatar :src="$ticket->contact->avatarUrl()" :name="$name" shape="round" size="lg" decorative />
 
                 <div class="min-w-0 flex-1 basis-56 xl:basis-0">
-                    <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink 2xl:flex-nowrap">
+                    <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink xl:flex-nowrap">
                         <span class="max-w-full min-w-0 truncate">{{ $name }}</span>
                         <x-status-badge :status="$ticket->status" class="shrink-0" />
                         @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)

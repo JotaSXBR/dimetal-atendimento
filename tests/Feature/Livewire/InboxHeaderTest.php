@@ -130,7 +130,7 @@ class InboxHeaderTest extends TestCase
         $this->assertStringContainsString('xl:basis-0', $text->getAttribute('class'));
         $this->assertStringContainsString('xl:shrink-0', $actions->getAttribute('class'));
         $title = $xpath->query('//*[@data-testid="header-title"]')->item(0);
-        $this->assertStringContainsString('2xl:flex-nowrap', $title->getAttribute('class'));
+        $this->assertMatchesRegularExpression('/(^|\s)xl:flex-nowrap/', $title->getAttribute('class'));
         $this->assertStringContainsString('shrink-0', $xpath->query('//*[@data-testid="header-title"]/*[2]')->item(0)->getAttribute('class'));
         $this->assertStringContainsString('truncate', $line->getAttribute('class'));
         $this->assertStringNotContainsString('break-words', $line->getAttribute('class'));
