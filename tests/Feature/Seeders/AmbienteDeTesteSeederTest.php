@@ -16,6 +16,8 @@ use App\Models\TicketNote;
 use App\Models\User;
 use Database\Seeders\AmbienteDeTesteSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\Events\BroadcastNotificationCreated;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use RuntimeException;
 use Tests\TestCase;
@@ -77,6 +79,38 @@ class AmbienteDeTesteSeederTest extends TestCase
         $recuperacao = $alertas->firstWhere('data.kind', 'recovery');
         $this->assertSame(0, $recuperacao->data['messages']);
         $this->assertSame('recovered', $recuperacao->data['state']);
+    }
+
+    public function test_alertas_do_sino_gravam_so_no_banco_sem_broadcast(): void
+    {
+        Event::fake([BroadcastNotificationCreated::class]);
+
+        $this->seed(AmbienteDeTesteSeeder::class);
+
+        Event::assertNotDispatched(BroadcastNotificationCreated::class);
+        $this->assertSame(3, User::query()->where('email', AmbienteDeTesteSeeder::ADMIN_EMAIL)->firstOrFail()->notifications()->count());
+    }
+
+    public function test_canal_parado_nao_e_reaproveitado(): void
+    {
+        Channel::factory()->create();
+
+        $this->seed(AmbienteDeTesteSeeder::class);
+
+        $this->assertTrue(Channel::query()->where('status', ChannelStatus::WORKING)->exists());
+    }
+
+    public function test_oi_ok_e_citacao_ficam_em_ticket_aberto_e_apontam_para_a_mensagem_certa(): void
+    {
+        $this->seed(AmbienteDeTesteSeeder::class);
+
+        foreach (['Oi', 'Ok'] as $corpo) {
+            $this->assertNotSame(TicketStatus::ENCERRADO, Message::query()->where('body', $corpo)->firstOrFail()->ticket->status, $corpo);
+        }
+        $citacao = Message::query()->whereNotNull('quoted_wa_message_id')->firstOrFail();
+        $alvo = Message::query()->where('wa_message_id', $citacao->quoted_wa_message_id)->firstOrFail();
+        $this->assertSame($citacao->ticket_id, $alvo->ticket_id);
+        $this->assertGreaterThanOrEqual(500, mb_strlen($alvo->body));
     }
 
     public function test_rodar_duas_vezes_nao_duplica_usuarios_nem_canal(): void
