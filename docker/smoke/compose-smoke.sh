@@ -96,7 +96,12 @@ for _ in $(seq 1 70); do
   sleep 3
 done
 # só os logs depois do restart: a subida normal já imprimiu "prepare-media"
-dc logs --since "$since" app 2>&1 | grep -q 'app:prepare-media falhou' || fail "falha do script de entrada não registrada"
+logs8=$(dc logs --since "$since" app 2>&1)
+grep -q 'app:prepare-media falhou' <<<"$logs8" || {
+  echo "estado: $(docker inspect -f '{{.State.Status}} exit={{.State.ExitCode}}' "$(dc ps -aq app)")"
+  tail -60 <<<"$logs8"
+  fail "falha do script de entrada não registrada"
+}
 [ "$(docker inspect -f '{{.State.ExitCode}}' "$(dc ps -aq app)")" = 1 ] || fail "app devia ter saído com código 1"
 dc start rustfs
 dc restart app
