@@ -54,6 +54,9 @@ class Backups extends Component
 
     public ?string $problem = null;
 
+    /** Tempo do trinco de despacho: cobre um `blocker()` lento (conexão ao banco de administração) sem soltar o trinco antes da hora. */
+    public const DISPATCH_LOCK_SECONDS = 120;
+
     public function mount(): void
     {
         $this->authorize('admin');
@@ -249,7 +252,7 @@ class Backups extends Component
     private function start(RestoreRequest $request, array $steps, string $title): void
     {
         // Trinco curto: sem ele, dois pedidos simultâneos passam juntos pelo `isRunning()` antes de o primeiro marcar o andamento.
-        $latch = Cache::lock('restore-dispatch', 30);
+        $latch = Cache::lock('restore-dispatch', self::DISPATCH_LOCK_SECONDS);
 
         if (! $latch->get()) {
             $this->problem = 'Já há uma restauração em andamento.';

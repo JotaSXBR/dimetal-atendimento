@@ -29,10 +29,6 @@ Branch `chore/claude-md`, revisão final.
 
 | # | Onde | O quê | Decisão |
 |---|------|-------|---------|
-| L3 | `app/Livewire/Settings/Backups.php` | TTL de 30 s do lock `restore-dispatch` | — |
-| L4 | `resources/js/composer-mode.js:45` | Estilo: ternário usado como instrução | — |
-| L5 | `resources/js/ticket-details.js:26` | Estilo: `catch` vazio | — |
-| L6 | `tests/js/storage-blocked.test.mjs` | Mock de `window`/`document` sem restaurar ao fim | — |
 | L7 | seed de teste | `sync` dos setores dos usuários de teste; `UsuariosDeTeste` sozinho fica sem setores; "sobra etiqueta" por `count > 1` | — |
 | L8 | `resources/views/livewire/inbox/inbox.blade.php` | Span do SLA sem `whitespace-nowrap` no cabeçalho em 2xl | — |
 | L9 | `resources/views/livewire/inbox/inbox.blade.php` | Linha de metadados truncada sem `title` | — |

@@ -68,7 +68,11 @@ document.addEventListener('alpine:init', () => {
 
         save(mode, value) {
             try {
-                value.trim() === '' ? window.localStorage.removeItem(this.key(mode)) : window.localStorage.setItem(this.key(mode), JSON.stringify({ text: value, at: Date.now() }));
+                if (value.trim() === '') {
+                    window.localStorage.removeItem(this.key(mode));
+                } else {
+                    window.localStorage.setItem(this.key(mode), JSON.stringify({ text: value, at: Date.now() }));
+                }
             } catch {
                 // storage bloqueado: o rascunho não persiste
             }
