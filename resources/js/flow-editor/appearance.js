@@ -233,6 +233,11 @@ export function fitScale(zoomedTo, min = MIN_FIT_ZOOM) {
     return Math.max(zoomedTo, min);
 }
 
+/** O `scale` do `zoomAt` (0,9 = folga de 5% por lado) reduzido para o fluxo caber na altura livre abaixo da barra (`inset` px). */
+export function insetScale(height, inset, base = 0.9) {
+    return height > inset ? base * (1 - inset / height) : base;
+}
+
 /**
  * Onde pôr o canvas (translate absoluto) para o bloco Início ficar a `margin` px do canto no zoom `k`; sem Início, o bloco mais ao
  * canto (menor x e menor y); sem blocos, só a margem. `insetTop` é a altura coberta no topo (barra flutuante).

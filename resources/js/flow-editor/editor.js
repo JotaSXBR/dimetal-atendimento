@@ -11,7 +11,7 @@ import { MinimapPlugin } from 'rete-minimap-plugin';
 import { getDOMSocketPosition } from 'rete-render-utils';
 import { LitElement, html } from 'lit';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
-import { History, ICONS, anchorTranslate, arrange, categoryOf, connectionPath, duplicate, fitScale, hasPositions, previewOf } from './appearance.js';
+import { History, ICONS, anchorTranslate, arrange, categoryOf, connectionPath, duplicate, fitScale, hasPositions, insetScale, previewOf } from './appearance.js';
 import { BLOCKS, defaultData, outputsFor } from './nodes.js';
 import { fromGraph, toGraph } from './serialize.js';
 
@@ -251,11 +251,12 @@ export async function createEditor(container, graph, hooks) {
      * a 24 px do canto do canvas: o resto do fluxo se alcança arrastando.
      */
     async function fitView() {
-        await AreaExtensions.zoomAt(area, editor.getNodes());
-
         // A barra flutuante cobre o topo do canvas (altura varia se quebrar linha): mede-se, não se fixa.
         const toolbar = container.parentElement?.querySelector('[role="toolbar"]');
         const inset = toolbar ? toolbar.offsetTop + toolbar.offsetHeight : 0;
+
+        await AreaExtensions.zoomAt(area, editor.getNodes(), { scale: insetScale(container.clientHeight, inset) });
+
         const { k } = area.area.transform;
         const target = fitScale(k);
 
@@ -270,7 +271,7 @@ export async function createEditor(container, graph, hooks) {
             await area.area.zoom(target);
             await area.area.translate(x, y);
         } else {
-            // zoomAt não aceita recuo: desce o enquadramento meia barra, que centra o fluxo na parte livre do canvas.
+            // zoomAt não aceita recuo: encolheu-se o `scale` e agora desce meia barra, que centra o fluxo na parte livre do canvas.
             const { x, y } = area.area.transform;
 
             await area.area.translate(x, y + inset / 2);
