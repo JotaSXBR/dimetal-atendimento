@@ -5,12 +5,12 @@ import { shown } from './shown.js';
 import { activeForQuery, buildRows, stepActive } from './tag-filter.js';
 
 document.addEventListener('alpine:init', () => {
-    // Depois de remover um chip o botão some e o foco cairia no BODY: volta ao seletor "Adicionar…" do componente (se existir). `.self` no
+    // Depois de remover um chip o botão some e o foco cairia no BODY: volta ao seletor "Adicionar…" do bloco indicado em `data-focus-target` (a ficha do contato abriga também o da conversa). `.self` no
     // listener: o evento do componente filho (etiquetas da conversa) também sobe até a ficha do contato, e não deve focar o seletor dela.
     window.Alpine.data('focusTagPicker', () => ({
         async focus() {
             await this.$nextTick();
-            const field = this.$el.querySelector('input[role="combobox"]');
+            const field = this.$el.querySelector(this.$el.dataset.focusTarget);
             if (field === null) {
                 return;
             }

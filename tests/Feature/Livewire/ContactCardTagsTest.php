@@ -166,6 +166,11 @@ class ContactCardTagsTest extends TestCase
         $this->card()->call('addTag', $tag->id)->call('removeTag', $tag->id)->assertDispatched('tag-removed');
     }
 
+    public function test_o_foco_de_volta_mira_o_seletor_das_etiquetas_do_contato(): void
+    {
+        $this->card()->assertSeeHtml('data-focus-target="[data-testid=contact-tags] input[role=combobox]"');
+    }
+
     public function test_remover_etiqueta_que_nao_estava_nao_pede_foco(): void
     {
         $this->card()->call('removeTag', Tag::factory()->contato()->create()->id)->assertNotDispatched('tag-removed');
