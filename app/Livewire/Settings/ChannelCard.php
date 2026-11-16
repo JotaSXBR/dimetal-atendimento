@@ -121,15 +121,16 @@ class ChannelCard extends Component
     }
 
     /**
-     * Desvincula o aparelho e marca o canal como desligado de propósito: sem alerta de queda e sem resposta nos tickets dele.
-     * Logout e não só parar: o WAHA religa as sessões paradas quando reinicia, e a desvinculada sobe em Aguardando QR.
+     * Apaga a sessão no WAHA e marca o canal como desligado de propósito: sem alerta de queda e sem resposta nos tickets dele.
+     * Delete, e não stop nem logout: com WHATSAPP_RESTART_ALL_SESSIONS=true o WAHA religa toda sessão STOPPED ao reiniciar, e uma
+     * sessão rodando que sofre logout reinicia em QR. O delete também desloga e desvincula o aparelho.
      */
     public function deactivate(): void
     {
         $this->reset('errorMessage', 'qr', 'qrValue', 'pairingCode', 'confirming');
 
         try {
-            (new WahaClient($this->channel))->logout();
+            (new WahaClient($this->channel))->deleteSession();
         } catch (Throwable $exception) {
             $this->fail($exception);
 

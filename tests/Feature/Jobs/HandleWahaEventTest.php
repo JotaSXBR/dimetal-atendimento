@@ -9,6 +9,7 @@ use App\Models\Message;
 use App\Models\WahaEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
@@ -35,6 +36,50 @@ class HandleWahaEventTest extends TestCase
 
         $this->assertSame(ChannelStatus::WORKING, $channel->fresh()->status);
         $this->assertNotNull($channel->fresh()->last_event_at);
+    }
+
+    /** @return array{Channel, WahaEvent} */
+    private function inactiveChannelEvent(string $status): array
+    {
+        $channel = Channel::factory()->create(['waha_session' => 'main'.$status, 'status' => ChannelStatus::STOPPED, 'active' => false]);
+        $event = WahaEvent::create([
+            'waha_event_id' => 'evt_'.$status,
+            'channel_id' => $channel->id,
+            'event' => 'session.status',
+            'session' => 'main'.$status,
+            'payload' => ['payload' => ['status' => $status]],
+            'received_at' => now(),
+        ]);
+
+        return [$channel, $event];
+    }
+
+    public function test_canal_desativado_que_volta_no_waha_e_apagado_de_novo(): void
+    {
+        config(['services.waha.url' => 'http://waha.test:3000', 'services.waha.key' => 'test-key']);
+        Http::fake(['*' => Http::response([], 200)]);
+
+        foreach (['SCAN_QR_CODE', 'WORKING'] as $status) {
+            [$channel, $event] = $this->inactiveChannelEvent($status);
+
+            (new HandleWahaEvent($event->id))->handle();
+
+            $this->assertSame(ChannelStatus::STOPPED, $channel->fresh()->status);
+        }
+
+        Http::assertSentCount(2);
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE' && str_ends_with($request->url(), '/api/sessions/mainWORKING'));
+    }
+
+    public function test_canal_desativado_que_recebe_stopped_nao_chama_o_waha(): void
+    {
+        Http::fake();
+        [$channel, $event] = $this->inactiveChannelEvent('STOPPED');
+
+        (new HandleWahaEvent($event->id))->handle();
+
+        $this->assertSame(ChannelStatus::STOPPED, $channel->fresh()->status);
+        Http::assertNothingSent();
     }
 
     public function test_status_com_me_grava_o_numero_do_canal(): void
