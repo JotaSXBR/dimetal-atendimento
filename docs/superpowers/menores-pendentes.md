@@ -30,9 +30,6 @@ Nenhum pendente. L8 e L9 corrigidos (SLA sem quebra de linha; `title` na linha d
 
 Branch `fix/menores-leva-2`, revisão final e conferência visual.
 
-- Teste da TTL de despacho da restauração confere só a constante, não o comportamento.
-- `tests/js/storage-blocked.test.mjs`: o `after` deixa `window` como `undefined` em vez de remover a propriedade.
-- `tests/Feature/Seeders/AmbienteDeTesteSeederTest.php`: o assert de etiqueta pega "o primeiro" contato/ticket etiquetado.
 - `app/Services/Setup/DefaultSectors.php`: borda com a marca já gravada (cenário sozinho, sem setores ativos).
 
 ## Pendências maiores já combinadas (não são menores de revisão)

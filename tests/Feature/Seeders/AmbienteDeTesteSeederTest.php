@@ -15,6 +15,7 @@ use App\Models\Ticket;
 use App\Models\TicketNote;
 use App\Models\User;
 use Database\Seeders\AmbienteDeTesteSeeder;
+use Database\Seeders\Cenarios\EtiquetasDosDoisEscopos;
 use Database\Seeders\Cenarios\UsuariosDeTeste;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\Events\BroadcastNotificationCreated;
@@ -76,9 +77,9 @@ class AmbienteDeTesteSeederTest extends TestCase
 
         $this->assertTrue(Contact::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONTATO))->exists());
         $this->assertTrue(Ticket::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONVERSA))->exists());
-        $contatoEtiquetado = Contact::query()->whereHas('tags')->firstOrFail();
+        $contatoEtiquetado = Contact::query()->where('name', EtiquetasDosDoisEscopos::NOME_DO_CONTATO)->firstOrFail();
         $this->assertTrue(Tag::query()->where('scope', TagScope::CONTATO)->whereNotIn('id', $contatoEtiquetado->tags()->pluck('tags.id'))->exists());
-        $ticketEtiquetado = Ticket::query()->whereHas('tags')->firstOrFail();
+        $ticketEtiquetado = $contatoEtiquetado->tickets()->firstOrFail();
         $this->assertTrue(Tag::query()->where('scope', TagScope::CONVERSA)->whereNotIn('id', $ticketEtiquetado->tags()->pluck('tags.id'))->exists());
 
         $this->assertTrue(TicketNote::query()->whereHas('ticket', fn ($q) => $q->where('status', '!=', TicketStatus::ENCERRADO))->exists());
