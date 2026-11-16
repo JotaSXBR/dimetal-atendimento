@@ -194,11 +194,11 @@
                 $name = $ticket->contact->label();
             @endphp
 
-            <header class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-surface px-4 py-2">
+            <header class="flex flex-wrap items-center lg:flex-nowrap gap-x-3 gap-y-1 border-b border-line bg-surface px-4 py-2">
                 <flux:button variant="subtle" size="sm" icon="arrow-left" class="lg:hidden" wire:click="$set('ticketId', null)" aria-label="Voltar para a lista" />
                 <x-avatar :src="$ticket->contact->avatarUrl()" :name="$name" shape="round" size="lg" decorative />
 
-                <div class="min-w-0 flex-1 basis-56">
+                <div class="min-w-0 flex-1 basis-56 lg:basis-0">
                     <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink">
                         <span class="max-w-full truncate">{{ $name }}</span>
                         <x-status-badge :status="$ticket->status" />
@@ -235,8 +235,8 @@
                     @endif
                 </div>
 
-                {{-- Em janela estreita as ações descem para a linha de baixo, à direita, em vez de espremer o nome e o SLA. --}}
-                <div class="ms-auto flex flex-wrap items-center justify-end gap-2">
+                {{-- Abaixo de lg as ações descem para a linha de baixo, à direita; em lg+ ficam na linha do nome (que trunca), para não pularem ao abrir Detalhes. --}}
+                <div class="ms-auto flex flex-wrap items-center justify-end gap-2 lg:shrink-0">
                     <flux:button size="sm" variant="subtle" icon="information-circle" class="lg:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
                     <flux:button size="sm" variant="subtle" icon="information-circle" class="max-lg:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
 

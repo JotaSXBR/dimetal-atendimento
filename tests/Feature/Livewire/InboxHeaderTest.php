@@ -116,4 +116,14 @@ class InboxHeaderTest extends TestCase
         $this->assertSame(0, $xpath->query('//*[@data-testid="header-sla"]')->length);
         $this->assertSame(0, $xpath->query('//header//button[@aria-label="Transferir" or @aria-label="Reatribuir" or @aria-label="Mais ações"]')->length);
     }
+
+    public function test_cabecalho_nao_quebra_linha_em_lg_para_as_acoes_nao_descerem_ao_abrir_detalhes(): void
+    {
+        $xpath = $this->xpath();
+        $header = $xpath->query('//header[.//*[@data-testid="header-title"]]')->item(0);
+        $text = $xpath->query('//*[@data-testid="header-title"]/..')->item(0);
+
+        $this->assertStringContainsString('lg:flex-nowrap', $header->getAttribute('class'));
+        $this->assertStringContainsString('lg:basis-0', $text->getAttribute('class'));
+    }
 }
