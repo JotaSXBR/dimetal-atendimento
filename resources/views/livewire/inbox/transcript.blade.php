@@ -49,13 +49,16 @@
             $audio => 'audio',
             default => 'below',
         };
+        // Com o menu (chevron de 24 px no canto), a bolha curta ganha largura para o horário não ficar por baixo dele:
+        // texto ~19 + folga 12 + horário ~48 + chevron além do padding 16 + padding 12 = ~107 px, logo min-w-28 (112 px).
+        $hasMenu = ! $readonly && ! $message->revoked_at && (auth()->user()?->can('reply', $message) ?? false);
         $resend = $out && ! $readonly && $message->delivery_status === \App\Enums\DeliveryStatus::FAILED
             ? app(\App\Services\Inbox\ResendTicketMessage::class)->kind($message, auth()->user())
             : 'none';
     @endphp
 
     <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }} {{ $message->reactions->isNotEmpty() ? 'mb-3' : '' }}">
-        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ match (true) {
+        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $hasMenu ? 'min-w-28' : '' }} {{ match (true) {
             // Cada tipo tem a sua cara: cliente (branca com borda), nossa (neutro suave), bot (tom do bot) e enviada pelo celular
             // (tracejada). O âmbar fica só para nota interna e aviso.
             $outside => 'border border-dashed border-ink-3 bg-surface',

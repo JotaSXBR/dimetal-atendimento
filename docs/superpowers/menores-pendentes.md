@@ -22,7 +22,6 @@ Adiados nas fatias do redesenho (#73, #74, #83, #87, #88, #100). Podem ter sido 
 |---|--------|-------|---------|
 | U2 | #83 | Faixa do hub de Configuração com rolagem horizontal no celular (`settings-page.blade.php:16`, `overflow-x-auto`): conferir no navegador | — |
 | U6 | #87 | Prefixo da chave `history-*`: sem conflito hoje (ramos exclusivos em `contact-card`, componentes distintos); só nomenclatura | — |
-| U10 | #73 | Chevron do menu da bolha (`transcript.blade.php:146`, `absolute end-1 top-1`) cobre o HORÁRIO (~16x12 px) nas bolhas curtas, só no hover; não cobre o texto; precisa reservar espaço na bolha (layout): conferir no navegador | — |
 
 ## Menores adiados da leva de menores baratos (16/11/2026)
 
