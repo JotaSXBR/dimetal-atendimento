@@ -175,6 +175,28 @@ Cenários (nome da classe → o que precisa existir):
 - [ ] **Step 5: CLAUDE.md**, em "Stack e comandos": `Ambiente de teste local: php artisan migrate:fresh --seed --seeder=AmbienteDeTesteSeeder (banco dimetal_local); cenário novo de conferência visual = classe nova em database/seeders/Cenarios/ chamada pelo agregador, com assert no AmbienteDeTesteSeederTest.`
 - [ ] **Step 6: Commit** `feat: seed do ambiente de teste com cenários da conferência visual`
 
+### Task 9: Apagar para todos respeita o prazo de 2 dias do WhatsApp (bug do dono, 16/11)
+
+Causa (systematic-debugging): `MessagePolicy::revoke` não tem prazo ("o WhatsApp decide"), mas o WAHA aceitou apagar uma mensagem
+de ontem. Prazos oficiais (faq.whatsapp.com, 16/11/2026): apagar para todos até 2 dias depois do envio; editar até 15 minutos
+(já aplicado: `Message::EDIT_WINDOW_MINUTES = 15`).
+
+**Files:**
+- Modify: `app/Models/Message.php` (constante `REVOKE_WINDOW_HOURS = 48`, ao lado de `EDIT_WINDOW_MINUTES`)
+- Modify: `app/Policies/MessagePolicy.php` (`revoke` com a janela; `edit` e `revoke` devolvem `Response::deny(<texto>)` quando o motivo é o prazo)
+- Modify: `app/Livewire/Inbox/Concerns/ActsOnMessages.php` (`act`: negado pelo prazo vira aviso na tela, não erro 403)
+- Test: `tests/Feature/Inbox/EditRevokeMessageTest.php` (ou o teste da policy existente)
+
+- [ ] **Step 1: Testes que falham:**
+  - `test_apagar_para_todos_vale_ate_2_dias`: mensagem própria do painel com `sent_at` = agora − 47 h → `can('revoke')` true; − 49 h → false.
+  - `test_botao_apagar_some_depois_de_2_dias`: o transcript não mostra "Apagar para todos" na mensagem de 49 h e mostra na de 1 h.
+  - `test_apagar_fora_do_prazo_avisa_sem_chamar_o_whatsapp`: chamar `revoke` numa mensagem de 49 h deixa `notice` = "O WhatsApp só permite apagar para todos até 2 dias depois do envio." e o WAHA não recebe requisição (`Http::assertNothingSent` ou equivalente).
+  - `test_editar_fora_do_prazo_avisa`: `editMessage` numa mensagem de 16 min deixa `notice` = "O WhatsApp só permite editar até 15 minutos depois do envio." sem 403.
+- [ ] **Step 2: Rodar e ver falhar.**
+- [ ] **Step 3: Corrigir** — janela na policy (`sent_at->gte(now()->subHours(Message::REVOKE_WINDOW_HOURS))`), `Response::deny` com os textos acima só para o motivo prazo (outros motivos continuam negando como hoje), e `act` usando `Gate::inspect` para transformar a negação por prazo em `notice`. Atualizar o comentário da policy. `RevokeTicketMessage` continua conferindo `can('revoke')`.
+- [ ] **Step 4: Rodar e ver passar** (os testes de mensagem e do transcript), pint, phpstan, phpmd.
+- [ ] **Step 5: Commit** `fix: apagar para todos só até 2 dias depois do envio (prazo do WhatsApp)`
+
 ### Verificação final (controlador, portão 7)
 
 `vendor/bin/pint --parallel --test --cache-file=.pint.cache`, `vendor/bin/phpstan analyse --no-progress`, `vendor/bin/phpmd analyze app --format text --ruleset phpmd.xml`, `node --test tests/js`, `npm run build` e a suíte com Redis (CLAUDE.md), lendo o código de saída de cada um.
