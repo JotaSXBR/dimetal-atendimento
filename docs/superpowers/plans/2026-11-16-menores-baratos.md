@@ -142,6 +142,39 @@
 - [ ] **Step 3: Atualizar `menores-pendentes.md`:** tirar os resolvidos e os corrigidos; os não baratos ficam com a causa em uma linha. Tirar também o B2 (fechado sem código: só a recuperação manual avisa com 0 mensagens, ver o spec).
 - [ ] **Step 4: Commit** `docs: menores de UX reconferidos (U1-U12)`
 
+### Task 8: Seed do ambiente de teste (cenários da conferência visual)
+
+**Files:**
+- Create: `database/seeders/AmbienteDeTesteSeeder.php`
+- Create: `database/seeders/Cenarios/*.php` (uma classe por cenário, lista abaixo)
+- Test: `tests/Feature/Seeders/AmbienteDeTesteSeederTest.php`
+- Modify: `CLAUDE.md` (seção "Stack e comandos": uma linha)
+
+**Interfaces:**
+- Produces: `Database\Seeders\AmbienteDeTesteSeeder::run(): void` que chama, em ordem, `SectorSeeder`, `TagSeeder`, `DefaultWorkflowSeeder` e cada `Database\Seeders\Cenarios\*`; constantes públicas `ADMIN_EMAIL = 'dev@teste.local'`, `ATENDENTE_EMAIL = 'atendente@teste.local'`, `SENHA = 'secret123'`.
+- Cada cenário é um `Seeder` com `run(): void`, usa as factories existentes e pode ser chamado sozinho (busca o canal/usuários pelo e-mail ou cria).
+
+Cenários (nome da classe → o que precisa existir):
+- `UsuariosDeTeste` → admin `ADMIN_EMAIL` em todos os setores; atendente `ATENDENTE_EMAIL` ativo em 2 setores.
+- `CanalConectado` → um canal `WORKING` com telefone fictício.
+- `TicketsEmTodosOsEstados` → ao menos um ticket `pendente`, `aguardando`, `em_atendimento` (do admin) e `encerrado`.
+- `NomesLongos` → contato com nome de 60+ caracteres e empresa longa, com ticket aberto.
+- `BolhasDeTamanhosVariados` → num ticket aberto: mensagem de entrada de uma palavra ("Oi"), uma de saída de uma palavra ("Ok"), uma longa (500+ caracteres) e uma com citação de outra.
+- `EtiquetasDosDoisEscopos` → contato com etiqueta de escopo contato e ticket com etiqueta de escopo conversa, sobrando etiquetas disponíveis nos dois.
+- `NotaInterna` → nota de equipe num ticket aberto.
+- `AlertasDoSino` → para o admin: um alerta de SLA estourado de ticket aberto, um de ticket encerrado e um de recuperação manual com 0 mensagens.
+
+- [ ] **Step 1: Testes que falham** em `AmbienteDeTesteSeederTest` (banco de teste vazio, `$this->seed(AmbienteDeTesteSeeder::class)`):
+  - `test_cria_os_usuarios_de_teste`: os dois e-mails existem, o atendente tem 2 setores, `Hash::check(SENHA, ...)`.
+  - `test_cobre_cada_cenario`: um assert por cenário da lista acima (contagens e valores exatos citados).
+  - `test_rodar_duas_vezes_nao_duplica_usuarios_nem_canal`.
+  - `test_recusa_rodar_em_producao`: com `app()->detectEnvironment(fn () => 'production')`, lança `RuntimeException` e nada é criado.
+- [ ] **Step 2: Rodar e ver falhar.**
+- [ ] **Step 3: Implementar** o agregador (guarda de ambiente: só `local` e `testing`) e os cenários. Sem mídia real.
+- [ ] **Step 4: Rodar e ver passar**, mais `pint --test`, `phpstan` nos arquivos novos e `phpmd analyze database/seeders --format text --ruleset phpmd.xml` só como aviso.
+- [ ] **Step 5: CLAUDE.md**, em "Stack e comandos": `Ambiente de teste local: php artisan migrate:fresh --seed --seeder=AmbienteDeTesteSeeder (banco dimetal_local); cenário novo de conferência visual = classe nova em database/seeders/Cenarios/ chamada pelo agregador, com assert no AmbienteDeTesteSeederTest.`
+- [ ] **Step 6: Commit** `feat: seed do ambiente de teste com cenários da conferência visual`
+
 ### Verificação final (controlador, portão 7)
 
 `vendor/bin/pint --parallel --test --cache-file=.pint.cache`, `vendor/bin/phpstan analyse --no-progress`, `vendor/bin/phpmd analyze app --format text --ruleset phpmd.xml`, `node --test tests/js`, `npm run build` e a suíte com Redis (CLAUDE.md), lendo o código de saída de cada um.

@@ -37,3 +37,20 @@ restauração.
 
 Seletores e nomes exatos de cada correção; a forma de preservar o `<details>` e o foco, desde que passem no
 `AlpineCspSubsetTest` e no `ViewConventionsTest`. Ao fechar cada item, tirá-lo de `menores-pendentes.md` no mesmo commit.
+
+## Acréscimo (16/11, aprovado pelo dono): seed do ambiente de teste
+
+**Por quê:** a conferência visual precisa de dados que cubram os cenários (bolha curta, nomes longos, tickets em todos os estados,
+atendente com vários setores...). Hoje eles vêm de um script solto que se perde. O dono quer um seed gravado no projeto, carregado
+sempre que preciso, indexado pelo CodeGraph para acrescentar cenários de testes futuros com facilidade.
+
+**Desenho:** um seeder por cenário em `database/seeders/Cenarios/` (nome = o que cobre) e um `AmbienteDeTesteSeeder` que chama
+todos; carga com `php artisan migrate:fresh --seed --seeder=AmbienteDeTesteSeeder` no banco `dimetal_local`. Usuários de teste
+(admin e atendente) com e-mail e senha de teste escritos no próprio seeder. Recusa rodar fora de `local`/`testing`. Um teste roda
+o seeder num banco vazio e confere cada cenário. Linha no CLAUDE.md com o comando e a regra "cenário novo = classe nova em
+`Cenarios/`".
+
+**Fora:** mídia real (foto/áudio exigem arquivo no RustFS); dados no beta.
+
+**Abordagens:** (1) seeder por cenário + agregador (escolhida: cada cenário se acha e se acrescenta sozinho); (2) um seeder único
+grande (mais simples hoje, vira um arquivo difícil de achar e de mexer); (3) script fora do projeto (o que se fez hoje: se perde).
