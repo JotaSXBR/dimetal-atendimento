@@ -10,6 +10,9 @@
     data-client-presence="{{ json_encode($clientPresence, JSON_THROW_ON_ERROR) }}"
     data-presence-ttl="{{ config('presence.state_ttl_seconds') }}"
 >
+    {{-- Limpeza dos rascunhos vencidos ou de ticket encerrado, uma vez por carga (resources/js/composer-mode.js) --}}
+    <div class="hidden" x-data="draftCleanup($wire, {{ auth()->id() }})"></div>
+
     {{-- Lista --}}
     <section class="flex min-h-0 flex-col border-e border-line {{ $ticket ? 'hidden lg:flex' : '' }}">
         <header class="border-b border-line p-4" x-data="queueSearch" data-open="{{ $search !== '' ? '1' : '0' }}" x-on:keydown.escape="escape">

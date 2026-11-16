@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Inbox\Concerns;
 
+use App\Enums\TicketStatus;
 use App\Jobs\SendTicketMessageJob;
 use App\Models\Message;
 use App\Models\QuickReply;
@@ -49,6 +50,27 @@ trait ComposesMessages
 
     /** @var array<int, TemporaryUploadedFile> Bandeja: arquivos aceitos, na ordem de envio. */
     public array $attachments = [];
+
+    /**
+     * Dos ids com rascunho guardado no navegador, os de ticket encerrado que o usuário ainda vê (o navegador apaga esses
+     * rascunhos). Só inteiros positivos, até 200: o id vem do navegador.
+     *
+     * @param  array<mixed>  $ids
+     * @return list<int>
+     */
+    #[Renderless]
+    public function closedDraftTickets(array $ids): array
+    {
+        $valid = array_values(array_filter(array_slice($ids, 0, 200), fn ($id): bool => is_int($id) && $id > 0));
+
+        $closed = Ticket::query()->readableBy($this->user())
+            ->whereIn('id', $valid)
+            ->where('status', TicketStatus::ENCERRADO->value)
+            ->get(['id'])
+            ->map(fn (Ticket $ticket): int => $ticket->id);
+
+        return array_values($closed->all());
+    }
 
     public function toggleQuickReplies(): void
     {
