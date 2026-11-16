@@ -184,6 +184,22 @@ class AutomationIndexTest extends TestCase
         $this->page()->assertSee('1 setor')->assertDontSee('2 setores');
     }
 
+    public function test_setor_id_que_nao_e_inteiro_nao_conta(): void
+    {
+        $sector = Sector::factory()->create();
+        $other = Sector::factory()->create();
+        Sector::factory()->create(['id' => 1000]);
+        // "B.0" e "1e3" valem outros setores se forem lidos como número; só o inteiro (ou seu texto) conta.
+        $this->flowWithMenu('Fixos', []);
+        Workflow::query()->where('name', 'Fixos')->update(['draft' => ['nodes' => array_map(
+            fn (mixed $id, int $i): array => ['id' => "t$i", 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $id]],
+            [$sector->id, (string) $sector->id, "{$other->id}.0", '1e3', null],
+            range(0, 4),
+        ), 'edges' => []]]);
+
+        $this->page()->assertSee('1 setor')->assertDontSee('2 setores')->assertDontSee('3 setores');
+    }
+
     public function test_setor_desativado_ou_apagado_nao_conta_no_menu(): void
     {
         Sector::factory()->create();

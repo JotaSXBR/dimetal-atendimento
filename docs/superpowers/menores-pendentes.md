@@ -30,9 +30,6 @@ Nenhum pendente. L8 e L9 corrigidos (SLA sem quebra de linha; `title` na linha d
 
 Branch `fix/menores-leva-2`, revisão final e conferência visual.
 
-- `app/Livewire/Automation/Index.php:141`: `is_numeric` aceita '1e3' e '5.7' na contagem de setores; `FILTER_VALIDATE_INT` seria mais rigoroso.
-- `tests/Feature/Livewire/`: o teste de `setor_id` string é só regressão, não prova o caso.
-- `app/Livewire/Automation/Index.php:141`: cadeia de `where/pluck/filter/map/filter` longa demais numa linha.
 - `resources/js/flow-editor/`: `positions` é montado sempre no `fitView`, mesmo quando o plano não o usa.
 - Teste da TTL de despacho da restauração confere só a constante, não o comportamento.
 - `tests/js/storage-blocked.test.mjs`: o `after` deixa `window` como `undefined` em vez de remover a propriedade.

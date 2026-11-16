@@ -137,8 +137,10 @@ class Index extends Component
     {
         $raw = $draft['nodes'] ?? [];
         $nodes = collect(is_array($raw) ? $raw : []);
-        // O JSON do rascunho traz o id como int ou texto; setor apagado não conta.
-        $fixed = $nodes->where('type', 'transferir')->pluck('data.setor_id')->filter(fn ($id): bool => is_numeric($id))->map(fn ($id): int => (int) $id)->filter(fn (int $id): bool => $existingIds->contains($id));
+        // O JSON do rascunho traz o id como int ou texto de inteiro ("1e3" e "5.7" não valem); setor apagado não conta.
+        $rawIds = $nodes->where('type', 'transferir')->pluck('data.setor_id');
+        $validIds = $rawIds->map(fn ($id): int|false => filter_var($id, FILTER_VALIDATE_INT))->filter(fn ($id): bool => $id !== false);
+        $fixed = $validIds->filter(fn (int $id): bool => $existingIds->contains($id));
         $ids = $nodes->contains('type', 'menu_setores') ? $fixed->merge($menuIds) : $fixed;
 
         return ['nodes' => $nodes->count(), 'sectors' => $ids->unique()->count()];
