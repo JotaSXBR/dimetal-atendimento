@@ -1,6 +1,6 @@
 name: security-scan
 
-# Varreduras pesadas: imagem Docker e scan dinâmico contra o staging. Rodam por agendamento (segunda de manhã), sob demanda
+# Varreduras pesadas: imagem Docker e scan dinâmico contra o beta. Rodam por agendamento (segunda de manhã), sob demanda
 # (`gh workflow run security-scan`) e, no PR, só quando mudam o que elas olham. Separadas do `tests` para nunca travar o deploy.
 on:
   pull_request:
@@ -65,11 +65,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      # Varredura passiva (baseline do OWASP ZAP) contra o staging, que roda o código da main. Só relata: abrir issue
+      # Varredura passiva (baseline do OWASP ZAP) contra o beta, que roda o código da main. Só relata: abrir issue
       # e reprovar o job ficam desligados até a primeira rodada ser triada.
-      - name: ZAP baseline scan of the staging
+      - name: ZAP baseline scan of the beta
         uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
         with:
-          target: 'https://staging.inbox.fluxie.com.br'
+          target: 'https://dimetal-beta.fluxie.com.br'
           allow_issue_writing: false
           fail_action: false

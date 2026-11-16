@@ -35,7 +35,7 @@ echo "1. compose config válido"
 dc config -q
 
 echo "2. app, worker, scheduler, reverb e waha saudáveis (até 180 s)"
-dc up -d --pull never app worker scheduler reverb waha
+dc up -d --pull missing app worker scheduler reverb waha
 for s in app worker scheduler reverb waha; do
   wait_for "$s" healthy 180 || { dc logs "$s" | tail -30; fail "$s não ficou healthy"; }
 done

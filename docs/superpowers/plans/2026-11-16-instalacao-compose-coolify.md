@@ -224,7 +224,7 @@ O texto atual que descreve os 5 apps do beta sai, porque isso vira histórico do
    **OK do dono:** criar a Release `v0.1.0` com o `gh`, com o changelog dos PRs.
 4. Dono cria o DNS. Eu crio o projeto `fluxie-inbox` com os ambientes `staging` e `production`.
 5. **Staging:** Application (build pack Docker Compose) da `main` com o domínio `https://staging.inbox.fluxie.com.br`. Gravar o
-   `COOLIFY_STAGING_UUID` com `gh secret set`, deploy, admin pelo terminal, QR do número de teste, mensagem ida e volta, backup manual.
+   `COOLIFY_STAGING_UUID` com `gh secret set`, deploy, admin pelo terminal, QR do número de teste, mensagem ida e volta, backup manual. No mesmo PR que remove o `deploy-beta` (passo 8), ou antes dele, trocar o alvo do ZAP em `security-scan.yml` para `https://staging.inbox.fluxie.com.br` (o DNS do staging precisa existir; em 16/11 o ZAP falhou no PR #137 por isso e o alvo voltou ao beta).
 6. **Production:** Service colado com o domínio `https://inbox.fluxie.com.br`. Gravar o `COOLIFY_PRODUCTION_UUID`, deploy e admin.
 7. **"sim" do dono e horário combinado:**
    1. parar o WAHA do `dimetal-beta`;
