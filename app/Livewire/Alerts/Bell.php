@@ -162,6 +162,7 @@ class Bell extends Component
             'backup' => match ($state) {
                 'restored' => ['arrow-path', 'accent', 'Banco restaurado', 'Veja Configuração > Backup do banco'],
                 'stale' => ['circle-stack', 'danger', 'Backup do banco atrasado', 'Veja Configuração > Backup do banco'],
+                'skipped' => ['circle-stack', 'warn', 'Backup diário não rodou', 'Outro backup estava em andamento'],
                 default => ['circle-stack', 'danger', 'Backup do banco falhou', 'Veja Configuração > Backup do banco'],
             },
             'recovery' => ['inbox-arrow-down', 'accent', ($data['state'] ?? '') === 'imported' ? 'Histórico importado' : 'Mensagens recuperadas', $this->recoveryDetail($data, $channel)],

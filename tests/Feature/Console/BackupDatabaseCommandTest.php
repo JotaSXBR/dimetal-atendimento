@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Console;
 
+use App\Enums\UserRole;
+use App\Models\User;
+use App\Notifications\BackupSkipped;
 use App\Services\Backup\BackupFile;
 use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
@@ -9,10 +12,14 @@ use App\Services\Backup\ManualBackupState;
 use App\Services\Backup\Restore\RestoreProgress;
 use App\Services\Backup\RunBackup;
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class BackupDatabaseCommandTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_diario_por_padrao_e_mostra_nome_e_tamanho(): void
     {
         $file = new BackupFile('dimetal-2026-11-12-0215-diario.dump', BackupKind::Diario, CarbonImmutable::now(), 2_500_000);
@@ -36,6 +43,28 @@ class BackupDatabaseCommandTest extends TestCase
         $this->mock(RunBackup::class)->shouldReceive('__invoke')->once()->andReturn(null);
 
         $this->artisan('app:backup-database')->expectsOutputToContain('em andamento')->assertSuccessful();
+    }
+
+    public function test_diario_com_lock_ocupado_alerta_os_admins(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->create(['role' => UserRole::ADMIN, 'active' => true]);
+        $this->mock(RunBackup::class)->shouldReceive('__invoke')->once()->andReturn(null);
+
+        $this->artisan('app:backup-database')->assertSuccessful();
+
+        Notification::assertSentTo($admin, BackupSkipped::class);
+    }
+
+    public function test_manual_com_lock_ocupado_nao_alerta(): void
+    {
+        Notification::fake();
+        User::factory()->create(['role' => UserRole::ADMIN, 'active' => true]);
+        $this->mock(RunBackup::class)->shouldReceive('__invoke')->once()->andReturn(null);
+
+        $this->artisan('app:backup-database --manual')->assertSuccessful();
+
+        Notification::assertNothingSent();
     }
 
     public function test_falha_sai_com_codigo_1_e_a_mensagem(): void
