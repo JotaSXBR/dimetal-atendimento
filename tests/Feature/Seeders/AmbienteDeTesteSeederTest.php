@@ -15,6 +15,7 @@ use App\Models\Ticket;
 use App\Models\TicketNote;
 use App\Models\User;
 use Database\Seeders\AmbienteDeTesteSeeder;
+use Database\Seeders\Cenarios\UsuariosDeTeste;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\Events\BroadcastNotificationCreated;
 use Illuminate\Support\Facades\Event;
@@ -38,6 +39,17 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertTrue($atendente->active);
         $this->assertTrue(Hash::check(AmbienteDeTesteSeeder::SENHA, $atendente->password));
         $this->assertTrue(Hash::check(AmbienteDeTesteSeeder::SENHA, $admin->password));
+    }
+
+    public function test_usuarios_de_teste_sozinho_tem_setores(): void
+    {
+        $this->seed(UsuariosDeTeste::class);
+
+        $admin = User::query()->where('email', AmbienteDeTesteSeeder::ADMIN_EMAIL)->firstOrFail();
+        $atendente = User::query()->where('email', AmbienteDeTesteSeeder::ATENDENTE_EMAIL)->firstOrFail();
+        $this->assertGreaterThan(2, Sector::query()->count());
+        $this->assertSame(Sector::query()->count(), $admin->sectors()->count());
+        $this->assertSame(2, $atendente->sectors()->count());
     }
 
     public function test_cobre_cada_cenario(): void
@@ -64,8 +76,10 @@ class AmbienteDeTesteSeederTest extends TestCase
 
         $this->assertTrue(Contact::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONTATO))->exists());
         $this->assertTrue(Ticket::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONVERSA))->exists());
-        $this->assertGreaterThan(1, Tag::query()->where('scope', TagScope::CONTATO)->count());
-        $this->assertGreaterThan(1, Tag::query()->where('scope', TagScope::CONVERSA)->count());
+        $contatoEtiquetado = Contact::query()->whereHas('tags')->firstOrFail();
+        $this->assertTrue(Tag::query()->where('scope', TagScope::CONTATO)->whereNotIn('id', $contatoEtiquetado->tags()->pluck('tags.id'))->exists());
+        $ticketEtiquetado = Ticket::query()->whereHas('tags')->firstOrFail();
+        $this->assertTrue(Tag::query()->where('scope', TagScope::CONVERSA)->whereNotIn('id', $ticketEtiquetado->tags()->pluck('tags.id'))->exists());
 
         $this->assertTrue(TicketNote::query()->whereHas('ticket', fn ($q) => $q->where('status', '!=', TicketStatus::ENCERRADO))->exists());
 

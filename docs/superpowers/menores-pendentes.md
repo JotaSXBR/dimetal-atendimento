@@ -29,7 +29,6 @@ Branch `chore/claude-md`, revisão final.
 
 | # | Onde | O quê | Decisão |
 |---|------|-------|---------|
-| L7 | seed de teste | `sync` dos setores dos usuários de teste; `UsuariosDeTeste` sozinho fica sem setores; "sobra etiqueta" por `count > 1` | — |
 | L8 | `resources/views/livewire/inbox/inbox.blade.php` | Span do SLA sem `whitespace-nowrap` no cabeçalho em 2xl | — |
 | L9 | `resources/views/livewire/inbox/inbox.blade.php` | Linha de metadados truncada sem `title` | — |
 
