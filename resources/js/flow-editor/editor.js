@@ -11,7 +11,7 @@ import { MinimapPlugin } from 'rete-minimap-plugin';
 import { getDOMSocketPosition } from 'rete-render-utils';
 import { LitElement, html } from 'lit';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
-import { History, ICONS, anchorTranslate, arrange, categoryOf, connectionPath, duplicate, fitScale, hasPositions, insetScale, previewOf } from './appearance.js';
+import { History, ICONS, arrange, categoryOf, connectionPath, duplicate, fitPlan, hasPositions, insetScale, previewOf } from './appearance.js';
 import { BLOCKS, defaultData, outputsFor } from './nodes.js';
 import { fromGraph, toGraph } from './serialize.js';
 
@@ -257,25 +257,19 @@ export async function createEditor(container, graph, hooks) {
 
         await AreaExtensions.zoomAt(area, editor.getNodes(), { scale: insetScale(container.clientHeight, inset) });
 
-        const { k } = area.area.transform;
-        const target = fitScale(k);
+        const { k, x, y } = area.area.transform;
+        const positions = editor.getNodes().flatMap((node) => {
+            const view = area.nodeViews.get(node.id);
 
-        if (target !== k) {
-            const positions = editor.getNodes().flatMap((node) => {
-                const view = area.nodeViews.get(node.id);
+            return view ? [{ type: node.type, x: view.position.x, y: view.position.y }] : [];
+        });
+        const plan = fitPlan({ k, x, y, inset, positions });
 
-                return view ? [{ type: node.type, x: view.position.x, y: view.position.y }] : [];
-            });
-            const { x, y } = anchorTranslate(positions, target, inset);
-
-            await area.area.zoom(target);
-            await area.area.translate(x, y);
-        } else {
-            // zoomAt não aceita recuo: encolheu-se o `scale` e agora desce meia barra, que centra o fluxo na parte livre do canvas.
-            const { x, y } = area.area.transform;
-
-            await area.area.translate(x, y + inset / 2);
+        if (plan.scale !== k) {
+            await area.area.zoom(plan.scale);
         }
+
+        await area.area.translate(plan.x, plan.y);
     }
 
     async function drawNodes(source) {

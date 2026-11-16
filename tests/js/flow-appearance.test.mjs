@@ -182,3 +182,22 @@ test('insetScale: o enquadramento cabe na área livre abaixo da barra', async ()
     assert.equal(insetScale(600, 60), 0.9 * (1 - 60 / 600));
     assert.equal(insetScale(0, 56), 0.9);
 });
+
+test('fitPlan: fluxo pequeno mantém o zoom e só desce meia barra', async () => {
+    const { fitPlan } = await import('../../resources/js/flow-editor/appearance.js');
+
+    assert.deepEqual(fitPlan({ k: 1, x: 10, y: 20, inset: 56, positions: [] }), { scale: 1, x: 10, y: 48 });
+});
+
+test('fitPlan: fluxo médio, acima do piso, não ancora o Início', async () => {
+    const { fitPlan } = await import('../../resources/js/flow-editor/appearance.js');
+
+    assert.deepEqual(fitPlan({ k: 0.95, x: 0, y: 0, inset: 0, positions: [{ type: 'inicio', x: 100, y: 50 }] }), { scale: 0.95, x: 0, y: 0 });
+});
+
+test('fitPlan: fluxo alto cai no piso e ancora o Início abaixo da barra', async () => {
+    const { fitPlan } = await import('../../resources/js/flow-editor/appearance.js');
+    const positions = [{ type: 'inicio', x: 100, y: 50 }];
+
+    assert.deepEqual(fitPlan({ k: 0.5, x: 7, y: 9, inset: 56, positions }), { scale: 0.9, x: 24 - 100 * 0.9, y: 56 + 24 - 50 * 0.9 });
+});
