@@ -15,6 +15,7 @@ class CanalConectado extends Seeder
 
     public static function canal(): Channel
     {
-        return Channel::query()->where('status', ChannelStatus::WORKING)->first() ?? Channel::factory()->connected()->create(['phone' => '5511999990000']);
+        // Sessão `main` é única: um canal parado vira conectado em vez de duplicar.
+        return Channel::query()->updateOrCreate(['waha_session' => 'main'], ['name' => 'WhatsApp', 'phone' => '5511999990000', 'status' => ChannelStatus::WORKING, 'active' => true]);
     }
 }
