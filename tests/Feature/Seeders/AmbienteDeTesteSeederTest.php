@@ -106,8 +106,10 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertTrue(Contact::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONTATO))->exists());
         $this->assertTrue(Ticket::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONVERSA))->exists());
         $contatoEtiquetado = Contact::query()->where('name', EtiquetasDosDoisEscopos::NOME_DO_CONTATO)->firstOrFail();
+        $this->assertTrue($contatoEtiquetado->tags()->exists());
         $this->assertTrue(Tag::query()->where('scope', TagScope::CONTATO)->whereNotIn('id', $contatoEtiquetado->tags()->pluck('tags.id'))->exists());
         $ticketEtiquetado = $contatoEtiquetado->tickets()->firstOrFail();
+        $this->assertTrue($ticketEtiquetado->tags()->exists());
         $this->assertTrue(Tag::query()->where('scope', TagScope::CONVERSA)->whereNotIn('id', $ticketEtiquetado->tags()->pluck('tags.id'))->exists());
 
         $this->assertTrue(TicketNote::query()->whereHas('ticket', fn ($q) => $q->where('status', '!=', TicketStatus::ENCERRADO))->exists());

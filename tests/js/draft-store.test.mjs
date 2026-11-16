@@ -43,3 +43,13 @@ test('draftTicketIds ordena do mais antigo e põe o formato antigo primeiro', ()
     ];
     assert.deepEqual(draftTicketIds(entries, 1), [20, 10, 30]);
 });
+
+test('draftTicketIds mantém a ordem de entrada quando duas datas empatam', () => {
+    const at = JSON.stringify({ text: 'a', at: 100 });
+    const entries = [
+        ['rascunho:1:30:reply', at],
+        ['rascunho:1:10:reply', at],
+        ['rascunho:1:20:reply', at],
+    ];
+    assert.deepEqual(draftTicketIds(entries, 1), [30, 10, 20]);
+});
