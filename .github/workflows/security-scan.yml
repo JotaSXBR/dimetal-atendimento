@@ -31,15 +31,23 @@ jobs:
         with:
           persist-credentials: false
 
-      # O PR prova a base do próprio branch: ela é construída aqui e substitui a imagem publicada do FROM, que só muda
-      # depois do merge. A referência é lida do docker/Dockerfile para não ficar fixa numa versão do PHP.
+      # No PR a base é a do branch: construída aqui e no lugar da imagem publicada do FROM, que só muda depois do merge.
+      # No agendado e no manual a base é a publicada (a que o deploy usa), para pegar a defasagem dela.
+      # A referência é lida do docker/Dockerfile para não ficar fixa numa versão do PHP.
       - name: Build the base image from this branch
+        if: github.event_name == 'pull_request'
         run: docker build -t dimetal-base:ci docker/base
 
       - name: Build the runtime image
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          base_ref="$(sed -nE 's#^FROM ([^ ]+) AS base$#\1#p' docker/Dockerfile)"
-          docker build --target runtime -f docker/Dockerfile --build-context "${base_ref}=docker-image://dimetal-base:ci" -t dimetal-scan:ci .
+          args=()
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base_ref="$(sed -nE 's#^FROM ([^ ]+) AS base$#\1#p' docker/Dockerfile)"
+            args+=(--build-context "${base_ref}=docker-image://dimetal-base:ci")
+          fi
+          docker build --target runtime -f docker/Dockerfile "${args[@]}" -t dimetal-scan:ci .
 
       # Falha só com vulnerabilidade CRÍTICA ou ALTA que já tenha correção: o que não tem correção publicada
       # não é acionável e deixaria o job vermelho para sempre.
