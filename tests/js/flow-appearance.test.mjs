@@ -166,3 +166,19 @@ test('anchorTranslate: ancora o Início a 24 px; sem Início, o bloco mais ao ca
     assert.deepEqual(anchorTranslate(positions.filter((p) => p.type !== 'inicio'), 1), { x: 24 - 300, y: 24 - 200 });
     assert.deepEqual(anchorTranslate([], 1), { x: 24, y: 24 });
 });
+
+test('anchorTranslate: o Início fica abaixo do recuo da barra; sem recuo, igual ao de antes', async () => {
+    const { anchorTranslate } = await import('../../resources/js/flow-editor/appearance.js');
+    const positions = [{ type: 'inicio', x: 100, y: 50 }];
+
+    assert.deepEqual(anchorTranslate(positions, 0.9, 56), { x: 24 - 100 * 0.9, y: 56 + 24 - 50 * 0.9 });
+    assert.deepEqual(anchorTranslate(positions, 0.9), anchorTranslate(positions, 0.9, 0));
+});
+
+test('insetScale: o enquadramento cabe na área livre abaixo da barra', async () => {
+    const { insetScale } = await import('../../resources/js/flow-editor/appearance.js');
+
+    assert.equal(insetScale(600, 0), 0.9);
+    assert.equal(insetScale(600, 60), 0.9 * (1 - 60 / 600));
+    assert.equal(insetScale(0, 56), 0.9);
+});

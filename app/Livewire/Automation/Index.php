@@ -3,6 +3,7 @@
 namespace App\Livewire\Automation;
 
 use App\Models\Channel;
+use App\Models\Sector;
 use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
@@ -10,6 +11,7 @@ use App\Services\Bot\WorkflowPublisher;
 use App\Services\Bot\WorkflowTemplates;
 use DomainException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -123,28 +125,32 @@ class Index extends Component
     }
 
     /**
-     * Resumo do rascunho para o cartão: quantos blocos e quantos setores ele cita (os fixos dos blocos Transferir, mais um
-     * se há Menu de setores, que leva ao setor que o cliente escolher).
+     * Resumo do rascunho para o cartão: quantos blocos e quantos setores ele cita (os fixos dos blocos Transferir; com
+     * Menu de setores, a união deles com os setores que o menu mostra).
      *
      * @param  array<string, mixed>  $draft
+     * @param  Collection<array-key, mixed>  $menuIds  ids dos setores visíveis no menu, consultados uma vez por render
      * @return array{nodes: int, sectors: int}
      */
-    private function summary(array $draft): array
+    private function summary(array $draft, Collection $menuIds): array
     {
         $raw = $draft['nodes'] ?? [];
         $nodes = collect(is_array($raw) ? $raw : []);
-        $fixed = $nodes->where('type', 'transferir')->pluck('data.setor_id')->filter(fn ($id): bool => $id !== null && $id !== '')->unique()->count();
+        $fixed = $nodes->where('type', 'transferir')->pluck('data.setor_id')->filter(fn ($id): bool => $id !== null && $id !== '');
+        $ids = $nodes->contains('type', 'menu_setores') ? $fixed->merge($menuIds) : $fixed;
 
-        return ['nodes' => $nodes->count(), 'sectors' => $fixed + ($nodes->contains('type', 'menu_setores') ? 1 : 0)];
+        return ['nodes' => $nodes->count(), 'sectors' => $ids->unique()->count()];
     }
 
     public function render(): View
     {
         $workflows = Workflow::query()->withCount('versions')->with(['versions' => fn ($q) => $q->with('publisher')->orderByDesc('number')])->orderBy('name')->get();
 
+        $menuIds = Sector::query()->visibleInMenu()->pluck('id');
+
         return view('livewire.automation.index', [
             'workflows' => $workflows,
-            'summaries' => $workflows->mapWithKeys(fn (Workflow $workflow): array => [$workflow->id => $this->summary($workflow->draft)]),
+            'summaries' => $workflows->mapWithKeys(fn (Workflow $workflow): array => [$workflow->id => $this->summary($workflow->draft, $menuIds)]),
             'channels' => Channel::query()->orderBy('name')->get(),
             'templates' => WorkflowTemplates::all(),
         ]);

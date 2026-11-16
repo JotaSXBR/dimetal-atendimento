@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\SectorStatus;
 use App\Enums\UserRole;
 use App\Livewire\Automation\Index;
 use App\Models\Channel;
@@ -135,6 +136,43 @@ class AutomationIndexTest extends TestCase
 
         $this->page()
             ->assertSeeInOrder(['Com horário', '8 blocos', 'Fixos', '3 blocos', '2 setores', 'Padrão', '5 blocos']);
+    }
+
+    /** @param  list<int>  $fixed */
+    private function flowWithMenu(string $name, array $fixed): void
+    {
+        $nodes = [['id' => 'm', 'type' => 'menu_setores', 'x' => 0, 'y' => 0, 'data' => []]];
+        foreach ($fixed as $i => $id) {
+            $nodes[] = ['id' => "t$i", 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $id]];
+        }
+        Workflow::factory()->create(['name' => $name, 'draft' => ['nodes' => $nodes, 'edges' => []]]);
+    }
+
+    public function test_menu_de_setores_conta_os_setores_que_o_menu_mostra(): void
+    {
+        $sectors = Sector::factory()->count(5)->create();
+        $this->flowWithMenu('Menu', [$sectors[0]->id]);
+
+        $this->page()->assertSee('5 setores');
+    }
+
+    public function test_setor_fora_do_menu_em_transferir_soma_uma_vez(): void
+    {
+        Sector::factory()->count(2)->create();
+        $hidden = Sector::factory()->create(['status' => SectorStatus::FORA_DO_MENU]);
+        $this->flowWithMenu('Menu', [$hidden->id]);
+
+        $this->page()->assertSee('3 setores');
+    }
+
+    public function test_sem_menu_de_setores_conta_so_os_fixos(): void
+    {
+        Sector::factory()->count(3)->create();
+        $id = Sector::query()->firstOrFail()->id;
+        $node = fn (string $i): array => ['id' => $i, 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $id]];
+        Workflow::factory()->create(['name' => 'Fixos', 'draft' => ['nodes' => [$node('a'), $node('b')], 'edges' => []]]);
+
+        $this->page()->assertSee('1 setor')->assertDontSee('1 setores');
     }
 
     public function test_nome_e_obrigatorio(): void

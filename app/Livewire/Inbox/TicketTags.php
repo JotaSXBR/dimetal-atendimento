@@ -52,6 +52,7 @@ class TicketTags extends Component
         $tag = $this->change($tagId, 'tag_removed', Tag::query(), fn (Ticket $ticket, Tag $tag): bool => $ticket->tags()->detach($tag->id) > 0);
 
         if ($tag !== null) {
+            $this->dispatch('tag-removed');
             // O Desfazer reaproveita `addTag`, que só aceita etiqueta da conversa: para outro escopo o aviso não promete o que não cumpre.
             Flux::toast(text: 'Etiqueta «'.$tag->name.'» removida.', duration: 6000, action: $tag->scope === TagScope::CONVERSA
                 ? ['label' => 'Desfazer', 'event' => 'undo-ticket-tag', 'params' => ['ownerId' => $this->ticketId, 'tagId' => $tag->id]]

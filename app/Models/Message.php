@@ -89,6 +89,9 @@ class Message extends Model
     /** Janela em que o WhatsApp deixa editar uma mensagem enviada. */
     public const EDIT_WINDOW_MINUTES = 15;
 
+    /** Janela em que o WhatsApp deixa apagar para todos (2 dias). */
+    public const REVOKE_WINDOW_HOURS = 48;
+
     /**
      * O id que o WAHA exige para reagir, editar e apagar: `{fromMe}_{chat}_{id}`. O chat é o do contato (`wa_id` ou `lid`).
      * Sem `wa_message_id` a mensagem ainda não saiu e não há como agir sobre ela.

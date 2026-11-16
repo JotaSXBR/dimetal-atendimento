@@ -123,6 +123,7 @@ class ContactCard extends Component
 
         if ($removed) {
             $this->tagsChanged();
+            $this->dispatch('tag-removed');
 
             if ($tag !== null) {
                 Flux::toast(text: 'Etiqueta «'.$tag->name.'» removida.', duration: 6000, action: [

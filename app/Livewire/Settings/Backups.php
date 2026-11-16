@@ -23,6 +23,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -246,6 +247,25 @@ class Backups extends Component
      * @param  list<string>  $steps
      */
     private function start(RestoreRequest $request, array $steps, string $title): void
+    {
+        // Trinco curto: sem ele, dois pedidos simultâneos passam juntos pelo `isRunning()` antes de o primeiro marcar o andamento.
+        $latch = Cache::lock('restore-dispatch', 30);
+
+        if (! $latch->get()) {
+            $this->problem = 'Já há uma restauração em andamento.';
+
+            return;
+        }
+
+        try {
+            $this->dispatchRestore($request, $steps, $title);
+        } finally {
+            $latch->release();
+        }
+    }
+
+    /** @param  list<string>  $steps */
+    private function dispatchRestore(RestoreRequest $request, array $steps, string $title): void
     {
         $this->problem = $this->blocker();
 

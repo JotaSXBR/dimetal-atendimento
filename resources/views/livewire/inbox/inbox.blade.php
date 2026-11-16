@@ -4,7 +4,7 @@
 
 <div
     data-open-ticket="{{ $ticketId }}"
-    class="grid min-h-0 flex-1 grid-cols-1 bg-surface {{ $ticket ? 'lg:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]' : 'lg:grid-cols-[340px_minmax(0,1fr)]' }}"
+    class="grid min-h-0 flex-1 grid-cols-1 bg-surface lg:grid-cols-[340px_minmax(0,1fr)] {{ $ticket ? '2xl:grid-cols-[340px_minmax(0,1fr)_var(--details-w,280px)]' : '' }}"
     x-data="ticketDetails"
     x-bind:style="details ? '' : '--details-w: 0px'"
     data-client-presence="{{ json_encode($clientPresence, JSON_THROW_ON_ERROR) }}"
@@ -194,14 +194,14 @@
                 $name = $ticket->contact->label();
             @endphp
 
-            <header class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-surface px-4 py-2">
+            <header class="flex flex-wrap items-center xl:flex-nowrap gap-x-3 gap-y-1 border-b border-line bg-surface px-4 py-2">
                 <flux:button variant="subtle" size="sm" icon="arrow-left" class="lg:hidden" wire:click="$set('ticketId', null)" aria-label="Voltar para a lista" />
                 <x-avatar :src="$ticket->contact->avatarUrl()" :name="$name" shape="round" size="lg" decorative />
 
-                <div class="min-w-0 flex-1 basis-56">
-                    <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink">
-                        <span class="max-w-full truncate">{{ $name }}</span>
-                        <x-status-badge :status="$ticket->status" />
+                <div class="min-w-0 flex-1 basis-56 xl:basis-0">
+                    <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink xl:flex-nowrap">
+                        <span class="max-w-full min-w-0 truncate">{{ $name }}</span>
+                        <x-status-badge :status="$ticket->status" class="shrink-0" />
                         @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
                             @php
                                 $slaState = $ticket->slaState();
@@ -219,7 +219,7 @@
                         $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
                     @endphp
                     {{-- `div`, não `p`: o conteúdo do tooltip do Flux é um bloco, e bloco dentro de `p` faz o navegador fechar o `p` antes dele. --}}
-                    <div data-testid="header-line" data-line="{{ $line }}" class="min-w-0 font-mono text-xs break-words text-ink-3">
+                    <div data-testid="header-line" data-line="{{ $line }}" class="min-w-0 font-mono text-xs truncate text-ink-3">
                         <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
                         <span>{{ mb_substr($line, mb_strlen($ticket->protocol)) }}</span>
                     </div>
@@ -235,10 +235,10 @@
                     @endif
                 </div>
 
-                {{-- Em janela estreita as ações descem para a linha de baixo, à direita, em vez de espremer o nome e o SLA. --}}
-                <div class="ms-auto flex flex-wrap items-center justify-end gap-2">
-                    <flux:button size="sm" variant="subtle" icon="information-circle" class="lg:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
-                    <flux:button size="sm" variant="subtle" icon="information-circle" class="max-lg:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
+                {{-- Abaixo de xl as ações descem para a linha de baixo, à direita; em xl+ ficam na linha do nome (que trunca), para não pularem ao abrir Detalhes. --}}
+                <div class="ms-auto flex flex-wrap items-center justify-end gap-2 xl:shrink-0">
+                    <flux:button size="sm" variant="subtle" icon="information-circle" class="2xl:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
+                    <flux:button size="sm" variant="subtle" icon="information-circle" class="max-2xl:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
 
                     @if ($canClaim)
                         <flux:button variant="primary" size="sm" icon="check" wire:click="claim" wire:loading.attr="disabled">Assumir</flux:button>

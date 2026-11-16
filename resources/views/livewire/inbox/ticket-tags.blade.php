@@ -1,5 +1,5 @@
 {{-- Linha "Conversa" do bloco Etiquetas do painel: chips redondos (com remover) e o seletor do que ainda falta. Some se não há o que mostrar nem aplicar. --}}
-<div>
+<div x-data="focusTagPicker" data-focus-target="[data-testid=ticket-tags] input[role=combobox]" x-on:tag-removed.self="focus">
     @if ($applied->isNotEmpty() || ($editable && $available->isNotEmpty()))
         <div data-testid="ticket-tags" class="flex items-start gap-2">
             <span data-testid="tags-row-conversa" class="w-14 shrink-0 pt-1.5 text-xs text-ink-3">Conversa</span>

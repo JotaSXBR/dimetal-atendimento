@@ -71,6 +71,23 @@ class TicketTagsTest extends TestCase
             ->call('removeTag', $tag->id)->assertDispatched('tags-changed');
     }
 
+    public function test_remover_etiqueta_pede_o_foco_de_volta_ao_seletor(): void
+    {
+        $tag = Tag::factory()->create();
+
+        $this->block()->call('addTag', $tag->id)->call('removeTag', $tag->id)->assertDispatched('tag-removed');
+    }
+
+    public function test_o_foco_de_volta_mira_o_seletor_das_etiquetas_da_conversa(): void
+    {
+        $this->block()->assertSeeHtml('data-focus-target="[data-testid=ticket-tags] input[role=combobox]"');
+    }
+
+    public function test_remover_etiqueta_que_nao_estava_nao_pede_foco(): void
+    {
+        $this->block()->call('removeTag', Tag::factory()->create()->id)->assertNotDispatched('tag-removed');
+    }
+
     public function test_escolher_no_seletor_grava_o_vinculo(): void
     {
         $tag = Tag::factory()->create();

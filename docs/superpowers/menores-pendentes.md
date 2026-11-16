@@ -5,21 +5,43 @@ incluir; o item sai no commit que o corrige. **Decisão:** quem precisa responde
 
 ## Menores de revisão
 
-Do bug do sino (`fix/ux-sino-alertas`, 14/11), limites aceitos e sem efeito visível hoje:
+Nenhum pendente. Os menores do sino (S1 a S4, `fix/ux-sino-alertas`) foram descartados pelo dono em 16/11/2026; o S4 foi
+conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores da série "UX simplificação" fecharam em 14/11/2026
+(plano `docs/superpowers/plans/2026-11-14-ux-menores.md`).
+
+## Achados do teste de UI no beta (16/11/2026)
 
 | # | Onde | O quê | Decisão |
 |---|------|-------|---------|
-| S1 | `app/Livewire/Alerts/Bell.php` (`read`) | Carrega todos os não lidos do usuário a cada clique (poucos, pelo purge de 7 dias); dá para filtrar no banco por `data->ticket_id` | — |
-| S2 | `app/Livewire/Alerts/Bell.php` (`render`) | Hidrata até 200 alertas por render (3 consultas fixas, sem N+1); dá para selecionar só as colunas usadas | — |
-| S3 | `app/Livewire/Alerts/Bell.php` (`markRead`) | Não é mais chamado pela view (só pelos testes); remover e trocar os testes por `open` | — |
-| S4 | `Bell::open` x `render` | O link usa `readableBy` (inclui histórico) e a lista mostra o protocolo com `visibleTo`: ticket do histórico abre mas sem o protocolo no item | Dono: alinhar? |
 
-Fora esses, nenhum pendente. Os menores das fatias D, E, F e G da série "UX simplificação", e os da revisão do próprio `fix/ux-menores`, foram
-resolvidos (ou aceitos e fechados) em 14/11/2026, com rulings do advisor registrados no ledger (`Ruling:`); o plano é
-`docs/superpowers/plans/2026-11-14-ux-menores.md`. Os menores das fatias A, B e C fecharam sem pendências.
+## Menores de UX antigos a reconferir (06/11 a 11/11)
+
+Adiados nas fatias do redesenho (#73, #74, #83, #87, #88, #100). Podem ter sido resolvidos pelas fatias seguintes: conferir antes de corrigir.
+
+| # | Origem | O quê | Decisão |
+|---|--------|-------|---------|
+| U2 | #83 | Faixa do hub de Configuração com rolagem horizontal no celular (`settings-page.blade.php:16`, `overflow-x-auto`): conferir no navegador | — |
+| U6 | #87 | Prefixo da chave `history-*`: sem conflito hoje (ramos exclusivos em `contact-card`, componentes distintos); só nomenclatura | — |
+| U10 | #73 | Chevron do menu da bolha (`transcript.blade.php:146`, `absolute end-1 top-1`) cobre o HORÁRIO (~16x12 px) nas bolhas curtas, só no hover; não cobre o texto; precisa reservar espaço na bolha (layout): conferir no navegador | — |
+| U11 | #74 | Rascunhos antigos sem limpeza de `localStorage` (o storage bloqueado já foi tratado, `445fd7d`); a limpeza precisa de regra de validade | — |
+
+## Menores adiados da leva de menores baratos (16/11/2026)
+
+Branch `chore/claude-md`, revisão final.
+
+| # | Onde | O quê | Decisão |
+|---|------|-------|---------|
+| L1 | `app/Livewire/Automation/Index.php` | Contagem de setores: falta teste com `setor_id` string e com setor desativado/apagado; setor fixo apagado ainda conta | — |
+| L2 | `resources/js/flow-editor/editor.js` | `fitView` do editor sem teste de integração; fluxo com altura entre H−barra e H cai no piso | — |
+| L3 | `app/Livewire/Settings/Backups.php` | TTL de 30 s do lock `restore-dispatch` | — |
+| L4 | `resources/js/composer-mode.js:45` | Estilo: ternário usado como instrução | — |
+| L5 | `resources/js/ticket-details.js:26` | Estilo: `catch` vazio | — |
+| L6 | `tests/js/storage-blocked.test.mjs` | Mock de `window`/`document` sem restaurar ao fim | — |
+| L7 | seed de teste | `sync` dos setores dos usuários de teste; `UsuariosDeTeste` sozinho fica sem setores; "sobra etiqueta" por `count > 1` | — |
+| L8 | `resources/views/livewire/inbox/inbox.blade.php` | Span do SLA sem `whitespace-nowrap` no cabeçalho em 2xl | — |
+| L9 | `resources/views/livewire/inbox/inbox.blade.php` | Linha de metadados truncada sem `title` | — |
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
-- Achados do sino de alertas (alertas duplicados, "0 mensagens", clique no alerta de SLA abrir o ticket): depois da fatia H.
-- Modernizar o `phpmd.xml` com o PHPMD mais recente (nota em memória, 14/11).
-- Futuro app/parte mobile separado.
+- Modernizar o `phpmd.xml` com o PHPMD mais recente.
+- Futuro app/parte mobile separado (auditoria em `docs/ux-audit/2026-11-15-ux-audit-mobile.md`, branch local `docs/ux-audit-mobile`).

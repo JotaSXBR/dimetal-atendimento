@@ -4,9 +4,11 @@
 
 const KEY = 'ticketDetailsOpen';
 
+const remembered = () => { try { return window.localStorage.getItem(KEY); } catch { return null; } };
+
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('ticketDetails', () => ({
-        details: window.localStorage.getItem(KEY) !== '0',
+        details: remembered() !== '0',
         sheet: false,
 
         init() {
@@ -19,7 +21,9 @@ document.addEventListener('alpine:init', () => {
 
         toggle() {
             this.details = !this.details;
-            window.localStorage.setItem(KEY, this.details ? '1' : '0');
+            try {
+                window.localStorage.setItem(KEY, this.details ? '1' : '0');
+            } catch {} // storage bloqueado: vale só nesta página
         },
     }));
 

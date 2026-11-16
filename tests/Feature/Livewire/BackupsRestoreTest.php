@@ -18,6 +18,7 @@ use App\Settings\BackupStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportTesting\Testable;
@@ -96,6 +97,38 @@ class BackupsRestoreTest extends TestCase
             ->assertSet('source', null)
             ->assertSee('Este arquivo não é um backup deste sistema.')
             ->assertDontSee('Digite RESTAURAR');
+    }
+
+    public function test_segundo_pedido_seguido_nao_despacha_outro_job(): void
+    {
+        $page = $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'RESTAURAR')->call('restore');
+        $page->call('restore')->assertSet('problem', 'Já há uma restauração em andamento.');
+
+        Queue::assertPushed(RestoreDatabaseJob::class, 1);
+    }
+
+    public function test_pedido_com_restauracao_em_andamento_nao_mexe_no_progresso(): void
+    {
+        $page = $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'RESTAURAR');
+        app(RestoreProgress::class)->begin('Outra restauração', ['swap']);
+        $antes = app(RestoreProgress::class)->get();
+
+        $page->call('restore');
+
+        Queue::assertNothingPushed();
+        $this->assertSame($antes, app(RestoreProgress::class)->get());
+    }
+
+    public function test_pedido_simultaneo_com_o_trinco_de_despacho_tomado_nao_despacha(): void
+    {
+        $page = $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'RESTAURAR');
+        $trinco = Cache::lock('restore-dispatch', 30);
+        $this->assertTrue($trinco->get());
+
+        $page->call('restore')->assertSet('problem', 'Já há uma restauração em andamento.');
+
+        Queue::assertNothingPushed();
+        $this->assertFalse(app(RestoreProgress::class)->isRunning());
     }
 
     public function test_backup_que_nao_esta_na_lista_e_recusado(): void

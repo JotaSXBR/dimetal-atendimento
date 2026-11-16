@@ -1,9 +1,24 @@
 // Seletor de etiquetas com busca (resources/views/components/tag-picker.blade.php). Fica aqui, e não num `x-data` inline, porque o build
 // CSP do Alpine não aceita método dentro do atributo. A lista é lida de `data-tags` a cada uso: o Livewire pode trocá-la ao renderizar.
 // `this.$el` muda conforme o elemento que dispara o evento (o campo, a opção): a raiz do componente fica guardada em `root`.
+import { shown } from './shown.js';
 import { activeForQuery, buildRows, stepActive } from './tag-filter.js';
 
 document.addEventListener('alpine:init', () => {
+    // Depois de remover um chip o botão some e o foco cairia no BODY: volta ao seletor "Adicionar…" do bloco indicado em `data-focus-target` (a ficha do contato abriga também o da conversa). `.self` no
+    // listener: o evento do componente filho (etiquetas da conversa) também sobe até a ficha do contato, e não deve focar o seletor dela.
+    window.Alpine.data('focusTagPicker', () => ({
+        async focus() {
+            await this.$nextTick();
+            const field = this.$el.querySelector(this.$el.dataset.focusTarget);
+            if (field === null) {
+                return;
+            }
+            await shown(field);
+            field.focus();
+        },
+    }));
+
     window.Alpine.data('tagPicker', () => ({
         root: null,
         all: [],

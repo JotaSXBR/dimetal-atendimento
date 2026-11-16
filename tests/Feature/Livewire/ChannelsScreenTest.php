@@ -552,4 +552,10 @@ class ChannelsScreenTest extends TestCase
         Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => Channel::factory()->create()])
             ->call('ask', 'drop')->assertSet('confirming', null);
     }
+
+    public function test_mais_opcoes_preserva_o_estado_aberto_entre_os_polls(): void
+    {
+        Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => Channel::factory()->create()])
+            ->assertSeeHtml('<details wire:ignore.self class="group mt-4 border-t border-line pt-3">');
+    }
 }

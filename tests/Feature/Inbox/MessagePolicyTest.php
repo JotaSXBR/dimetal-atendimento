@@ -90,7 +90,7 @@ class MessagePolicyTest extends TestCase
         $this->assertFalse($other->can('revoke', $mine), 'nem apaga');
     }
 
-    public function test_edicao_vale_ate_15_min_e_apagar_nao_tem_janela(): void
+    public function test_edicao_vale_ate_15_min_e_apagar_tem_janela_maior(): void
     {
         $inside = $this->message($this->mine(['sent_at' => now()->subSeconds(900)]));
         $outside = $this->message($this->mine(['sent_at' => now()->subSeconds(901)]));
@@ -98,6 +98,12 @@ class MessagePolicyTest extends TestCase
         $this->assertTrue($this->me->can('edit', $inside));
         $this->assertFalse($this->me->can('edit', $outside));
         $this->assertTrue($this->me->can('revoke', $outside));
+    }
+
+    public function test_apagar_para_todos_vale_ate_2_dias(): void
+    {
+        $this->assertTrue($this->me->can('revoke', $this->message($this->mine(['sent_at' => now()->subHours(47)]))));
+        $this->assertFalse($this->me->can('revoke', $this->message($this->mine(['sent_at' => now()->subHours(49)]))));
     }
 
     public function test_so_texto_se_edita_mas_anexo_se_apaga(): void

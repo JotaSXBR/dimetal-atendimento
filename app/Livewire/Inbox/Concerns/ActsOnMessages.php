@@ -3,12 +3,14 @@
 namespace App\Livewire\Inbox\Concerns;
 
 use App\Models\Message;
+use App\Policies\MessagePolicy;
 use App\Services\Inbox\EditTicketMessage;
 use App\Services\Inbox\MessageActionFailed;
 use App\Services\Inbox\Quote;
 use App\Services\Inbox\ReactToMessage;
 use App\Services\Inbox\RevokeTicketMessage;
 use Closure;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
@@ -70,7 +72,15 @@ trait ActsOnMessages
             return;
         }
 
-        $this->authorize($ability, $message);
+        $access = Gate::inspect($ability, $message);
+
+        if ($access->code() === MessagePolicy::DEADLINE) {
+            $this->notice = $access->message();
+
+            return;
+        }
+
+        $access->authorize();
 
         if (! RateLimiter::attempt('message-action:'.$this->user()->id, config()->integer('security.message_action_per_minute'), fn () => true, 60)) {
             $this->notice = 'Você está agindo rápido demais. Aguarde alguns segundos.';

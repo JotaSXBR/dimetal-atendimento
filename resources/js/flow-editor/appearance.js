@@ -233,18 +233,23 @@ export function fitScale(zoomedTo, min = MIN_FIT_ZOOM) {
     return Math.max(zoomedTo, min);
 }
 
+/** O `scale` do `zoomAt` (0,9 = folga de 5% por lado) reduzido para o fluxo caber na altura livre abaixo da barra (`inset` px). */
+export function insetScale(height, inset, base = 0.9) {
+    return height > inset ? base * (1 - inset / height) : base;
+}
+
 /**
  * Onde pôr o canvas (translate absoluto) para o bloco Início ficar a `margin` px do canto no zoom `k`; sem Início, o bloco mais ao
- * canto (menor x e menor y); sem blocos, só a margem.
+ * canto (menor x e menor y); sem blocos, só a margem. `insetTop` é a altura coberta no topo (barra flutuante).
  *
  * @param {{type: string, x: number, y: number}[]} positions posições dos blocos em coordenadas do grafo
  */
-export function anchorTranslate(positions, k, margin = 24) {
+export function anchorTranslate(positions, k, insetTop = 0, margin = 24) {
     const start = positions.find((p) => p.type === 'inicio');
     const x = start ? start.x : positions.length ? Math.min(...positions.map((p) => p.x)) : 0;
     const y = start ? start.y : positions.length ? Math.min(...positions.map((p) => p.y)) : 0;
 
-    return { x: margin - x * k, y: margin - y * k };
+    return { x: margin - x * k, y: insetTop + margin - y * k };
 }
 
 /** Cópia do bloco para o ponto 40 px abaixo e à direita, sem ligações; o Início não se duplica. */
