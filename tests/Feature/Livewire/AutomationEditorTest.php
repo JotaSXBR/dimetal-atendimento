@@ -112,7 +112,7 @@ class AutomationEditorTest extends TestCase
         }
         $page->call('saveDraft', $big)->assertHasErrors('graph');
 
-        $this->assertCount(5, $this->workflow->fresh()?->draft['nodes'], 'o rascunho anterior fica intacto');
+        $this->assertCount(8, $this->workflow->fresh()?->draft['nodes'], 'o rascunho anterior fica intacto');
     }
 
     public function test_publicar_grafo_invalido_devolve_os_erros_e_nao_cria_versao(): void
@@ -153,8 +153,8 @@ class AutomationEditorTest extends TestCase
         $page = Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])
             ->call('restore', $first->id);
 
-        $this->assertCount(5, $this->workflow->fresh()?->draft['nodes']);
-        $this->assertCount(5, $page->get('result')['graph']['nodes']);
+        $this->assertCount(8, $this->workflow->fresh()?->draft['nodes']);
+        $this->assertCount(8, $page->get('result')['graph']['nodes']);
     }
 
     public function test_salvar_rascunho_guarda_as_mensagens(): void

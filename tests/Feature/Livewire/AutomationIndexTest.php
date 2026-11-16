@@ -65,14 +65,14 @@ class AutomationIndexTest extends TestCase
         $this->page()->set('newName', 'Do modelo')->set('template', 'padrao')->call('create');
 
         $this->assertSame(['Do modelo', 'Triagem'], Workflow::query()->orderBy('name')->pluck('name')->all());
-        $this->assertCount(5, Workflow::query()->where('name', 'Do modelo')->firstOrFail()->draft['nodes']);
+        $this->assertCount(8, Workflow::query()->where('name', 'Do modelo')->firstOrFail()->draft['nodes']);
         $this->assertCount(1, Workflow::query()->where('name', 'Triagem')->firstOrFail()->draft['nodes']);
     }
 
     public function test_a_galeria_agrupa_os_modelos_em_basicos_e_por_segmento(): void
     {
         $html = $this->page()->call('$set', 'showNew', true)->html();
-        $positions = array_map(fn (string $text): int|false => strpos($html, $text), ['Básicos', 'Em branco', 'Atendimento padrão', 'Atendimento com horário', 'Por segmento', 'Distribuidora']);
+        $positions = array_map(fn (string $text): int|false => strpos($html, $text), ['Básicos', 'Em branco', 'Atendimento padrão', 'Por segmento', 'Distribuidora']);
 
         $this->assertNotContains(false, $positions);
         $sorted = $positions;
@@ -115,19 +115,19 @@ class AutomationIndexTest extends TestCase
             ->assertSet('template', 'padrao')
             ->assertSee('Em branco')
             ->assertSee('Atendimento padrão')
-            ->assertSee('Atendimento com horário')
+            ->assertDontSee('Atendimento com horário')
             ->assertSee('fora do expediente avisa o horário');
 
-        $page->set('newName', 'Com horário')->set('template', 'horario')->call('create')->assertHasNoErrors();
+        $page->set('newName', 'Antigo')->set('template', 'horario')->call('create')->assertHasNoErrors();
 
-        $this->assertCount(8, Workflow::query()->where('name', 'Com horário')->firstOrFail()->draft['nodes']);
+        $this->assertCount(1, Workflow::query()->where('name', 'Antigo')->firstOrFail()->draft['nodes']);
     }
 
     public function test_card_mostra_resumo_do_rascunho(): void
     {
         $publisher = app(WorkflowPublisher::class);
         $publisher->create('Padrão', $this->user, template: 'padrao');
-        $publisher->create('Com horário', $this->user, template: 'horario');
+        $publisher->create('Outro padrão', $this->user, template: 'padrao');
         [$s3, $s4] = Sector::factory()->count(2)->create();
         Workflow::factory()->create(['name' => 'Fixos', 'draft' => ['nodes' => [
             ['id' => 'a', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $s3->id]],
@@ -136,7 +136,7 @@ class AutomationIndexTest extends TestCase
         ], 'edges' => []]]);
 
         $this->page()
-            ->assertSeeInOrder(['Com horário', '8 blocos', 'Fixos', '3 blocos', '2 setores', 'Padrão', '5 blocos']);
+            ->assertSeeInOrder(['Fixos', '3 blocos', '2 setores', 'Outro padrão', '8 blocos', 'Padrão', '8 blocos']);
     }
 
     /** @param  list<int|string>  $fixed */
@@ -268,6 +268,6 @@ class AutomationIndexTest extends TestCase
         $page = $this->page()->call('toggle', $workflow->id)->assertSee('Versão 1')->assertSee($this->user->name);
         $page->call('restore', $workflow->id, $first?->id);
 
-        $this->assertCount(5, $workflow->fresh()?->draft['nodes']);
+        $this->assertCount(8, $workflow->fresh()?->draft['nodes']);
     }
 }

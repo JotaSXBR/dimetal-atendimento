@@ -10,9 +10,11 @@ use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Sector;
+use App\Models\Setting;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Bot\BotEngine;
+use App\Services\Bot\Simulation\BotSimulator;
 use App\Services\Bot\WorkflowPublisher;
 use App\Services\Bot\WorkflowTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -88,19 +90,19 @@ class WorkflowTemplatesTest extends TestCase
         $this->assertSame(['Financeiro'], WorkflowTemplates::resolveGraph($graph)['missing']);
     }
 
-    public function test_all_marca_os_tres_modelos_basicos_no_grupo_basicos(): void
+    public function test_all_marca_os_modelos_basicos_no_grupo_basicos(): void
     {
         $basicos = array_values(array_filter(WorkflowTemplates::all(), fn (array $t): bool => $t['group'] === 'Básicos'));
 
-        $this->assertSame(['em_branco', 'padrao', 'horario'], array_column($basicos, 'key'));
+        $this->assertSame(['em_branco', 'padrao'], array_column($basicos, 'key'));
     }
 
     public function test_a_lista_traz_os_modelos_na_ordem(): void
     {
         $all = WorkflowTemplates::all();
 
-        $this->assertSame(['em_branco', 'padrao', 'horario', 'distribuidora'], array_column($all, 'key'));
-        $this->assertSame(['Em branco', 'Atendimento padrão', 'Atendimento com horário', 'Distribuidora'], array_column($all, 'name'));
+        $this->assertSame(['em_branco', 'padrao', 'distribuidora'], array_column($all, 'key'));
+        $this->assertSame(['Em branco', 'Atendimento padrão', 'Distribuidora'], array_column($all, 'name'));
 
         foreach ($all as $template) {
             $this->assertNotSame('', $template['description']);
@@ -123,7 +125,7 @@ class WorkflowTemplatesTest extends TestCase
             }
         }
 
-        $this->assertCount(8, WorkflowTemplates::graph(WorkflowTemplates::WITH_HOURS)['nodes']);
+        $this->assertCount(8, WorkflowTemplates::graph(WorkflowTemplates::STANDARD)['nodes']);
     }
 
     public function test_chave_desconhecida_cria_em_branco(): void
@@ -133,27 +135,29 @@ class WorkflowTemplatesTest extends TestCase
         $this->assertCount(1, $workflow->draft['nodes']);
     }
 
-    public function test_modelo_com_horario_dentro_do_horario_passa_pelo_menu(): void
+    public function test_padrao_dentro_do_horario_passa_pelo_menu(): void
     {
+        Setting::put('company.name', 'Loja Teste');
         BusinessHour::create(['weekday' => 1, 'opens_at' => '08:00:00', 'closes_at' => '18:00:00']);
         $this->travelTo(Carbon::parse('2026-11-09 10:00:00', config()->string('app.display_timezone')));
         $publisher = app(WorkflowPublisher::class);
-        $workflow = $publisher->create('Com horário', $this->user, WorkflowTemplates::WITH_HOURS);
+        $workflow = $publisher->create('Padrão', $this->user, WorkflowTemplates::STANDARD);
 
         app(BotEngine::class)->start($this->ticket, $publisher->publish($workflow, $this->user));
 
         $texts = $this->botTexts();
-        $this->assertStringContainsString('Bem-vindo a ', $texts[0]);
+        $this->assertSame('Olá, Maria! Bem-vindo a Loja Teste.', $texts[0]);
+        $this->assertStringStartsWith('Com qual setor você quer falar?', $texts[1]);
         $this->assertStringContainsString('1 - Vendas', $texts[1]);
         $this->assertSame(TicketStatus::PENDENTE, $this->ticket->fresh()?->status);
     }
 
-    public function test_modelo_com_horario_fora_do_horario_avisa_e_vai_a_fila_geral_sem_setor(): void
+    public function test_padrao_fora_do_horario_avisa_e_vai_a_fila_geral_sem_setor(): void
     {
         BusinessHour::create(['weekday' => 1, 'opens_at' => '08:00:00', 'closes_at' => '18:00:00']);
         $this->travelTo(Carbon::parse('2026-11-09 22:00:00', config()->string('app.display_timezone')));
         $publisher = app(WorkflowPublisher::class);
-        $workflow = $publisher->create('Com horário', $this->user, WorkflowTemplates::WITH_HOURS);
+        $workflow = $publisher->create('Padrão', $this->user, WorkflowTemplates::STANDARD);
 
         app(BotEngine::class)->start($this->ticket, $publisher->publish($workflow, $this->user));
 
@@ -161,5 +165,41 @@ class WorkflowTemplatesTest extends TestCase
         $fresh = $this->ticket->fresh();
         $this->assertSame(TicketStatus::AGUARDANDO, $fresh?->status);
         $this->assertNull($fresh?->sector_id);
+    }
+
+    /** @return array{0: list<string>, 1: ?string} textos do bot e o outcome */
+    private function simulatedBotTexts(string $clock, string ...$replies): array
+    {
+        $graph = WorkflowTemplates::graph(WorkflowTemplates::STANDARD);
+        $sim = app(BotSimulator::class);
+        $state = $sim->start($graph, 'Maria', $clock);
+
+        foreach ($replies as $reply) {
+            $state = $sim->reply($graph, $state, $reply);
+        }
+
+        return [array_values(array_map(fn (array $l): string => $l['text'], array_filter($state->log, fn (array $l): bool => $l['kind'] === 'bot'))), $state->outcome];
+    }
+
+    public function test_padrao_resposta_invalida_repete_o_menu_com_o_aviso_do_beta(): void
+    {
+        [$texts, $outcome] = $this->simulatedBotTexts('aberto', '9');
+
+        $this->assertContains('Resposta inválida.', $texts);
+        $this->assertNull($outcome);
+    }
+
+    public function test_padrao_sem_nome_de_empresa_nao_deixa_variavel_crua(): void
+    {
+        [$texts] = $this->simulatedBotTexts('fechado');
+        foreach ($texts as $text) {
+            $this->assertStringNotContainsString('{{empresa}}', $text);
+        }
+        $this->assertStringContainsString('Bem-vindo a ', $texts[0]);
+    }
+
+    public function test_padrao_traz_a_mensagem_de_encaminhamento_do_beta(): void
+    {
+        $this->assertStringStartsWith('Vou encaminhar você para o setor:', WorkflowTemplates::graph('padrao')['settings']['mensagens']['encaminhamento_setor']);
     }
 }
