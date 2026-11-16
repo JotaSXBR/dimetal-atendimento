@@ -38,7 +38,7 @@ segmento, lê o QR e já atende. Daí em diante, ela atualiza com um botão.
 | Plataforma | Só Coolify, como recurso **Docker Compose com imagens versionadas no GHCR** (app, worker, scheduler, reverb, waha, postgres, redis, rustfs). Substitui a decisão de 05/11 de manter apps separados: o preset do Coolify exige compose com imagens fixas, e no compose os serviços se acham pelo nome. O Dockerfile por papel continua sendo a fonte das imagens |
 | WAHA e RustFS | Vêm no compose já ligados, com chaves geradas pelas variáveis mágicas do Coolify (`SERVICE_PASSWORD_*`, `SERVICE_BASE64_*`). Não entram no assistente. O WAHA gratuito tem sessões ilimitadas desde a 2026.6.1 |
 | Primeiro acesso | Exige um código gerado pelo Coolify (variável mágica, vista na aba Environment) |
-| Assistente | 1) admin + empresa (nome, logo, fuso); 2) segmento: **Distribuidora** (setores, etiquetas e a automação do beta) ou **Em branco**; 3) e-mail e Google, opcionais, que saem do `.env` para o banco; 4) QR do primeiro canal, por último, com a opção de pular |
+| Assistente | 1) admin + empresa (nome, logo, fuso); 2) segmento: **Distribuidora** (setores e etiquetas de distribuidora + o "Atendimento padrão", que é a automação do beta) ou **Em branco**; 3) e-mail e Google, opcionais, que saem do `.env` para o banco; 4) QR do primeiro canal, por último, com a opção de pular |
 | Atualização | O app consulta as Releases do GitHub uma vez por dia (ligado por padrão, com opção de desligar; não envia dado da instalação). Em **Configurações > Sistema** o admin cola um token da API do Coolify, guardado criptografado, e ganha o botão **Atualizar**. O botão roda o **backup obrigatório** (se falhar, não atualiza), troca a versão das imagens pela API e reimplanta |
 | Ambientes | **Dev local** (servidor local, waha-local, seed). Projeto novo no Coolify com **staging** (número de WhatsApp de teste, CI completo, atualiza a cada merge na `main`) e **production** (vitrine: o mesmo compose dos terceiros, atualiza por Release `vX.Y.Z`). A production não é o uso real da Dimetal |
 | Fim do beta | Os projetos `dimetal-beta` e `dimetal-main` do Coolify são apagados depois da prova do projeto 2. Automação, setores e etiquetas já foram exportados (projeto 0) |
@@ -48,7 +48,7 @@ segmento, lê o QR e já atende. Daí em diante, ela atualiza com um botão.
 
 | # | Projeto | Depende de | Estado |
 |---|---------|-----------|--------|
-| 0 | Segmento Distribuidora = automação do beta; o modelo atual vira "Distribuidora completo" | nada | design completo |
+| 0 | "Atendimento padrão" = automação do beta; sai o "Atendimento com horário"; o segmento Distribuidora (CNPJ) fica | nada | design completo |
 | 1 | Renomeação para Fluxie Inbox (organização, repo, imagens, banco, backup, README, LICENSE) | o dono criar `fluxie-tech` e transferir o repo | design completo |
 | 2 | Imagens versionadas no GHCR + `compose` para o Coolify + workflows de release; subir staging e production; apagar o beta e a main antigos | 1 | brainstorming a fazer |
 | 3 | Primeiro acesso com código + assistente (Flux/Livewire); e-mail e Google passam para o banco | 2 (o código vem do Coolify) | brainstorming a fazer |

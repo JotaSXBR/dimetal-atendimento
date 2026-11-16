@@ -1,21 +1,24 @@
-# Projetos 0 e 1: modelo Distribuidora do beta e renomeação para Fluxie Inbox
+# Projetos 0 e 1: Atendimento padrão do beta e renomeação para Fluxie Inbox
 
 Data: 16/11/2026. Roteiro geral em `2026-11-16-fluxie-inbox-roteiro-design.md`. São duas entregas, cada uma com seu próprio plano e PR.
 
 ## Intenção
 
-- **Projeto 0:** a automação que roda hoje no dimetal-beta, desenhada pelo dono, passa a ser o modelo do segmento
-  **Distribuidora**. É ela que o assistente do projeto 3 vai instalar. O beta será apagado no projeto 2, então ela precisa
-  existir no código antes disso.
+- **Projeto 0:** a automação que roda hoje no dimetal-beta (desenhada pelo dono: horário → saudação → menu de setores → fila)
+  passa a ser o modelo básico **"Atendimento padrão"**. Ela é genérica: só captura o horário e o setor, nada de distribuidora.
+  É o fluxo que o assistente do projeto 3 instala junto com os setores e etiquetas do segmento Distribuidora. O beta será
+  apagado no projeto 2, então ela precisa existir no código antes disso.
 - **Projeto 1:** o produto deixa de ser "da Dimetal" e passa a se chamar **Fluxie Inbox**, num repositório público da
   organização `fluxie-tech`. Os projetos 2 a 5 (imagens, compose e preset) dependem dos nomes definitivos.
 
 ## Objetivos
 
-1. O modelo `distribuidora` gera o grafo da automação do beta, com `{{empresa}}` no lugar de "Dimetal Distribuidora".
-2. O modelo atual, com CNPJ e nota fiscal, continua disponível como **"Distribuidora completo"**.
-3. Não sobra "dimetal" em código, configuração, CI, README, LICENSE e docs vivos, exceto onde for para ler dados antigos.
-4. O beta continua de pé durante e depois da renomeação, até o projeto 2 substituí-lo.
+1. O modelo `padrao` ("Atendimento padrão", e o `DefaultWorkflow::graph()` que o seeder usa) gera o grafo da automação do beta,
+   com `{{empresa}}` no lugar de "Dimetal Distribuidora".
+2. O modelo "Atendimento com horário" (`horario`) sai: ficaria igual ao padrão. Os básicos passam a ser Em branco e Atendimento padrão.
+3. O segmento "Distribuidora" (CNPJ e nota fiscal) continua como está, com o mesmo nome e a mesma chave.
+4. Não sobra "dimetal" em código, configuração, CI, README, LICENSE e docs vivos, exceto onde for para ler dados antigos.
+5. O beta continua de pé durante e depois da renomeação, até o projeto 2 substituí-lo.
 
 ## Não objetivos
 
@@ -75,38 +78,33 @@ Houve duas escolhas: como entregar os dois projetos e de que forma o modelo do b
 - **C. Renomeação em duas ondas** (o que o público vê, depois os nomes técnicos). Divide um trabalho mecânico sem ganho, já
   que o dono quer tudo como `fluxie`. Descartada.
 
-**Como o modelo entra no código (decisão minha, ver "Decisões do builder"):**
+**Onde o fluxo do beta entra (decisão do dono, 16/11):**
 
-- **Escolhida:** uma classe `Template` nova, que monta o grafo com o `FlowBuilder`. Os ids dos blocos ficam legíveis
-  (`horario`, `fora`, `transferir_fora`), e não os aleatórios do editor.
-- **Descartada:** colar o JSON do beta como arquivo. Os ids ilegíveis e as coordenadas não acrescentam nada, e o editor reorganiza o desenho.
+- **Escolhida:** vira o "Atendimento padrão" e o "Atendimento com horário" sai, porque os dois ficariam iguais. O nome reflete o
+  que o fluxo faz (horário e setor), e o "Distribuidora" com CNPJ continua sendo o modelo de segmento.
+- Descartadas: chamá-lo de "Distribuidora" e renomear o atual para "Distribuidora completo" (o fluxo não tem nada de
+  distribuidora); só atualizar o "com horário" mantendo três básicos quase iguais; ou acrescentar um quarto básico.
 
 ## Projeto 0: design
 
-1. **Nova classe** `App\Services\Bot\Templates\Segments\Distribuidora`, com a chave `distribuidora` e o nome "Distribuidora",
-   reescrita para gerar a automação do beta. A estrutura é a do `FlowBuilder::opening`:
-   - fora do horário, a mensagem do beta (com `{{empresa}}`) e depois um `transferir` com `fila_geral: true` **sem** `setor_id`;
-   - no horário, a saudação e o bloco `menu_setores`, com o texto, o `invalido` e o `timeout_min: 5` do beta;
-   - em seguida o `encaminhamento` e o `transferir` sem setor fixo (o setor vem do menu).
+1. `DefaultWorkflow::graph()` passa a devolver o fluxo do beta (a tabela de "Dados de origem"), com ids legíveis:
+   `inicio`, `horario` (condicao), `saudacao`, `menu` (menu_setores), `encaminhamento`, `transferir`, `fora`, `transferir_fora`.
+   - Textos do beta, trocando "Dimetal Distribuidora" por `{{empresa}}` e "voce" por "você".
+   - `menu` com `invalido: Resposta inválida.` e `timeout_min: 5`.
+   - `transferir_fora` com `fila_geral: true` e **sem** `setor_id`.
+   - O grafo leva `settings.mensagens.encaminhamento_setor` com o texto do beta.
+   - Posições `x`/`y` como as do `withHours()` de hoje.
+2. `DefaultWorkflow::withHours()` e `WorkflowTemplates::WITH_HOURS` saem. `OUT_OF_HOURS` fica, porque o `FlowBuilder::opening`
+   do segmento Distribuidora usa. A descrição do "Atendimento padrão" passa a citar o horário. Uma chave desconhecida (inclusive
+   uma `horario` antiga) continua caindo no em branco; nenhum workflow guarda a chave.
+3. O `DefaultWorkflowSeeder` não muda: instalações novas já ganham o fluxo novo como rascunho. Os workflows existentes não mudam.
+4. Testes (RED antes) que dependem dos três básicos ou do `withHours`:
+   - `WorkflowTemplatesTest`;
+   - `AutomationIndexTest` (lista, criação com `horario`);
+   - `WorkflowPublisherTest` e `AutomationEditorTest` (usam `DefaultWorkflow::graph()` e continuam válidos).
 
-   O `opening()` atual usa o `menu` de opções fixas e o `OUT_OF_HOURS` padrão. O builder decide se monta o grafo bloco a bloco
-   ou se ganha um parâmetro; o resultado tem de ser o descrito acima.
-   - Os textos ficam como no beta, trocando só "Dimetal Distribuidora" por `{{empresa}}`. O "voce" sem acento do
-     `encaminhamento_setor` é corrigido para "você".
-   - O grafo leva `settings.mensagens.encaminhamento_setor` com o texto do beta. Confirmar que o `resolveGraph` e o
-     `WorkflowPublisher::create` preservam `settings`; se não preservarem, é ajuste do mesmo PR.
-   - Descrição honesta: menu dos setores cadastrados, aviso do horário e fila geral fora do expediente, protocolo ao encaminhar.
-2. **Classe atual** renomeada para `DistribuidoraCompleto`, com chave `distribuidora_completo`, nome "Distribuidora completo" e
-   a descrição de hoje. O grafo não muda.
-3. `WorkflowTemplates::SEGMENTS = [Distribuidora::class, DistribuidoraCompleto::class]`, nessa ordem.
-4. **Testes (RED antes):**
-   - `WorkflowTemplatesTest::test_a_lista_traz_os_modelos_na_ordem` passa a esperar as duas chaves e os dois nomes;
-   - o rascunho de cada modelo continua válido no `check()` (esse teste já percorre todos);
-   - novo teste de comportamento do Distribuidora, no molde dos testes "com horário": dentro do horário a saudação traz o
-     nome da empresa e o menu lista os setores; fora do horário vai à fila geral sem setor e o texto traz `{{empresa}}` resolvido;
-   - o `SegmentTemplatesTest` (no máximo cinco opções, descrição honesta) continua passando para os dois.
-
-   O `{{empresa}}` já é resolvido pelo motor? Conferir em `Vars`. Se não for, é ajuste do mesmo PR, com teste.
+   Os dois testes "com horário" do `WorkflowTemplatesTest` passam a usar o `padrao`, e entram testes novos para o "Resposta
+   inválida." e o `{{empresa}}` resolvido.
 
 ## Projeto 1: design
 
@@ -160,7 +158,7 @@ Houve duas escolhas: como entregar os dois projetos e de que forma o modelo do b
 
 ## Decisões do builder (minhas, sujeitas à revisão do dono)
 
-- O modelo do beta é escrito com o `FlowBuilder`, com ids legíveis, e não como o JSON exportado.
+- O fluxo do beta é escrito com ids legíveis, e não como o JSON exportado.
 - O "voce" sem acento do texto do beta é corrigido.
 - No `transferir` de fora do expediente, o `setor_id: 1` do beta sai: com `fila_geral: true` ele não tem efeito, e o id 1 não
   existe numa instalação nova.
@@ -171,7 +169,7 @@ Houve duas escolhas: como entregar os dois projetos e de que forma o modelo do b
 
 - **Projeto 0:**
   - portão 7 completo;
-  - no servidor local, criar um workflow "Distribuidora" e simular dentro e fora do horário;
+  - no servidor local, criar um workflow "Atendimento padrão" e simular dentro e fora do horário;
   - no beta, depois do merge, conferir que o workflow "Padrão" que já existe não mudou.
 - **Projeto 1:**
   - portão 7 completo;

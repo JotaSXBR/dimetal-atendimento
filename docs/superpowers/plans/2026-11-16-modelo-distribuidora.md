@@ -1,112 +1,84 @@
-# Modelo Distribuidora do beta: plano de implementação
+# Atendimento padrão com o fluxo do beta: plano de implementação
 
 > **Para agentes:** SUB-SKILL OBRIGATÓRIA: superpowers:subagent-driven-development (este projeto) para executar tarefa por tarefa. Passos com checkbox (`- [ ]`).
 
-**Objetivo:** o segmento "Distribuidora" passa a gerar a automação que roda no dimetal-beta, com `{{empresa}}` no lugar do nome. O modelo atual, com CNPJ e nota fiscal, continua como "Distribuidora completo".
+**Objetivo:** o modelo básico "Atendimento padrão" passa a ser a automação que roda no dimetal-beta (horário → saudação → menu de setores → fila), com `{{empresa}}` no lugar do nome. O "Atendimento com horário" sai, porque ficaria igual.
 
-**Arquitetura:** os modelos por segmento são classes `Template` em `app/Services/Bot/Templates/Segments/`, listadas em `WorkflowTemplates::SEGMENTS`. O grafo de cada uma é montado com o `FlowBuilder`. Workflows já existentes não mudam: o grafo do modelo só é copiado quando se cria um workflow novo.
+**Arquitetura:** `DefaultWorkflow::graph()` é o grafo do "Atendimento padrão": é ele que a galeria (`WorkflowTemplates`, chave `padrao`) e o `DefaultWorkflowSeeder` usam. Workflows já existentes não mudam, porque o grafo só é copiado quando se cria um workflow novo. O segmento "Distribuidora" (CNPJ) não é tocado.
 
-**Stack:** PHP 8.5, Laravel 13, PHPUnit 12.
+**Stack:** PHP 8.5, Laravel 13, Livewire 4, PHPUnit 12.
 
-**Spec:** `docs/superpowers/specs/2026-11-16-modelo-distribuidora-e-renomeacao-design.md` (seção "Projeto 0").
+**Spec:** `docs/superpowers/specs/2026-11-16-modelo-distribuidora-e-renomeacao-design.md` (seções "Dados de origem" e "Projeto 0: design").
 
 ## Restrições globais
 
-- Os textos do modelo novo são os do beta, só com "Dimetal Distribuidora" trocado por `{{empresa}}` e "voce" por "você".
-- Nenhum `setor_id` fixo no modelo novo: os setores vêm do bloco `menu_setores`, e fora do horário vai para a fila geral (`fila_geral: true`).
-- Chaves: `distribuidora` (modelo novo) e `distribuidora_completo` (o atual). Ordem em `SEGMENTS`: `[Distribuidora::class, DistribuidoraCompleto::class]`.
-- A descrição de todo segmento contém "não", dizendo o que o modelo não faz (regra do `SegmentTemplatesTest`).
-- Testes afetados no ciclo RED/GREEN: `php artisan test --filter='SegmentTemplatesTest|WorkflowTemplatesTest|FlowBuilderTest'`. O Postgres de teste precisa estar no ar (ver `CLAUDE.md`).
+- Os textos são os do beta, só com "Dimetal Distribuidora" trocado por `{{empresa}}` e "voce" por "você".
+- Nenhum `setor_id` fixo: o setor vem do `menu_setores`; fora do horário vai para a fila geral (`fila_geral: true`).
+- `DefaultWorkflow::OUT_OF_HOURS` **fica**, porque o `FlowBuilder::opening` (segmento Distribuidora) usa. `DefaultWorkflow::withHours()` e `WorkflowTemplates::WITH_HOURS` saem.
+- Testes afetados: `php artisan test --filter='WorkflowTemplatesTest|SegmentTemplatesTest|AutomationIndexTest|AutomationEditorTest|WorkflowPublisherTest|AutomationSimulatorTest'`. Precisa do Postgres de teste no ar (ver `CLAUDE.md`).
 
 ## Foco da revisão
 
-1. **Sem setores cadastrados:** o modelo novo cria um rascunho que valida (`checkGraph` vazio), e `resolve()['missing']` vem `[]`, porque nenhum setor é nomeado. Coberto na Tarefa 2.
-2. **Resposta inválida no menu:** o bot responde "Resposta inválida." e repete o menu, não a mensagem padrão. Coberto na Tarefa 2.
-3. **Silêncio no menu (5 min):** vai para a fila geral sem travar a sessão. Coberto na Tarefa 2.
-4. **Nome da empresa não configurado:** `{{empresa}}` cai no padrão de `CompanySettings::name()`, sem sobrar `{{empresa}}` literal no texto. Coberto na Tarefa 2.
-5. **Workflow já salvo com a chave antiga:** não existe, porque os workflows guardam o grafo e não a chave. Nenhum teste a acrescentar; foi conferido em `WorkflowPublisher::create`.
+1. **Instalação sem setores:** o rascunho do padrão continua válido (`checkGraph` vazio); o `menu_setores` sem setores manda para a fila (`Step::leave('erros')`). Coberto no `test_cada_modelo_cria_rascunho_valido_sem_publicar`; o comportamento do menu vazio já existia.
+2. **Resposta inválida no menu:** o bot responde "Resposta inválida." e repete o menu. Teste novo.
+3. **Nome da empresa não configurado:** não sobra `{{empresa}}` cru no texto. Teste novo.
+4. **Chave antiga `horario`** (uma aba aberta com a galeria antiga enviando `template=horario`): cai no em branco sem erro, pelo `default` do `resolve`. Teste novo no `AutomationIndexTest`.
+5. **Mensagem padrão de encaminhamento:** o grafo leva `settings.mensagens.encaminhamento_setor` do beta, e o editor aceita esse `settings` ao salvar. Teste novo.
 
 ---
 
-### Tarefa 1: o modelo atual vira "Distribuidora completo"
+### Tarefa 1: "Atendimento padrão" vira o fluxo do beta e o "com horário" sai
 
 **Arquivos:**
-- Renomear: `app/Services/Bot/Templates/Segments/Distribuidora.php` → `app/Services/Bot/Templates/Segments/DistribuidoraCompleto.php` (classe `DistribuidoraCompleto`, `key()` = `'distribuidora_completo'`, `name()` = `'Distribuidora completo'`; descrição e grafo como estão)
-- Modificar: `app/Services/Bot/WorkflowTemplates.php` (import e `SEGMENTS = [DistribuidoraCompleto::class]` nesta tarefa)
-- Testes: `tests/Feature/Bot/SegmentTemplatesTest.php`, `tests/Feature/Bot/WorkflowTemplatesTest.php`
+- Modificar: `app/Services/Bot/DefaultWorkflow.php` (`graph()` novo; remove `withHours()`; docblocks)
+- Modificar: `app/Services/Bot/WorkflowTemplates.php` (remove `WITH_HOURS` da lista e do `resolve`; descrição do padrão)
+- Testes: `tests/Feature/Bot/WorkflowTemplatesTest.php`, `tests/Feature/Livewire/AutomationIndexTest.php` (linhas ~75, ~118–130), e conferir `tests/Feature/Bot/WorkflowPublisherTest.php` e `tests/Feature/Livewire/AutomationEditorTest.php`, que usam `DefaultWorkflow::graph()` e devem continuar passando sem mudança
 
 **Interfaces:**
-- Produz: `App\Services\Bot\Templates\Segments\DistribuidoraCompleto implements Template`, com `key(): 'distribuidora_completo'`.
+- Produz: `DefaultWorkflow::graph(): array` com `nodes`, `edges` e `settings`; `WorkflowTemplates::all()` com os básicos `['em_branco', 'padrao']`.
 
-- [ ] **Passo 1: ajustar os testes para a chave nova (RED)**
-  - `SegmentTemplatesTest`: nos três testes `test_distribuidora_*`, trocar `'distribuidora'` por `'distribuidora_completo'` e renomeá-los para `test_distribuidora_completo_*`. `test_a_galeria_tem_o_segmento_distribuidora` passa a afirmar `assertContains('distribuidora_completo', $this->segments())`.
-  - `WorkflowTemplatesTest::test_a_lista_traz_os_modelos_na_ordem`: espera as chaves `['em_branco', 'padrao', 'horario', 'distribuidora_completo']` e os nomes `[..., 'Distribuidora completo']`.
-- [ ] **Passo 2: rodar e ver falhar**
-  `php artisan test --filter='SegmentTemplatesTest|WorkflowTemplatesTest'`. Esperado: FAIL (a chave `distribuidora_completo` não existe e cai no modelo em branco).
-- [ ] **Passo 3: renomear com `git mv`** e ajustar a classe, a chave, o nome e o docblock ("Distribuidora completo: ...").
-- [ ] **Passo 4: rodar e ver passar** (mesmo comando). Esperado: PASS.
-- [ ] **Passo 5: commit**
-  `git commit -m "refactor: modelo Distribuidora atual vira Distribuidora completo"`
+**Grafo exigido de `DefaultWorkflow::graph()`** (posições `x`/`y` como as do `withHours()` atual):
 
-### Tarefa 2: o modelo Distribuidora do beta
+| id | tipo | x, y | data |
+|----|------|------|------|
+| `inicio` | inicio | 0, 0 | `[]` |
+| `horario` | condicao | 260, 0 | `['kind' => 'horario']` |
+| `saudacao` | mensagem | 520, 0 | `['texto' => 'Olá, {{nome}}! Bem-vindo a {{empresa}}.']` |
+| `menu` | menu_setores | 780, 0 | `['texto' => 'Com qual setor você quer falar? Responda com o número da opção:', 'invalido' => 'Resposta inválida.', 'timeout_min' => 5]` |
+| `encaminhamento` | mensagem | 1040, 0 | `['texto' => 'Certo! Seu protocolo é {{protocolo}}. Você entrou na fila de {{setor}} e um atendente já te responde em instantes.']` |
+| `transferir` | transferir | 1300, 0 | `[]` |
+| `fora` | mensagem | 520, 240 | `['texto' => "Olá, {{nome}}! \nBem-vindo a {{empresa}}. \nNosso horário de atendimento é {{horario}}. Retornamos {{proximo_horario}} e você já está na fila para ser atendido."]` |
+| `transferir_fora` | transferir | 780, 240 | `['fila_geral' => true]` |
 
-**Arquivos:**
-- Criar: `app/Services/Bot/Templates/Segments/Distribuidora.php`
-- Modificar: `app/Services/Bot/WorkflowTemplates.php` (`SEGMENTS = [Distribuidora::class, DistribuidoraCompleto::class]`)
-- Testes: `tests/Feature/Bot/SegmentTemplatesTest.php`, `tests/Feature/Bot/WorkflowTemplatesTest.php`
+Ligações: as mesmas sete do `withHours()` atual.
 
-**Interfaces:**
-- Consome: `FlowBuilder::start()`, `->branch(string $from, string $port, array $steps)`, `->link()`, `->graph()`; `Template` (`key`, `name`, `description`, `graph`).
-- Produz: `Distribuidora::key() === 'distribuidora'`, `name() === 'Distribuidora'`.
+`settings`: `['mensagens' => ['encaminhamento_setor' => "Vou encaminhar você para o setor: {{setor}} \nSeu protocolo é {{protocolo}}"]]`.
 
-**Grafo exigido** (ids legíveis; o `opening()` não serve, porque usa o `menu` de opções fixas e o texto padrão de fora do horário):
-
-| id | tipo | data |
-|----|------|------|
-| `inicio` | inicio | `[]` |
-| `horario` | condicao | `['kind' => 'horario']` |
-| `saudacao` | mensagem | `['texto' => 'Olá, {{nome}}! Bem-vindo a {{empresa}}.']` |
-| `menu` | menu_setores | `['texto' => 'Com qual setor você quer falar? Responda com o número da opção:', 'invalido' => 'Resposta inválida.', 'timeout_min' => 5]` |
-| `encaminhamento` | mensagem | `['texto' => 'Certo! Seu protocolo é {{protocolo}}. Você entrou na fila de {{setor}} e um atendente já te responde em instantes.']` |
-| `transferir` | transferir | `[]` |
-| `fora` | mensagem | `['texto' => "Olá, {{nome}}! \nBem-vindo a {{empresa}}. \nNosso horário de atendimento é {{horario}}. Retornamos {{proximo_horario}} e você já está na fila para ser atendido."]` |
-| `transferir_fora` | transferir | `['fila_geral' => true]` |
-
-Ligações:
-- `inicio→horario` (out);
-- `horario→saudacao` (true), `saudacao→menu` (out), `menu→encaminhamento` (setor), `encaminhamento→transferir` (out);
-- `horario→fora` (false), `fora→transferir_fora` (out).
-
-`settings` do grafo: `['mensagens' => ['encaminhamento_setor' => "Vou encaminhar você para o setor: {{setor}} \nSeu protocolo é {{protocolo}}"]]`. O `FlowBuilder::graph()` devolve só `nodes` e `edges`: a classe acrescenta `settings` ao array que ele retorna.
-
-Descrição (precisa conter "não"): `'Saudação com o nome da empresa, menu com os setores cadastrados e o protocolo ao encaminhar; fora do expediente avisa o horário e coloca o cliente na fila geral. Não faz perguntas antes de entregar ao setor.'`
+Descrição do padrão em `WorkflowTemplates::all()`: `'Saudação com o nome da empresa, menu de setores e protocolo; fora do expediente avisa o horário e coloca o cliente na fila.'`
 
 - [ ] **Passo 1: testes (RED)**
-  - **Em `SegmentTemplatesTest`:**
-    - `test_a_galeria_tem_o_segmento_distribuidora` volta a afirmar também `assertContains('distribuidora', ...)` e checa a ordem: `assertSame(['distribuidora', 'distribuidora_completo'], $this->segments())`.
-    - `test_todo_segmento_e_valido_com_e_sem_os_setores`: a afirmação "deveria acusar setores faltando" passa a valer só para segmentos cujo grafo tem algum `transferir` com `data.setor`. Ela fica antes do `resolve`; olhar o grafo cru da classe ou o `missing` com setores cadastrados, a critério do builder. Para `distribuidora`, afirmar `assertSame([], $resolved['missing'])`. O `checkGraph` sem setores continua `[]` para todos.
-    - `test_todo_segmento_tem_no_maximo_cinco_opcoes_e_uma_descricao_honesta`: exige ao menos um bloco `menu` **ou** `menu_setores`. O limite de 5 opções vale só para os blocos `menu`.
-  - **Novos testes em `SegmentTemplatesTest`** (setUp já cria Vendas, Financeiro e SAC):
-    - `test_distribuidora_escolhe_o_setor_pelo_menu_e_vai_a_fila_dele`:
-      - grava `Setting::put('company.name', 'Loja Teste')`; `walk('distribuidora', 'aberto', ['2'])`;
-      - `outcome === IN_QUEUE` e o efeito contém `'entraria na fila de Financeiro'`;
-      - o primeiro texto do bot é `'Olá, Maria! Bem-vindo a Loja Teste.'`; o segundo começa com `'Com qual setor você quer falar?'` e contém `'2 - Financeiro'`;
-      - um texto do bot contém `'Você entrou na fila de Financeiro'`.
-    - `test_distribuidora_resposta_invalida_repete_o_menu_com_o_aviso_do_beta`: `walk('distribuidora', 'aberto', ['9'])` → `outcome === null`, e entre os textos do bot está `'Resposta inválida.'`.
-    - `test_distribuidora_silencio_no_menu_vai_a_fila`: `start` aberto e depois `silence` → `IN_QUEUE`.
-    - `test_distribuidora_sem_nome_de_empresa_nao_deixa_variavel_crua`:
-      - sem `company.name` gravado, `walk('distribuidora', 'fechado', [])`;
-      - o único texto do bot contém `'Bem-vindo a '` e **não** contém `'{{empresa}}'`;
-      - a mensagem padrão de `encaminhamento_setor` do grafo é a do beta: `WorkflowTemplates::graph('distribuidora')['settings']['mensagens']['encaminhamento_setor']` começa com `'Vou encaminhar você para o setor:'`.
-  - `WorkflowTemplatesTest::test_a_lista_traz_os_modelos_na_ordem`: chaves `[..., 'distribuidora', 'distribuidora_completo']` e nomes `[..., 'Distribuidora', 'Distribuidora completo']`.
-- [ ] **Passo 2: rodar e ver falhar** (`--filter='SegmentTemplatesTest|WorkflowTemplatesTest'`). Esperado: FAIL (a chave `distribuidora` cai no modelo em branco).
-- [ ] **Passo 3: implementar** `Distribuidora` com o grafo da tabela e incluir a classe em `SEGMENTS`.
-- [ ] **Passo 4: rodar e ver passar**: o mesmo filtro e depois `php artisan test --parallel --filter=Bot`. Esperado: PASS. O teste `test_fora_do_horario_vai_a_fila_geral_sem_perguntar` vale para os dois segmentos sem ajuste.
+  - `WorkflowTemplatesTest`:
+    - `test_all_marca_os_tres_modelos_basicos_no_grupo_basicos` → renomear para `test_all_marca_os_modelos_basicos_no_grupo_basicos`, esperando `['em_branco', 'padrao']`.
+    - `test_a_lista_traz_os_modelos_na_ordem` → chaves `['em_branco', 'padrao', 'distribuidora']` e nomes `['Em branco', 'Atendimento padrão', 'Distribuidora']`.
+    - `test_cada_modelo_cria_rascunho_valido_sem_publicar` → `assertCount(8, WorkflowTemplates::graph(WorkflowTemplates::STANDARD)['nodes'])`.
+    - Os dois testes `test_modelo_com_horario_*` → renomear para `test_padrao_dentro_do_horario_passa_pelo_menu` e `test_padrao_fora_do_horario_avisa_e_vai_a_fila_geral_sem_setor`, usando `WorkflowTemplates::STANDARD`. No primeiro:
+      - gravar `Setting::put('company.name', 'Loja Teste')`;
+      - afirmar `$texts[0] === 'Olá, Maria! Bem-vindo a Loja Teste.'`;
+      - afirmar que `$texts[1]` começa com `'Com qual setor você quer falar?'` e contém `'1 - Vendas'`.
+    - Novo `test_padrao_resposta_invalida_repete_o_menu_com_o_aviso_do_beta`: dentro do horário, `BotEngine::reply` com `'9'`. Se o teste não tiver um caminho direto pelo motor, usar o `BotSimulator` como no `SegmentTemplatesTest::walk`. Afirmar que entre os textos do bot está `'Resposta inválida.'` e que o ticket segue `PENDENTE`.
+    - Novo `test_padrao_sem_nome_de_empresa_nao_deixa_variavel_crua`: fora do horário, sem `company.name`; o texto do bot não contém `'{{empresa}}'`.
+    - Novo `test_padrao_traz_a_mensagem_de_encaminhamento_do_beta`: `WorkflowTemplates::graph('padrao')['settings']['mensagens']['encaminhamento_setor']` começa com `'Vou encaminhar você para o setor:'`.
+  - `AutomationIndexTest`:
+    - a ordem da galeria (linha ~75) sem "Atendimento com horário";
+    - o teste das linhas ~118–130 deixa de esperar "Atendimento com horário". Ele passa a afirmar `assertDontSee('Atendimento com horário')` e que criar com `template = 'horario'` gera um rascunho com 1 bloco (em branco), sem erro.
+- [ ] **Passo 2: rodar e ver falhar** (filtro das restrições globais). Esperado: FAIL nos testes alterados e novos.
+- [ ] **Passo 3: implementar**: o `graph()` novo, remover o `withHours()` e o `WITH_HOURS`, ajustar descrição e docblocks (o docblock da classe diz que o padrão tem horário).
+- [ ] **Passo 4: rodar e ver passar**: o mesmo filtro, depois `php artisan test --parallel --filter=Bot` e `--filter=Automation`. Esperado: PASS, inclusive `WorkflowPublisherTest`, `AutomationEditorTest` e `SegmentTemplatesTest` sem mudança.
 - [ ] **Passo 5: commit**
-  `git commit -m "feat: modelo Distribuidora com a automação do beta (menu de setores e horário)"`
+  `git commit -m "feat: Atendimento padrão com o fluxo do beta (horário e menu de setores); sai o modelo com horário"`
 
-### Depois das tarefas
+### Depois da tarefa
 
 - Portão 7 (comandos do `CLAUDE.md`), revisão final do branch (`revisor-final`).
-- Conferência no servidor local: criar um workflow "Distribuidora" e rodar o simulador do editor com o relógio aberto e o fechado.
+- Conferência no servidor local: criar um workflow "Atendimento padrão" na galeria e rodar o simulador do editor com o relógio aberto e o fechado.
 - Os specs e este plano vão no PR deste branch. O PR só se abre quando o dono pedir.
