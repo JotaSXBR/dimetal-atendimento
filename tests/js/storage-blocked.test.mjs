@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+// localStorage bloqueado (navegador restrito): lê e grava lançam SecurityError; o compositor e o painel de detalhes seguem.
+const blocked = { getItem() { throw new Error('SecurityError'); }, setItem() { throw new Error('SecurityError'); }, removeItem() { throw new Error('SecurityError'); } };
+const factories = {};
+let initHandler;
+
+globalThis.document = { addEventListener: (event, handler) => { initHandler = handler; } };
+globalThis.window = { localStorage: blocked, Alpine: { data: (name, factory) => { factories[name] = factory; } } };
+
+await import('../../resources/js/composer-mode.js');
+initHandler();
+await import('../../resources/js/ticket-details.js');
+initHandler();
+
+test('rascunho do compositor sem localStorage não lança', () => {
+    const composer = factories.composerMode({}, 1, 2);
+
+    assert.equal(composer.load('reply'), '');
+    assert.doesNotThrow(() => composer.save('reply', 'texto'));
+    assert.doesNotThrow(() => composer.save('reply', ''));
+});
+
+test('painel de detalhes sem localStorage abre e alterna', () => {
+    const details = factories.ticketDetails();
+
+    assert.equal(details.details, true);
+    assert.doesNotThrow(() => details.toggle());
+    assert.equal(details.details, false);
+});

@@ -33,14 +33,18 @@ document.addEventListener('alpine:init', () => {
         },
 
         load(mode) {
-            return window.localStorage.getItem(this.key(mode)) ?? '';
+            try {
+                return window.localStorage.getItem(this.key(mode)) ?? '';
+            } catch {
+                return ''; // storage bloqueado: sem rascunho, o compositor segue
+            }
         },
 
         save(mode, value) {
-            if (value.trim() === '') {
-                window.localStorage.removeItem(this.key(mode));
-            } else {
-                window.localStorage.setItem(this.key(mode), value);
+            try {
+                value.trim() === '' ? window.localStorage.removeItem(this.key(mode)) : window.localStorage.setItem(this.key(mode), value);
+            } catch {
+                // storage bloqueado: o rascunho não persiste
             }
         },
 
