@@ -173,4 +173,13 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertSame(0, Channel::query()->count());
         $this->assertSame(0, Ticket::query()->count());
     }
+
+    public function test_cria_tickets_com_sla_estourado_e_a_vencer(): void
+    {
+        $this->seed(AmbienteDeTesteSeeder::class);
+
+        $abertos = Ticket::query()->where('status', TicketStatus::AGUARDANDO)->whereNotNull('waiting_since')->whereNotNull('sla_due_at');
+        $this->assertTrue((clone $abertos)->where('sla_due_at', '<', now())->exists(), 'prazo estourado');
+        $this->assertTrue((clone $abertos)->where('sla_due_at', '>', now())->exists(), 'prazo a vencer');
+    }
 }

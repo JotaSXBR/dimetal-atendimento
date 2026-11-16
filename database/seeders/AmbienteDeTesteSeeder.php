@@ -8,6 +8,7 @@ use Database\Seeders\Cenarios\CanalConectado;
 use Database\Seeders\Cenarios\EtiquetasDosDoisEscopos;
 use Database\Seeders\Cenarios\NomesLongos;
 use Database\Seeders\Cenarios\NotaInterna;
+use Database\Seeders\Cenarios\TicketsComSla;
 use Database\Seeders\Cenarios\TicketsEmTodosOsEstados;
 use Database\Seeders\Cenarios\UsuariosDeTeste;
 use Illuminate\Database\Seeder;
@@ -39,6 +40,7 @@ class AmbienteDeTesteSeeder extends Seeder
             EtiquetasDosDoisEscopos::class,
             NotaInterna::class,
             AlertasDoSino::class,
+            TicketsComSla::class,
         ]);
     }
 }
