@@ -128,17 +128,18 @@ class AutomationIndexTest extends TestCase
         $publisher = app(WorkflowPublisher::class);
         $publisher->create('Padrão', $this->user, template: 'padrao');
         $publisher->create('Com horário', $this->user, template: 'horario');
+        [$s3, $s4] = Sector::factory()->count(2)->create();
         Workflow::factory()->create(['name' => 'Fixos', 'draft' => ['nodes' => [
-            ['id' => 'a', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 3]],
-            ['id' => 'b', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 3]],
-            ['id' => 'c', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => 4]],
+            ['id' => 'a', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $s3->id]],
+            ['id' => 'b', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $s3->id]],
+            ['id' => 'c', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $s4->id]],
         ], 'edges' => []]]);
 
         $this->page()
             ->assertSeeInOrder(['Com horário', '8 blocos', 'Fixos', '3 blocos', '2 setores', 'Padrão', '5 blocos']);
     }
 
-    /** @param  list<int>  $fixed */
+    /** @param  list<int|string>  $fixed */
     private function flowWithMenu(string $name, array $fixed): void
     {
         $nodes = [['id' => 'm', 'type' => 'menu_setores', 'x' => 0, 'y' => 0, 'data' => []]];
@@ -173,6 +174,34 @@ class AutomationIndexTest extends TestCase
         Workflow::factory()->create(['name' => 'Fixos', 'draft' => ['nodes' => [$node('a'), $node('b')], 'edges' => []]]);
 
         $this->page()->assertSee('1 setor')->assertDontSee('1 setores');
+    }
+
+    public function test_setor_id_string_no_rascunho_conta_uma_vez(): void
+    {
+        $sector = Sector::factory()->create();
+        $this->flowWithMenu('Menu', [(string) $sector->id]);
+
+        $this->page()->assertSee('1 setor')->assertDontSee('2 setores');
+    }
+
+    public function test_setor_desativado_ou_apagado_nao_conta_no_menu(): void
+    {
+        Sector::factory()->create();
+        Sector::factory()->create(['status' => SectorStatus::DESATIVADO]);
+        Sector::factory()->create()->delete();
+        $this->flowWithMenu('Menu', []);
+
+        $this->page()->assertSee('1 setor')->assertDontSee('2 setores')->assertDontSee('3 setores');
+    }
+
+    public function test_setor_fixo_apagado_nao_conta(): void
+    {
+        $sector = Sector::factory()->create();
+        $sector->delete();
+        $node = ['id' => 'a', 'type' => 'transferir', 'x' => 0, 'y' => 0, 'data' => ['setor_id' => $sector->id]];
+        Workflow::factory()->create(['name' => 'Fixos', 'draft' => ['nodes' => [$node], 'edges' => []]]);
+
+        $this->page()->assertSee('1 bloco')->assertDontSee('1 setor');
     }
 
     public function test_nome_e_obrigatorio(): void

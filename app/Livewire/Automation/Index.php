@@ -130,13 +130,15 @@ class Index extends Component
      *
      * @param  array<string, mixed>  $draft
      * @param  Collection<array-key, mixed>  $menuIds  ids dos setores visíveis no menu, consultados uma vez por render
+     * @param  Collection<array-key, mixed>  $existingIds  ids dos setores não apagados (qualquer status), consultados uma vez por render
      * @return array{nodes: int, sectors: int}
      */
-    private function summary(array $draft, Collection $menuIds): array
+    private function summary(array $draft, Collection $menuIds, Collection $existingIds): array
     {
         $raw = $draft['nodes'] ?? [];
         $nodes = collect(is_array($raw) ? $raw : []);
-        $fixed = $nodes->where('type', 'transferir')->pluck('data.setor_id')->filter(fn ($id): bool => $id !== null && $id !== '');
+        // O JSON do rascunho traz o id como int ou texto; setor apagado não conta.
+        $fixed = $nodes->where('type', 'transferir')->pluck('data.setor_id')->filter(fn ($id): bool => is_numeric($id))->map(fn ($id): int => (int) $id)->filter(fn (int $id): bool => $existingIds->contains($id));
         $ids = $nodes->contains('type', 'menu_setores') ? $fixed->merge($menuIds) : $fixed;
 
         return ['nodes' => $nodes->count(), 'sectors' => $ids->unique()->count()];
@@ -147,10 +149,11 @@ class Index extends Component
         $workflows = Workflow::query()->withCount('versions')->with(['versions' => fn ($q) => $q->with('publisher')->orderByDesc('number')])->orderBy('name')->get();
 
         $menuIds = Sector::query()->visibleInMenu()->pluck('id');
+        $existingIds = Sector::query()->pluck('id');
 
         return view('livewire.automation.index', [
             'workflows' => $workflows,
-            'summaries' => $workflows->mapWithKeys(fn (Workflow $workflow): array => [$workflow->id => $this->summary($workflow->draft, $menuIds)]),
+            'summaries' => $workflows->mapWithKeys(fn (Workflow $workflow): array => [$workflow->id => $this->summary($workflow->draft, $menuIds, $existingIds)]),
             'channels' => Channel::query()->orderBy('name')->get(),
             'templates' => WorkflowTemplates::all(),
         ]);

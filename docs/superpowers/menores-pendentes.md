@@ -29,7 +29,6 @@ Branch `chore/claude-md`, revisão final.
 
 | # | Onde | O quê | Decisão |
 |---|------|-------|---------|
-| L1 | `app/Livewire/Automation/Index.php` | Contagem de setores: falta teste com `setor_id` string e com setor desativado/apagado; setor fixo apagado ainda conta | — |
 | L2 | `resources/js/flow-editor/editor.js` | `fitView` do editor sem teste de integração; fluxo com altura entre H−barra e H cai no piso | — |
 | L3 | `app/Livewire/Settings/Backups.php` | TTL de 30 s do lock `restore-dispatch` | — |
 | L4 | `resources/js/composer-mode.js:45` | Estilo: ternário usado como instrução | — |
