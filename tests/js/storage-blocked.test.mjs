@@ -18,8 +18,11 @@ await import('../../resources/js/ticket-details.js');
 initHandler();
 
 after(() => {
-    globalThis.document = originalDocument;
-    globalThis.window = originalWindow;
+    // Atribuir `undefined` deixaria a propriedade criada; o original ausente tem de sumir.
+    for (const [nome, original] of [['document', originalDocument], ['window', originalWindow]]) {
+        if (original === undefined) delete globalThis[nome];
+        else globalThis[nome] = original;
+    }
 });
 
 test('rascunho do compositor sem localStorage não lança', () => {

@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Livewire\Alerts\Bell;
 use App\Models\User;
 use App\Notifications\BackupFailed;
+use App\Notifications\BackupSkipped;
 use App\Notifications\BackupStale;
 use App\Services\Alerts\AlertRecipients;
 use App\Settings\BackupStatus;
@@ -60,6 +61,19 @@ class BackupAlertsTest extends TestCase
 
         $this->assertSame(['kind' => 'backup', 'level' => 'critico', 'state' => 'failed'], (new BackupFailed)->toArray($user));
         $this->assertSame(['kind' => 'backup', 'level' => 'critico', 'state' => 'stale'], (new BackupStale)->toArray($user));
+        $this->assertSame(['kind' => 'backup', 'level' => 'grave', 'state' => 'skipped'], (new BackupSkipped)->toArray($user));
+    }
+
+    public function test_bell_mostra_backup_que_nao_rodou(): void
+    {
+        $eu = User::factory()->create(['role' => UserRole::ADMIN]);
+        $eu->notify(new BackupSkipped);
+
+        $this->actingAs($eu);
+
+        Livewire::test(Bell::class)
+            ->assertSee('Backup diário não rodou')
+            ->assertSee('Outro backup estava em andamento');
     }
 
     public function test_bell_mostra_backup_falhou_e_atrasado(): void

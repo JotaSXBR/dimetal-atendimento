@@ -60,7 +60,7 @@ class InboxNotesTranscriptTest extends TestCase
         TicketNote::factory()->for($ticket)->bot()->create(['body' => 'CNPJ coletado']);
 
         Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])
-            ->assertSee('Nota interna · Bot')
+            ->assertSee('Nota interna · Automação')
             ->assertSee('CNPJ coletado')
             ->assertDontSee('Usuário removido')
             ->assertDontSeeHtml('deleteNote(');

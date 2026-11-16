@@ -17,7 +17,7 @@ enum ClosedReason: string
             self::MANUAL => 'Encerrado por atendente',
             self::INATIVIDADE => 'Encerrado por inatividade',
             self::MESCLADO => 'Mesclado em outro ticket do mesmo cliente',
-            self::BOT => 'Encerrado pelo bot',
+            self::BOT => 'Encerrado pela Automação',
             self::IMPORTADO => 'Histórico importado',
         };
     }

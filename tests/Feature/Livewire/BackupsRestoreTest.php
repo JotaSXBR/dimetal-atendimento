@@ -99,9 +99,22 @@ class BackupsRestoreTest extends TestCase
             ->assertDontSee('Digite RESTAURAR');
     }
 
-    public function test_trava_de_despacho_dura_120_segundos(): void
+    public function test_pedido_com_a_trava_tomada_nao_despacha_e_o_pedido_solta_a_trava(): void
     {
-        $this->assertSame(120, Backups::DISPATCH_LOCK_SECONDS);
+        $page = $this->page()->call('chooseBackup', self::NAME)->set('confirm', 'RESTAURAR');
+        $outroDono = Cache::lock('restore-dispatch', Backups::DISPATCH_LOCK_SECONDS);
+        $this->assertTrue($outroDono->get());
+
+        $page->call('restore')->assertSet('problem', 'Já há uma restauração em andamento.');
+        Queue::assertNothingPushed();
+
+        $outroDono->release();
+        $page->call('restore');
+        Queue::assertPushed(RestoreDatabaseJob::class, 1);
+
+        $trava = Cache::lock('restore-dispatch', 1);
+        $this->assertTrue($trava->get());
+        $trava->release();
     }
 
     public function test_segundo_pedido_seguido_nao_despacha_outro_job(): void

@@ -72,7 +72,7 @@ class BubbleColorsTest extends TestCase
         $html = $this->html($this->ticket->messages()->firstOrFail());
 
         $this->assertStringContainsString('bg-bot/15', $this->bubble($html, 'Resposta automática do bot'));
-        $this->assertMatchesRegularExpression('/text-bot[^>]*>[^<]*Bot · resposta automática/', $html);
+        $this->assertMatchesRegularExpression('/text-bot[^>]*>[^<]*Automação · resposta automática/', $html);
     }
 
     public function test_nota_interna_tem_o_fundo_amarelo_de_aviso_e_nao_o_ambar_translucido(): void

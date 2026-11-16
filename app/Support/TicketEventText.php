@@ -31,9 +31,9 @@ final class TicketEventText
         'tag_added' => 'Etiqueta adicionada',
         'tag_removed' => 'Etiqueta removida',
         'opened_by_agent' => 'Conversa iniciada pela equipe',
-        'bot_started' => 'Bot iniciou o atendimento',
-        'bot_abandoned' => 'Equipe respondeu pelo celular; a triagem do bot acabou',
-        'bot_handoff' => 'Bot encaminhou',
+        'bot_started' => 'Automação iniciou o atendimento',
+        'bot_abandoned' => 'Equipe respondeu pelo celular; a triagem da Automação acabou',
+        'bot_handoff' => 'Automação encaminhou',
     ];
 
     public static function label(string $type): string

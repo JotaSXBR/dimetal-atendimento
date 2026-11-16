@@ -256,12 +256,13 @@ export function anchorTranslate(positions, k, insetTop = 0, margin = 24) {
  * O que fazer depois do `zoomAt`, que deixou o canvas em zoom `k` e translate (`x`, `y`): se `k` ficou abaixo do piso, `scale` sobe
  * ao piso e o Início é ancorado; senão `scale` = `k` e o fluxo só desce meia barra (`inset`), centrando-se na parte livre.
  *
+ * @param {() => {type: string, x: number, y: number}[]} positions função que devolve as posições dos blocos; só é chamada quando ancora o Início
  * @returns {{scale: number, x: number, y: number}} `scale` diferente de `k` pede também `zoom(scale)` antes do translate
  */
 export function fitPlan({ k, x, y, inset, positions }) {
     const scale = fitScale(k);
 
-    return scale === k ? { scale, x, y: y + inset / 2 } : { scale, ...anchorTranslate(positions, scale, inset) };
+    return scale === k ? { scale, x, y: y + inset / 2 } : { scale, ...anchorTranslate(positions(), scale, inset) };
 }
 
 /** Cópia do bloco para o ponto 40 px abaixo e à direita, sem ligações; o Início não se duplica. */

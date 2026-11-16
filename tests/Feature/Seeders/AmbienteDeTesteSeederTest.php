@@ -4,17 +4,23 @@ namespace Tests\Feature\Seeders;
 
 use App\Enums\ChannelStatus;
 use App\Enums\MessageDirection;
+use App\Enums\MessageOrigin;
+use App\Enums\NoteOrigin;
+use App\Enums\SectorStatus;
 use App\Enums\TagScope;
 use App\Enums\TicketStatus;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Sector;
+use App\Models\Setting;
 use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketNote;
 use App\Models\User;
+use App\Services\Setup\DefaultSectors;
 use Database\Seeders\AmbienteDeTesteSeeder;
+use Database\Seeders\Cenarios\EtiquetasDosDoisEscopos;
 use Database\Seeders\Cenarios\UsuariosDeTeste;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\Events\BroadcastNotificationCreated;
@@ -52,6 +58,29 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertSame(2, $atendente->sectors()->count());
     }
 
+    public function test_usuarios_de_teste_sozinho_cria_setores_mesmo_com_a_marca(): void
+    {
+        Setting::put(DefaultSectors::MARK, true);
+
+        $this->seed(UsuariosDeTeste::class);
+
+        $this->assertEqualsCanonicalizing(DefaultSectors::NAMES, Sector::query()->where('status', SectorStatus::ATIVO)->pluck('name')->all());
+        $atendente = User::query()->where('email', AmbienteDeTesteSeeder::ATENDENTE_EMAIL)->firstOrFail();
+        $this->assertSame(2, $atendente->sectors()->where('status', SectorStatus::ATIVO)->count());
+    }
+
+    public function test_usuarios_de_teste_reativa_setor_apagado_ou_desativado_pelo_nome(): void
+    {
+        Setting::put(DefaultSectors::MARK, true);
+        Sector::factory()->create(['name' => 'Vendas', 'status' => SectorStatus::DESATIVADO])->delete();
+        Sector::factory()->create(['name' => 'SAC', 'status' => SectorStatus::DESATIVADO]);
+
+        $this->seed(UsuariosDeTeste::class);
+
+        $this->assertEqualsCanonicalizing(DefaultSectors::NAMES, Sector::query()->where('status', SectorStatus::ATIVO)->pluck('name')->all());
+        $this->assertSame(5, Sector::withTrashed()->count());
+    }
+
     public function test_cobre_cada_cenario(): void
     {
         $this->seed(AmbienteDeTesteSeeder::class);
@@ -76,9 +105,11 @@ class AmbienteDeTesteSeederTest extends TestCase
 
         $this->assertTrue(Contact::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONTATO))->exists());
         $this->assertTrue(Ticket::query()->whereHas('tags', fn ($q) => $q->where('scope', TagScope::CONVERSA))->exists());
-        $contatoEtiquetado = Contact::query()->whereHas('tags')->firstOrFail();
+        $contatoEtiquetado = Contact::query()->where('name', EtiquetasDosDoisEscopos::NOME_DO_CONTATO)->firstOrFail();
+        $this->assertTrue($contatoEtiquetado->tags()->exists());
         $this->assertTrue(Tag::query()->where('scope', TagScope::CONTATO)->whereNotIn('id', $contatoEtiquetado->tags()->pluck('tags.id'))->exists());
-        $ticketEtiquetado = Ticket::query()->whereHas('tags')->firstOrFail();
+        $ticketEtiquetado = $contatoEtiquetado->tickets()->firstOrFail();
+        $this->assertTrue($ticketEtiquetado->tags()->exists());
         $this->assertTrue(Tag::query()->where('scope', TagScope::CONVERSA)->whereNotIn('id', $ticketEtiquetado->tags()->pluck('tags.id'))->exists());
 
         $this->assertTrue(TicketNote::query()->whereHas('ticket', fn ($q) => $q->where('status', '!=', TicketStatus::ENCERRADO))->exists());
@@ -172,6 +203,17 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertSame(0, User::query()->count());
         $this->assertSame(0, Channel::query()->count());
         $this->assertSame(0, Ticket::query()->count());
+    }
+
+    public function test_tem_conversa_da_automacao(): void
+    {
+        $this->seed(AmbienteDeTesteSeeder::class);
+
+        $resposta = Message::query()->where('origin', MessageOrigin::BOT)->firstOrFail();
+        $nota = TicketNote::query()->where('origin', NoteOrigin::BOT)->firstOrFail();
+        $this->assertSame($resposta->ticket_id, $nota->ticket_id);
+        $this->assertNull($nota->user_id);
+        $this->assertTrue(Message::query()->where('ticket_id', $resposta->ticket_id)->where('direction', MessageDirection::IN)->exists());
     }
 
     public function test_cria_tickets_com_sla_estourado_e_a_vencer(): void

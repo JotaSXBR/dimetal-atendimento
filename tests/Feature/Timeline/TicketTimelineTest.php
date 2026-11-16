@@ -156,8 +156,8 @@ class TicketTimelineTest extends TestCase
         $abandoned = $this->event('bot_abandoned');
         $timeline = $this->timeline([$started, $abandoned]);
 
-        $this->assertSame('Bot iniciou o atendimento', $timeline->sentence($started));
-        $this->assertSame('Equipe respondeu pelo celular; a triagem do bot acabou', $timeline->sentence($abandoned));
+        $this->assertSame('Automação iniciou o atendimento', $timeline->sentence($started));
+        $this->assertSame('Equipe respondeu pelo celular; a triagem da Automação acabou', $timeline->sentence($abandoned));
     }
 
     public function test_bot_encaminhou_diz_o_setor_e_o_motivo(): void
@@ -173,21 +173,21 @@ class TicketTimelineTest extends TestCase
         $bare = $this->event('bot_handoff');
         $timeline = $this->timeline([$flow, $leave, $errors, $timeout, $noFlow, $unknown, $removed, $bare]);
 
-        $this->assertSame('Bot encaminhou para Comercial', $timeline->sentence($flow));
-        $this->assertSame('Bot encaminhou para Comercial (cliente pediu atendente)', $timeline->sentence($leave));
-        $this->assertSame('Bot encaminhou para Comercial (respostas inválidas)', $timeline->sentence($errors));
-        $this->assertSame('Bot encaminhou para Comercial (sem resposta do cliente)', $timeline->sentence($timeout));
-        $this->assertSame('Bot encaminhou para Fila geral (sem automação ativa)', $timeline->sentence($noFlow));
-        $this->assertSame('Bot encaminhou para Comercial', $timeline->sentence($unknown));
-        $this->assertSame('Bot encaminhou para setor removido', $timeline->sentence($removed));
-        $this->assertSame('Bot encaminhou para Fila geral', $timeline->sentence($bare));
+        $this->assertSame('Automação encaminhou para Comercial', $timeline->sentence($flow));
+        $this->assertSame('Automação encaminhou para Comercial (cliente pediu atendente)', $timeline->sentence($leave));
+        $this->assertSame('Automação encaminhou para Comercial (respostas inválidas)', $timeline->sentence($errors));
+        $this->assertSame('Automação encaminhou para Comercial (sem resposta do cliente)', $timeline->sentence($timeout));
+        $this->assertSame('Automação encaminhou para Fila geral (sem automação ativa)', $timeline->sentence($noFlow));
+        $this->assertSame('Automação encaminhou para Comercial', $timeline->sentence($unknown));
+        $this->assertSame('Automação encaminhou para setor removido', $timeline->sentence($removed));
+        $this->assertSame('Automação encaminhou para Fila geral', $timeline->sentence($bare));
     }
 
     public function test_bot_encaminhou_com_motivo_que_nao_e_texto_nao_quebra(): void
     {
         $event = $this->event('bot_handoff', null, ['reason' => ['x'], 'sector_id' => 'abc']);
 
-        $this->assertSame('Bot encaminhou para Fila geral', $this->timeline([$event])->sentence($event));
+        $this->assertSame('Automação encaminhou para Fila geral', $this->timeline([$event])->sentence($event));
     }
 
     public function test_changes_descarta_so_os_eventos_de_conversa(): void

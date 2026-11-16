@@ -48,11 +48,21 @@ class MessagePolicy
             return Response::deny();
         }
 
-        $dias = intdiv(Message::REVOKE_WINDOW_HOURS, 24);
-
         return $message->sent_at->gte(now()->subHours(Message::REVOKE_WINDOW_HOURS))
             ? Response::allow()
-            : Response::deny('O WhatsApp só permite apagar para todos até '.$dias.($dias === 1 ? ' dia' : ' dias').' depois do envio.', self::DEADLINE);
+            : Response::deny('O WhatsApp só permite apagar para todos até '.self::windowLabel(Message::REVOKE_WINDOW_HOURS).' depois do envio.', self::DEADLINE);
+    }
+
+    /** O prazo por extenso: "2 dias" quando é múltiplo de 24 h, senão "36 horas". */
+    public static function windowLabel(int $hours): string
+    {
+        if ($hours % 24 === 0) {
+            $days = intdiv($hours, 24);
+
+            return $days.($days === 1 ? ' dia' : ' dias');
+        }
+
+        return $hours.($hours === 1 ? ' hora' : ' horas');
     }
 
     private function own(User $user, Message $message): bool

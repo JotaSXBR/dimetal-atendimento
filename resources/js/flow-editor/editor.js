@@ -258,12 +258,18 @@ export async function createEditor(container, graph, hooks) {
         await AreaExtensions.zoomAt(area, editor.getNodes(), { scale: insetScale(container.clientHeight, inset) });
 
         const { k, x, y } = area.area.transform;
-        const positions = editor.getNodes().flatMap((node) => {
-            const view = area.nodeViews.get(node.id);
+        const plan = fitPlan({
+            k,
+            x,
+            y,
+            inset,
+            positions: () =>
+                editor.getNodes().flatMap((node) => {
+                    const view = area.nodeViews.get(node.id);
 
-            return view ? [{ type: node.type, x: view.position.x, y: view.position.y }] : [];
+                    return view ? [{ type: node.type, x: view.position.x, y: view.position.y }] : [];
+                }),
         });
-        const plan = fitPlan({ k, x, y, inset, positions });
 
         if (plan.scale !== k) {
             await area.area.zoom(plan.scale);

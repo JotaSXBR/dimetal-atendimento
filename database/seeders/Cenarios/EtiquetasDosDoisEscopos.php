@@ -14,11 +14,13 @@ class EtiquetasDosDoisEscopos extends Seeder
 {
     use SoRodaEmAmbienteDeTeste;
 
+    public const NOME_DO_CONTATO = 'Cliente com Etiquetas';
+
     public function run(): void
     {
         $this->exigirAmbienteDeTeste();
 
-        $contato = Contact::factory()->create();
+        $contato = Contact::factory()->create(['name' => self::NOME_DO_CONTATO]);
         $ticket = Ticket::factory()->create(['contact_id' => $contato->id, 'channel_id' => CanalConectado::canal()->id, 'status' => TicketStatus::AGUARDANDO]);
 
         // As etiquetas padrão (TagSeeder) cobrem os dois escopos: sobram as não aplicadas.

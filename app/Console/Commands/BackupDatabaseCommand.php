@@ -2,12 +2,15 @@
 
 namespace App\Console\Commands;
 
+use App\Notifications\BackupSkipped;
+use App\Services\Alerts\AlertRecipients;
 use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
 use App\Services\Backup\ManualBackupState;
 use App\Services\Backup\Restore\RestoreProgress;
 use App\Services\Backup\RunBackup;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Notification;
 
 class BackupDatabaseCommand extends Command
 {
@@ -15,7 +18,7 @@ class BackupDatabaseCommand extends Command
 
     protected $description = 'Faz o backup do banco (pg_dump) para o bucket de backups e aplica a retenção';
 
-    public function handle(RunBackup $backup, ManualBackupState $state): int
+    public function handle(RunBackup $backup, ManualBackupState $state, AlertRecipients $recipients): int
     {
         $manual = (bool) $this->option('manual');
 
@@ -38,6 +41,7 @@ class BackupDatabaseCommand extends Command
 
         if ($file === null) {
             $manual && $state->markFinished(null, 'Já havia um backup em andamento.');
+            $manual || Notification::send($recipients->admins(), new BackupSkipped);
             $this->warn('Já há um backup em andamento.');
 
             return self::SUCCESS;

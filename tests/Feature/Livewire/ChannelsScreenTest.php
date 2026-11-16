@@ -277,9 +277,9 @@ class ChannelsScreenTest extends TestCase
         return Ticket::factory()->create(['channel_id' => $channel->id, 'contact_id' => Contact::factory()->create()->id, 'status' => $status]);
     }
 
-    public function test_desativar_desvincula_a_sessao_no_waha(): void
+    public function test_desativar_apaga_a_sessao_no_waha(): void
     {
-        Http::fake(['*/api/main/logout' => Http::response([], 200)]);
+        Http::fake(['*/api/sessions/main' => Http::response([], 200)]);
         $channel = Channel::factory()->connected()->create(['waha_session' => 'main']);
 
         Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $channel])
@@ -288,8 +288,8 @@ class ChannelsScreenTest extends TestCase
 
         $this->assertFalse($channel->fresh()->active);
         $this->assertSame(ChannelStatus::STOPPED, $channel->fresh()->status);
-        Http::assertSent(fn ($request) => $request->method() === 'POST' && str_ends_with($request->url(), '/api/main/logout'));
-        Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/stop'));
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE' && str_ends_with($request->url(), '/api/sessions/main'));
+        Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/logout') || str_ends_with($request->url(), '/stop'));
     }
 
     public function test_canal_desativado_em_aguardando_qr_nao_busca_qr_nem_alerta(): void

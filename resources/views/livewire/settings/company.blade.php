@@ -19,7 +19,7 @@
             <div class="flex items-center justify-between gap-3">
                 <div>
                     <p class="text-sm font-semibold text-ink">Assinatura das mensagens</p>
-                    <p class="text-xs text-ink-3">Adicionada às mensagens enviadas pelo painel. Não vale para o bot, legendas de arquivo nem reenvios.</p>
+                    <p class="text-xs text-ink-3">Adicionada às mensagens enviadas pelo painel. Não vale para a Automação, legendas de arquivo nem reenvios.</p>
                 </div>
                 <flux:switch wire:model.live="signatureEnabled" aria-label="Assinatura ligada" />
             </div>

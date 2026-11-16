@@ -9,6 +9,7 @@ use App\Services\Inbox\ApplyAck;
 use App\Services\Inbox\ApplyMessageChange;
 use App\Services\Inbox\IngestMessage;
 use App\Services\Waha\ChannelPhone;
+use App\Services\Waha\WahaClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -107,6 +108,16 @@ class HandleWahaEvent implements ShouldQueue
         $channel = $event->channel;
 
         if ($channel === null) {
+            return;
+        }
+
+        // Canal desligado de propósito que reaparece no WAHA (reinício religou a sessão): apaga de novo; falha do WAHA refaz o job.
+        // Relê o `active`: o dono pode ter reativado o canal depois que o job o carregou.
+        $channel->refresh();
+
+        if (! $channel->active && $status !== ChannelStatus::STOPPED) {
+            (new WahaClient($channel))->deleteSession();
+
             return;
         }
 

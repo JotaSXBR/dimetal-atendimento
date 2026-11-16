@@ -32,12 +32,26 @@ export function staleDraftKeys(entries, userId, now, maxAgeMs) {
         .map(([key]) => key);
 }
 
-/** Ids de ticket (únicos) das chaves de rascunho do usuário. */
-export function draftTicketIds(keys, userId) {
-    const ids = keys
-        .filter((key) => key.startsWith(prefix(userId)))
-        .map((key) => Number(key.split(':')[2]))
-        .filter((id) => Number.isInteger(id) && id > 0);
+/** Id do ticket da chave de rascunho do usuário, ou `null` (chave de outro usuário ou malformada). */
+export function draftTicketId(key, userId) {
+    const id = key.startsWith(prefix(userId)) ? Number(key.split(':')[2]) : NaN;
 
-    return [...new Set(ids)];
+    return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+/** Ids de ticket (únicos) das entradas `[chave, valor]` do usuário, do rascunho mais antigo ao mais novo; sem data conta como o mais antigo. */
+export function draftTicketIds(entries, userId) {
+    const oldest = new Map();
+
+    entries.forEach(([key, raw]) => {
+        const id = draftTicketId(key, userId);
+        const at = parseDraft(raw).at ?? -Infinity;
+
+        if (id !== null) {
+            oldest.set(id, Math.min(oldest.get(id) ?? Infinity, at));
+        }
+    });
+
+    // sort é estável: empate fica na ordem de entrada
+    return [...oldest.keys()].sort((a, b) => (oldest.get(a) < oldest.get(b) ? -1 : Number(oldest.get(a) > oldest.get(b))));
 }

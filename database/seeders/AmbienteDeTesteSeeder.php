@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Database\Seeders\Cenarios\AlertasDoSino;
 use Database\Seeders\Cenarios\BolhasDeTamanhosVariados;
 use Database\Seeders\Cenarios\CanalConectado;
+use Database\Seeders\Cenarios\ConversaDaAutomacao;
 use Database\Seeders\Cenarios\EtiquetasDosDoisEscopos;
 use Database\Seeders\Cenarios\NomesLongos;
 use Database\Seeders\Cenarios\NotaInterna;
@@ -39,6 +40,7 @@ class AmbienteDeTesteSeeder extends Seeder
             BolhasDeTamanhosVariados::class,
             EtiquetasDosDoisEscopos::class,
             NotaInterna::class,
+            ConversaDaAutomacao::class,
             AlertasDoSino::class,
             TicketsComSla::class,
         ]);
