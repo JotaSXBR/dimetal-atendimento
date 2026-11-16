@@ -4,16 +4,19 @@ namespace Tests\Feature\Seeders;
 
 use App\Enums\ChannelStatus;
 use App\Enums\MessageDirection;
+use App\Enums\SectorStatus;
 use App\Enums\TagScope;
 use App\Enums\TicketStatus;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Sector;
+use App\Models\Setting;
 use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketNote;
 use App\Models\User;
+use App\Services\Setup\DefaultSectors;
 use Database\Seeders\AmbienteDeTesteSeeder;
 use Database\Seeders\Cenarios\EtiquetasDosDoisEscopos;
 use Database\Seeders\Cenarios\UsuariosDeTeste;
@@ -51,6 +54,29 @@ class AmbienteDeTesteSeederTest extends TestCase
         $this->assertGreaterThan(2, Sector::query()->count());
         $this->assertSame(Sector::query()->count(), $admin->sectors()->count());
         $this->assertSame(2, $atendente->sectors()->count());
+    }
+
+    public function test_usuarios_de_teste_sozinho_cria_setores_mesmo_com_a_marca(): void
+    {
+        Setting::put(DefaultSectors::MARK, true);
+
+        $this->seed(UsuariosDeTeste::class);
+
+        $this->assertEqualsCanonicalizing(DefaultSectors::NAMES, Sector::query()->where('status', SectorStatus::ATIVO)->pluck('name')->all());
+        $atendente = User::query()->where('email', AmbienteDeTesteSeeder::ATENDENTE_EMAIL)->firstOrFail();
+        $this->assertSame(2, $atendente->sectors()->where('status', SectorStatus::ATIVO)->count());
+    }
+
+    public function test_usuarios_de_teste_reativa_setor_apagado_ou_desativado_pelo_nome(): void
+    {
+        Setting::put(DefaultSectors::MARK, true);
+        Sector::factory()->create(['name' => 'Vendas', 'status' => SectorStatus::DESATIVADO])->delete();
+        Sector::factory()->create(['name' => 'SAC', 'status' => SectorStatus::DESATIVADO]);
+
+        $this->seed(UsuariosDeTeste::class);
+
+        $this->assertEqualsCanonicalizing(DefaultSectors::NAMES, Sector::query()->where('status', SectorStatus::ATIVO)->pluck('name')->all());
+        $this->assertSame(5, Sector::withTrashed()->count());
     }
 
     public function test_cobre_cada_cenario(): void

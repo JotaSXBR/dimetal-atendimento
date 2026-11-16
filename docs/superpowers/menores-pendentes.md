@@ -30,7 +30,7 @@ Nenhum pendente. L8 e L9 corrigidos (SLA sem quebra de linha; `title` na linha d
 
 Branch `fix/menores-leva-2`, revisão final e conferência visual.
 
-- `app/Services/Setup/DefaultSectors.php`: borda com a marca já gravada (cenário sozinho, sem setores ativos).
+Nenhum pendente.
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
