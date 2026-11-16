@@ -11,7 +11,7 @@ Os anexos ficam fora: já estão no RustFS e a empresa os puxa por rclone. Desen
 - **O quê:** `pg_dump -Fc --compress=zstd:3` (cliente 18), conferido com `pg_restore --list` antes de subir.
 - **Onde:** bucket `BACKUP_BUCKET` do RustFS (o `app:prepare-media`, que roda no pós-deploy do app, cria o bucket sozinho). Sem
   `BACKUP_BUCKET` o disco é a pasta local `storage/app/backups` (só dev).
-- **Nomes:** `dimetal-AAAA-MM-DD-HHMM-diario|semanal|manual|antes.dump`, no horário de exibição. `antes` é o backup de segurança que a
+- **Nomes:** `fluxie-AAAA-MM-DD-HHMM-diario|semanal|manual|antes.dump`, no horário de exibição. Os backups antigos, `dimetal-*.dump`, continuam aceitos na lista, no download e na restauração. `antes` é o backup de segurança que a
   restauração faz do estado atual antes de trocar o banco.
 - **Retenção:** 7 diários, 2 semanais (cópia do diário de domingo), 3 manuais e 2 "antes". Só depois de um backup novo gravado é que o
   excedente sai.
@@ -76,7 +76,7 @@ o tamanho do banco: confira o disco da VPS.
 ## Primeiro backup no beta e teste de restauração (para o dono)
 
 1. **Fazer um backup.** Em Configuração > Backup do banco, **Fazer backup agora**. A tela mostra "Backup em andamento" e se atualiza sozinha
-   até aparecer "Backup concluído: dimetal-...-manual.dump" (com tamanho e "Último backup bom" preenchido).
+   até aparecer "Backup concluído: fluxie-...-manual.dump" (com tamanho e "Último backup bom" preenchido).
 2. **Baixar** o arquivo e conferir que veio.
 3. **Teste seguro, sem tocar no beta:** siga "Restaurar manualmente num PostgreSQL descartável" abaixo e anote tamanho e tempo.
 4. **Teste da restauração pela tela (no beta):** é o beta, não a produção. Faça uma alteração visível (por exemplo, renomeie uma etiqueta),
@@ -91,21 +91,21 @@ Este roteiro **não toca no banco do beta**: o arquivo é baixado pela tela e re
 
    ```powershell
    docker run -d --name pg-restore-teste -e POSTGRES_PASSWORD=teste postgres:18-alpine
-   docker cp "$HOME\Downloads\dimetal-AAAA-MM-DD-HHMM-manual.dump" pg-restore-teste:/tmp/backup.dump
-   docker exec pg-restore-teste createdb -U postgres dimetal_restaurado
+   docker cp "$HOME\Downloads\fluxie-AAAA-MM-DD-HHMM-manual.dump" pg-restore-teste:/tmp/backup.dump
+   docker exec pg-restore-teste createdb -U postgres fluxie_restaurado
    ```
 
 2. **Restaurar** e medir o tempo:
 
    ```powershell
-   Measure-Command { docker exec pg-restore-teste pg_restore --no-owner -U postgres -d dimetal_restaurado /tmp/backup.dump }
+   Measure-Command { docker exec pg-restore-teste pg_restore --no-owner -U postgres -d fluxie_restaurado /tmp/backup.dump }
    ```
 
    Sem mensagem de erro é sucesso.
 3. **Conferir** que os dados vieram:
 
    ```powershell
-   docker exec pg-restore-teste psql -U postgres -d dimetal_restaurado -c "select (select count(*) from users) as usuarios, (select count(*) from tickets) as tickets, (select count(*) from messages) as mensagens, (select count(*) from contacts) as contatos"
+   docker exec pg-restore-teste psql -U postgres -d fluxie_restaurado -c "select (select count(*) from users) as usuarios, (select count(*) from tickets) as tickets, (select count(*) from messages) as mensagens, (select count(*) from contacts) as contatos"
    ```
 
 4. **Limpar:** `docker rm -f pg-restore-teste`. Anote o tamanho do arquivo e o tempo do passo 2.
