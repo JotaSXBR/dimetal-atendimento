@@ -14,7 +14,7 @@ class BackupCatalog
 {
     // `dimetal-` é o prefixo antigo: só leitura, nunca mais gravado. O sufixo `-v<versão>` (semver, sem barra) só existe nos feitos
     // numa Release; os antigos e os de desenvolvimento não têm.
-    private const PATTERN = '/^(?:dimetal|fluxie)-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual|antes)(?:-v(\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?))?\.dump$/';
+    private const PATTERN = '/^(?:dimetal|fluxie)-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual|antes)(?:-v(\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?))?\.dump$/';
 
     public function __construct(private readonly InstalledVersion $installed = new InstalledVersion) {}
 
@@ -35,7 +35,7 @@ class BackupCatalog
     /** A versão em que o backup foi feito, se o nome a traz. */
     public static function versionIn(string $name): ?string
     {
-        return preg_match(self::PATTERN, $name, $m) === 1 && ($m[4] ?? '') !== '' ? $m[4] : null;
+        return preg_match(self::PATTERN, $name, $m) === 1 ? (($m[4] ?? '') ?: null) : null;
     }
 
     /** @return list<BackupFile> do mais novo ao mais velho */
@@ -108,6 +108,6 @@ class BackupCatalog
 
         $createdAt = CarbonImmutable::createFromFormat('Y-m-d Hi', $m[1].' '.$m[2], config()->string('app.display_timezone'));
 
-        return $createdAt === null ? null : new BackupFile($path, BackupKind::from($m[3]), $createdAt, $size ?? $this->disk()->size($path), ($m[4] ?? '') ?: null);
+        return $createdAt === null ? null : new BackupFile($path, BackupKind::from($m[3]), $createdAt, $size ?? $this->disk()->size($path), self::versionIn($path));
     }
 }

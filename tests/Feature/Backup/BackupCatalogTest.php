@@ -274,4 +274,21 @@ class BackupCatalogTest extends TestCase
         Storage::disk('backups')->assertExists('fluxie-2026-11-14-0300-diario.dump');
         Storage::disk('backups')->assertExists('fluxie-2026-11-16-0300-diario-v0.3.0.dump');
     }
+
+    public function test_nome_de_qualquer_versao_de_release_volta_pela_lista(): void
+    {
+        $at = CarbonImmutable::parse('2026-11-13 05:15:00', 'UTC');
+
+        foreach (['1.0.0-rc-1', '0.0.0-teste.1', '2.10.3', '1.0.0--x.y-z'] as $i => $version) {
+            config(['fluxie.version' => 'v'.$version]);
+            $kind = [BackupKind::Diario, BackupKind::Antes, BackupKind::Semanal, BackupKind::Manual][$i];
+            $name = $this->catalog()->name($kind, $at->addMinutes($i));
+            Storage::disk('backups')->put($name, 'x');
+
+            $file = $this->catalog()->find($name);
+            $this->assertNotNull($file, $name);
+            $this->assertSame([$kind, $version, $at->addMinutes($i)->format('Y-m-d H:i')], [$file->kind, $file->version, $file->createdAt->utc()->format('Y-m-d H:i')]);
+            $this->assertSame($version, BackupCatalog::versionIn($name));
+        }
+    }
 }
