@@ -64,7 +64,7 @@
             // Cada tipo tem a sua cara: cliente (branca com borda), nossa (neutro suave), bot (tom do bot) e enviada pelo celular
             // (tracejada). O âmbar fica só para nota interna e aviso.
             $outside => 'border border-dashed border-ink-3 bg-(--bubble-bg) [--bubble-bg:var(--color-surface)]',
-            $message->origin === \App\Enums\MessageOrigin::BOT => 'bg-(--bubble-bg) [--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-surface))]',
+            $message->origin === \App\Enums\MessageOrigin::BOT => 'bg-(--bubble-bg) [--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-canvas))]',
             $out => 'bg-(--bubble-bg) [--bubble-bg:var(--color-accent-soft)]',
             default => 'border border-line bg-(--bubble-bg) [--bubble-bg:var(--color-surface)]',
         } }}">

@@ -71,7 +71,7 @@ class BubbleColorsTest extends TestCase
         $this->message(MessageDirection::OUT, MessageOrigin::BOT, 'Resposta automática do bot');
         $html = $this->html($this->ticket->messages()->firstOrFail());
 
-        $this->assertStringContainsString('[--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-surface))]', $this->bubble($html, 'Resposta automática do bot'));
+        $this->assertStringContainsString('[--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-canvas))]', $this->bubble($html, 'Resposta automática do bot'));
         $this->assertMatchesRegularExpression('/text-bot[^>]*>[^<]*Automação · resposta automática/', $html);
     }
 

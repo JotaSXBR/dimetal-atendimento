@@ -283,7 +283,7 @@ class InboxTranscriptTest extends TestCase
 
         $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
 
-        $this->assertStringContainsString('[--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-surface))]', $html);
+        $this->assertStringContainsString('[--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-canvas))]', $html);
         $this->assertStringContainsString('bg-(--bubble-bg)', $html);
         preg_match('/<button[^>]*data-testid="message-menu-button"[^>]*>/', $html, $m);
         $this->assertStringContainsString('var(--bubble-bg)', $m[0]);
