@@ -143,7 +143,7 @@ jobs:
           pattern='\$\{FLUXIE_VERSION:-[^}]*\}'
           grep -qE "$pattern" docker-compose.yml || { echo "::error::docker-compose.yml sem FLUXIE_VERSION"; exit 1; }
           sed -E "s#$pattern#\${FLUXIE_VERSION:-$VERSION}#g" docker-compose.yml > "$RUNNER_TEMP/docker-compose.yml"
-          grep -qF "FLUXIE_VERSION:-$VERSION}" "$RUNNER_TEMP/docker-compose.yml" || { echo "::error::troca da versão não aconteceu"; exit 1; }
+          [ "$(grep -cF "FLUXIE_VERSION:-$VERSION}" "$RUNNER_TEMP/docker-compose.yml")" = 2 ] || { echo "::error::esperava 2 trocas da versão (imagem e ambiente)"; exit 1; }
           cp "$RUNNER_TEMP/docker-compose.yml" docker-compose.yml
           gh release upload "$TAG" docker-compose.yml --clobber
 
