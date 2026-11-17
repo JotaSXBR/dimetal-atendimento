@@ -34,7 +34,7 @@ Os anexos ficam fora: já estão no RustFS e a empresa os puxa por rclone. Desen
 - O usuário do banco (`DB_USERNAME`) precisa poder criar e renomear bancos (superusuário ou `CREATEDB`) e conectar no banco `postgres`.
 
 **Segurança do arquivo enviado (leia antes de ligar em produção):** o `pg_restore` executa o conteúdo do arquivo com o usuário do banco
-(no beta, superusuário). A tela confere os rótulos da TOC e, depois de restaurar no banco novo, o catálogo (nenhuma função, gatilho, visão,
+(no staging, superusuário). A tela confere os rótulos da TOC e, depois de restaurar no banco novo, o catálogo (nenhuma função, gatilho, visão,
 regra ou extensão que o sistema não usa), mas isso **não protege contra um arquivo forjado de propósito** (o corpo de uma entrada pode
 trazer SQL que o rótulo não mostra, e uma expressão de `DEFAULT` pode chamar funções do servidor). Por isso: envie só arquivos de origem
 confiável (os que o próprio sistema gerou, ou a cópia da empresa), e em produção prefira `BACKUP_RESTORE_UPLOAD=false` (só restaura backups
@@ -73,19 +73,19 @@ o tamanho do banco: confira o disco da VPS.
   atual intacto. Para bancos que não cabem nisso use o plano B abaixo.
 - Não dá para fazer backup (manual ou agendado) durante uma restauração: ele espera.
 
-## Primeiro backup no beta e teste de restauração (para o dono)
+## Primeiro backup no staging e teste de restauração (para o dono)
 
 1. **Fazer um backup.** Em Configuração > Backup do banco, **Fazer backup agora**. A tela mostra "Backup em andamento" e se atualiza sozinha
    até aparecer "Backup concluído: fluxie-...-manual.dump" (com tamanho e "Último backup bom" preenchido).
 2. **Baixar** o arquivo e conferir que veio.
-3. **Teste seguro, sem tocar no beta:** siga "Restaurar manualmente num PostgreSQL descartável" abaixo e anote tamanho e tempo.
-4. **Teste da restauração pela tela (no beta):** é o beta, não a produção. Faça uma alteração visível (por exemplo, renomeie uma etiqueta),
+3. **Teste seguro, sem tocar no staging:** siga "Restaurar manualmente num PostgreSQL descartável" abaixo e anote tamanho e tempo.
+4. **Teste da restauração pela tela (no staging):** é o staging, não a produção. Faça uma alteração visível (por exemplo, renomeie uma etiqueta),
    **Restaurar** o backup do passo 1, acompanhe a página de andamento e confira que a alteração sumiu. Depois use **Voltar para este** no
    banco guardado e confira que ela voltou.
 
 ## Restaurar manualmente num PostgreSQL descartável (plano B e teste sem risco)
 
-Este roteiro **não toca no banco do beta**: o arquivo é baixado pela tela e restaurado num PostgreSQL descartável no seu computador (Docker).
+Este roteiro **não toca no banco do staging**: o arquivo é baixado pela tela e restaurado num PostgreSQL descartável no seu computador (Docker).
 
 1. **Subir um PostgreSQL descartável** (PowerShell):
 

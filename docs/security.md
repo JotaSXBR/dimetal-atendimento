@@ -125,14 +125,14 @@ O texto das mensagens e os tickets não têm prazo: decisão de LGPD ainda em ab
 
 ## Varreduras automáticas
 
-Rodam fora do workflow `tests` de propósito: o `deploy-beta` depende do `tests`, e uma varredura instável não pode travar o
+Rodam fora do workflow `tests` de propósito: o `release-image` (que atualiza o staging) depende do `tests`, e uma varredura instável não pode travar o
 deploy. Ações fixadas por SHA de commit e permissão mínima (`contents: read`).
 
 | Varredura | Quando roda | O que reprova |
 |---|---|---|
 | Segredos no histórico do git (gitleaks, imagem fixada por digest) | todo PR, push na `main`, semanal | qualquer achado. **Segredo real: parar, rotacionar e avisar. Nunca liberar.** Falso positivo só por impressão digital, em `.gitleaksignore` |
 | Imagem Docker (Trivy, alvo `runtime`) | semanal, sob demanda e PR que mexe em `docker/` ou nos lockfiles | CRÍTICA ou ALTA **com correção publicada** (o que não tem correção não é acionável) |
-| Scan dinâmico passivo (OWASP ZAP baseline) contra o beta | semanal e sob demanda | nada por enquanto: só relata, até a primeira rodada ser triada |
+| Scan dinâmico passivo (OWASP ZAP baseline) contra o staging | semanal e sob demanda | nada por enquanto: só relata, até a primeira rodada ser triada |
 
 Rodar na hora: `gh workflow run security` e `gh workflow run security-scan`.
 

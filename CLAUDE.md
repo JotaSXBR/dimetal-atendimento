@@ -48,7 +48,7 @@ os hooks do projeto.
 | `revisor-final` | opus, low | revisão do branch inteiro no portão 6 (molde `code-reviewer.md`) |
 | `Explore` | haiku, low | busca só fora do índice do CodeGraph: `vendor/` (Livewire, Flux), Blade, migrations, `docs/` |
 | `leitor-web-logs` | haiku, low | páginas da web na pesquisa e logs grandes (Coolify, WAHA, saída de teste) |
-| `conferente-visual` | sonnet, medium | conferência no navegador pelo Claude in Chrome (servidor local ou beta): layout, foco, medidas, console e CSP |
+| `conferente-visual` | sonnet, medium | conferência no navegador pelo Claude in Chrome (servidor local ou staging): layout, foco, medidas, console e CSP |
 
 Builder-check do brainstorming e investigações em paralelo: subagente comum com `sonnet`, `medium`. Ciclo de correção da SDD
 nas rodadas 4 e 5: um modelo acima do implementador. Mudar um destes é decisão do dono.
@@ -115,7 +115,8 @@ Laravel 13, Livewire 4.4, Flux 2, Reverb, Fortify, PostgreSQL 18, Redis 8. Vers�
 
 - Não abrir PR sem pedido. Docs, specs e notas vão no PR da fatia que as usa, ou ficam no branch até o dono pedir. Merge só
   do que o dono nomeou.
-- Só o beta está em escopo: nunca tocar a `main`/produção do Coolify, nunca commitar na `main`.
+- Staging em escopo; na production (`fluxie-inbox`/production) só com OK do dono, e ela se atualiza por Release. Nunca
+  tocar os outros projetos do Coolify, nunca commitar na `main`.
 - Credenciais do Coolify em `.env.coolify.local` (ignorado; nunca imprimir o token).
 - Este `CLAUDE.md` é versionado. Locais e ignorados pelo git: `AGENTS.md`, `.claude/`, `.mcp.json`, `GEMINI.md`, `.gemini`,
   `.codegraph`, `skills-lock.json`, `.referencias/` (prints de produtos de terceiros, só para consulta) e `.superpowers/`

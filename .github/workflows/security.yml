@@ -1,7 +1,7 @@
 name: security
 
-# Varreduras rápidas, em todo PR e push na main. Fica fora do workflow `tests` de propósito: o deploy-beta depende
-# do `tests`, e uma varredura instável aqui não pode travar o deploy.
+# Varreduras rápidas, em todo PR e push na main. Fica fora do workflow `tests` de propósito: o release-image
+# (que atualiza o staging) depende do `tests`, e uma varredura instável aqui não pode travar o deploy.
 on:
   push:
     branches:
