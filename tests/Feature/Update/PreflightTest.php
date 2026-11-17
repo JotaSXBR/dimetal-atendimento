@@ -276,6 +276,39 @@ class PreflightTest extends TestCase
         $this->assertFalse(app(Preflight::class)->composeEdited());
     }
 
+    /** Caso real: o Coolify regrava o compose (âncoras expandidas, aspas trocadas, sem os comentários do topo). */
+    private function coolifyCompose(string $raw): bool
+    {
+        $this->world['installed_compose'] = [200, (string) file_get_contents(base_path('tests/Fixtures/coolify/compose-release-asset.yml'))];
+        $this->world['service_get'] = [200, ['docker_compose_raw' => $raw]];
+        $this->fakeWorld();
+
+        return app(Preflight::class)->composeEdited();
+    }
+
+    private function reserialized(): string
+    {
+        return (string) file_get_contents(base_path('tests/Fixtures/coolify/compose-coolify-reserializado.yml'));
+    }
+
+    public function test_compose_regravado_pelo_coolify_nao_e_editado(): void
+    {
+        $this->assertFalse($this->coolifyCompose($this->reserialized()));
+    }
+
+    public function test_variavel_a_mais_no_app_e_edicao(): void
+    {
+        $edited = preg_replace('/(services:\n  app:\n(?:.*\n)*?    environment:\n)/', "$1      EXTRA_VAR: '1'\n", $this->reserialized(), 1, $count);
+
+        $this->assertSame(1, $count);
+        $this->assertTrue($this->coolifyCompose((string) $edited));
+    }
+
+    public function test_compose_do_coolify_invalido_conta_como_editado(): void
+    {
+        $this->assertTrue($this->coolifyCompose("services:\n  app: [\n"));
+    }
+
     public function test_compose_editado_e_falso_quando_nao_da_para_baixar(): void
     {
         $this->world['installed_compose'] = [404, 'Not Found'];

@@ -89,7 +89,11 @@ final class Preflight
         return $body !== null ? $body : throw new RuntimeException('Não foi possível baixar o docker-compose.yml da Release '.$target.'.');
     }
 
-    /** O compose do Coolify difere do da Release da versão que roda: as edições serão substituídas. Sem como comparar, falso. */
+    /**
+     * O compose do Coolify difere do da Release da versão que roda: as edições serão substituídas. Compara o conteúdo, não o texto,
+     * porque o Coolify regrava o compose (âncoras expandidas, aspas trocadas, sem comentários). Sem o asset para comparar, falso;
+     * compose do Coolify que não se lê, verdadeiro (não dá para garantir que não foi editado).
+     */
     public function composeEdited(): bool
     {
         $release = $this->installed->release();
@@ -102,10 +106,47 @@ final class Preflight
         $original = $this->download("https://github.com/{$repo}/releases/download/v{$release}/docker-compose.yml");
 
         try {
-            return $original !== null && trim($original) !== trim($this->coolify->compose());
-        } catch (CoolifyException) {
+            $original = $original === null ? null : $this->composeContent($original);
+        } catch (ParseException) {
             return false;
         }
+
+        try {
+            return $original !== null && $original !== $this->composeContent($this->coolify->compose());
+        } catch (CoolifyException) {
+            return false;
+        } catch (ParseException) {
+            return true;
+        }
+    }
+
+    /**
+     * As chaves de topo que valem (sem as `x-`, que só servem às âncoras), com os escalares como texto: `'8080'` e `8080` são iguais.
+     *
+     * @throws ParseException
+     */
+    private function composeContent(string $yaml): mixed
+    {
+        $parsed = Yaml::parse($yaml);
+
+        return is_array($parsed) ? $this->normalized(array_filter($parsed, fn (int|string $key): bool => ! str_starts_with((string) $key, 'x-'), ARRAY_FILTER_USE_KEY)) : $this->normalized($parsed);
+    }
+
+    private function normalized(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            if (! array_is_list($value)) {
+                ksort($value);
+            }
+
+            return array_map($this->normalized(...), $value);
+        }
+
+        return match (true) {
+            is_bool($value) => $value ? 'true' : 'false',
+            is_scalar($value) => (string) $value,
+            default => '',
+        };
     }
 
     /** @throws CoolifyException */
