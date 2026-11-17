@@ -13,9 +13,7 @@ conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores d
 
 Branch `feat/modelo-distribuidora`, revisão final.
 
-| # | Onde | O quê | Decisão |
-|---|------|-------|---------|
-| A1 | `app/Livewire/Automation/Index.php` (`create`) e `WorkflowTemplates::resolve` | Chave de modelo desconhecida (ex.: `horario`, de uma galeria antiga em cache) cria rascunho em branco sem aviso. Endurecer com `in:` das chaves de `WorkflowTemplates::all()` | dono |
+Nenhum pendente. A1 corrigido no branch do primeiro acesso (`in:` das chaves de `WorkflowTemplates::all()`).
 
 ## Achados do teste de UI no beta (16/11/2026)
 
@@ -44,11 +42,7 @@ Nenhum pendente.
 
 Branch `feat/assistente-primeiro-acesso`, revisão final.
 
-| # | Onde | O quê | Decisão |
-|---|------|-------|---------|
-| P1 | `app/Livewire/Setup/FirstSteps.php` (`createChannel`) | Se o request morrer entre criar o canal e gravar `setup.canal`, a retomada cria um segundo canal. Improvável; o canal a mais se apaga em Canais | advisor |
-| P3 | `/primeiros-passos` | A barra lateral completa aparece durante os primeiros passos (os links voltam ao assistente pelo middleware). Esconder ou manter | dono |
-| P5 | Busca global (Ctrl K), `<input type="search">` | Sem `id` nem `name`: o Chrome aponta "form field should have id or name" em todas as telas. Anterior a este branch | advisor |
+Nenhum pendente. P1, P3 e P5 corrigidos no branch (transação, tela limpa com Sair, `id` e `name` na busca).
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
