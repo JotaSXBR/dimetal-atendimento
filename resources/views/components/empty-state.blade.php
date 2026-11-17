@@ -4,7 +4,7 @@
     @if ($compact)
         <flux:icon :name="$icon" class="size-6 text-ink-3" />
     @else
-        <div data-empty-state-icon class="flex size-11 items-center justify-center rounded-full bg-canvas">
+        <div data-empty-state-icon class="flex size-11 items-center justify-center rounded-full bg-muted">
             <flux:icon :name="$icon" class="size-5 text-ink-3" />
         </div>
     @endif

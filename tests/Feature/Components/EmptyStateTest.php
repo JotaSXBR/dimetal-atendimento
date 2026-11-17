@@ -61,4 +61,14 @@ class EmptyStateTest extends TestCase
         $this->assertSame(0, $compact->query('//*[@data-empty-state-icon]')->length);
         $this->assertStringContainsString('ms-2', $compact->query('//*[@data-empty-state]')->item(0)->getAttribute('class'));
     }
+
+    public function test_circulo_do_icone_usa_o_fundo_muted_visivel_no_tema_claro(): void
+    {
+        $xpath = $this->xpath('<x-empty-state title="Nada" />');
+
+        // canvas (#fafafa) some sobre o corpo branco; muted (zinc-100) é o tom do desenho no Pencil.
+        $classes = explode(' ', $xpath->query('//*[@data-empty-state-icon]')->item(0)?->getAttribute('class') ?? '');
+        $this->assertContains('bg-muted', $classes);
+        $this->assertNotContains('bg-canvas', $classes);
+    }
 }

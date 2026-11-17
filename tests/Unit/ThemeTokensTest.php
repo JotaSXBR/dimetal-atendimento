@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 class ThemeTokensTest extends TestCase
 {
-    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'warn', 'danger', 'ok', 'bot', 'read', 'danger-foreground', 'warn-foreground'];
+    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'muted', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'warn', 'danger', 'ok', 'bot', 'read', 'danger-foreground', 'warn-foreground'];
 
     public function test_todo_token_tem_algum_uso(): void
     {
