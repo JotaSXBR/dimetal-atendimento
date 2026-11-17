@@ -251,4 +251,21 @@ class UpdateWatchTest extends TestCase
 
         $this->assertSame(1, $admin->notifications()->count());
     }
+
+    public function test_revertida_que_vira_falhou_avisa_de_novo_no_sino_uma_vez(): void
+    {
+        Notification::swap(new ChannelManager(app())); // envio de verdade: o sino é a linha no banco
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $this->update->moveTo(UpdateStatus::Revertida, 'devolvida pelo vigia');
+        $this->watch();
+
+        // O job não conseguiu desfazer a gravação: como no ApplyUpdate::restoreWrites, a linha vira `falhou` e o aviso volta a valer.
+        $this->update->moveTo(UpdateStatus::Falhou, 'não foi possível regravar');
+        $this->update->update(['notified_at' => null]);
+        $this->assertNotNull($this->watch()->notified_at);
+        $this->watch();
+
+        $states = $admin->notifications()->get()->map(fn ($n): mixed => $n->data['state'])->sort()->values()->all();
+        $this->assertSame(['falhou', 'revertida'], $states);
+    }
 }

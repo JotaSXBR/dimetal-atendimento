@@ -81,8 +81,9 @@ class UpdateWatchCommand extends Command
         foreach ($finished as $update) {
             try {
                 // O banco grava antes do broadcast: se ele falhar, quem já tem a linha no sino não recebe outra na próxima rodada.
-                $admins = $recipients->admins()->reject(fn (User $admin): bool => $admin->notifications()
-                    ->where('type', UpdateFinished::class)->whereRaw("(data::jsonb ->> 'update_id') = ?", [(string) $update->id])->exists());
+                // A chave inclui o estado: `revertida` que vira `falhou` (devolução do job que não deu) avisa de novo.
+                $admins = $recipients->admins()->reject(fn (User $admin): bool => $admin->notifications()->where('type', UpdateFinished::class)
+                    ->whereRaw("(data::jsonb ->> 'update_id') = ? and (data::jsonb ->> 'state') = ?", [(string) $update->id, $update->status->value])->exists());
                 Notification::send($admins, new UpdateFinished($update->status->value, $update->to_version, $update->id));
             } catch (Throwable $e) {
                 report($e); // sem marcar: o próximo minuto tenta de novo
