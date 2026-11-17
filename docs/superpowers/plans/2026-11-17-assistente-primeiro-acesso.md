@@ -236,3 +236,18 @@ detalhes (atualização, backup, Google). "Rodando localmente" ganha a linha: o 
 - [ ] **Step 2: alterar** compose e fumaça; rodar de novo → passa.
 - [ ] **Step 3: escrever** `docs/deploy.md` e `README.md`.
 - [ ] **Step 4: commit** `docs: instalação pelo assistente no deploy e no README`
+
+### Task 8: menores antes do PR (dono, 17/11)
+
+Itens de `docs/superpowers/menores-pendentes.md`, cada um com RED antes do código; saem da lista no commit que os corrige.
+
+- **P3**: `/primeiros-passos` sem a barra lateral: tela limpa com a logo da empresa (ou o nome), os três passos e um botão **Sair**
+  (logout do Fortify). Mesmo comportamento nas resoluções de costume e no celular; o `ChannelCard` continua funcionando (Echo/Livewire).
+  Teste: a resposta de `/primeiros-passos` não tem os links da navegação (`route('inbox')`, `route('contatos')`) e tem o form de logout.
+- **P1**: `FirstSteps::createChannel` cria o canal e grava `setup.canal` numa única `DB::transaction`. Teste: se gravar a marca
+  falhar, o canal não fica.
+- **P5**: o `<input type="search">` da busca global (Ctrl K) ganha `id` e `name`. Teste de view (o campo tem `name`).
+- **A1**: `App\Livewire\Automation\Index::create` recusa chave de modelo fora de `WorkflowTemplates::all()` (regra `in:`), com
+  mensagem no campo e sem criar workflow. Teste: chave `horario` → erro, 0 workflows novos.
+
+Conferência visual de `/primeiros-passos` em 1280, 1920, 2560 e 390 depois do P3.
