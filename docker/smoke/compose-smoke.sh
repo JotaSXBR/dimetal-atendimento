@@ -23,7 +23,8 @@ SERVICE_HEX_32_REVERBKEY=$(hex 16)
 SERVICE_HEX_32_REVERBID=$(hex 16)
 SERVICE_PASSWORD_REVERBSECRET=$(hex 16)
 ENV
-dc() { docker compose -p fluxie-smoke -f docker-compose.yml --env-file "$(cygpath -m "$ENVF" 2>/dev/null || echo "$ENVF")" "$@"; }
+# O override só encurta a espera do passo 8; o resto é o docker-compose.yml como o Coolify o usa.
+dc() { docker compose -p fluxie-smoke -f docker-compose.yml -f docker/smoke/compose.override.yml --env-file "$(cygpath -m "$ENVF" 2>/dev/null || echo "$ENVF")" "$@"; }
 trap 'dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -f "$ENVF"' EXIT
 fail() { echo "FALHA: $*"; exit 1; }
 status() { docker inspect -f '{{.State.Health.Status}}' "$(dc ps -q "$1")" 2>/dev/null || echo none; }
@@ -93,7 +94,7 @@ dc stop rustfs
 since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 dc restart app
 wait_for app healthy 15 && fail "app ficou healthy sem o RustFS"
-# 20 tentativas de no máximo 5 s mais 3 s de pausa (~160 s); depois o script de entrada sai com 1
+# PREPARE_MEDIA_ATTEMPTS tentativas (override) de no máximo 5 s mais 3 s de pausa; depois o script de entrada sai com 1
 for _ in $(seq 1 70); do
   [ "$(docker inspect -f '{{.State.Status}}' "$(dc ps -aq app)")" = exited ] && break
   sleep 3
@@ -107,6 +108,8 @@ grep -q 'app:prepare-media falhou' <<<"$logs8" || {
 }
 [ "$(docker inspect -f '{{.State.ExitCode}}' "$(dc ps -aq app)")" = 1 ] || fail "app devia ter saído com código 1"
 dc start rustfs
+# com só 3 tentativas (override) o app não pode correr contra a subida do RustFS
+wait_for rustfs healthy 60 || { dc logs rustfs | tail -30; fail "rustfs não voltou a healthy"; }
 dc restart app
 wait_for app healthy 180 || { dc logs app | tail -30; fail "app não voltou a healthy"; }
 

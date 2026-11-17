@@ -1,0 +1,6 @@
+# Só para o smoke test: 3 tentativas do app:prepare-media em vez de 20, para o cenário "RustFS fora" (passo 8) acabar
+# em ~25 s em vez de ~160 s. A subida normal espera o RustFS ficar healthy (depends_on), então 3 bastam.
+services:
+  app:
+    environment:
+      PREPARE_MEDIA_ATTEMPTS: "3"
