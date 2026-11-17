@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\Setup\SetupState;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -20,5 +21,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             DefaultWorkflowSeeder::class,
         ]);
+
+        SetupState::markConcluded();
     }
 }

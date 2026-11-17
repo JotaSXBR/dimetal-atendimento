@@ -13,9 +13,7 @@ conferido no beta (ticket do histórico abre e mostra o protocolo). Os menores d
 
 Branch `feat/modelo-distribuidora`, revisão final.
 
-| # | Onde | O quê | Decisão |
-|---|------|-------|---------|
-| A1 | `app/Livewire/Automation/Index.php` (`create`) e `WorkflowTemplates::resolve` | Chave de modelo desconhecida (ex.: `horario`, de uma galeria antiga em cache) cria rascunho em branco sem aviso. Endurecer com `in:` das chaves de `WorkflowTemplates::all()` | dono |
+Nenhum pendente. A1 corrigido no branch do primeiro acesso (`in:` das chaves de `WorkflowTemplates::all()`).
 
 ## Achados do teste de UI no beta (16/11/2026)
 
@@ -39,6 +37,12 @@ Nenhum pendente. L8 e L9 corrigidos (SLA sem quebra de linha; `title` na linha d
 Branch `fix/menores-leva-2`, revisão final e conferência visual.
 
 Nenhum pendente.
+
+## Menores adiados do primeiro acesso (17/11/2026)
+
+Branch `feat/assistente-primeiro-acesso`, revisão final.
+
+Nenhum pendente. P1, P3 e P5 corrigidos no branch (transação, tela limpa com Sair, `id` e `name` na busca).
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
