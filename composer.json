@@ -99,8 +99,8 @@
             "@php artisan test --parallel --coverage --min=80"
         ],
         "security:audit": [
-            "composer audit --no-interaction",
-            "npm audit --audit-level=high"
+            "composer audit --locked --no-interaction",
+            "npm audit --package-lock-only --audit-level=high"
         ],
         "test": [
             "@php artisan config:clear --ansi",

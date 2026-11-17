@@ -184,12 +184,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.versions.outputs.node }}
-          cache: npm
 
-      - name: Install dependencies
-        run: |
-          composer install --no-interaction --no-scripts --prefer-dist
-          npm ci --no-audit --no-fund
-
+      # Os dois audits leem só os lockfiles (--locked e --package-lock-only): instalar não muda o veredito.
       - name: Audit dependencies
         run: composer security:audit
