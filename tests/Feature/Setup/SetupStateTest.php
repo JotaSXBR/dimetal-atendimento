@@ -49,6 +49,25 @@ class SetupStateTest extends TestCase
         $this->assertSame('distribuidora', SetupState::segment());
     }
 
+    public function test_segmento_invalido_e_recusado(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        SetupState::setSegment('qualquer');
+    }
+
+    public function test_migracao_em_instalacao_ja_com_marcas_e_setores_nao_muda_nada(): void
+    {
+        $this->startFreshInstall();
+        User::factory()->create(['role' => 'atendente']);
+        $this->migracao()->up();
+
+        $this->migracao()->up();
+
+        $this->assertSame(5, Sector::query()->count());
+        $this->assertSame(15, Tag::query()->count());
+    }
+
     public function test_has_admin_ignora_atendente_e_supervisor(): void
     {
         User::factory()->create(['role' => 'atendente']);

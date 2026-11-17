@@ -19,6 +19,8 @@ final class SetupState
 
     public const STEPS = ['empresa', 'segmento', 'canal'];
 
+    public const SEGMENTS = [ApplySegment::DISTRIBUIDORA, ApplySegment::EM_BRANCO];
+
     /** Só o `true` fica no cache: a instalação concluída não volta atrás, e o `false` precisa ser relido do banco. */
     public static function concluded(): bool
     {
@@ -70,6 +72,10 @@ final class SetupState
 
     public static function setSegment(string $segment): void
     {
+        if (! in_array($segment, self::SEGMENTS, true)) {
+            throw new InvalidArgumentException("Segmento [{$segment}] inválido.");
+        }
+
         Setting::put(self::SEGMENT, $segment);
     }
 }
