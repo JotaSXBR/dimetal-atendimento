@@ -14,7 +14,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A main exige PR atualizado (strict), então o push na main traz a mesma árvore que o PR já testou. Se essa árvore passou
+  # num run verde deste workflow, num PR do próprio repositório, tests e static não repetem a suíte. Qualquer dúvida
+  # (sem registro, run não verde, fork, erro da API) deixa tested=false e tudo roda. O audit roda sempre: aviso novo
+  # depende do dia, não da árvore.
+  already-tested:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      tested: ${{ steps.lookup.outputs.tested }}
+    steps:
+      - id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          tested=false
+          if tree=$(gh api "repos/$REPO/commits/$SHA" --jq .commit.tree.sha) &&
+             runs=$(gh api "repos/$REPO/actions/artifacts?name=tested-tree-$tree&per_page=20"                --jq '.artifacts[] | select(.expired | not) | .workflow_run.id'); then
+            for run in $runs; do
+              ok=$(gh api "repos/$REPO/actions/runs/$run"                 --jq '.name == "tests" and .event == "pull_request" and .conclusion == "success" and .head_repository.full_name == "'"$REPO"'"') || continue
+              if [ "$ok" = true ]; then
+                tested=true
+                echo "::notice::Árvore $tree já passou no run $run do PR; suíte não repetida"
+                break
+              fi
+            done
+          fi
+          echo "tested=$tested" >> "$GITHUB_OUTPUT"
+
   tests:
+    needs: already-tested
+    # !cancelled(): no PR o already-tested é pulado e o job roda; se ele falhar, tested fica vazio e o job também roda.
+    if: ${{ !cancelled() && needs.already-tested.outputs.tested != 'true' }}
     runs-on: ubuntu-26.04
 
     services:
@@ -98,8 +135,28 @@ jobs:
       - name: Run tests with coverage
         run: composer ci:tests
 
+      # Registro para o push da main (job already-tested). Só vale se o run inteiro terminar verde, o que o lookup confere.
+      - name: Record tested tree
+        if: github.event_name == 'pull_request'
+        id: tree
+        run: |
+          tree=$(git rev-parse 'HEAD^{tree}')
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+          echo "$tree" > "$RUNNER_TEMP/tested-tree"
+
+      - name: Upload tested tree
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tested-tree-${{ steps.tree.outputs.tree }}
+          path: ${{ runner.temp }}/tested-tree
+          retention-days: 14
+          overwrite: true
+
   # Pint, Larastan e PHPMD não precisam de banco: rodam em paralelo com os testes, e o PR espera só o job mais lento.
   static:
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.tested != 'true' }}
     runs-on: ubuntu-26.04
     timeout-minutes: 10
 
@@ -184,12 +241,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.versions.outputs.node }}
-          cache: npm
 
-      - name: Install dependencies
-        run: |
-          composer install --no-interaction --no-scripts --prefer-dist
-          npm ci --no-audit --no-fund
-
+      # Os dois audits leem só os lockfiles (--locked e --package-lock-only): instalar não muda o veredito.
       - name: Audit dependencies
         run: composer security:audit
