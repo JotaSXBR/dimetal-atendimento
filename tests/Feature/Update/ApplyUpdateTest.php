@@ -366,6 +366,55 @@ class ApplyUpdateTest extends TestCase
         ];
     }
 
+    /** Simula o vigia fechando a atualização no meio do job: o Http do passo muda a linha no banco antes de responder. */
+    private function closedByWatcherDuring(string $stub, UpdateStatus $to, mixed $response): void
+    {
+        $this->world[$stub] = function () use ($to, $response): mixed {
+            // só depois do backup: o pré-voo também lê as variáveis
+            SystemUpdate::query()->whereKey($this->update->id)->where('status', '<>', UpdateStatus::Conferindo->value)->update(['status' => $to->value]);
+
+            return $response;
+        };
+    }
+
+    public function test_vigia_fecha_entre_a_conferencia_e_o_backup_o_job_nao_faz_backup_nem_reabre(): void
+    {
+        $this->noBackup();
+        $this->world['manifest'] = function (): array {
+            SystemUpdate::query()->whereKey($this->update->id)->update(['status' => UpdateStatus::Falhou->value]);
+
+            return [200, $this->fixture('ghcr-manifest-0.1.0.json')];
+        };
+
+        $update = $this->apply();
+
+        $this->assertSame(UpdateStatus::Falhou, $update->status);
+        $this->assertSame([], $this->composeWrites());
+    }
+
+    public function test_vigia_fecha_antes_de_aplicar_o_job_nao_grava_nem_reinicia(): void
+    {
+        $this->backupOk();
+        $this->closedByWatcherDuring('envs_get', UpdateStatus::Falhou, [200, [['key' => 'FLUXIE_VERSION', 'value' => '0.1.0', 'is_preview' => false]]]);
+
+        $update = $this->apply();
+
+        $this->assertSame(UpdateStatus::Falhou, $update->status);
+        $this->assertSame([], $this->composeWrites());
+        Http::assertNotSent(fn (Request $r): bool => str_contains($r->url(), '/svc123/restart'));
+    }
+
+    public function test_vigia_devolve_durante_a_gravacao_o_job_nao_reabre_nem_reinicia(): void
+    {
+        $this->backupOk();
+        $this->closedByWatcherDuring('service_patch', UpdateStatus::Revertida, [200, ['message' => 'ok']]);
+
+        $update = $this->apply();
+
+        $this->assertSame(UpdateStatus::Revertida, $update->status);
+        Http::assertNotSent(fn (Request $r): bool => str_contains($r->url(), '/svc123/restart'));
+    }
+
     #[DataProvider('estadosAlemDeConferindo')]
     public function test_job_repetido_em_estado_posterior_nao_chama_nada(UpdateStatus $status): void
     {

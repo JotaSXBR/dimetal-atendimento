@@ -61,6 +61,15 @@ class SystemUpdateTest extends TestCase
         $this->assertSame('Deu ruim.', $update->message);
     }
 
+    public function test_mover_so_vale_se_o_estado_ainda_e_o_esperado(): void
+    {
+        $update = SystemUpdate::start(null, '0.1.0', '0.2.0') ?? throw new \RuntimeException('trava');
+        SystemUpdate::query()->whereKey($update->id)->update(['status' => UpdateStatus::Falhou->value]);
+
+        $this->assertFalse($update->moveTo(UpdateStatus::Backup));
+        $this->assertSame(UpdateStatus::Falhou, $update->refresh()->status);
+    }
+
     public function test_estados_abertos_e_rotulos(): void
     {
         $this->assertSame([UpdateStatus::Conferindo, UpdateStatus::Backup, UpdateStatus::Aplicando, UpdateStatus::Reiniciando], UpdateStatus::openCases());

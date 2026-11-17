@@ -12,7 +12,10 @@ use App\Notifications\UpdateFinished;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Notifications\ChannelManager;
+use Illuminate\Notifications\Events\BroadcastNotificationCreated;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -195,5 +198,57 @@ class UpdateWatchTest extends TestCase
         $this->assertNotNull($event);
         $this->assertSame('* * * * *', $event->expression);
         $this->assertTrue($event->withoutOverlapping);
+    }
+
+    public function test_aplicando_devolvido_pelo_vigia_audita_a_reversao(): void
+    {
+        $this->at(UpdateStatus::Aplicando, 6);
+
+        $this->assertSame(UpdateStatus::Revertida, $this->watch()->status);
+        $this->assertSame(1, AuditLog::query()->where('action', AuditAction::UpdateReverted->value)->count());
+    }
+
+    public function test_reiniciando_ha_mais_de_60_minutos_com_migracao_pendente_falha_sem_tocar_no_coolify(): void
+    {
+        $this->at(UpdateStatus::Reiniciando, 61);
+        config(['fluxie.version' => '0.2.0']);
+        DB::table('migrations')->orderByDesc('id')->limit(1)->delete();
+
+        $update = $this->watch();
+
+        $this->assertSame(UpdateStatus::Falhou, $update->status);
+        $this->assertStringContainsString('docs/deploy.md', (string) $update->message);
+        $this->assertSame(1, AuditLog::query()->where('action', AuditAction::UpdateFailed->value)->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_reiniciando_ha_mais_de_60_minutos_com_versao_desconhecida_falha_sem_tocar_no_coolify(): void
+    {
+        $this->at(UpdateStatus::Reiniciando, 61);
+        config(['fluxie.version' => '0.9.9']);
+
+        $this->assertSame(UpdateStatus::Falhou, $this->watch()->status);
+        Http::assertNothingSent();
+    }
+
+    public function test_reiniciando_com_versao_desconhecida_antes_de_60_minutos_segue_aberto(): void
+    {
+        $this->at(UpdateStatus::Reiniciando, 59);
+        config(['fluxie.version' => '0.9.9']);
+
+        $this->assertSame(UpdateStatus::Reiniciando, $this->watch()->status);
+    }
+
+    public function test_broadcast_que_falha_nao_duplica_o_alerta_no_sino(): void
+    {
+        Notification::swap(new ChannelManager(app())); // envio de verdade: o sino é a linha no banco
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $this->update->moveTo(UpdateStatus::Falhou, 'x');
+        Event::listen(BroadcastNotificationCreated::class, fn () => throw new RuntimeException('reverb fora'));
+
+        $this->assertNull($this->watch()->notified_at); // a linha do sino já existe, o broadcast caiu
+        $this->assertNotNull($this->watch()->notified_at); // quem já tem a linha não recebe outra
+
+        $this->assertSame(1, $admin->notifications()->count());
     }
 }

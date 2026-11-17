@@ -37,7 +37,10 @@ final class ApplyUpdate
 
         try {
             $compose = $this->checked($update);
-            $update->moveTo(UpdateStatus::Backup);
+            if (! $update->moveTo(UpdateStatus::Backup)) {
+                return; // o vigia fechou no meio
+            }
+
             $update->update(['backup_file' => $this->backup()]);
         } catch (RuntimeException $e) {
             $this->fail($update, $e->getMessage());
@@ -95,12 +98,18 @@ final class ApplyUpdate
 
         $current = $envs[self::VERSION_KEY] ?? null;
         $update->update(['previous_compose' => $previous, 'previous_version' => is_string($current) && $current !== '' ? $current : $this->installed->current()]);
-        $update->moveTo(UpdateStatus::Aplicando);
+        if (! $update->moveTo(UpdateStatus::Aplicando)) {
+            return; // o vigia fechou no meio: nada foi gravado
+        }
 
         try {
             $this->coolify->putCompose($compose);
             $this->coolify->setEnv(self::VERSION_KEY, $update->to_version);
-            $update->moveTo(UpdateStatus::Reiniciando);
+
+            if (! $update->moveTo(UpdateStatus::Reiniciando)) {
+                return; // o vigia devolveu enquanto gravava: não reinicia
+            }
+
             $this->coolify->restart(pull: true);
         } catch (Throwable $e) {
             // Qualquer falha depois da primeira escrita devolve; o que não é do Coolify é relançado para ser reportado.
@@ -127,7 +136,10 @@ final class ApplyUpdate
 
     private function close(SystemUpdate $update, UpdateStatus $status, string $message, AuditAction $action): void
     {
-        $update->moveTo($status, $message);
+        if (! $update->moveTo($status, $message)) {
+            return; // já fechada por outro processo: sem segunda auditoria
+        }
+
         Auditor::record($action, $update->requested_by === null ? null : User::query()->find($update->requested_by), $update->to_version, ['message' => $message]);
     }
 

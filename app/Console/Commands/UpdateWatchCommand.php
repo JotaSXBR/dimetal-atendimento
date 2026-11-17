@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Enums\UpdateStatus;
 use App\Models\SystemUpdate;
+use App\Models\User;
 use App\Notifications\UpdateFinished;
 use App\Services\Alerts\AlertRecipients;
 use App\Services\Update\ApplyUpdate;
@@ -51,11 +52,13 @@ class UpdateWatchCommand extends Command
 
     private function watchRestart(SystemUpdate $update, ApplyUpdate $apply, string $running, bool $pending, int $minutes): void
     {
-        if ($this->same($running, $update->to_version)) {
-            // O `migrate` roda só no container `app`: versão nova com migração pendente não é atualização concluída.
-            $pending || $apply->succeed($update);
+        if ($this->same($running, $update->to_version) && ! $pending) {
+            $apply->succeed($update); // o `migrate` roda só no container `app`: com migração pendente não é concluída
         } elseif ($minutes > 10 && $this->same($running, $update->from_version)) {
             $apply->revert($update, 'O sistema não subiu na versão nova.');
+        } elseif ($minutes > 60) {
+            // Versão desconhecida, ou destino com migração pendente: o vigia não mexe no Coolify; destrava para o dono recuperar.
+            $apply->fail($update, 'A atualização não foi confirmada em 60 minutos. O vigia não alterou o Coolify; siga a recuperação do docs/deploy.md.');
         }
     }
 
@@ -77,7 +80,10 @@ class UpdateWatchCommand extends Command
 
         foreach ($finished as $update) {
             try {
-                Notification::send($recipients->admins(), new UpdateFinished($update->status->value, $update->to_version));
+                // O banco grava antes do broadcast: se ele falhar, quem já tem a linha no sino não recebe outra na próxima rodada.
+                $admins = $recipients->admins()->reject(fn (User $admin): bool => $admin->notifications()
+                    ->where('type', UpdateFinished::class)->whereRaw("(data::jsonb ->> 'update_id') = ?", [(string) $update->id])->exists());
+                Notification::send($admins, new UpdateFinished($update->status->value, $update->to_version, $update->id));
             } catch (Throwable $e) {
                 report($e); // sem marcar: o próximo minuto tenta de novo
 

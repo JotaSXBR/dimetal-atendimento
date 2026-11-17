@@ -38,7 +38,7 @@ class BellTest extends TestCase
     {
         $admin = User::factory()->create(['role' => UserRole::ADMIN]);
         foreach (['concluida', 'revertida', 'falhou'] as $state) {
-            $admin->notify(new UpdateFinished($state, '0.2.0'));
+            $admin->notify(new UpdateFinished($state, '0.2.0', 1));
         }
         $this->actingAs($admin);
 

@@ -70,13 +70,18 @@ class SystemUpdate extends Model
         });
     }
 
-    public function moveTo(UpdateStatus $status, ?string $message = null): void
+    /** Compare-and-set: só move se a linha ainda está em `$from` (padrão: o estado que este objeto conhece). Falso = outro processo já mexeu. */
+    public function moveTo(UpdateStatus $status, ?string $message = null, ?UpdateStatus $from = null): bool
     {
-        $this->update([
-            'status' => $status,
+        $moved = static::query()->whereKey($this->id)->where('status', ($from ?? $this->status)->value)->update([
+            'status' => $status->value,
             'message' => $message ?? $this->message,
             'step_at' => now(),
             'finished_at' => $status->isOpen() ? null : now(),
         ]);
+
+        $this->refresh();
+
+        return $moved === 1;
     }
 }
