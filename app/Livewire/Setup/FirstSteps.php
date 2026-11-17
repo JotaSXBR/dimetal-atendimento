@@ -40,7 +40,9 @@ class FirstSteps extends Component
     {
         $this->guard();
 
-        $this->name = CompanySettings::name();
+        // Sem nome salvo, o campo começa vazio: `CompanySettings::name()` devolveria o nome do produto.
+        $saved = Setting::get('company.name');
+        $this->name = is_string($saved) ? $saved : '';
         $this->step = SetupState::step();
         $id = $this->step === 'canal' ? Setting::get(self::CHANNEL_KEY) : null;
         $this->channelId = is_int($id) ? $id : null;

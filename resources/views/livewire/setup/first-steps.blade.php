@@ -4,12 +4,12 @@
         <p class="mt-1 text-sm text-ink-2">Três passos rápidos para deixar a instalação pronta.</p>
     </div>
 
-    <ol class="grid grid-cols-3 gap-2" aria-label="Passos">
+    <ol class="flex gap-2 sm:grid sm:grid-cols-3" aria-label="Passos">
         @foreach (['empresa' => 'Empresa', 'segmento' => 'Segmento', 'canal' => 'Canal'] as $key => $label)
             @php($current = $step === $key)
-            <li @if ($current) aria-current="step" @endif class="flex items-center gap-2 rounded-[10px] border px-3 py-2 text-sm {{ $current ? 'border-accent bg-accent-soft font-semibold text-accent-content' : 'border-line text-ink-3' }}">
+            <li @if ($current) aria-current="step" @endif class="flex min-w-0 items-center gap-2 rounded-[10px] border px-3 py-2 text-sm {{ $current ? 'flex-1' : 'shrink-0' }} {{ $current ? 'border-accent bg-accent-soft font-semibold text-accent-content' : 'border-line text-ink-3' }}">
                 <span class="flex size-6 shrink-0 items-center justify-center rounded-full border border-current text-xs">{{ $loop->iteration }}</span>
-                {{ $label }}
+                <span class="truncate {{ $current ? '' : 'hidden sm:inline' }}">{{ $label }}</span>
             </li>
         @endforeach
     </ol>
@@ -29,7 +29,7 @@
         </section>
 
         <form wire:submit="saveCompany" class="space-y-4 rounded-[14px] border border-line bg-surface p-5">
-            <flux:input label="Nome fantasia" wire:model="name" autofocus />
+            <flux:input label="Nome fantasia" wire:model="name" name="name" autofocus />
 
             <flux:button type="submit" variant="primary">Continuar</flux:button>
         </form>
@@ -59,7 +59,7 @@
 
                 <form wire:submit="createChannel" class="flex items-end gap-2">
                     <div class="flex-1">
-                        <flux:input wire:model="sessionName" label="Nome da sessão" placeholder="principal" />
+                        <flux:input wire:model="sessionName" name="sessionName" label="Nome da sessão" placeholder="principal" />
                     </div>
                     <flux:button type="submit" variant="primary" wire:loading.attr="disabled">Criar canal</flux:button>
                 </form>
@@ -70,7 +70,7 @@
         @endif
 
         <div>
-            <flux:button type="button" variant="ghost" wire:click="skip">Pular, conecto depois</flux:button>
+            <button type="button" wire:click="skip" class="text-sm font-medium text-ink-2 underline underline-offset-2 hover:text-ink">Pular, conecto depois</button>
         </div>
     @endif
 </div>

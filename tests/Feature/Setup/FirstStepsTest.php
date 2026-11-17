@@ -55,6 +55,15 @@ class FirstStepsTest extends TestCase
         $this->assertSame('segmento', SetupState::step());
     }
 
+    public function test_nome_comeca_vazio_na_instalacao_nova_e_vem_preenchido_se_ja_salvo(): void
+    {
+        Livewire::actingAs($this->admin())->test(FirstSteps::class)->assertSet('name', '');
+
+        Setting::put('company.name', 'Dimetal');
+
+        Livewire::actingAs($this->admin())->test(FirstSteps::class)->assertSet('name', 'Dimetal');
+    }
+
     public function test_volta_no_passo_em_que_parou(): void
     {
         SetupState::setStep('canal');
