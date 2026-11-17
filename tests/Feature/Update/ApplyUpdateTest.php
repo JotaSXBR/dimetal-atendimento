@@ -10,6 +10,7 @@ use App\Models\SystemUpdate;
 use App\Services\Backup\BackupFile;
 use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
+use App\Services\Backup\ManualBackupState;
 use App\Services\Backup\Restore\RestoreProgress;
 use App\Services\Backup\RunBackup;
 use App\Services\Update\ApplyUpdate;
@@ -186,6 +187,32 @@ class ApplyUpdateTest extends TestCase
         $update = $this->apply();
 
         $this->assertSame(UpdateStatus::Falhou, $update->status);
+        $this->assertNothingChangedBehaviourInCoolify();
+    }
+
+    /** @return array<string, array{\Closure, string}> */
+    public static function ocupadoDuranteOBackup(): array
+    {
+        return [
+            'restauração' => [fn () => app(RestoreProgress::class)->begin('Restaurando', ['inspect']), 'restauração'],
+            'backup manual' => [fn () => app(ManualBackupState::class)->markStarted(), 'backup'],
+        ];
+    }
+
+    /** A restauração ou o backup manual que começa depois do pré-voo (durante o backup da atualização) ainda barra a troca. */
+    #[DataProvider('ocupadoDuranteOBackup')]
+    public function test_restauracao_ou_backup_que_comeca_durante_o_backup_falha_sem_trocar_nada(\Closure $start, string $contains): void
+    {
+        $this->mock(RunBackup::class, fn (MockInterface $m) => $m->shouldReceive('__invoke')->once()->andReturnUsing(function () use ($start): BackupFile {
+            $start();
+
+            return $this->backupFile();
+        }));
+
+        $update = $this->apply();
+
+        $this->assertSame(UpdateStatus::Falhou, $update->status);
+        $this->assertStringContainsString($contains, (string) $update->message);
         $this->assertNothingChangedBehaviourInCoolify();
     }
 

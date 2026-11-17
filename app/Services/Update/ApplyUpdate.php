@@ -96,6 +96,14 @@ final class ApplyUpdate
             return;
         }
 
+        // A restauração ou o backup manual pode ter começado depois do pré-voo, durante o backup desta atualização.
+        $busy = $this->preflight->busyErrors();
+        if ($busy !== []) {
+            $this->fail($update, implode(' ', $busy));
+
+            return;
+        }
+
         $current = $envs[self::VERSION_KEY] ?? null;
         $update->update(['previous_compose' => $previous, 'previous_version' => is_string($current) && $current !== '' ? $current : $this->installed->current()]);
         if (! $update->moveTo(UpdateStatus::Aplicando)) {

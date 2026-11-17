@@ -175,8 +175,12 @@ final class Preflight
         return ($app['image'] ?? null) === $expected ? [] : ["A imagem do serviço app no docker-compose.yml da Release não é {$expected}."];
     }
 
-    /** @return list<string> */
-    private function busyErrors(): array
+    /**
+     * Restauração ou backup manual em curso (a atualização reconfere antes de gravar no Coolify).
+     *
+     * @return list<string>
+     */
+    public function busyErrors(): array
     {
         return array_values(array_filter([
             $this->restore->isRunning() ? 'Há uma restauração de backup em andamento.' : null,
