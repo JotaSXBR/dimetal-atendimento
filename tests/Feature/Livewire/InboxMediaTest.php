@@ -255,6 +255,17 @@ class InboxMediaTest extends TestCase
             ->assertDontSeeHtml('max-h-72');
     }
 
+    /** O `w-fit` encolhe o contêiner até o conteúdo; sem `max-w-full` a foto (w-72) passa da bolha no celular. */
+    public function test_contener_da_foto_nao_passa_da_bolha(): void
+    {
+        $html = $this->screen(['media_ref' => 'f.jpg', 'media_mime' => 'image/jpeg'])->html();
+
+        $this->assertMatchesRegularExpression('/<div[^>]*class="([^"]*)"[^>]*>\s*<button[^>]*cursor-zoom-in/', $html);
+        preg_match('/<div[^>]*class="([^"]*)"[^>]*>\s*<button[^>]*cursor-zoom-in/', $html, $m);
+        $this->assertContains('w-fit', explode(' ', $m[1]));
+        $this->assertContains('max-w-full', explode(' ', $m[1]));
+    }
+
     public function test_figurinha_nao_ganha_a_caixa_da_foto(): void
     {
         $this->screen(['media_ref' => 's.webp', 'media_mime' => 'image/webp'])->assertDontSeeHtml('data-photo-box')->assertSeeHtml('max-h-40');
