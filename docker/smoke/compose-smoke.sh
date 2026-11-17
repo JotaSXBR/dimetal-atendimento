@@ -75,7 +75,9 @@ echo "6. sem migração pendente e sem migrar fora do app"
 ms=$(dc exec -T worker php artisan migrate:status) || fail "migrate:status falhou"
 ! grep -q Pending <<<"$ms" || fail "migração pendente"
 for s in worker scheduler reverb; do
-  ! dc logs "$s" 2>&1 | grep -q 'Running migrations' || fail "$s rodou migração"
+  # nunca `dc logs | grep -q` com pipefail: o grep fecha o pipe, o logs leva SIGPIPE e o resultado se inverte
+  slogs=$(dc logs "$s" 2>&1)
+  ! grep -q 'Running migrations' <<<"$slogs" || fail "$s rodou migração"
 done
 
 echo "7. imagens de terceiros com versão fixa"
