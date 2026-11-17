@@ -65,15 +65,10 @@ class DefaultSectorsTest extends TestCase
         $this->assertSame(5, Sector::query()->count());
     }
 
-    public function test_agendamento_so_roda_enquanto_a_marca_nao_existe(): void
+    public function test_nao_ha_mais_tarefa_agendada_de_padroes(): void
     {
-        $event = collect(app(Schedule::class)->events())->first(fn (Event $e): bool => $e->description === 'install-default-sectors');
+        $descricoes = collect(app(Schedule::class)->events())->map(fn (Event $e): ?string => $e->description);
 
-        $this->assertNotNull($event, 'O passo agendado install-default-sectors não existe.');
-        $this->assertTrue($event->filtersPass($this->app));
-
-        DefaultSectors::install();
-
-        $this->assertFalse($event->filtersPass($this->app));
+        $this->assertFalse($descricoes->contains('install-default-sectors'));
     }
 }
