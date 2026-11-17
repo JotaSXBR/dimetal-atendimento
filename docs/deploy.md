@@ -64,7 +64,7 @@ botão.
 
    Nunca `root` nem `delete`.
 3. Copie o token: ele aparece uma vez só.
-4. No painel, **Configurações → Sistema → Conexão com o Coolify**: informe a URL do painel do Coolify, cole o token, salve e
+4. No painel, **Configuração → Sistema → Conexão com o Coolify**: informe a URL do painel do Coolify, cole o token, salve e
    use **Testar conexão**. O teste lê o compose, lê e grava as variáveis (regrava o mesmo valor) e confere a permissão
    `deploy` sem reiniciar nada; cada falha aparece em português.
 
@@ -109,7 +109,7 @@ Quando a versão nova não sobe ou a atualização ficou como "falhou":
 
 1. No Coolify, volte o compose da versão anterior (o `docker-compose.yml` da Release dela) e `FLUXIE_VERSION` para a versão
    anterior, e reinicie.
-2. No painel, **Configurações → Backup do banco**, restaure o backup feito logo antes de atualizar: pelo botão, é o que traz a
+2. No painel, **Configuração → Backup do banco**, restaure o backup feito logo antes de atualizar: pelo botão, é o que traz a
    versão anterior no nome.
 
 Backup de versão mais velha restaura em versão mais nova (a restauração roda as migrações). Backup de versão mais nova em
