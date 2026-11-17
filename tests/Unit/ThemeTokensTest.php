@@ -425,4 +425,11 @@ class ThemeTokensTest extends TestCase
 
         $this->assertSame([], $offenders, 'amber-* não acompanha o tema escuro: use bg-warn/10, border-warn/30, text-warn');
     }
+
+    public function test_layout_de_pagina_reserva_a_barra_de_rolagem(): void
+    {
+        $css = (string) file_get_contents(dirname(__DIR__, 2).'/resources/css/app.css');
+
+        $this->assertMatchesRegularExpression('/html:has\(\[data-page-layout\]\)\s*\{[^}]*scrollbar-gutter:\s*stable/', $css);
+    }
 }

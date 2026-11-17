@@ -80,4 +80,16 @@ class SettingsPageTest extends TestCase
             }
         }
     }
+
+    public function test_layout_de_pagina_marca_o_main(): void
+    {
+        foreach (['/configuracoes/setores', '/contatos'] as $url) {
+            $this->assertCount(1, $this->xpath($this->page(UserRole::ADMIN, $url))->query('//*[@role="main"][@data-page-layout]'), $url);
+        }
+    }
+
+    public function test_inbox_nao_marca_o_main(): void
+    {
+        $this->assertStringNotContainsString('data-page-layout', $this->page(UserRole::ADMIN, '/inbox'));
+    }
 }
