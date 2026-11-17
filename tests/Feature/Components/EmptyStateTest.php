@@ -51,7 +51,7 @@ class EmptyStateTest extends TestCase
         $this->assertSame(1, $compact->query('//*[@data-empty-state]//svg')->length);
     }
 
-    public function test_compacto_ocupa_menos_altura_e_classe_do_chamador_se_mistura(): void
+    public function test_compacto_nao_tem_o_circulo_do_icone_e_mistura_a_classe_do_chamador(): void
     {
         $normal = $this->xpath('<x-empty-state title="Nada" />');
         $compact = $this->xpath('<x-empty-state title="Nada" compact class="ms-2" />');
