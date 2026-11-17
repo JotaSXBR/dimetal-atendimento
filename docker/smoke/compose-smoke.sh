@@ -18,6 +18,7 @@ SERVICE_PASSWORD_REDIS=$(hex 16)
 SERVICE_USER_RUSTFS=u$(hex 6)
 SERVICE_PASSWORD_RUSTFS=$(hex 16)
 SERVICE_PASSWORD_WAHA=$(hex 16)
+SERVICE_PASSWORD_SETUP=$(hex 8)
 SERVICE_HEX_32_REVERBKEY=$(hex 16)
 SERVICE_HEX_32_REVERBID=$(hex 16)
 SERVICE_PASSWORD_REVERBSECRET=$(hex 16)
@@ -40,10 +41,10 @@ for s in app worker scheduler reverb waha; do
   wait_for "$s" healthy 180 || { dc logs "$s" | tail -30; fail "$s não ficou healthy"; }
 done
 
-echo "3. /up e /login devolvem 200"
-for p in /up /login; do
-  code=$(dc exec -T app curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$p")
-  [ "$code" = 200 ] || fail "$p devolveu $code"
+echo "3. /up 200; instalação nova: /login redireciona (302) e /instalar abre (200)"
+for pc in /up:200 /login:302 /instalar:200; do
+  code=$(dc exec -T app curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080${pc%:*}")
+  [ "$code" = "${pc#*:}" ] || fail "${pc%:*} devolveu $code (esperado ${pc#*:})"
 done
 
 echo "4. websocket do Reverb em /app devolve 101"

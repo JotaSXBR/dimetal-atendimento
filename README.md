@@ -53,9 +53,22 @@ O `db:seed` cria os cinco setores e, se `ADMIN_EMAIL`/`ADMIN_PASSWORD` estiverem
 administrador inicial. Outros usuários: `php artisan app:create-user email@exemplo.com.br "Nome"
 --role=atendente`.
 
+O `db:seed` também marca a instalação como concluída: localmente não há tela de instalação nem primeiros passos.
+
 ## Instalação no Coolify
 
-O roteiro de instalação (Service de Docker Compose, primeiro acesso e atualização) está em [`docs/deploy.md`](docs/deploy.md).
+Requisitos: Coolify v4 em um servidor com Docker e um domínio (ou subdomínio) apontando para ele.
+
+1. No Coolify, crie um projeto e, nele, um recurso **Service** → **Docker Compose Empty**.
+2. Baixe o `docker-compose.yml` da [Release mais recente](https://github.com/fluxie-tech/fluxie-inbox/releases) e cole o
+   conteúdo no editor do Service. Use sempre o arquivo da Release, não o da `main`.
+3. No serviço `app`, informe o domínio (`https://seu.dominio`). Só o `app` recebe domínio.
+4. Faça o deploy e espere todos os serviços ficarem saudáveis.
+5. Abra `https://seu.dominio` e digite o código de instalação (Coolify → Service → Environment → `SERVICE_PASSWORD_SETUP`).
+   Crie o administrador e siga os primeiros passos: empresa, segmento e canal.
+6. No canal, leia o QR no WhatsApp e confirme que ele fica **Conectado**.
+
+Atualização, backup, Google Contatos e diagnóstico estão em [`docs/deploy.md`](docs/deploy.md).
 
 ## Testes e qualidade
 
