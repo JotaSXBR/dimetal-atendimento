@@ -16,7 +16,7 @@ _coolify_code() {
 # coolify_set_env <applications|services> <uuid> <key> <value>: PATCH e, se a variável não existir (404), POST.
 coolify_set_env() {
   local path="$COOLIFY_URL/api/v1/$1/$2/envs" body code extra='{}'
-  # No Service há duplicata de preview; a de produção é is_preview false. O corpo do staging (Application) fica como estava.
+  # No Service há duplicata de preview; a de produção é is_preview false.
   case "$1" in services) extra='{"is_preview":false}' ;; esac
   body=$(jq -cn --arg k "$3" --arg v "$4" --argjson e "$extra" '{key: $k, value: $v} + $e') || return 1
   code=$(_coolify_code -X PATCH "$path" -d "$body")
@@ -25,44 +25,6 @@ coolify_set_env() {
     200|201) return 0 ;;
     *) echo "Coolify recusou a variável $3 em $1/$2 (HTTP $code)"; return 1 ;;
   esac
-}
-
-# 0 = terminou; 1 = falhou ou estourou o tempo; 2 = o token não pode ler o status
-_coolify_wait_finished() {
-  local code status _
-  for _ in $(seq 1 90); do
-    code=$(curl -s --max-time 30 -o /tmp/deployment.json -w '%{http_code}' \
-      -H "Authorization: Bearer $COOLIFY_API_TOKEN" "$COOLIFY_URL/api/v1/deployments/$1")
-    case "$code" in
-      200) ;;
-      401|403) return 2 ;;
-      *) sleep 20; continue ;;
-    esac
-    status=$(jq -r .status /tmp/deployment.json)
-    case "$status" in
-      finished) return 0 ;;
-      failed|error|cancelled*) echo "deploy $1 terminou como $status"; return 1 ;;
-    esac
-    sleep 20
-  done
-  echo "deploy $1 não terminou a tempo"
-  return 1
-}
-
-# coolify_deploy_wait <uuid[,uuid...]>: enfileira o deploy e espera cada um terminar.
-coolify_deploy_wait() {
-  local ids id rc
-  ids=$(_coolify_api -X POST "$COOLIFY_URL/api/v1/deploy" -d "{\"uuid\":\"$1\"}" | jq -r '.deployments[].deployment_uuid')
-  [ -n "$ids" ] || { echo "Coolify não enfileirou deploy para $1"; return 1; }
-  for id in $ids; do
-    rc=0
-    _coolify_wait_finished "$id" || rc=$?
-    case "$rc" in
-      0) ;;
-      2) echo "::warning::COOLIFY_API_TOKEN sem permissão de leitura: seguindo sem esperar o deploy $id" ;;
-      *) return 1 ;;
-    esac
-  done
 }
 
 # Status do Service (ex.: "running:healthy"). O openapi do Coolify não documenta o campo; o GET devolve `status`.
