@@ -28,7 +28,7 @@
     @if ($decorative) aria-hidden="true" @else role="img" aria-label="{{ $name }}" @endif
     {{ $attributes->class('relative inline-flex flex-none') }}
 >
-    <flux:avatar :name="$name" :initials="$initials" :circle="$round" :size="$size" :color="$accent ? null : 'auto'" :class="$accent ? 'bg-accent text-accent-foreground' : ''" aria-hidden="true" />
+    <flux:avatar :name="$name" :initials="$initials" :circle="$round" :size="$size" :class="$accent ? 'bg-accent text-accent-foreground' : 'bg-accent-soft text-ink-2'" aria-hidden="true" />
     @if ($src)
         <img
             src="{{ $src }}"
