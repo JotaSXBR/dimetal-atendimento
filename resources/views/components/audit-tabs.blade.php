@@ -1,7 +1,8 @@
 @props(['active'])
 
 {{-- As duas auditorias: a de tickets (o que mudou cada atendimento) e a do sistema (acesso, usuários, backup e configurações). --}}
-<nav class="flex gap-1 border-b border-line" aria-label="Tipo de auditoria">
+{{-- Vai no slot `tabs` do x-page-header: a linha de baixo é a do cabeçalho. --}}
+<nav class="flex gap-1" aria-label="Tipo de auditoria">
     @foreach (['tickets' => ['Tickets', 'auditoria'], 'sistema' => ['Sistema', 'auditoria.sistema']] as $key => [$label, $route])
         <a
             href="{{ route($route) }}"

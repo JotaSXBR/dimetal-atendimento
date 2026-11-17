@@ -110,6 +110,20 @@ class SystemLogPageTest extends TestCase
             ->assertSeeHtml('href="'.route('auditoria.sistema').'"')->assertSeeHtml('aria-current="page"');
     }
 
+    public function test_as_abas_ficam_dentro_do_cabecalho_nas_duas_paginas(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+
+        foreach (['/auditoria', '/auditoria/sistema'] as $url) {
+            $dom = new \DOMDocument;
+            @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->actingAs($admin)->get($url)->assertOk()->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+            $xpath = new \DOMXPath($dom);
+
+            $this->assertSame(1, $xpath->query('//*[@data-page-header]//nav[@aria-label="Tipo de auditoria"]')->length, $url);
+            $this->assertSame(1, $xpath->query('//nav[@aria-label="Tipo de auditoria"]')->length, $url);
+        }
+    }
+
     public function test_o_item_auditoria_do_menu_segue_ativo_na_pagina_nova(): void
     {
         $item = collect(Navigation::items())->first(fn ($item): bool => $item->route === 'auditoria');

@@ -19,4 +19,12 @@ class PageHeaderTest extends TestCase
         $this->assertStringContainsString('S', $xpath->query('.//*[@data-flux-subheading]', $root)->item(0)?->textContent ?? '');
         $this->assertSame('Ação', trim($xpath->query('.//*[@data-page-header-actions]//button', $root)->item(0)?->textContent ?? ''));
     }
+
+    public function test_abas_ficam_dentro_do_cabecalho(): void
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->blade('<x-page-header title="T"><x-slot:tabs><nav aria-label="Abas">x</nav></x-slot:tabs></x-page-header>'), LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        $this->assertSame(1, (new \DOMXPath($dom))->query('//*[@data-page-header]//nav[@aria-label="Abas"]')->length);
+    }
 }

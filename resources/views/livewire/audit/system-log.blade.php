@@ -1,7 +1,7 @@
 <section class="mx-auto w-full max-w-6xl space-y-4 p-6">
-    <x-page-header title="Auditoria" subtitle="Eventos do sistema: acesso, usuários, backup e restauração e configurações. Nunca se edita; os registros ficam por 365 dias." />
-
-    <x-audit-tabs active="sistema" />
+    <x-page-header class="mb-6" title="Auditoria" subtitle="Eventos do sistema: acesso, usuários, backup e restauração e configurações. Nunca se edita; os registros ficam por 365 dias.">
+        <x-slot:tabs><x-audit-tabs active="sistema" /></x-slot:tabs>
+    </x-page-header>
 
     <div class="grid gap-3 sm:grid-cols-3">
         <flux:select wire:model.live="period" label="Período">

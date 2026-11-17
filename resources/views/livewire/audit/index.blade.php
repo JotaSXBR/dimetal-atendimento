@@ -1,7 +1,7 @@
 <section class="mx-auto w-full max-w-6xl space-y-4 p-6">
-    <x-page-header title="Auditoria" subtitle="Trilha dos eventos de ticket: assumir, transferir, encerrar e mais. Nunca se edita nem se apaga." />
-
-    <x-audit-tabs active="tickets" />
+    <x-page-header class="mb-6" title="Auditoria" subtitle="Trilha dos eventos de ticket: assumir, transferir, encerrar e mais. Nunca se edita nem se apaga.">
+        <x-slot:tabs><x-audit-tabs active="tickets" /></x-slot:tabs>
+    </x-page-header>
 
     <div class="grid gap-3 sm:grid-cols-3">
         <flux:select wire:model.live="period" label="Período">

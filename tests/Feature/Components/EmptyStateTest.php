@@ -53,11 +53,12 @@ class EmptyStateTest extends TestCase
 
     public function test_compacto_ocupa_menos_altura_e_classe_do_chamador_se_mistura(): void
     {
-        $normal = $this->xpath('<x-empty-state title="Nada" />')->query('//*[@data-empty-state]')->item(0);
-        $compact = $this->xpath('<x-empty-state title="Nada" compact class="ms-2" />')->query('//*[@data-empty-state]')->item(0);
+        $normal = $this->xpath('<x-empty-state title="Nada" />');
+        $compact = $this->xpath('<x-empty-state title="Nada" compact class="ms-2" />');
 
-        $this->assertStringContainsString('p-8', $normal->getAttribute('class'));
-        $this->assertStringContainsString('py-4', $compact->getAttribute('class'));
-        $this->assertStringContainsString('ms-2', $compact->getAttribute('class'));
+        // O compacto é o que fica sem o círculo de 44 px em volta do ícone.
+        $this->assertSame(1, $normal->query('//*[@data-empty-state]/*[@data-empty-state-icon]')->length);
+        $this->assertSame(0, $compact->query('//*[@data-empty-state-icon]')->length);
+        $this->assertStringContainsString('ms-2', $compact->query('//*[@data-empty-state]')->item(0)->getAttribute('class'));
     }
 }
