@@ -1,7 +1,7 @@
 <x-settings-page route="configuracoes.sistema" title="Sistema" subtitle="Versão instalada, novas versões e atualização pelo app." width="3xl">
     <div class="mt-6 space-y-6" @if ($open) wire:poll.3s data-system-update @endif>
         @if ($open)
-            <div data-update-lost hidden role="status" class="rounded-[14px] border border-line bg-surface p-4 text-sm text-ink-2">
+            <div data-update-lost hidden role="status" aria-live="polite" class="sticky top-0 z-10 rounded-[14px] border border-line bg-surface p-4 text-sm text-ink-2 shadow-sm">
                 Atualizando. A página volta sozinha quando o sistema subir.
             </div>
         @endif

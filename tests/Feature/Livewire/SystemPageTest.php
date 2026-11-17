@@ -201,6 +201,8 @@ class SystemPageTest extends TestCase
             ->assertSee('Aplicando')
             ->assertSee('Reiniciando')
             ->assertSeeHtml('wire:poll.3s')
+            // O aviso de "Atualizando" fica preso no topo da janela: com a página rolada ele segue à vista.
+            ->assertSeeHtml('data-update-lost hidden role="status" aria-live="polite" class="sticky top-0')
             ->assertDontSee('Atualizar para');
     }
 
