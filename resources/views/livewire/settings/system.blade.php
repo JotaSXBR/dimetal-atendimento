@@ -124,7 +124,7 @@
                     <p id="confirm-title" class="text-sm font-semibold text-ink">Atualizar para {{ $target }}</p>
                     <div class="mt-2 space-y-2 text-sm text-ink-2">
                         <p>O sistema faz um backup do banco, grava a nova versão no Coolify e reinicia. Fica fora do ar por alguns minutos.</p>
-                        <p>Se a nova versão não subir, o sistema volta sozinho para a anterior.</p>
+                        <p>Se a troca não acontecer, o sistema desfaz sozinho. Se a versão nova subir com erro, siga a recuperação em docs/deploy.md (Atualizar → Rollback).</p>
                         @if ($composeEdited)
                             <p class="text-danger">O compose deste Service no Coolify foi editado à mão. A atualização o substitui pelo da Release; confira se há algo seu para refazer depois.</p>
                         @endif

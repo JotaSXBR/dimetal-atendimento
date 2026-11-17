@@ -191,6 +191,17 @@ class SystemPageTest extends TestCase
         Livewire::actingAs($this->admin())->test(System::class)->call('askUpdate')->assertSet('composeEdited', true)->assertSee('editado');
     }
 
+    /** Só a troca que não acontece se desfaz sozinha; a versão nova que sobe com erro pede a recuperação manual. */
+    public function test_confirmacao_nao_promete_volta_automatica_para_versao_que_sobe_com_erro(): void
+    {
+        $this->fakeWorld();
+
+        Livewire::actingAs($this->admin())->test(System::class)->call('askUpdate')
+            ->assertDontSee('volta sozinho para a anterior')
+            ->assertSee('Se a troca não acontecer, o sistema desfaz sozinho.')
+            ->assertSee('docs/deploy.md (Atualizar → Rollback)');
+    }
+
     public function test_atualizacao_aberta_mostra_os_passos_e_atualiza_sozinha(): void
     {
         SystemUpdate::start(null, '0.1.0', '0.2.0')?->moveTo(UpdateStatus::Backup);
