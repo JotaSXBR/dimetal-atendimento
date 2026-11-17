@@ -1,0 +1,1 @@
+{"uuid":"svc123","name":"fluxie-inbox","status":"running:healthy","docker_compose_raw":"services:\n  app:\n    image: ghcr.io/fluxie-tech/fluxie-inbox:${FLUXIE_VERSION:-0.1.0}\n"}

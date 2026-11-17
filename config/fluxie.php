@@ -14,4 +14,7 @@ return [
 
     'image' => 'ghcr.io/fluxie-tech/fluxie-inbox',
 
+    /** UUID do Service desta instalação no Coolify (o compose da Release o declara). */
+    'resource_uuid' => env('COOLIFY_RESOURCE_UUID'),
+
 ];
