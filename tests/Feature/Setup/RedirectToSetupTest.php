@@ -40,8 +40,8 @@ class RedirectToSetupTest extends TestCase
     {
         $this->startFreshInstall();
 
-        $this->assertNotSame(url('/instalar'), $this->post('/webhooks/waha')->headers->get('Location'));
-        $this->assertNotSame(url('/instalar'), $this->get('/marca/logo')->headers->get('Location'));
+        $this->assertNotSame(302, $this->post('/webhooks/waha')->getStatusCode());
+        $this->assertNotSame(302, $this->get('/marca/logo')->getStatusCode());
     }
 
     public function test_instalacao_concluida_nao_redireciona(): void
