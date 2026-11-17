@@ -13,10 +13,12 @@ use App\Services\Backup\DumpFailed;
 use App\Services\Backup\Restore\RestoreProgress;
 use App\Services\Backup\RunBackup;
 use App\Services\Update\ApplyUpdate;
+use App\Settings\UpdateSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
@@ -287,6 +289,51 @@ class ApplyUpdateTest extends TestCase
         $compose = $this->composeWrites();
         $this->assertSame(base64_encode(self::CURRENT_COMPOSE), end($compose)->data()['docker_compose_raw']);
         Http::assertNotSent(fn (Request $r): bool => str_contains($r->url(), '/svc123/restart'));
+    }
+
+    public function test_erro_inesperado_depois_da_primeira_escrita_tambem_devolve_e_e_relancado(): void
+    {
+        $this->envs['FLUXIE_VERSION'] = '0.1.0';
+        $this->backupOk();
+        $this->world['envs_patch'] = function (Request $r) {
+            $r['value'] === '0.2.0' && throw new RuntimeException('falha que não é do Coolify');
+
+            return Http::response(['uuid' => 'e'], 200);
+        };
+        $this->fakeWorld();
+
+        try {
+            app(ApplyUpdate::class)($this->update);
+            $this->fail('Esperava a exceção inesperada relançada.');
+        } catch (RuntimeException $e) {
+            $this->assertSame('falha que não é do Coolify', $e->getMessage());
+        }
+
+        $this->assertSame(UpdateStatus::Revertida, $this->update->refresh()->status);
+        $compose = $this->composeWrites();
+        $this->assertSame(base64_encode(self::CURRENT_COMPOSE), end($compose)->data()['docker_compose_raw']);
+        $this->assertSame('0.1.0', $this->envs['FLUXIE_VERSION']);
+        $this->assertNotNull($this->audit(AuditAction::UpdateReverted));
+    }
+
+    public function test_o_token_nunca_aparece_no_estado_na_auditoria_nem_no_log(): void
+    {
+        $token = 'tok-secreto-123';
+        UpdateSettings::setToken($token);
+        Log::spy();
+        $this->envs['FLUXIE_VERSION'] = '0.1.0';
+        $this->backupOk();
+        $this->world['restart'] = [500, ['message' => "erro com {$token}"]];
+
+        $this->assertSame(UpdateStatus::Revertida, $this->apply()->status);
+
+        // Mesmo com o painel ecoando o token no corpo do erro, nada que o app grava ou registra o leva.
+        $failed = SystemUpdate::start(null, '0.2.0', '0.3.0') ?? throw new RuntimeException('trava');
+        (new ApplyUpdateJob($failed->id))->failed(new RuntimeException('erro de rede'));
+        $stored = json_encode([SystemUpdate::query()->get()->toArray(), AuditLog::query()->get()->toArray()], JSON_UNESCAPED_UNICODE);
+        $this->assertStringNotContainsString($token, (string) $stored);
+        Log::shouldNotHaveReceived('error', fn (string $message, array $context = []): bool => str_contains($message.json_encode($context), $token));
+        Http::assertSent(fn (Request $r): bool => $r->hasHeader('Authorization', 'Bearer '.$token)); // o token foi usado de fato
     }
 
     public function test_se_a_devolucao_tambem_falha_fica_falhou_com_o_caminho_da_recuperacao(): void

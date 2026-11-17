@@ -11,6 +11,7 @@ use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
 use App\Services\Backup\RunBackup;
 use RuntimeException;
+use Throwable;
 
 /**
  * Conferências, backup novo e troca do compose e da versão no Coolify. Nada muda no Coolify antes de tudo passar; depois da primeira
@@ -95,8 +96,10 @@ final class ApplyUpdate
             $this->coolify->setEnv(self::VERSION_KEY, $update->to_version);
             $update->moveTo(UpdateStatus::Reiniciando);
             $this->coolify->restart(pull: true);
-        } catch (CoolifyException $e) {
-            $this->revert($update, $e->getMessage());
+        } catch (Throwable $e) {
+            // Qualquer falha depois da primeira escrita devolve; o que não é do Coolify é relançado para ser reportado.
+            $this->revert($update, $e instanceof CoolifyException ? $e->getMessage() : 'Erro inesperado ao aplicar a atualização.');
+            $e instanceof CoolifyException || throw $e;
         }
     }
 
@@ -106,8 +109,9 @@ final class ApplyUpdate
         try {
             $this->coolify->putCompose($update->previous_compose ?? throw new CoolifyException('O compose anterior não ficou guardado.'));
             $this->coolify->setEnv(self::VERSION_KEY, $update->previous_version ?? throw new CoolifyException('A versão anterior não ficou guardada.'));
-        } catch (CoolifyException $e) {
-            $this->fail($update, "{$reason} Não foi possível devolver o compose e a versão anteriores ({$e->getMessage()}). Siga a recuperação do docs/deploy.md.");
+        } catch (Throwable $e) {
+            $why = $e instanceof CoolifyException ? $e->getMessage() : 'erro inesperado';
+            $this->fail($update, "{$reason} Não foi possível devolver o compose e a versão anteriores ({$why}). Siga a recuperação do docs/deploy.md.");
 
             return;
         }
