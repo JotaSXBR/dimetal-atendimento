@@ -12,8 +12,10 @@ use App\Models\User;
 use App\Notifications\ChannelDown;
 use App\Notifications\ChannelNumberChanged;
 use App\Notifications\MessagesRecovered;
+use App\Notifications\NewVersionAvailable;
 use App\Notifications\SlaBreached;
 use App\Notifications\SlaWarning;
+use App\Notifications\UpdateFinished;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -21,6 +23,28 @@ use Tests\TestCase;
 class BellTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_versao_nova_mostra_o_numero_e_nao_o_alerta_generico(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $admin->notify(new NewVersionAvailable('0.2.0'));
+
+        $this->actingAs($admin);
+
+        Livewire::test(Bell::class)->assertSee('Versão 0.2.0 disponível')->assertSee('Configuração > Sistema');
+    }
+
+    public function test_fim_da_atualizacao_mostra_os_tres_estados(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        foreach (['concluida', 'revertida', 'falhou'] as $state) {
+            $admin->notify(new UpdateFinished($state, '0.2.0', 1));
+        }
+        $this->actingAs($admin);
+
+        Livewire::test(Bell::class)->assertSee('Sistema atualizado para 0.2.0')->assertSee('Atualização para 0.2.0 desfeita')
+            ->assertSee('Atualização para 0.2.0 falhou')->assertSee('Configuração > Sistema');
+    }
 
     public function test_lista_so_as_do_usuario_logado_e_conta_as_nao_lidas(): void
     {

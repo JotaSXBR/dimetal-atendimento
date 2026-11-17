@@ -43,6 +43,10 @@ final class AuditLogText
             AuditAction::ChannelCreated => "{$who} criou o canal {$subject}",
             AuditAction::ChannelDeleted => "{$who} apagou o canal {$subject}",
             AuditAction::RetentionPurgeRequested => "{$who} pediu o expurgo de anexos antigos",
+            AuditAction::UpdateRequested => "{$who} pediu a atualização para {$subject}",
+            AuditAction::UpdateSucceeded => "Atualização para {$subject} concluída, pedida por {$who}.",
+            AuditAction::UpdateReverted => trim("Atualização para {$subject} desfeita, pedida por {$who}. ".self::message($log)),
+            AuditAction::UpdateFailed => trim("Atualização para {$subject} falhou, pedida por {$who}. ".self::message($log)),
         };
     }
 

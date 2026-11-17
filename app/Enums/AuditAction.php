@@ -25,6 +25,10 @@ enum AuditAction: string
     case ChannelCreated = 'channel.created';
     case ChannelDeleted = 'channel.deleted';
     case RetentionPurgeRequested = 'retention.purge_requested';
+    case UpdateRequested = 'update.requested';
+    case UpdateSucceeded = 'update.succeeded';
+    case UpdateReverted = 'update.reverted';
+    case UpdateFailed = 'update.failed';
 
     public function label(): string
     {
@@ -49,6 +53,10 @@ enum AuditAction: string
             self::ChannelCreated => 'Canal criado',
             self::ChannelDeleted => 'Canal apagado',
             self::RetentionPurgeRequested => 'Expurgo de anexos pedido',
+            self::UpdateRequested => 'Atualização pedida',
+            self::UpdateSucceeded => 'Atualização concluída',
+            self::UpdateReverted => 'Atualização desfeita',
+            self::UpdateFailed => 'Atualização falhou',
         };
     }
 
@@ -58,7 +66,7 @@ enum AuditAction: string
             self::Login, self::LoginFailed, self::Logout => 'Acesso',
             self::UserCreated, self::UserUpdated, self::UserRoleChanged, self::UserPasswordSet, self::UserDeactivated, self::UserActivated => 'Usuários',
             self::BackupDownloaded, self::BackupManualRequested, self::RestoreRequested, self::RestoreSucceeded, self::RestoreFailed, self::RestoreSwitched => 'Backup',
-            self::GoogleConnected, self::GoogleDisconnected, self::ChannelCreated, self::ChannelDeleted, self::RetentionPurgeRequested => 'Configurações',
+            self::GoogleConnected, self::GoogleDisconnected, self::ChannelCreated, self::ChannelDeleted, self::RetentionPurgeRequested, self::UpdateRequested, self::UpdateSucceeded, self::UpdateReverted, self::UpdateFailed => 'Configurações',
         };
     }
 

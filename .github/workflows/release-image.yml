@@ -3,6 +3,7 @@ name: release-image
 # Imagem versionada ghcr.io/fluxie-tech/fluxie-inbox.
 #  - push verde na main (workflow_run do `tests`): publica `edge` e `sha-<sha>` e atualiza o staging.
 #  - Release `vX.Y.Z`: promove `sha-<sha do commit da tag>` para `X.Y.Z` e `X.Y`, anexa o compose da versão e atualiza a production.
+#  - Pré-release `vX.Y.Z-pre` (ex.: `v0.0.0-teste.1`): promove só para `X.Y.Z-pre` e anexa o compose; a production não é tocada.
 # Sem COOLIFY_STAGING_UUID / COOLIFY_PRODUCTION_UUID o workflow publica e pula o deploy com um aviso.
 on:
   workflow_run:
@@ -43,6 +44,10 @@ jobs:
 
       - name: Compose smoke test
         run: bash docker/smoke/compose-smoke.sh "$IMAGE:sha-$SHA"
+
+      # Regra do compose: a candidata aplicada por cima da instalação da última Release (compose e imagem dela).
+      - name: Upgrade smoke test
+        run: bash docker/smoke/upgrade-smoke.sh "$IMAGE:sha-$SHA"
 
       - name: Log in to GHCR
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
@@ -100,7 +105,7 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           source .github/scripts/coolify.sh
-          out=$(release_tags "$TAG") || { echo "::error::Tag $TAG fora do padrão vX.Y.Z"; exit 1; }
+          out=$(release_tags "$TAG") || { echo "::error::Tag $TAG fora do padrão vX.Y.Z[-pré-release]"; exit 1; }
           read -r full minor <<< "$out"
           echo "version=$full" >> "$GITHUB_OUTPUT"
           echo "minor=$minor" >> "$GITHUB_OUTPUT"
@@ -112,7 +117,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # github.sha numa Release é o commit da tag.
+      # github.sha numa Release é o commit da tag. Pré-release não tem MINOR: o apelido X.Y é só de versão estável.
       - name: Promote sha tag to X.Y.Z and X.Y
         env:
           SHA: ${{ github.sha }}
@@ -121,7 +126,9 @@ jobs:
         run: |
           docker buildx imagetools inspect "$IMAGE:sha-$SHA" >/dev/null ||
             { echo "::error::Imagem $IMAGE:sha-$SHA não existe: o commit da tag não passou pelo push verde na main"; exit 1; }
-          docker buildx imagetools create -t "$IMAGE:$FULL" -t "$IMAGE:$MINOR" "$IMAGE:sha-$SHA"
+          tags=(-t "$IMAGE:$FULL")
+          [ -z "$MINOR" ] || tags+=(-t "$IMAGE:$MINOR")
+          docker buildx imagetools create "${tags[@]}" "$IMAGE:sha-$SHA"
 
   compose-asset:
     needs: retag
@@ -143,14 +150,20 @@ jobs:
           pattern='\$\{FLUXIE_VERSION:-[^}]*\}'
           grep -qE "$pattern" docker-compose.yml || { echo "::error::docker-compose.yml sem FLUXIE_VERSION"; exit 1; }
           sed -E "s#$pattern#\${FLUXIE_VERSION:-$VERSION}#g" docker-compose.yml > "$RUNNER_TEMP/docker-compose.yml"
-          grep -qF "FLUXIE_VERSION:-$VERSION}" "$RUNNER_TEMP/docker-compose.yml" || { echo "::error::troca da versão não aconteceu"; exit 1; }
+          [ "$(grep -cF "FLUXIE_VERSION:-$VERSION}" "$RUNNER_TEMP/docker-compose.yml")" = 2 ] || { echo "::error::esperava 2 trocas da versão (imagem e ambiente)"; exit 1; }
           cp "$RUNNER_TEMP/docker-compose.yml" docker-compose.yml
           gh release upload "$TAG" docker-compose.yml --clobber
 
+  # Este job só faz a primeira subida da production (0.1.0 -> primeira versão com o botão Atualizar); um PR depois dessa Release
+  # o remove, e dali em diante a production se atualiza pelo botão, como os terceiros. Sem backup antes: a production ainda não
+  # tem número nem uso. Grava o compose da Release (o asset que o compose-asset acabou de anexar, o mesmo que terceiros colam) e
+  # FLUXIE_VERSION; se gravar ou reiniciar falhar, devolve compose e versão guardados (hoje 0.1.0, sem a variável gravada),
+  # reinicia sem pull na versão anterior e falha. timeout-minutes cobre os dois restarts (~11 min cada) com folga.
   production:
     needs: [retag, compose-asset]
+    if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-slim
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -160,10 +173,12 @@ jobs:
         env:
           UUID: ${{ secrets.COOLIFY_PRODUCTION_UUID }}
           VERSION: ${{ needs.retag.outputs.version }}
+          TAG: ${{ github.event.release.tag_name }}
+          GH_TOKEN: ${{ github.token }}
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
         run: |
           [ -n "$UUID" ] || { echo "::notice::COOLIFY_PRODUCTION_UUID não definido: imagem promovida, atualização da production pulada"; exit 0; }
+          gh release download "$TAG" -p docker-compose.yml -D "$RUNNER_TEMP/release"
           source .github/scripts/coolify.sh
-          coolify_set_env services "$UUID" FLUXIE_VERSION "$VERSION"
-          coolify_restart_service "$UUID"
+          coolify_update_service "$UUID" "$RUNNER_TEMP/release/docker-compose.yml" "$VERSION"

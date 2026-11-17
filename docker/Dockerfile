@@ -56,6 +56,7 @@ FROM base AS runtime
 
 ARG VERSION=dev
 LABEL org.opencontainers.image.version="${VERSION}"
+ENV FLUXIE_BUILD=${VERSION}
 
 USER root
 

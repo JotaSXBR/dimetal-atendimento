@@ -60,6 +60,20 @@ class BackupsPageTest extends TestCase
             ->assertSee(route('configuracoes.backups.baixar', 'dimetal-2026-11-12-0215-diario.dump'), false);
     }
 
+    public function test_lista_mostra_a_versao_em_que_o_backup_foi_feito(): void
+    {
+        Storage::disk('backups')->put('fluxie-2026-11-16-0300-antes-v0.3.0.dump', 'x');
+        Storage::disk('backups')->put('fluxie-2026-11-15-0300-diario.dump', 'x');
+
+        $html = Livewire::actingAs($this->admin())->test(Backups::class)
+            ->assertSee('fluxie-2026-11-16-0300-antes-v0.3.0.dump')
+            ->assertSee('feito na 0.3.0')
+            ->assertSee('fluxie-2026-11-15-0300-diario.dump')
+            ->html();
+
+        $this->assertSame(1, substr_count($html, 'feito na'));
+    }
+
     public function test_estado_vazio_sem_backups(): void
     {
         Livewire::actingAs($this->admin())->test(Backups::class)->assertSee('Nenhum backup ainda');

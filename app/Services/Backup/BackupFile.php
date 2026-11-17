@@ -12,5 +12,7 @@ final readonly class BackupFile
         public BackupKind $kind,
         public CarbonImmutable $createdAt,
         public int $size,
+        /** A versão do sistema em que foi feito; `null` nos nomes antigos e nos de desenvolvimento. */
+        public ?string $version = null,
     ) {}
 }

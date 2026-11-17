@@ -2,36 +2,13 @@
 # Fumaça do docker-compose.yml: sobe app, worker, scheduler e reverb e confere o que o Coolify vai depender.
 # Uso: compose-smoke.sh <imagem-local>. Derruba tudo no fim (down -v), mesmo em falha.
 set -euo pipefail
-export MSYS_NO_PATHCONV=1 # Git Bash no Windows converte caminhos como /up
 IMG="${1:?uso: compose-smoke.sh <imagem-local>}"
-cd "$(dirname "$0")/../.."
+SMOKE_PROJECT=fluxie-smoke
+# O override só encurta a espera do passo 8; o resto é o docker-compose.yml como o Coolify o usa.
+SMOKE_FILES=(-f docker-compose.yml -f docker/smoke/compose.override.yml)
+source "$(dirname "$0")/lib.sh"
 export FLUXIE_VERSION=smoke
 docker tag "$IMG" ghcr.io/fluxie-tech/fluxie-inbox:smoke
-# Valores aleatórios a cada execução, no formato que o Coolify gera; nada parecido com segredo fica versionado.
-ENVF=$(mktemp)
-hex() { openssl rand -hex "$1"; }
-cat >"$ENVF" <<ENV
-SERVICE_URL_APP=http://localhost:8080
-SERVICE_REALBASE64_32_APPKEY=$(openssl rand -base64 32)
-SERVICE_PASSWORD_POSTGRES=$(hex 16)
-SERVICE_PASSWORD_REDIS=$(hex 16)
-SERVICE_USER_RUSTFS=u$(hex 6)
-SERVICE_PASSWORD_RUSTFS=$(hex 16)
-SERVICE_PASSWORD_WAHA=$(hex 16)
-SERVICE_PASSWORD_SETUP=$(hex 8)
-SERVICE_HEX_32_REVERBKEY=$(hex 16)
-SERVICE_HEX_32_REVERBID=$(hex 16)
-SERVICE_PASSWORD_REVERBSECRET=$(hex 16)
-ENV
-# O override só encurta a espera do passo 8; o resto é o docker-compose.yml como o Coolify o usa.
-dc() { docker compose -p fluxie-smoke -f docker-compose.yml -f docker/smoke/compose.override.yml --env-file "$(cygpath -m "$ENVF" 2>/dev/null || echo "$ENVF")" "$@"; }
-trap 'dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -f "$ENVF"' EXIT
-fail() { echo "FALHA: $*"; exit 1; }
-status() { docker inspect -f '{{.State.Health.Status}}' "$(dc ps -q "$1")" 2>/dev/null || echo none; }
-wait_for() { # <serviço> <estado> <segundos>
-  for _ in $(seq 1 "$(($3 / 3))"); do [ "$(status "$1")" = "$2" ] && return 0; sleep 3; done
-  return 1
-}
 
 echo "1. compose config válido"
 dc config -q

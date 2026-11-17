@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Enums\AuditAction;
 use App\Jobs\RestoreDatabaseJob;
+use App\Models\SystemUpdate;
 use App\Services\Audit\Auditor;
 use App\Services\Backup\BackupCatalog;
 use App\Services\Backup\BackupFile;
@@ -57,6 +58,8 @@ class Backups extends Component
     /** Tempo do trinco de despacho: cobre um `blocker()` lento (conexão ao banco de administração) sem soltar o trinco antes da hora. */
     public const DISPATCH_LOCK_SECONDS = 120;
 
+    private const UPDATE_RUNNING = 'Há uma atualização do sistema em andamento; espere ela terminar.';
+
     public function mount(): void
     {
         $this->authorize('admin');
@@ -69,6 +72,12 @@ class Backups extends Component
 
         if (app(RestoreProgress::class)->isRunning()) {
             $this->problem = 'Há uma restauração em andamento; espere ela terminar para fazer um backup.';
+
+            return;
+        }
+
+        if (SystemUpdate::open() !== null) {
+            $this->problem = self::UPDATE_RUNNING;
 
             return;
         }
@@ -296,6 +305,10 @@ class Backups extends Component
 
         if (app(RestoreProgress::class)->isRunning()) {
             return 'Já há uma restauração em andamento.';
+        }
+
+        if (SystemUpdate::open() !== null) {
+            return self::UPDATE_RUNNING;
         }
 
         $environment = app(Maintenance::class)->problem();

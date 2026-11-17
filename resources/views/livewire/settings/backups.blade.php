@@ -115,6 +115,7 @@
                     <p class="font-mono text-sm break-all text-ink">{{ $file->name }}</p>
                     <p class="mt-0.5 text-xs text-ink-3">
                         {{ $file->kind->label() }} · {{ $file->createdAt->format('d/m/Y H:i') }} · {{ number_format($file->size / 1_000_000, 1, ',', '.') }} MB
+                        @if ($file->version)<span class="whitespace-nowrap"> · feito na {{ $file->version }}</span>@endif
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">

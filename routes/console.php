@@ -1,5 +1,6 @@
 <?php
 
+use App\Settings\UpdateSettings;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -25,6 +26,10 @@ Schedule::command('app:purge-notifications')->dailyAt('03:45')->withoutOverlappi
 Schedule::command('app:purge-waha-events')->dailyAt('03:50')->withoutOverlapping(10);
 // A auditoria do sistema guarda IP e e-mail digitado: 365 dias.
 Schedule::command('app:purge-audit-logs')->dailyAt('03:55')->withoutOverlapping(10);
+// Consulta as Releases do GitHub às 07:40 do horário de exibição; o interruptor é lido na hora de rodar.
+Schedule::command('app:check-releases')->dailyAt('07:40')->timezone(config()->string('app.display_timezone'))->when(fn (): bool => UpdateSettings::checkEnabled())->withoutOverlapping(10);
+// Fecha, devolve ou avisa a atualização do sistema que ficou aberta: a trava com backup e restauração não pode ficar presa.
+Schedule::command('app:update-watch')->everyMinute()->withoutOverlapping(10);
 Schedule::command('app:recover-messages')->dailyAt('04:15')->withoutOverlapping(10);
 
 // Em segundo plano, para uma rodada lenta não atrasar as demais tarefas do minuto (elas rodam em sequência).

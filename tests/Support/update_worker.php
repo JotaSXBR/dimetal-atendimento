@@ -1,0 +1,15 @@
+<?php
+
+/**
+ * Processo separado do SystemUpdateConcurrencyTest: tenta abrir uma atualização. Uso: php update_worker.php
+ */
+
+use App\Models\SystemUpdate;
+use Illuminate\Contracts\Console\Kernel;
+
+require __DIR__.'/../../vendor/autoload.php';
+
+$app = require __DIR__.'/../../bootstrap/app.php';
+$app->make(Kernel::class)->bootstrap();
+
+echo SystemUpdate::start(null, '0.1.0', '0.3.0') === null ? 'REFUSED' : 'CREATED';

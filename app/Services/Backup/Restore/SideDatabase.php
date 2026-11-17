@@ -57,12 +57,12 @@ class SideDatabase
      *
      * @throws RestoreRejected
      */
-    public function verify(string $database): void
+    public function verify(string $database, ?string $version = null): void
     {
         AdminDatabase::assertName($database);
 
         try {
-            $this->check($database);
+            $this->check($database, $version);
         } finally {
             // Sessão aberta no banco novo impediria a troca por renomeação.
             $this->admin->forget('pgsql_side');
@@ -100,7 +100,7 @@ class SideDatabase
     }
 
     /** @throws RestoreRejected */
-    private function check(string $database): void
+    private function check(string $database, ?string $version): void
     {
         $db = $this->admin->connectionTo($database, 'pgsql_side');
 
@@ -119,9 +119,19 @@ class SideDatabase
             throw new RestoreRejected('O backup não tem nenhum administrador ativo: depois de restaurar ninguém conseguiria entrar.');
         }
 
+        $this->assertKnownMigrations($db, $version);
+    }
+
+    /** @throws RestoreRejected */
+    private function assertKnownMigrations(Connection $db, ?string $version): void
+    {
         $known = array_map(fn (string $file): string => basename($file, '.php'), glob(database_path('migrations/*.php')) ?: []);
         $stored = array_column($this->admin->query($db, 'select migration from migrations'), 'migration');
         $unknown = array_values(array_diff(array_map(fn (mixed $name): string => is_scalar($name) ? (string) $name : '', $stored), $known));
+
+        if ($unknown !== [] && $version !== null) {
+            throw new RestoreRejected("Este backup foi feito numa versão mais nova ($version). Atualize o sistema para essa versão antes de restaurar.");
+        }
 
         if ($unknown !== []) {
             throw new RestoreRejected('O backup é de uma versão mais nova do sistema (migrações desconhecidas: '.implode(', ', array_slice($unknown, 0, 3)).').');

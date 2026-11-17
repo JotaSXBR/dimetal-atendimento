@@ -43,6 +43,7 @@ class Navigation
             $item('Empresa e assinatura', 'configuracoes.empresa', 'admin', $config, 'Empresa', 'building-office'),
             $item('Anexos e retenção', 'configuracoes.retencao', 'admin', $config, 'Empresa', 'trash'),
             $item('Backup do banco', 'configuracoes.backups', 'admin', $config, 'Empresa', 'circle-stack', 'configuracoes.backups*'),
+            $item('Sistema', 'configuracoes.sistema', 'admin', $config, 'Empresa', 'arrow-path'),
         ];
     }
 

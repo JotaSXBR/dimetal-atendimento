@@ -44,6 +44,14 @@ Branch `feat/assistente-primeiro-acesso`, revisão final.
 
 Nenhum pendente. P1, P3 e P5 corrigidos no branch (transação, tela limpa com Sair, `id` e `name` na busca).
 
+## Menores adiados da atualização pelo app (17/11/2026, `feat/atualizacao-pelo-app`)
+
+- Alerta "Versão X disponível" continua no sino depois que a atualização para X concluiu; avaliar marcar como lido ao concluir
+  (`app/Console/Commands/UpdateWatchCommand.php`, `app/Notifications/NewVersionAvailable.php`).
+- `tests/Feature/Backup/Restore/SideDatabaseTest.php` `test_verify_nao_deixa_conexao_aberta_no_banco_novo` falhou 1 vez em
+  `--parallel` (conta conexões abertas; passa isolado e na rodada seguinte): teste instável.
+- `tests/Unit/ProductionDependenciesTest.php` só lê `use` no topo; classe de pacote escrita por inteiro no código não é vista.
+
 ## Pendências maiores já combinadas (não são menores de revisão)
 
 - Modernizar o `phpmd.xml` com o PHPMD mais recente.

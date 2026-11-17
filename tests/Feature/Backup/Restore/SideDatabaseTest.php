@@ -240,6 +240,16 @@ class SideDatabaseTest extends TestCase
         $this->side->verify($this->database);
     }
 
+    public function test_verify_cita_a_versao_do_backup_na_migracao_desconhecida(): void
+    {
+        $this->schema(migration: '2099_01_01_000000_do_futuro');
+
+        $this->expectException(RestoreRejected::class);
+        $this->expectExceptionMessage('Este backup foi feito numa versão mais nova (0.4.0). Atualize o sistema para essa versão antes de restaurar.');
+
+        $this->side->verify($this->database, '0.4.0');
+    }
+
     public function test_verify_recusa_tabela_faltando(): void
     {
         $this->schema(withTickets: false);

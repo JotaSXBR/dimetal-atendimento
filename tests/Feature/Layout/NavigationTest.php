@@ -68,7 +68,7 @@ class NavigationTest extends TestCase
             'Atendimento' => ['Setores', 'Horário e SLA', 'Respostas rápidas', 'Etiquetas'],
             'Equipe' => ['Usuários'],
             'Conexões' => ['Canais', 'Google Contatos'],
-            'Empresa' => ['Empresa e assinatura', 'Anexos e retenção', 'Backup do banco'],
+            'Empresa' => ['Empresa e assinatura', 'Anexos e retenção', 'Backup do banco', 'Sistema'],
         ], $groups(UserRole::ADMIN));
     }
 

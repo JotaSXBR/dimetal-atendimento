@@ -46,11 +46,12 @@ os hooks do projeto.
 | `implementador` | sonnet, medium | uma tarefa do plano, com TDD; `haiku` quando o plano traz o código completo e a tarefa toca 1 a 2 arquivos |
 | `revisor-tarefa` | sonnet, medium | revisão de spec e qualidade de cada tarefa (molde da skill SDD) |
 | `revisor-final` | opus, low | revisão do branch inteiro no portão 6 (molde `code-reviewer.md`) |
+| `revisor-design` | sonnet, medium | builder check da spec no portão 1 (molde `builder-check-prompt.md`), e de novo quando a spec é reescrita |
 | `Explore` | haiku, low | busca só fora do índice do CodeGraph: `vendor/` (Livewire, Flux), Blade, migrations, `docs/` |
 | `leitor-web-logs` | haiku, low | páginas da web na pesquisa e logs grandes (Coolify, WAHA, saída de teste) |
-| `conferente-visual` | sonnet, medium | conferência no navegador pelo Claude in Chrome (servidor local ou staging): layout, foco, medidas, console e CSP |
+| `conferente-visual` | sonnet, medium | conferência no navegador (Claude in Chrome; chrome-devtools para as resoluções), servidor local ou staging: layout, foco, medidas, console e CSP |
 
-Builder-check do brainstorming e investigações em paralelo: subagente comum com `sonnet`, `medium`. Ciclo de correção da SDD
+Investigações em paralelo: subagente comum com `sonnet`, `medium`; nunca `general-purpose` para papel que tem agente acima. Ciclo de correção da SDD
 nas rodadas 4 e 5: um modelo acima do implementador. Mudar um destes é decisão do dono.
 
 ## Pesquisa antes de feature nova
