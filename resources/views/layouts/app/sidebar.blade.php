@@ -3,9 +3,9 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
+    <body class="min-h-screen bg-surface">
         {{-- --sidebar-bg: fundo da sidebar, também usado no anel do ponto da Fila (uma só fonte para as duas cores). --}}
-        <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-(--sidebar-bg) [--sidebar-bg:var(--color-zinc-50)] dark:border-zinc-700 dark:[--sidebar-bg:var(--color-zinc-900)]">
+        <flux:sidebar sticky collapsible class="border-e border-line bg-(--sidebar-bg) [--sidebar-bg:var(--color-canvas)]">
             <flux:sidebar.header class="in-data-flux-sidebar-collapsed-desktop:flex-col in-data-flux-sidebar-collapsed-desktop:items-center in-data-flux-sidebar-collapsed-desktop:gap-3">
                 {{-- Fechada, o Flux tira a marca do fluxo no hover e só então mostra o botão de colapso: sem mouse (toque, teclado) não haveria como
                      reabrir, e o sino pulava de lugar. Aqui a marca fica fixa e o botão fica sempre à vista. A ordem do DOM é a ordem visual nos dois

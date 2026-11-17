@@ -432,4 +432,21 @@ class ThemeTokensTest extends TestCase
 
         $this->assertMatchesRegularExpression('/html:has\(\[data-page-layout\]\)[^{]*\{[^}]*scrollbar-gutter\s*:\s*stable/', $css);
     }
+
+    /** Layouts de entrada (`layouts/auth/`) ficam de fora: entram na fatia 6 do redesenho, com fundo e cartão próprios. */
+    public function test_layouts_nao_usam_zinc_nem_branco_cru(): void
+    {
+        $layouts = dirname(__DIR__, 2).'/resources/views/layouts';
+        $files = [$layouts.'/app.blade.php', $layouts.'/inbox.blade.php', $layouts.'/setup.blade.php', ...glob($layouts.'/app/*.blade.php')];
+        $offenders = [];
+        foreach ($files as $file) {
+            foreach (file($file) ?: [] as $n => $line) {
+                if (preg_match('/bg-white|dark:bg-zinc-|border-zinc-|var\(--color-zinc-/', $line, $m) === 1) {
+                    $offenders[] = basename($file).':'.($n + 1).' '.$m[0];
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders, 'use bg-surface, bg-canvas e border-line');
+    }
 }
