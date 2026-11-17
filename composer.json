@@ -100,7 +100,7 @@
         ],
         "security:audit": [
             "composer audit --locked --no-interaction",
-            "npm audit --package-lock-only --audit-level=high"
+            "node .github/scripts/npm-audit.mjs"
         ],
         "test": [
             "@php artisan config:clear --ansi",
