@@ -41,12 +41,22 @@ class EmptyStateTest extends TestCase
         $this->assertSame(0, $sem->query('//*[@data-empty-state-action]')->length);
     }
 
+    public function test_icone_fica_num_circulo_fora_do_compacto(): void
+    {
+        $normal = $this->xpath('<x-empty-state title="Nada" />');
+        $compact = $this->xpath('<x-empty-state title="Nada" compact />');
+
+        $this->assertStringContainsString('rounded-full', $normal->query('//*[@data-empty-state-icon]')->item(0)?->getAttribute('class') ?? '');
+        $this->assertSame(0, $compact->query('//*[@data-empty-state-icon]')->length);
+        $this->assertSame(1, $compact->query('//*[@data-empty-state]//svg')->length);
+    }
+
     public function test_compacto_ocupa_menos_altura_e_classe_do_chamador_se_mistura(): void
     {
         $normal = $this->xpath('<x-empty-state title="Nada" />')->query('//*[@data-empty-state]')->item(0);
         $compact = $this->xpath('<x-empty-state title="Nada" compact class="ms-2" />')->query('//*[@data-empty-state]')->item(0);
 
-        $this->assertStringContainsString('py-10', $normal->getAttribute('class'));
+        $this->assertStringContainsString('p-8', $normal->getAttribute('class'));
         $this->assertStringContainsString('py-4', $compact->getAttribute('class'));
         $this->assertStringContainsString('ms-2', $compact->getAttribute('class'));
     }
