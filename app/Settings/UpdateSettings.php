@@ -4,6 +4,7 @@ namespace App\Settings;
 
 use App\Models\Setting;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Throwable;
 
 /** O que a atualização pelo app guarda em `settings`: consulta às Releases, última versão vista, URL do painel e o token do Coolify (cifrado). */
@@ -89,7 +90,12 @@ final class UpdateSettings
 
     public static function token(): ?string
     {
-        $token = Setting::get('update.token');
+        try {
+            $token = Setting::get('update.token');
+        } catch (DecryptException) {
+            // APP_KEY trocada: o token guardado não abre mais; a tela pede para colar de novo (a exceção não leva o valor).
+            return null;
+        }
 
         return is_string($token) && $token !== '' ? $token : null;
     }

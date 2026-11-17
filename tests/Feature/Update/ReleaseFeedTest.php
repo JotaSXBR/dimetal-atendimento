@@ -41,7 +41,7 @@ class ReleaseFeedTest extends TestCase
         $asset = $base['assets'][0];
         $asset['browser_download_url'] = "https://github.com/fluxie-tech/fluxie-inbox/releases/download/{$tag}/docker-compose.yml";
 
-        return array_merge($base, ['tag_name' => $tag, 'assets' => $compose ? [$asset] : []], $over);
+        return array_merge($base, ['tag_name' => $tag, 'html_url' => "https://github.com/fluxie-tech/fluxie-inbox/releases/tag/{$tag}", 'assets' => $compose ? [$asset] : []], $over);
     }
 
     public function test_avisa_os_admins_uma_vez_por_versao(): void
@@ -59,7 +59,7 @@ class ReleaseFeedTest extends TestCase
         $latest = UpdateSettings::latest();
         $this->assertSame('v0.2.0', $latest['tag']);
         $this->assertStringEndsWith('/v0.2.0/docker-compose.yml', $latest['compose_url']);
-        $this->assertSame('https://github.com/fluxie-tech/fluxie-inbox/releases/tag/v0.1.0', $latest['notes_url']);
+        $this->assertSame('https://github.com/fluxie-tech/fluxie-inbox/releases/tag/v0.2.0', $latest['notes_url']);
         $this->assertTrue(UpdateSettings::lastCheck()['ok']);
     }
 
@@ -167,6 +167,27 @@ class ReleaseFeedTest extends TestCase
             && $r->header('User-Agent') === ['Fluxie-Inbox']
             && ! $r->hasHeader('Authorization')
             && $r->body() === '');
+    }
+
+    public function test_falha_ao_notificar_nao_escapa_e_nao_marca_como_avisada(): void
+    {
+        User::factory()->create(['role' => UserRole::ADMIN]);
+        Http::fake([self::LATEST => Http::response($this->release('v0.2.0'))]);
+        Notification::shouldReceive('send')->once()->andThrow(new \RuntimeException('broadcast fora do ar'));
+
+        $this->artisan('app:check-releases')->assertSuccessful();
+
+        $this->assertNull(UpdateSettings::notifiedVersion());
+        $this->assertTrue(UpdateSettings::lastCheck()['ok']);
+        $this->assertSame('v0.2.0', UpdateSettings::latest()['tag']);
+    }
+
+    public function test_token_ilegivel_com_outra_app_key_vira_sem_token(): void
+    {
+        UpdateSettings::setToken('segredo-123');
+        Setting::query()->where('key', 'update.token')->update(['value' => 'lixo-que-nao-decifra']);
+
+        $this->assertNull(UpdateSettings::token());
     }
 
     public function test_comando_nao_deixa_escapar_excecao(): void

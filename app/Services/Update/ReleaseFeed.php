@@ -118,7 +118,14 @@ final class ReleaseFeed
             return;
         }
 
-        Notification::send($this->recipients->admins(), new NewVersionAvailable((string) $latest));
+        try {
+            Notification::send($this->recipients->admins(), new NewVersionAvailable((string) $latest));
+        } catch (Throwable $e) {
+            report($e); // sem marcar como avisada: a próxima consulta tenta de novo
+
+            return;
+        }
+
         UpdateSettings::markNotified((string) $latest);
     }
 }
