@@ -81,6 +81,19 @@ class Bell extends Component
         Auth::user()?->unreadNotifications()->update(['read_at' => now()]);
     }
 
+    /** @return array{string, string, string, string} */
+    private function updateItem(mixed $state, string $version): array
+    {
+        $see = 'Veja Configuração > Sistema';
+
+        return match ($state) {
+            'concluida' => ['check-circle', 'accent', "Sistema atualizado para {$version}", $see],
+            'revertida' => ['arrow-uturn-left', 'warn', "Atualização para {$version} desfeita", $see],
+            'falhou' => ['exclamation-triangle', 'danger', "Atualização para {$version} falhou", $see],
+            default => ['arrow-up-circle', 'accent', "Versão {$version} disponível", $see],
+        };
+    }
+
     public function render(): View
     {
         $user = Auth::user();
@@ -165,7 +178,7 @@ class Bell extends Component
                 'skipped' => ['circle-stack', 'warn', 'Backup diário não rodou', 'Outro backup estava em andamento'],
                 default => ['circle-stack', 'danger', 'Backup do banco falhou', 'Veja Configuração > Backup do banco'],
             },
-            'update' => ['arrow-up-circle', 'accent', 'Versão '.(is_string($data['version'] ?? null) ? $data['version'] : '').' disponível', 'Veja Configuração > Sistema'],
+            'update' => $this->updateItem($state, is_string($data['version'] ?? null) ? $data['version'] : ''),
             'recovery' => ['inbox-arrow-down', 'accent', ($data['state'] ?? '') === 'imported' ? 'Histórico importado' : 'Mensagens recuperadas', $this->recoveryDetail($data, $channel)],
             default => ['bell', 'accent', 'Alerta', $detail],
         };

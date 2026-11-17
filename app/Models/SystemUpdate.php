@@ -24,8 +24,9 @@ use Illuminate\Support\Facades\DB;
  * @property CarbonImmutable|null $started_at
  * @property CarbonImmutable|null $step_at
  * @property CarbonImmutable|null $finished_at
+ * @property CarbonImmutable|null $notified_at
  */
-#[Fillable(['status', 'from_version', 'to_version', 'requested_by', 'backup_file', 'previous_compose', 'previous_version', 'message', 'started_at', 'step_at', 'finished_at'])]
+#[Fillable(['status', 'from_version', 'to_version', 'requested_by', 'backup_file', 'previous_compose', 'previous_version', 'message', 'started_at', 'step_at', 'finished_at', 'notified_at'])]
 class SystemUpdate extends Model
 {
     /** Chave fixa do `pg_advisory_xact_lock` que serializa o início de atualizações. */
@@ -42,6 +43,7 @@ class SystemUpdate extends Model
             'started_at' => 'datetime',
             'step_at' => 'datetime',
             'finished_at' => 'datetime',
+            'notified_at' => 'datetime',
         ];
     }
 

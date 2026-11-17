@@ -54,6 +54,12 @@ final class ApplyUpdate
         $this->close($update, UpdateStatus::Falhou, $message, AuditAction::UpdateFailed);
     }
 
+    /** Fecha como `concluida` (quem chama já viu a versão nova rodando). */
+    public function succeed(SystemUpdate $update): void
+    {
+        $this->close($update, UpdateStatus::Concluida, "Sistema atualizado para {$update->to_version}.", AuditAction::UpdateSucceeded);
+    }
+
     /** @throws RuntimeException com os erros do pré-voo, em português */
     private function checked(SystemUpdate $update): string
     {
@@ -104,7 +110,7 @@ final class ApplyUpdate
     }
 
     /** Devolve: regrava o compose e a versão guardados (nada é apagado no Coolify). */
-    private function revert(SystemUpdate $update, string $reason): void
+    public function revert(SystemUpdate $update, string $reason): void
     {
         try {
             $this->coolify->putCompose($update->previous_compose ?? throw new CoolifyException('O compose anterior não ficou guardado.'));
