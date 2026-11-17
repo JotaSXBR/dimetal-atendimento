@@ -413,6 +413,11 @@ class ApplyUpdateTest extends TestCase
 
         $this->assertSame(UpdateStatus::Revertida, $update->status);
         Http::assertNotSent(fn (Request $r): bool => str_contains($r->url(), '/svc123/restart'));
+        // o que o job gravou depois da devolução do vigia é desfeito: o último compose e a última versão são os anteriores
+        $composes = $this->composeWrites();
+        $this->assertSame(self::CURRENT_COMPOSE, base64_decode((string) end($composes)->data()['docker_compose_raw']));
+        $envs = $this->envValues();
+        $this->assertSame('0.1.0', end($envs)['value']);
     }
 
     #[DataProvider('estadosAlemDeConferindo')]

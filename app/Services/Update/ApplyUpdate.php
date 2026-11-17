@@ -107,7 +107,9 @@ final class ApplyUpdate
             $this->coolify->setEnv(self::VERSION_KEY, $update->to_version);
 
             if (! $update->moveTo(UpdateStatus::Reiniciando)) {
-                return; // o vigia devolveu enquanto gravava: não reinicia
+                $this->restoreWrites($update); // o vigia devolveu enquanto gravava: desfaz o que o job gravou e não reinicia
+
+                return;
             }
 
             $this->coolify->restart(pull: true);
@@ -115,6 +117,17 @@ final class ApplyUpdate
             // Qualquer falha depois da primeira escrita devolve; o que não é do Coolify é relançado para ser reportado.
             $this->revert($update, $e instanceof CoolifyException ? $e->getMessage() : 'Erro inesperado ao aplicar a atualização.');
             $e instanceof CoolifyException || throw $e;
+        }
+    }
+
+    /** Regrava o compose e a versão guardados sem mudar o estado (a linha já foi fechada por outro processo). */
+    private function restoreWrites(SystemUpdate $update): void
+    {
+        try {
+            $this->coolify->putCompose($update->previous_compose ?? throw new CoolifyException('O compose anterior não ficou guardado.'));
+            $this->coolify->setEnv(self::VERSION_KEY, $update->previous_version ?? throw new CoolifyException('A versão anterior não ficou guardada.'));
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 
