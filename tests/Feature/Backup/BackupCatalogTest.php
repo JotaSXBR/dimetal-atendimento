@@ -213,4 +213,65 @@ class BackupCatalogTest extends TestCase
 
         $this->assertSame([], $this->catalog()->all());
     }
+
+    public function test_nome_leva_a_versao_da_release_sem_o_v(): void
+    {
+        config(['fluxie.version' => 'v0.3.0']);
+        $at = CarbonImmutable::parse('2026-11-13 05:15:00', 'UTC');
+
+        $this->assertSame('fluxie-2026-11-13-0215-diario-v0.3.0.dump', $this->catalog()->name(BackupKind::Diario, $at));
+        $this->assertSame('fluxie-2026-11-13-0215-semanal-v0.3.0.dump', $this->catalog()->name(BackupKind::Semanal, $at));
+
+        config(['fluxie.version' => '0.0.0-teste.1']);
+        $this->assertSame('fluxie-2026-11-13-0215-antes-v0.0.0-teste.1.dump', $this->catalog()->name(BackupKind::Antes, $at));
+    }
+
+    public function test_versao_de_desenvolvimento_mantem_o_nome_antigo(): void
+    {
+        config(['fluxie.version' => null, 'fluxie.build' => 'sha-abc1234']);
+
+        $this->assertSame('fluxie-2026-11-13-0215-manual.dump', $this->catalog()->name(BackupKind::Manual, CarbonImmutable::parse('2026-11-13 05:15:00', 'UTC')));
+    }
+
+    public function test_lista_le_a_versao_do_nome_e_nome_antigo_fica_sem_versao(): void
+    {
+        Storage::disk('backups')->put('fluxie-2026-11-16-0300-diario-v0.3.0.dump', 'x');
+        Storage::disk('backups')->put('fluxie-2026-11-15-0300-antes-v0.0.0-teste.1.dump', 'x');
+        Storage::disk('backups')->put('dimetal-2026-11-14-0300-diario.dump', 'x');
+
+        $all = $this->catalog()->all();
+
+        $this->assertSame(['0.3.0', '0.0.0-teste.1', null], array_map(fn ($file) => $file->version, $all));
+        $this->assertSame(BackupKind::Antes, $all[1]->kind);
+        $this->assertSame('fluxie-2026-11-16-0300-diario-v0.3.0.dump', $this->catalog()->find('fluxie-2026-11-16-0300-diario-v0.3.0.dump')?->name);
+    }
+
+    public function test_versao_fora_do_semver_fica_fora_da_lista(): void
+    {
+        foreach (['fluxie-2026-11-16-0300-diario-v.dump', 'fluxie-2026-11-16-0300-diario-vabc.dump', 'fluxie-2026-11-16-0300-diario-v1.2.dump', 'fluxie-2026-11-16-0300-diario-v1.2.3-.dump', 'fluxie-2026-11-16-0300-diario-v1.2.3_x.dump'] as $name) {
+            Storage::disk('backups')->put($name, 'x');
+        }
+
+        $this->assertSame([], $this->catalog()->all());
+    }
+
+    public function test_versao_do_nome(): void
+    {
+        $this->assertSame('0.0.0-teste.1', BackupCatalog::versionIn('fluxie-2026-11-15-0300-antes-v0.0.0-teste.1.dump'));
+        $this->assertNull(BackupCatalog::versionIn('fluxie-2026-11-15-0300-antes.dump'));
+        $this->assertNull(BackupCatalog::versionIn('arquivo enviado'));
+    }
+
+    public function test_prune_conta_nomes_com_e_sem_versao_no_mesmo_tipo(): void
+    {
+        config(['backup.keep.diario' => 2]);
+        Storage::disk('backups')->put('dimetal-2026-11-10-0300-diario.dump', 'x');
+        Storage::disk('backups')->put('fluxie-2026-11-14-0300-diario.dump', 'x');
+        Storage::disk('backups')->put('fluxie-2026-11-16-0300-diario-v0.3.0.dump', 'x');
+
+        $this->assertSame(1, $this->catalog()->prune());
+        Storage::disk('backups')->assertMissing('dimetal-2026-11-10-0300-diario.dump');
+        Storage::disk('backups')->assertExists('fluxie-2026-11-14-0300-diario.dump');
+        Storage::disk('backups')->assertExists('fluxie-2026-11-16-0300-diario-v0.3.0.dump');
+    }
 }

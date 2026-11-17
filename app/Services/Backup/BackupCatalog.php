@@ -2,6 +2,7 @@
 
 namespace App\Services\Backup;
 
+use App\Services\Update\InstalledVersion;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Filesystem\FilesystemAdapter;
@@ -11,18 +12,30 @@ use League\Flysystem\FileAttributes;
 /** O que há no bucket de backup: nomes, listagem e rotação. Só arquivos com o nome do padrão existem para o catálogo. */
 class BackupCatalog
 {
-    // `dimetal-` é o prefixo antigo: só leitura, nunca mais gravado.
-    private const PATTERN = '/^(?:dimetal|fluxie)-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual|antes)\.dump$/';
+    // `dimetal-` é o prefixo antigo: só leitura, nunca mais gravado. O sufixo `-v<versão>` (semver, sem barra) só existe nos feitos
+    // numa Release; os antigos e os de desenvolvimento não têm.
+    private const PATTERN = '/^(?:dimetal|fluxie)-(\d{4}-\d{2}-\d{2})-(\d{4})-(diario|semanal|manual|antes)(?:-v(\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?))?\.dump$/';
+
+    public function __construct(private readonly InstalledVersion $installed = new InstalledVersion) {}
 
     public function disk(): Filesystem
     {
         return Storage::disk(config()->string('backup.disk'));
     }
 
-    /** `fluxie-AAAA-MM-DD-HHMM-<tipo>.dump`, no fuso de exibição. */
+    /** `fluxie-AAAA-MM-DD-HHMM-<tipo>[-v<versão>].dump`, no fuso de exibição; a versão só numa Release. */
     public function name(BackupKind $kind, CarbonImmutable $at): string
     {
-        return 'fluxie-'.$at->setTimezone(config()->string('app.display_timezone'))->format('Y-m-d-Hi').'-'.$kind->value.'.dump';
+        $version = $this->installed->release();
+
+        return 'fluxie-'.$at->setTimezone(config()->string('app.display_timezone'))->format('Y-m-d-Hi').'-'.$kind->value
+            .($version === null ? '' : '-v'.$version).'.dump';
+    }
+
+    /** A versão em que o backup foi feito, se o nome a traz. */
+    public static function versionIn(string $name): ?string
+    {
+        return preg_match(self::PATTERN, $name, $m) === 1 && ($m[4] ?? '') !== '' ? $m[4] : null;
     }
 
     /** @return list<BackupFile> do mais novo ao mais velho */
@@ -95,6 +108,6 @@ class BackupCatalog
 
         $createdAt = CarbonImmutable::createFromFormat('Y-m-d Hi', $m[1].' '.$m[2], config()->string('app.display_timezone'));
 
-        return $createdAt === null ? null : new BackupFile($path, BackupKind::from($m[3]), $createdAt, $size ?? $this->disk()->size($path));
+        return $createdAt === null ? null : new BackupFile($path, BackupKind::from($m[3]), $createdAt, $size ?? $this->disk()->size($path), ($m[4] ?? '') ?: null);
     }
 }

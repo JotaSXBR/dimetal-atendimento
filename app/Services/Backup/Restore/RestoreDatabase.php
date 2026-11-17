@@ -9,6 +9,7 @@ use App\Models\Channel;
 use App\Notifications\BackupRestored;
 use App\Services\Alerts\AlertRecipients;
 use App\Services\Audit\Auditor;
+use App\Services\Backup\BackupCatalog;
 use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
 use App\Services\Backup\RunBackup;
@@ -100,7 +101,7 @@ class RestoreDatabase
             $this->side->restore($run->incoming, (string) $run->path);
         });
 
-        $this->step('verify', fn () => $this->side->verify($run->incoming));
+        $this->step('verify', fn () => $this->side->verify($run->incoming, BackupCatalog::versionIn($run->label)));
 
         $this->cutover($run);
     }

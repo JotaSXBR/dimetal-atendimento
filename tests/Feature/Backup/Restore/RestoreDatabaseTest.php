@@ -141,6 +141,16 @@ class RestoreDatabaseTest extends TestCase
         return app(RestoreProgress::class)->get();
     }
 
+    public function test_verify_recebe_a_versao_do_nome_do_backup(): void
+    {
+        $this->sources->shouldReceive('fetch')->andReturn(['path' => '/tmp/restore-x.dump', 'name' => 'fluxie-2026-11-12-1000-manual-v0.3.0.dump']);
+        $this->side->shouldReceive('verify')->once()->with(self::STAGING, '0.3.0');
+
+        $this->run_($this->request(source: 'bucket:fluxie-2026-11-12-1000-manual-v0.3.0.dump'));
+
+        $this->assertSame('done', $this->state()['status']);
+    }
+
     public function test_restaura_na_ordem_do_spec(): void
     {
         Log::spy();

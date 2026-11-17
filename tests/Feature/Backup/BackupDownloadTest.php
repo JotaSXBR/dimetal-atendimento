@@ -51,6 +51,17 @@ class BackupDownloadTest extends TestCase
         $this->assertSame('dump-fluxie', $response->streamedContent());
     }
 
+    public function test_admin_baixa_arquivo_com_a_versao_no_nome(): void
+    {
+        $name = 'fluxie-2026-11-16-0300-antes-v0.0.0-teste.1.dump';
+        Storage::disk('backups')->put($name, 'dump-versao');
+
+        $response = $this->actingAs($this->admin())->get(route('configuracoes.backups.baixar', $name));
+
+        $response->assertOk()->assertDownload($name);
+        $this->assertSame('dump-versao', $response->streamedContent());
+    }
+
     public function test_nome_forjado_da_404(): void
     {
         $admin = $this->actingAs($this->admin());
