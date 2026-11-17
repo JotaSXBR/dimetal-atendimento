@@ -15,8 +15,8 @@ use Throwable;
 
 /**
  * Conferências, backup novo e troca do compose e da versão no Coolify. Nada muda no Coolify antes de tudo passar; depois da primeira
- * escrita, qualquer falha regrava o compose e a versão guardados. Cada passo confere o estado no banco: um job repetido, ou fechado
- * pelo vigia no meio, não refaz nada.
+ * escrita, qualquer falha regrava o compose e a versão guardados (menos o reinício sem resposta clara, que fica com o vigia).
+ * Cada passo confere o estado no banco: um job repetido, ou fechado pelo vigia no meio, não refaz nada.
  */
 final class ApplyUpdate
 {
@@ -112,11 +112,30 @@ final class ApplyUpdate
                 return;
             }
 
-            $this->coolify->restart(pull: true);
+            $this->restart($update);
         } catch (Throwable $e) {
-            // Qualquer falha depois da primeira escrita devolve; o que não é do Coolify é relançado para ser reportado.
+            // Qualquer outra falha depois da primeira escrita devolve; o que não é do Coolify é relançado para ser reportado.
             $this->revert($update, $e instanceof CoolifyException ? $e->getMessage() : 'Erro inesperado ao aplicar a atualização.');
             $e instanceof CoolifyException || throw $e;
+        }
+    }
+
+    /**
+     * Só a recusa definitiva (4xx) sobe para devolver. Sem conexão, timeout ou 5xx o reinício pode ter acontecido: fica em
+     * `reiniciando` e o vigia decide pela versão que sobe (destino = concluída; origem depois de 10 min = devolve).
+     *
+     * @throws CoolifyException
+     */
+    private function restart(SystemUpdate $update): void
+    {
+        try {
+            $this->coolify->restart(pull: true);
+        } catch (CoolifyException $e) {
+            if ($e->status !== 0 && $e->status < 500) {
+                throw $e;
+            }
+
+            $update->update(['message' => "O Coolify não confirmou o reinício ({$e->getMessage()}). O vigia confere a versão que subir nos próximos minutos."]);
         }
     }
 

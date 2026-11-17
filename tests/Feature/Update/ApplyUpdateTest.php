@@ -16,6 +16,7 @@ use App\Services\Update\ApplyUpdate;
 use App\Settings\UpdateSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -228,12 +229,12 @@ class ApplyUpdateTest extends TestCase
     {
         $this->envs['FLUXIE_VERSION'] = '0.1.0';
         $this->backupOk();
-        $this->world['restart'] = [500, ['message' => 'boom']];
+        $this->world['restart'] = [422, ['message' => 'boom']];
 
         $update = $this->apply();
 
         $this->assertSame(UpdateStatus::Revertida, $update->status);
-        $this->assertStringContainsString('HTTP 500', (string) $update->message);
+        $this->assertStringContainsString('HTTP 422', (string) $update->message);
         $compose = $this->composeWrites();
         $this->assertCount(2, $compose);
         $this->assertSame(base64_encode($this->releaseCompose()), $compose[0]->data()['docker_compose_raw']);
@@ -241,15 +242,55 @@ class ApplyUpdateTest extends TestCase
         $this->assertSame('0.1.0', $this->envs['FLUXIE_VERSION']);
         $this->assertSame('0.2.0', $this->envValues()[1]['value']);
         $this->assertSame('0.1.0', $this->envValues()[2]['value']);
-        $this->assertStringContainsString('HTTP 500', $this->audit(AuditAction::UpdateReverted)->detail['message']);
+        $this->assertStringContainsString('HTTP 422', $this->audit(AuditAction::UpdateReverted)->detail['message']);
         $this->assertNull(AuditLog::query()->where('action', AuditAction::UpdateFailed->value)->first());
+    }
+
+    /** Recusa definitiva (4xx): o Coolify não reiniciou, então devolve na hora. */
+    public function test_restart_recusado_com_403_devolve_na_hora(): void
+    {
+        $this->envs['FLUXIE_VERSION'] = '0.1.0';
+        $this->backupOk();
+        $this->world['restart'] = [403, ['message' => 'Missing required permissions: deploy']];
+
+        $update = $this->apply();
+
+        $this->assertSame(UpdateStatus::Revertida, $update->status);
+        $this->assertSame('0.1.0', $this->envs['FLUXIE_VERSION']);
+    }
+
+    /** @return array<string, array{mixed}> */
+    public static function restartSemRespostaClara(): array
+    {
+        return [
+            'sem conexão ou timeout' => [fn () => throw new ConnectionException('cURL error 28: Operation timed out')],
+            'HTTP 502' => [[502, ['message' => 'Bad Gateway']]],
+            'HTTP 503' => [[503, ['message' => 'Service Unavailable']]],
+        ];
+    }
+
+    /** Sem resposta clara o reinício pode ter acontecido: fica em `reiniciando` e o vigia decide pela versão que sobe. */
+    #[DataProvider('restartSemRespostaClara')]
+    public function test_restart_sem_resposta_clara_fica_reiniciando_sem_regravar(mixed $stub): void
+    {
+        $this->envs['FLUXIE_VERSION'] = '0.1.0';
+        $this->backupOk();
+        $this->world['restart'] = $stub;
+
+        $update = $this->apply();
+
+        $this->assertSame(UpdateStatus::Reiniciando, $update->status);
+        $this->assertStringContainsString('vigia', (string) $update->message);
+        $this->assertCount(1, $this->composeWrites());
+        $this->assertSame('0.2.0', $this->envs['FLUXIE_VERSION']);
+        $this->assertNull(AuditLog::query()->whereIn('action', [AuditAction::UpdateReverted->value, AuditAction::UpdateFailed->value])->first());
     }
 
     public function test_instalacao_sem_a_variavel_ganha_a_versao_rodando_no_prevoo_e_a_volta_a_regrava(): void
     {
         $this->assertArrayNotHasKey('FLUXIE_VERSION', $this->envs);
         $this->backupOk();
-        $this->world['restart'] = [500, ['message' => 'boom']];
+        $this->world['restart'] = [422, ['message' => 'boom']];
 
         $update = $this->apply();
 
@@ -265,7 +306,7 @@ class ApplyUpdateTest extends TestCase
     {
         $this->envs['FLUXIE_VERSION'] = '';
         $this->backupOk();
-        $this->world['restart'] = [500, ['message' => 'boom']];
+        $this->world['restart'] = [422, ['message' => 'boom']];
 
         $update = $this->apply();
 
@@ -323,7 +364,7 @@ class ApplyUpdateTest extends TestCase
         Log::spy();
         $this->envs['FLUXIE_VERSION'] = '0.1.0';
         $this->backupOk();
-        $this->world['restart'] = [500, ['message' => "erro com {$token}"]];
+        $this->world['restart'] = [422, ['message' => "erro com {$token}"]];
 
         $this->assertSame(UpdateStatus::Revertida, $this->apply()->status);
 
@@ -340,7 +381,7 @@ class ApplyUpdateTest extends TestCase
     {
         $this->envs['FLUXIE_VERSION'] = '0.1.0';
         $this->backupOk();
-        $this->world['restart'] = [500, ['message' => 'boom']];
+        $this->world['restart'] = [422, ['message' => 'boom']];
         $patches = 0;
         $this->world['service_patch'] = function () use (&$patches) {
             return ++$patches === 1 ? Http::response(['message' => 'ok'], 200) : Http::response(['message' => 'x'], 502);
