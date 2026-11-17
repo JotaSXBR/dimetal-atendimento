@@ -212,3 +212,10 @@ em 17/11/2026).
 - Limite de largura em 2K, espaçamentos e tamanhos exatos: seguir o Pencil, ajustando ao que o Tailwind oferece.
 - Quais telas separadas dá para juntar sem mudar rota ou regra (ver não-metas).
 - Divisão de cada fatia em tarefas e quais testes de markup precisam acompanhar.
+
+## Decididos no início da fatia 2 (17/11/2026)
+
+- **Encerrar** (dono): só no cabeçalho da conversa, como hoje. O rodapé do painel de detalhes fica com Editar contato (e
+  Conversar, quando houver); sai o "Encerrar ticket" do rodapé no Pencil. Substitui o "ação Encerrar no rodapé" da fatia 2.
+- **Transferir** (dono): botão no cabeçalho quando a coluna da conversa tem largura; em coluna estreita volta para o menu
+  "…", onde Reatribuir continua.
