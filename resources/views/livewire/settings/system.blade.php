@@ -26,7 +26,7 @@
                 <dd class="text-right font-mono text-ink">
                     @if ($target !== null)
                         {{ $target }}
-                        @if ($latest['notes_url'] !== '')
+                        @if (str_starts_with($latest['notes_url'], 'https://'))
                             · <a href="{{ $latest['notes_url'] }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-6 items-center font-medium text-accent-content underline underline-offset-2">Ver novidades</a>
                         @endif
                     @else
@@ -87,6 +87,7 @@
         @if ($last !== null)
             <section class="rounded-[14px] border border-line bg-surface p-4" aria-labelledby="update-title">
                 <p id="update-title" class="text-sm font-semibold text-ink">Atualização para {{ $last->to_version }}</p>
+                @if ($open)
                 <ol class="mt-3 divide-y divide-line rounded-[14px] border border-line text-sm">
                     @foreach ($steps as $step)
                         <li data-step data-state="{{ $step['state'] }}" class="flex items-center justify-between gap-4 px-4 py-3">
@@ -97,6 +98,7 @@
                         </li>
                     @endforeach
                 </ol>
+                @endif
                 @if ($open)
                     @if ($stale)
                         <p class="mt-3 text-sm text-danger" role="alert">Sem confirmação há mais de 30 minutos. Veja a recuperação em docs/deploy.md.</p>
@@ -118,7 +120,7 @@
 
         @if ($canUpdate && $target !== null && ! $open)
             @if ($confirming)
-                <section class="rounded-[14px] border border-line bg-surface p-4" aria-labelledby="confirm-title">
+                <section x-data="updateConfirm" class="rounded-[14px] border border-line bg-surface p-4" aria-labelledby="confirm-title">
                     <p id="confirm-title" class="text-sm font-semibold text-ink">Atualizar para {{ $target }}</p>
                     <div class="mt-2 space-y-2 text-sm text-ink-2">
                         <p>O sistema faz um backup do banco, grava a nova versão no Coolify e reinicia. Fica fora do ar por alguns minutos.</p>

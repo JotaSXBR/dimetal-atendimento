@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Feature\Update\FakesUpdateWorld;
 use Tests\TestCase;
 
@@ -216,6 +217,74 @@ class SystemPageTest extends TestCase
         SystemUpdate::query()->create(['status' => UpdateStatus::Revertida, 'from_version' => '0.1.0', 'to_version' => '0.2.0', 'message' => 'O sistema não subiu.', 'started_at' => now()->subHour(), 'step_at' => now(), 'finished_at' => now()]);
 
         Livewire::actingAs($this->admin())->test(System::class)->assertSee('Revertida')->assertSee('O sistema não subiu.')->assertDontSeeHtml('wire:poll');
+    }
+
+    /** @return array<string, array{\Closure(): void, string}> */
+    public static function semCondicaoParaAtualizar(): array
+    {
+        return [
+            'sem uuid do Coolify' => [fn () => config(['fluxie.resource_uuid' => null]), 'não é um Service do Coolify'],
+            'versão de desenvolvimento' => [fn () => config(['fluxie.version' => null, 'fluxie.build' => 'sha-abcdef0123']), 'Não há versão nova'],
+            'sem versão maior' => [fn () => config(['fluxie.version' => '0.2.0']), 'Não há versão nova'],
+            'sem token' => [fn () => UpdateSettings::setToken(null), 'token da API'],
+        ];
+    }
+
+    #[DataProvider('semCondicaoParaAtualizar')]
+    public function test_acoes_de_atualizar_chamadas_direto_recusam_sem_condicao(\Closure $arrange, string $problem): void
+    {
+        Queue::fake();
+        Http::fake();
+        $arrange();
+
+        Livewire::actingAs($this->admin())->test(System::class)
+            ->call('askUpdate')->assertSet('confirming', false)->assertSee($problem)
+            ->set('confirm', 'ATUALIZAR')->call('update')->assertSee($problem);
+
+        $this->assertSame(0, SystemUpdate::query()->count());
+        Queue::assertNothingPushed();
+        Http::assertNothingSent();
+    }
+
+    public function test_token_digitado_some_do_snapshot_mesmo_com_erro_de_validacao(): void
+    {
+        $component = Livewire::actingAs($this->admin())->test(System::class)
+            ->set('panelUrl', 'sem-esquema')
+            ->set('tokenInput', '9|token-digitado-secreto')
+            ->call('saveConnection')
+            ->assertHasErrors('panelUrl')
+            ->assertSet('tokenInput', '');
+
+        $this->assertStringNotContainsString('token-digitado-secreto', json_encode($component->snapshot));
+        $this->assertSame('7|segredo-do-token', UpdateSettings::token());
+    }
+
+    public function test_token_grande_demais_nao_e_salvo(): void
+    {
+        Livewire::actingAs($this->admin())->test(System::class)
+            ->set('tokenInput', str_repeat('a', 501))
+            ->call('saveConnection')
+            ->assertHasErrors('tokenInput')
+            ->assertSet('tokenInput', '');
+
+        $this->assertSame('7|segredo-do-token', UpdateSettings::token());
+    }
+
+    public function test_link_das_novidades_so_com_https(): void
+    {
+        UpdateSettings::setLatest(['tag' => 'v0.2.0', 'published_at' => '2026-11-17T10:00:00Z', 'notes_url' => 'javascript:alert(1)', 'compose_url' => 'https://github.com/c']);
+
+        Livewire::actingAs($this->admin())->test(System::class)->assertSee('0.2.0')->assertDontSee('Ver novidades')->assertDontSeeHtml('javascript:');
+    }
+
+    public function test_fechada_nao_mostra_os_passos_como_aguardando(): void
+    {
+        SystemUpdate::query()->create(['status' => UpdateStatus::Falhou, 'from_version' => '0.1.0', 'to_version' => '0.2.0', 'message' => 'Falhou no backup.', 'started_at' => now()->subHour(), 'step_at' => now(), 'finished_at' => now()]);
+
+        Livewire::actingAs($this->admin())->test(System::class)
+            ->assertSee('Falhou no backup.')
+            ->assertDontSeeHtml('data-step')
+            ->assertDontSee('aguardando');
     }
 
     public function test_consultar_agora_usa_o_github(): void

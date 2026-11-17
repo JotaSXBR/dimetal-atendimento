@@ -55,17 +55,24 @@ class System extends Component
     public function saveConnection(): void
     {
         $this->authorize('admin');
-        $this->validate(['panelUrl' => ['nullable', 'url', 'max:255'], 'tokenInput' => ['nullable', 'string', 'max:500']], [
-            'panelUrl.url' => 'Informe a URL completa do painel, com https://.',
-        ]);
+        $token = trim($this->tokenInput);
+
+        try {
+            $this->validate(['panelUrl' => ['nullable', 'url', 'max:255'], 'tokenInput' => ['nullable', 'string', 'max:500']], [
+                'panelUrl.url' => 'Informe a URL completa do painel, com https://.',
+            ]);
+        } finally {
+            // Sai do snapshot mesmo com erro de validação: senão o segredo digitado volta para a tela.
+            $this->reset('tokenInput');
+        }
 
         UpdateSettings::setPanelUrl(rtrim(trim($this->panelUrl), '/') ?: null);
 
-        if (trim($this->tokenInput) !== '') {
-            UpdateSettings::setToken(trim($this->tokenInput));
+        if ($token !== '') {
+            UpdateSettings::setToken($token);
         }
 
-        $this->reset('tokenInput', 'connectionErrors', 'connectionMessage');
+        $this->reset('connectionErrors', 'connectionMessage');
         $this->panelUrl = UpdateSettings::panelUrl() ?? '';
     }
 
@@ -104,12 +111,13 @@ class System extends Component
     public function askUpdate(Preflight $preflight): void
     {
         $this->authorize('admin');
+        $this->reset('confirm', 'problem');
+        $this->problem = $this->blocker();
 
-        if ($this->target() === null) {
+        if ($this->problem !== null) {
             return;
         }
 
-        $this->reset('confirm', 'problem');
         $this->composeEdited = $preflight->composeEdited();
         $this->confirming = true;
     }
@@ -125,8 +133,7 @@ class System extends Component
         $this->authorize('admin');
         $target = $this->target();
 
-        $this->problem = match (true) {
-            $target === null => 'Não há versão nova para instalar.',
+        $this->problem = $this->blocker() ?? match (true) {
             $this->confirm !== self::CONFIRM_WORD => 'Digite '.self::CONFIRM_WORD.' para confirmar.',
             app(RestoreProgress::class)->isRunning() => 'Há uma restauração em andamento; espere ela terminar para atualizar.',
             app(ManualBackupState::class)->isRunning() => 'Há um backup em andamento; espere ele terminar para atualizar.',
@@ -148,6 +155,17 @@ class System extends Component
         Auditor::record(AuditAction::UpdateRequested, Auth::user(), (string) $target);
         ApplyUpdateJob::dispatch($update->id);
         $this->cancelUpdate();
+    }
+
+    /** Por que esta instalação não pode atualizar agora; a tela esconde o botão, mas a ação chamada direto também recusa. */
+    private function blocker(): ?string
+    {
+        return match (true) {
+            $this->resourceUuid() === null => 'Esta instalação não é um Service do Coolify; atualize pelo painel.',
+            ! $this->canUpdate() || $this->target() === null => 'Não há versão nova para instalar.',
+            UpdateSettings::token() === null => 'Salve o token da API do Coolify antes de atualizar.',
+            default => null,
+        };
     }
 
     /** Só uma Release instalada, num Service do Coolify, tem o que atualizar; o `sha-…` do beta faria o pré-voo gravar lixo no Coolify. */
@@ -213,8 +231,7 @@ class System extends Component
         $at = array_search($status, $steps, true);
 
         return match (true) {
-            $status === UpdateStatus::Concluida => 'done',
-            $at === false => 'pending', // fechada sem concluir: o resultado vem escrito, não por passo
+            $at === false => 'pending', // fechada: a tela não mostra os passos, só o resultado escrito
             array_search($step, $steps, true) < $at => 'done',
             $step === $status => 'running',
             default => 'pending',
