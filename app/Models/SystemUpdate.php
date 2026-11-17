@@ -48,9 +48,7 @@ class SystemUpdate extends Model
     /** A atualização aberta mais recente, se houver. */
     public static function open(): ?self
     {
-        $open = array_filter(UpdateStatus::cases(), fn (UpdateStatus $s) => $s->isOpen());
-
-        return static::query()->whereIn('status', array_map(fn (UpdateStatus $s) => $s->value, $open))->latest('id')->first();
+        return static::query()->whereIn('status', array_column(UpdateStatus::openCases(), 'value'))->latest('id')->first();
     }
 
     /** Cria a atualização em `conferindo`; nulo se já há uma aberta (a trava vale entre processos). */

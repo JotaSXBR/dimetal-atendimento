@@ -13,6 +13,12 @@ enum UpdateStatus: string
     case Falhou = 'falhou';
     case Revertida = 'revertida';
 
+    /** @return list<self> */
+    public static function openCases(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $s) => $s->isOpen()));
+    }
+
     public function isOpen(): bool
     {
         return in_array($this, [self::Conferindo, self::Backup, self::Aplicando, self::Reiniciando], true);

@@ -9,7 +9,11 @@ use App\Livewire\Settings\Backups;
 use App\Models\AuditLog;
 use App\Models\SystemUpdate;
 use App\Models\User;
+use App\Services\Backup\BackupFile;
+use App\Services\Backup\BackupKind;
 use App\Services\Backup\Restore\AdminDatabase;
+use App\Services\Backup\Restore\DumpInfo;
+use App\Services\Backup\Restore\DumpInspector;
 use App\Services\Backup\Restore\StoredDatabase;
 use App\Services\Backup\RunBackup;
 use App\Support\AuditLogText;
@@ -17,7 +21,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class SystemUpdateTest extends TestCase
@@ -57,9 +63,7 @@ class SystemUpdateTest extends TestCase
 
     public function test_estados_abertos_e_rotulos(): void
     {
-        $open = array_filter(UpdateStatus::cases(), fn (UpdateStatus $s) => $s->isOpen());
-
-        $this->assertSame([UpdateStatus::Conferindo, UpdateStatus::Backup, UpdateStatus::Aplicando, UpdateStatus::Reiniciando], array_values($open));
+        $this->assertSame([UpdateStatus::Conferindo, UpdateStatus::Backup, UpdateStatus::Aplicando, UpdateStatus::Reiniciando], UpdateStatus::openCases());
 
         foreach (UpdateStatus::cases() as $status) {
             $this->assertNotSame('', $status->label());
@@ -82,6 +86,12 @@ class SystemUpdateTest extends TestCase
     public function test_backup_manual_e_restauracao_sao_recusados_com_atualizacao_aberta(): void
     {
         Queue::fake();
+        Storage::fake('backups');
+        Storage::fake('local');
+        Storage::disk('backups')->put('dimetal-2026-11-12-0215-diario.dump', 'conteudo');
+        $this->mock(DumpInspector::class)->shouldReceive('inspect')->andReturnUsing(
+            fn (string $path, string $name) => new DumpInfo($name, CarbonImmutable::now(), 'fluxie', '18.6', '18.5', 'zstd', 269, 1_500_000),
+        );
         $this->mock(AdminDatabase::class)->shouldReceive('stored')->andReturn([new StoredDatabase('fluxie_antes_202611131000', CarbonImmutable::now(), 1_000_000)]);
         SystemUpdate::start(null, '0.1.0', '0.2.0');
         $admin = User::factory()->create(['role' => UserRole::ADMIN]);
@@ -93,18 +103,30 @@ class SystemUpdateTest extends TestCase
 
         $page->call('chooseStored', 'fluxie_antes_202611131000')->set('confirm', 'RESTAURAR')->call('switchBack')->assertSet('problem', $message);
         Queue::assertNothingPushed();
+
+        $page->call('chooseBackup', 'dimetal-2026-11-12-0215-diario.dump')->set('confirm', 'RESTAURAR')->call('restore')->assertSet('problem', $message);
+        Queue::assertNothingPushed();
     }
 
-    public function test_diario_pula_em_aplicando_e_reiniciando(): void
+    /** @return array<string, array{UpdateStatus, bool}> */
+    public static function statusesVsDaily(): array
     {
-        $this->mock(RunBackup::class)->shouldNotReceive('__invoke');
-        $update = SystemUpdate::start(null, '0.1.0', '0.2.0');
-        $this->assertNotNull($update);
+        $skips = [UpdateStatus::Aplicando, UpdateStatus::Reiniciando];
 
-        foreach ([UpdateStatus::Aplicando, UpdateStatus::Reiniciando] as $status) {
-            $update->moveTo($status);
-            $this->artisan('app:backup-database')->expectsOutputToContain('atualização')->assertSuccessful();
-        }
+        return collect(UpdateStatus::cases())->mapWithKeys(fn (UpdateStatus $s) => [$s->value => [$s, in_array($s, $skips, true)]])->all();
+    }
+
+    #[DataProvider('statusesVsDaily')]
+    public function test_diario_so_pula_em_aplicando_e_reiniciando(UpdateStatus $status, bool $skips): void
+    {
+        $file = new BackupFile('dimetal-2026-11-12-0215-diario.dump', BackupKind::Diario, CarbonImmutable::now(), 1_000_000);
+        $run = $this->mock(RunBackup::class);
+        $skips ? $run->shouldNotReceive('__invoke') : $run->shouldReceive('__invoke')->once()->andReturn($file);
+        SystemUpdate::start(null, '0.1.0', '0.2.0')?->moveTo($status);
+
+        $skips
+            ? $this->artisan('app:backup-database')->expectsOutputToContain('atualização')->assertSuccessful()
+            : $this->artisan('app:backup-database')->expectsOutputToContain('Backup gravado')->assertSuccessful();
     }
 
     public function test_frases_da_auditoria(): void
