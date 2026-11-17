@@ -1,0 +1,202 @@
+# documentation: https://github.com/fluxie-tech/fluxie-inbox/blob/main/docs/deploy.md
+# slogan: Caixa de entrada de WhatsApp para equipes de atendimento, com WAHA, tempo real e backup.
+# category: productivity
+# tags: whatsapp, inbox, atendimento, crm, laravel
+# logo: svgs/fluxie-inbox.svg
+# port: 8080
+
+x-app-env: &app-env
+  APP_NAME: "Fluxie Inbox"
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_KEY: base64:${SERVICE_REALBASE64_32_APPKEY}
+  APP_URL: ${SERVICE_URL_APP}
+  APP_TIMEZONE: UTC
+  APP_DISPLAY_TIMEZONE: America/Sao_Paulo
+  APP_LOCALE: pt_BR
+  APP_MAINTENANCE_DRIVER: cache
+  APP_MAINTENANCE_STORE: redis
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: ${LOG_LEVEL:-warning}
+  CSP_MODE: enforce
+  LIVEWIRE_CSP_SAFE: "true"
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_DATABASE: fluxie
+  DB_USERNAME: fluxie
+  DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+  SESSION_DRIVER: redis
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  BROADCAST_CONNECTION: reverb
+  REVERB_APP_ID: ${SERVICE_HEX_32_REVERBID}
+  REVERB_APP_KEY: ${SERVICE_HEX_32_REVERBKEY}
+  REVERB_APP_SECRET: ${SERVICE_PASSWORD_REVERBSECRET}
+  REVERB_HOST: reverb
+  REVERB_PORT: "8080"
+  REVERB_SCHEME: http
+  MEDIA_DISK: s3
+  AWS_BUCKET: media
+  BACKUP_BUCKET: backups
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_ENDPOINT: http://rustfs:9000
+  AWS_USE_PATH_STYLE_ENDPOINT: "true"
+  AWS_ACCESS_KEY_ID: ${SERVICE_USER_RUSTFS}
+  AWS_SECRET_ACCESS_KEY: ${SERVICE_PASSWORD_RUSTFS}
+  WAHA_URL: http://waha:3000
+  WAHA_API_KEY: ${SERVICE_PASSWORD_WAHA}
+  WAHA_WEBHOOK_URL: http://app:8080/webhooks/waha
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  GOOGLE_REDIRECT_URI: ${SERVICE_URL_APP}/configuracoes/google/callback
+
+x-fluxie-image: &fluxie-image ghcr.io/fluxie-tech/fluxie-inbox:${FLUXIE_VERSION:-0.1.0}
+
+x-wait-infra: &wait-infra
+  postgres: {condition: service_healthy}
+  redis: {condition: service_healthy}
+
+services:
+  app:
+    image: *fluxie-image
+    environment:
+      <<: *app-env
+      AUTORUN_ENABLED: "true"
+      SERVICE_URL_APP_8080:
+    volumes:
+      - app-storage:/var/www/html/storage/app
+    depends_on:
+      <<: *wait-infra
+      rustfs: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  worker:
+    image: *fluxie-image
+    command: ["/usr/local/bin/worker.sh"]
+    environment:
+      <<: *app-env
+      AUTORUN_ENABLED: "false"
+    depends_on: *wait-infra
+    healthcheck:
+      test: ["CMD", "healthcheck-queue"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  scheduler:
+    image: *fluxie-image
+    command: ["php", "artisan", "schedule:work"]
+    environment:
+      <<: *app-env
+      AUTORUN_ENABLED: "false"
+    depends_on: *wait-infra
+    healthcheck:
+      test: ["CMD", "healthcheck-schedule"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  reverb:
+    image: *fluxie-image
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    environment:
+      <<: *app-env
+      AUTORUN_ENABLED: "false"
+    depends_on: *wait-infra
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 8080) ? 0 : 1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  waha:
+    image: devlikeapro/waha:gows-2026.10.1
+    environment:
+      WHATSAPP_DEFAULT_ENGINE: GOWS
+      TZ: America/Sao_Paulo
+      WAHA_API_KEY: ${SERVICE_PASSWORD_WAHA}
+      WAHA_DASHBOARD_ENABLED: "false"
+      WHATSAPP_SWAGGER_ENABLED: "false"
+      WAHA_WORKER_RESTART_SESSIONS: "true"
+      WAHA_PRESENCE_AUTO_ONLINE: "false"
+      WAHA_PRESENCE_AUTO_ONLINE_DURATION_SECONDS: "0"
+      WHATSAPP_FILES_FOLDER: /app/.media
+      WHATSAPP_FILES_LIFETIME: "0"
+      WAHA_EVENTS_DOWNLOAD_MEDIA: "true"
+      GODEBUG: netdns=go
+      WAHA_GOWS_DEVICE_REQUIRE_FULL_SYNC: "false"
+      WAHA_GOWS_DEVICE_HISTORY_SYNC_FULL_SYNC_DAYS_LIMIT: "10"
+      WAHA_GOWS_DEVICE_HISTORY_SYNC_RECENT_SYNC_DAYS_LIMIT: "7"
+      WAHA_GOWS_DEVICE_HISTORY_SYNC_INITIAL_SYNC_MAX_MESSAGES_PER_CHAT: "200"
+      WAHA_GOWS_DEVICE_HISTORY_SYNC_FULL_SYNC_SIZE_MB_LIMIT: "256"
+      WAHA_GOWS_DEVICE_HISTORY_SYNC_STORAGE_QUOTA_MB: "512"
+    volumes:
+      - waha-sessions:/app/.sessions
+      - waha-media:/app/.media
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: fluxie
+      POSTGRES_USER: fluxie
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+    volumes:
+      - pg-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fluxie -d fluxie"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    environment:
+      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+      REDISCLI_AUTH: ${SERVICE_PASSWORD_REDIS}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rustfs:
+    image: rustfs/rustfs:1.0.6
+    environment:
+      RUSTFS_ACCESS_KEY: ${SERVICE_USER_RUSTFS}
+      RUSTFS_SECRET_KEY: ${SERVICE_PASSWORD_RUSTFS}
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  app-storage:
+  waha-sessions:
+  waha-media:
+  pg-data:
+  redis-data:
+  rustfs-data:
