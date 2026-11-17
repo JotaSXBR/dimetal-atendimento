@@ -76,8 +76,6 @@ escrita à mão, ou restaurar o backup feito antes de atualizar.
 | `COOLIFY_STAGING_UUID` | UUID da Application do staging. Sem ele o workflow publica a imagem e pula o deploy. |
 | `COOLIFY_PRODUCTION_UUID` | UUID do Service da production. Sem ele a Release promove a imagem e pula a atualização. |
 
-Como fazer pela API: [`deploy-coolify-api.md`](deploy-coolify-api.md).
-
 ### Soltar uma versão
 
 1. Confira que o commit a lançar passou pelo `tests` na `main` (a imagem `sha-<sha>` dele precisa existir; sem ela o workflow
