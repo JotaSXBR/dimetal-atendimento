@@ -26,6 +26,16 @@ class VersionTest extends TestCase
         $this->assertTrue(Version::parse('1.0.0-100000000000000000000')->greaterThan(Version::parse('1.0.0-99999999999999999999')));
     }
 
+    public function test_zero_a_esquerda_nao_e_semver(): void
+    {
+        foreach (['01.0.0', '1.02.0', '1.0.0-01', '1.0.0-a.01'] as $texto) {
+            $this->assertNull(Version::parse($texto), $texto);
+        }
+        $this->assertNotNull(Version::parse('0.1.0'));
+        $this->assertNotNull(Version::parse('1.0.0-0'));
+        $this->assertNotNull(Version::parse('1.0.0-0a'));
+    }
+
     public function test_desenvolvimento_nao_e_release(): void
     {
         foreach (['sha-abc', 'edge', 'dev', ''] as $texto) {

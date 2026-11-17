@@ -5,7 +5,7 @@ namespace App\Services\Update;
 /** SemVer 2.0 (precedência); metadado de build (`+…`) é ignorado. */
 final readonly class Version
 {
-    private const PATTERN = '/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z.-]+)?$/';
+    private const PATTERN = '/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z.-]+)?$/';
 
     /**
      * @param  list<int>  $core
