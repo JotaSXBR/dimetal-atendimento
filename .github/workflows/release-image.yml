@@ -45,6 +45,10 @@ jobs:
       - name: Compose smoke test
         run: bash docker/smoke/compose-smoke.sh "$IMAGE:sha-$SHA"
 
+      # Regra do compose: a candidata aplicada por cima da instalação da última Release (compose e imagem dela).
+      - name: Upgrade smoke test
+        run: bash docker/smoke/upgrade-smoke.sh "$IMAGE:sha-$SHA"
+
       - name: Log in to GHCR
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:

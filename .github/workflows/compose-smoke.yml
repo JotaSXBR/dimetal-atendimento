@@ -43,3 +43,7 @@ jobs:
 
       - name: Compose smoke test
         run: bash docker/smoke/compose-smoke.sh fluxie-smoke:ci
+
+      # Regra do compose: o compose do PR aplicado por cima da instalação da última Release. Barra antes do merge.
+      - name: Upgrade smoke test
+        run: bash docker/smoke/upgrade-smoke.sh fluxie-smoke:ci
