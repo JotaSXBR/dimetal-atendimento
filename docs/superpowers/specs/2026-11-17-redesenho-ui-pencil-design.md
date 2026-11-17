@@ -16,8 +16,10 @@ nova**. É o "redesenho visual do dono" que a auditoria `docs/ux-audit/2026-11-1
   tabelas largas, estados (vazio, erro, carregando) e a posição de botões e alertas.
 - Visual monocromático do design: primário preto (zinc), avatares cinza com iniciais, cor só para estado (SLA, conectado,
   erro, bot, aviso).
-- Telas de gestão (Contatos, Relatórios, Auditoria, Histórico, Configurações) em largura toda, com limite em 2K para não
-  esticar demais.
+- Telas de gestão com layout de página (Contatos, Relatórios, Auditoria, Automação, Configurações) em largura toda, com
+  limite em 2K para não esticar demais. O Histórico usa o layout da Inbox (`layouts::inbox`, três colunas) e segue o
+  arranjo da Inbox, não o de página. A largura de cada tela muda na fatia que a redesenha (3 a 5), junto com o conteúdo
+  que passa a ocupar a largura (tabela); a fatia 1 só cria o arranjo e o aplica onde o conteúdo já cabe.
 - Tema claro e escuro pelos mesmos tokens; o escuro também aprovado no Pencil.
 - O Pencil vira o retrato fiel do app: o que o app não faz sai do desenho, o que o app tem e o desenho não ganha tela.
 
@@ -69,7 +71,7 @@ nova**. É o "redesenho visual do dono" que a auditoria `docs/ux-audit/2026-11-1
 | Componente do Pencil | No app |
 |---|---|
 | Sidebar, Nav Item, Nav Item Active, Nav Group Label, Sino | `layouts/app/sidebar.blade.php` (Flux sidebar), itens de 40 px |
-| Page Header (+ Tab) | `x-page-header` (existe; ganha o arranjo do design: título 28 px, subtítulo, ações à direita) |
+| Page Header (+ Tab) | `x-page-header` (existe; ganha o arranjo do design: faixa com borda de baixo, título 24 px peso 500, subtítulo 14 px, ações à direita, abas embaixo) |
 | Settings Nav Item / Active | nav de `x-settings-page` |
 | Button Primário/Secundário/Ghost/Destrutivo | `flux:button` primary / outline / ghost / danger (destrutivo no tom suave do design onde a ação não é a principal da tela) |
 | Badge Neutro/Conectado/Perto de estourar/SLA estourado/Bot | `x-status-badge` / `flux:badge` |
@@ -97,8 +99,9 @@ O arquivo `Dimetal.pen` tem 36 frames no topo, espalhados sem ordem, com compone
 Antes da fatia 1:
 
 - **Organizar o canvas:** uma faixa de componentes no topo e as telas abaixo, agrupadas por área na ordem das fatias
-  (Inbox e variantes; Histórico e Contatos; Relatórios e Auditoria; Configurações e Perfil; Login e celular; Automação),
-  cada tela em claro com a versão escura ao lado.
+  (Inbox e variantes; Histórico e Contatos; Relatórios e Auditoria; Configurações e Perfil; Login e celular; Automação).
+  Sem cópia escura de cada tela (sairia de sincronia com a clara): o escuro se confere trocando o tema do frame
+  (`theme: {mode: "dark"}`) numa cópia temporária, apagada depois (feito em 17/11).
 - **Consolidar os componentes:** `Componentes` (itens do menu e Sidebar), `Componentes - base`, `Componentes - alertas`,
   `Estados do sistema` e os dois `Settings Nav Item` soltos num quadro só de componentes, sem duplicata.
 - **Atualizar o `Design System`:** os textos e códigos de cor estão defasados (fala em "verde de sinal" e mostra hex que não
@@ -113,6 +116,15 @@ Antes da fatia 1:
 As variáveis do Pencil ganham o modo escuro com os valores do bloco `.dark` de `resources/css/app.css` (zinc-900 de fundo,
 zinc-800 de superfície, ink zinc-50, line zinc-700, warn/danger/ok/bot/read nas versões 300–400). Cada tela desenhada é
 conferida nos dois modos no Pencil antes do código, e no navegador depois.
+
+**Tokens 1:1 entre Pencil e app.** O Pencil tem variáveis sem par no `app.css` (`danger-soft`, `ok-soft`, `bot-soft`,
+`table-head`, `muted`, `line-strong`, `sidebar`, `sb-*`), e o layout usa zinc cru (`bg-white dark:bg-zinc-800` no body, fundo
+da sidebar). A fatia 1 reconcilia: cada uma vira token no `app.css` (contraste medido no `ThemeTokensTest`) ou
+`color-mix` sobre token existente, e o Pencil passa a usar os nomes do app (`accent-foreground`, `danger-foreground`). O
+plano de cada fatia traz o fundo real de cada área nos dois temas (a bolha do bot errou por misturar sobre `surface` quando
+o fundo era `canvas`).
+
+**Piso de 12 px.** Textos de 10 a 11 px do Pencil (Card, Stat, contador do menu) sobem para 12 px no Pencil e no app.
 
 ## Fatias
 
@@ -148,6 +160,16 @@ em 17/11/2026).
 - Largura toda nas telas de gestão.
 - Escuro no Pencil pelos tokens do app.
 - Fatia 0 de bugs antes do visual; editor do bot por último.
+
+## Decididos durante a fatia 0 (17/11/2026)
+
+- **Menores corrigidos na hora** (dono): achados Minor das revisões se corrigem na própria fatia, não vão para
+  `docs/superpowers/menores-pendentes.md`.
+- **Setinha do menu da bolha** (dono, pelo print do WhatsApp Web): folga igual dos dois lados; a setinha surge no canto de
+  cima, só com o mouse ou o foco, deslizando. Em bolha de texto, com degradê na cor da bolha (`--bubble-bg`); sobre mídia,
+  documento ou citação, num círculo flutuante (o degradê virava remendo). Nas telas de toque fica visível e com espaço
+  reservado. A fatia 2 (Inbox) não desfaz isso.
+- **Fundo das bolhas:** a bolha do bot mistura 15% do bot sobre `canvas`, o fundo real da conversa (Inbox e Histórico).
 
 ## Decisões minhas (da revisão do construtor)
 
