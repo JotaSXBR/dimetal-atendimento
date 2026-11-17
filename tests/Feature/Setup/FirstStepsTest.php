@@ -44,6 +44,28 @@ class FirstStepsTest extends TestCase
         $this->actingAs($this->admin())->get('/primeiros-passos')->assertNotFound();
     }
 
+    public function test_tela_limpa_sem_a_navegacao_e_com_o_sair(): void
+    {
+        $html = (string) $this->actingAs($this->admin())->get('/primeiros-passos')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString(route('inbox'), $html);
+        $this->assertStringNotContainsString(route('contatos'), $html);
+        $this->assertStringContainsString('action="'.route('logout').'"', $html);
+    }
+
+    public function test_se_gravar_a_marca_do_canal_falha_o_canal_nao_fica(): void
+    {
+        SetupState::setStep('canal');
+        Setting::saving(fn (Setting $s) => $s->key === 'setup.canal' ? throw new \RuntimeException('falha') : null);
+
+        try {
+            Livewire::actingAs($this->admin())->test(FirstSteps::class)->call('createChannel');
+        } catch (\RuntimeException) {
+        }
+
+        $this->assertSame(0, Channel::query()->count());
+    }
+
     public function test_empresa_grava_nome_e_avanca(): void
     {
         Livewire::actingAs($this->admin())->test(FirstSteps::class)

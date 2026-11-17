@@ -14,13 +14,16 @@ use App\Services\Setup\ApplySegment;
 use App\Services\Setup\SetupState;
 use App\Settings\CompanySettings;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /** Os três passos do admin recém-criado: empresa, segmento e canal. Concluir leva à fila. */
 #[Title('Primeiros passos')]
+#[Layout('layouts::setup')]
 class FirstSteps extends Component
 {
     use ReceivesAvatar;
@@ -105,17 +108,23 @@ class FirstSteps extends Component
             return;
         }
 
-        $channel = app(CreateChannel::class)($this->sessionName, auth()->user());
+        // A marca do canal entra junto com ele: sem ela, a retomada criaria um segundo canal.
+        $channel = DB::transaction(function (): Channel {
+            $channel = app(CreateChannel::class)($this->sessionName, auth()->user());
 
-        if (SetupState::segment() === ApplySegment::DISTRIBUIDORA) {
-            $workflow = Workflow::query()->where('name', DefaultWorkflow::NAME)->first();
+            if (SetupState::segment() === ApplySegment::DISTRIBUIDORA) {
+                $workflow = Workflow::query()->where('name', DefaultWorkflow::NAME)->first();
 
-            if ($workflow !== null) {
-                app(WorkflowPublisher::class)->activate($workflow, $channel);
+                if ($workflow !== null) {
+                    app(WorkflowPublisher::class)->activate($workflow, $channel);
+                }
             }
-        }
 
-        Setting::put(self::CHANNEL_KEY, $channel->id, 'int');
+            Setting::put(self::CHANNEL_KEY, $channel->id, 'int');
+
+            return $channel;
+        });
+
         $this->channelId = $channel->id;
     }
 
