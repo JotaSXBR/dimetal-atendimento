@@ -1,10 +1,11 @@
 name: release-image
 
 # Imagem versionada ghcr.io/fluxie-tech/fluxie-inbox.
-#  - push verde na main (workflow_run do `tests`): publica `edge` e `sha-<sha>` e atualiza o staging.
-#  - Release `vX.Y.Z`: promove `sha-<sha do commit da tag>` para `X.Y.Z` e `X.Y`, anexa o compose da versão e atualiza a production.
-#  - Pré-release `vX.Y.Z-pre` (ex.: `v0.0.0-teste.1`): promove só para `X.Y.Z-pre` e anexa o compose; a production não é tocada.
-# Sem COOLIFY_STAGING_UUID / COOLIFY_PRODUCTION_UUID o workflow publica e pula o deploy com um aviso.
+#  - push verde na main (workflow_run do `tests`): publica `edge` e `sha-<sha>`; nenhum ambiente é atualizado.
+#  - Release ou pré-release `vX.Y.Z[-pre]`: promove `sha-<sha do commit da tag>` para `X.Y.Z[-pre]` (e `X.Y` só na estável) e
+#    anexa o compose da versão. O staging pega a pré-release pelo botão Atualizar do app.
+#  - Só na Release estável o job `production` atualiza a production (apenas a primeira subida; ver o comentário dele).
+# Sem COOLIFY_PRODUCTION_UUID o workflow promove a imagem e pula a production com um aviso.
 on:
   workflow_run:
     workflows: [tests]
@@ -61,29 +62,6 @@ jobs:
           docker tag "$IMAGE:sha-$SHA" "$IMAGE:edge"
           docker push "$IMAGE:sha-$SHA"
           docker push "$IMAGE:edge"
-
-  deploy-staging:
-    needs: edge
-    runs-on: ubuntu-slim
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          persist-credentials: false
-
-      # Esperar exige que COOLIFY_API_TOKEN tenha a permissão "read" além de "deploy" (ver coolify.sh).
-      - name: Deploy no staging
-        env:
-          UUID: ${{ secrets.COOLIFY_STAGING_UUID }}
-          SHA: ${{ github.event.workflow_run.head_sha }}
-          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
-          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-        run: |
-          [ -n "$UUID" ] || { echo "::notice::COOLIFY_STAGING_UUID não definido: imagem publicada, deploy do staging pulado"; exit 0; }
-          source .github/scripts/coolify.sh
-          coolify_set_env applications "$UUID" FLUXIE_VERSION "sha-$SHA"
-          coolify_deploy_wait "$UUID"
 
   retag:
     if: github.event_name == 'release'

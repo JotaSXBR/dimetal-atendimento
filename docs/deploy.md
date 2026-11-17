@@ -119,9 +119,9 @@ versão mais velha é recusado ("Atualize o sistema para essa versão antes de r
 
 ### Ambientes
 
-- **staging** (`staging.inbox.fluxie.com.br`): **Application** com build pack Docker Compose, lendo o `docker-compose.yml` da
-  `main`. Cada merge verde na `main` publica as tags `edge` e `sha-<sha>` e o workflow `release-image` grava
-  `FLUXIE_VERSION=sha-<sha>` no staging e faz o deploy.
+- **staging** (`staging.inbox.fluxie.com.br`): **Service** com o compose colado de uma pré-release e
+  `FLUXIE_UPDATE_PRERELEASE=true`. Atualiza pelo botão **Atualizar** (Configuração → Sistema) a cada pré-release. Merge verde
+  na `main` só publica as tags `edge` e `sha-<sha>`; nenhum ambiente muda sozinho.
 - **production** (`inbox.fluxie.com.br`): **Service** com o compose colado da Release (como no passo 2 acima). Ao publicar uma
   Release `vX.Y.Z`, o workflow cria as tags `X.Y.Z` e `X.Y` e anexa à Release o compose com a versão no padrão. O job
   `production` grava o compose e `FLUXIE_VERSION` e reinicia o Service com pull, devolvendo os dois se falhar; pula
@@ -132,23 +132,29 @@ versão mais velha é recusado ("Atualize o sistema para essa versão antes de r
 
 | Segredo | Para quê |
 |---|---|
-| `COOLIFY_URL`, `COOLIFY_API_TOKEN` | API do Coolify. O token precisa das permissões deploy, read (sem ela o workflow não espera o deploy terminar) e escrita de variáveis. |
-| `COOLIFY_STAGING_UUID` | UUID da Application do staging. Sem ele o workflow publica a imagem e pula o deploy. |
+| `COOLIFY_URL`, `COOLIFY_API_TOKEN` | API do Coolify. O token precisa das permissões deploy, read, read:sensitive (para guardar o compose) e escrita de variáveis. |
 | `COOLIFY_PRODUCTION_UUID` | UUID do Service da production. Sem ele a Release promove a imagem e pula a atualização. |
 
 ### Soltar uma versão
 
 1. Confira que o commit a lançar passou pelo `tests` na `main` (a imagem `sha-<sha>` dele precisa existir; sem ela o workflow
    falha).
-2. Crie a Release com o `gh`:
+2. Primeiro no staging: crie uma pré-release no commit e espere o `release-image` promover a imagem e anexar o compose:
 
    ```
-   gh release create vX.Y.Z --target main --generate-notes
+   gh release create vX.Y.Z-rc.N --target <sha> --prerelease --generate-notes
    ```
 
-3. Acompanhe o workflow `release-image` no Actions: ele promove a imagem, anexa o compose e atualiza a production.
+   Depois clique em **Atualizar** em Configuração → Sistema do staging e confira.
+3. Aprovado no staging, crie a Release estável no mesmo commit:
 
-Releases só no formato `vX.Y.Z`; outra tag falha na validação. Pré-release publica só a tag completa (sem `X.Y`) e não
+   ```
+   gh release create vX.Y.Z --target <sha> --generate-notes
+   ```
+
+4. Acompanhe o workflow `release-image` no Actions: ele promove a imagem, anexa o compose e atualiza a production.
+
+Releases só no formato `vX.Y.Z[-pré-release]`; outra tag falha na validação. Pré-release publica só a tag completa (sem `X.Y`) e não
 atualiza a production.
 
 O CI roda a fumaça de atualização (`docker/smoke/upgrade-smoke.sh`): sobe o compose da Release anterior, cria dados e troca
