@@ -17,15 +17,17 @@ O Fluxie Inbox roda como um único Service de Docker Compose no Coolify: app, wo
 3. No serviço `app`, informe o domínio (`https://seu.dominio`). Só o `app` recebe domínio: o tempo real (websocket) sai pelo
    mesmo domínio, em `/app`, pelo nginx do app, sem rota própria no Coolify.
 4. Faça o deploy e espere todos os serviços ficarem saudáveis. O `app` roda as migrações ao subir.
-5. No terminal do serviço `app` (Coolify → Service → `app` → Terminal), crie o administrador:
+5. Abra `https://seu.dominio`. A tela pede o código de instalação: está no Coolify → Service → Environment →
+   `SERVICE_PASSWORD_SETUP`. Digite o código, crie o administrador (senha de no mínimo 8 caracteres) e siga os primeiros passos:
+   empresa, segmento (Distribuidora ou Em branco) e o primeiro canal, lendo o QR no WhatsApp (ou pulando para depois).
+6. Confirme que o canal fica **Conectado** e envie uma mensagem de teste.
 
-   ```
-   php artisan app:create-user voce@exemplo.com "Seu Nome" --role=admin
-   ```
+Alternativa de emergência, se a tela de instalação não servir: no terminal do serviço `app` (Coolify → Service → `app` →
+Terminal), `php artisan app:create-user voce@exemplo.com "Seu Nome" --role=admin`. O comando pergunta a senha; rodar de novo
+com o mesmo e-mail atualiza o usuário.
 
-   O comando pergunta a senha (mínimo de 8 caracteres). Rodar de novo com o mesmo e-mail atualiza o usuário.
-6. Entre no painel, abra **Canais**, escolha **Conectar** e leia o QR (ou use o código de pareamento) no WhatsApp. Confirme que
-   o canal fica **Conectado** e envie uma mensagem de teste.
+O fuso de exibição vem de `APP_DISPLAY_TIMEZONE` (padrão `America/Sao_Paulo`). Deixe **Connect to Predefined Network**
+desligado: cada recurso fica com a rede própria.
 
 Em instalação existente, não troque `APP_NAME`: ele é a base dos prefixos de cache, Redis e do cookie de sessão, e trocar
 desloga todos e deixa o cache órfão. Se precisar trocar, fixe antes `CACHE_PREFIX`, `REDIS_PREFIX` e `SESSION_COOKIE` com os
@@ -75,8 +77,6 @@ escrita à mão, ou restaurar o backup feito antes de atualizar.
 | `COOLIFY_URL`, `COOLIFY_API_TOKEN` | API do Coolify. O token precisa das permissões deploy, read (sem ela o workflow não espera o deploy terminar) e escrita de variáveis. |
 | `COOLIFY_STAGING_UUID` | UUID da Application do staging. Sem ele o workflow publica a imagem e pula o deploy. |
 | `COOLIFY_PRODUCTION_UUID` | UUID do Service da production. Sem ele a Release promove a imagem e pula a atualização. |
-
-Como fazer pela API: [`deploy-coolify-api.md`](deploy-coolify-api.md).
 
 ### Soltar uma versão
 

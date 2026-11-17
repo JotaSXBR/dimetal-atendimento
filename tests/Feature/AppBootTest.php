@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class AppBootTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_login_responde_e_o_app_grava_em_utc_e_exibe_em_sao_paulo(): void
     {
         $this->get('/login')->assertOk();

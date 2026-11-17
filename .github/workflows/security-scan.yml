@@ -1,7 +1,7 @@
 name: security-scan
 
-# Varreduras pesadas: imagem Docker e scan dinâmico contra o beta. Rodam por agendamento (segunda de manhã), sob demanda
-# (`gh workflow run security-scan`) e, no PR, só quando mudam o que elas olham. Separadas do `tests` para nunca travar o deploy.
+# Varreduras pesadas: imagem Docker e scan dinâmico contra o staging. Rodam por agendamento (segunda de manhã), sob demanda
+# (`gh workflow run security-scan`) e, no PR, só a da imagem e quando muda o que ela olha. Separadas do `tests` para nunca travar o deploy.
 on:
   pull_request:
     paths:
@@ -31,19 +31,29 @@ jobs:
         with:
           persist-credentials: false
 
-      # No PR a base é a do branch: construída aqui e no lugar da imagem publicada do FROM, que só muda depois do merge.
-      # No agendado e no manual a base é a publicada (a que o deploy usa), para pegar a defasagem dela.
+      # No PR que muda docker/base a base é a do branch: construída aqui (~80 s) e no lugar da imagem publicada do FROM, que
+      # só muda depois do merge. No resto, inclusive agendado e manual, a base é a publicada, a que o deploy usa: uma base
+      # defasada reprova aqui, e o remédio é rodar o base-image. A comparação é de árvores, basta o commit da base.
       # A referência é lida do docker/Dockerfile para não ficar fixa numa versão do PHP.
-      - name: Build the base image from this branch
+      - name: Detect base image changes
+        id: base
         if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          if git diff --quiet "$BASE_SHA" HEAD -- docker/base; then echo "changed=false"; else echo "changed=true"; fi >> "$GITHUB_OUTPUT"
+
+      - name: Build the base image from this branch
+        if: steps.base.outputs.changed == 'true'
         run: docker build -t fluxie-base:ci docker/base
 
       - name: Build the runtime image
         env:
-          EVENT_NAME: ${{ github.event_name }}
+          BASE_CHANGED: ${{ steps.base.outputs.changed }}
         run: |
           args=()
-          if [ "$EVENT_NAME" = "pull_request" ]; then
+          if [ "$BASE_CHANGED" = "true" ]; then
             base_ref="$(sed -nE 's#^FROM ([^ ]+) AS base$#\1#p' docker/Dockerfile)"
             args+=(--build-context "${base_ref}=docker-image://fluxie-base:ci")
           fi
@@ -60,16 +70,18 @@ jobs:
           exit-code: '1'
           format: table
 
+  # Varre o staging (código da main), não o do PR: no PR seria um minuto de runner sem relação com a mudança.
   dynamic:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-26.04
     timeout-minutes: 20
 
     steps:
-      # Varredura passiva (baseline do OWASP ZAP) contra o beta, que roda o código da main. Só relata: abrir issue
+      # Varredura passiva (baseline do OWASP ZAP) contra o staging, que roda o código da main. Só relata: abrir issue
       # e reprovar o job ficam desligados até a primeira rodada ser triada.
-      - name: ZAP baseline scan of the beta
+      - name: ZAP baseline scan of the staging
         uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
         with:
-          target: 'https://dimetal-beta.fluxie.com.br'
+          target: 'https://staging.inbox.fluxie.com.br'
           allow_issue_writing: false
           fail_action: false

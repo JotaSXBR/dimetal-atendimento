@@ -118,9 +118,9 @@ class AutomationIndexTest extends TestCase
             ->assertDontSee('Atendimento com horário')
             ->assertSee('fora do expediente avisa o horário');
 
-        $page->set('newName', 'Antigo')->set('template', 'horario')->call('create')->assertHasNoErrors();
+        $page->set('newName', 'Antigo')->set('template', 'horario')->call('create')->assertHasErrors(['template']);
 
-        $this->assertCount(1, Workflow::query()->where('name', 'Antigo')->firstOrFail()->draft['nodes']);
+        $this->assertSame(0, Workflow::query()->where('name', 'Antigo')->count());
     }
 
     public function test_card_mostra_resumo_do_rascunho(): void

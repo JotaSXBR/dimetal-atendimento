@@ -1,6 +1,6 @@
 {{-- Busca Ctrl+K (resources/js/command-palette.js): combobox com listbox; a marca da seta é `data-active` + `aria-activedescendant`. --}}
 <div>
-    <input type="search" role="combobox" aria-controls="palette-list" aria-expanded="true" aria-autocomplete="list" wire:model.live.debounce.200ms="q"
+    <input type="search" id="palette-input" name="q" role="combobox" aria-controls="palette-list" aria-expanded="true" aria-autocomplete="list" wire:model.live.debounce.200ms="q"
         placeholder="Buscar tela, contato ou protocolo" aria-label="Buscar tela, contato ou protocolo" autocomplete="off"
         class="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-3">
 

@@ -95,36 +95,3 @@ RUN apt-get update -qq \
 USER www-data
 
 EXPOSE 8080
-
-
-# No Coolify, build por Dockerfile ignora o campo "start_command": o comando do container é o CMD da
-# imagem. Por isso worker e scheduler são estágios próprios, escolhidos em "dockerfile_target_build".
-
-FROM runtime AS worker
-
-STOPSIGNAL SIGTERM
-
-# Um processo por fila (outbound, inbound, realtime+default e google), no mesmo container (ver docker/worker.sh).
-CMD ["/usr/local/bin/worker.sh"]
-
-# A imagem base herda um HEALTHCHECK de curl no nginx, que não existe neste estágio e o deixaria unhealthy;
-# o Coolify usa o HEALTHCHECK da imagem. Troca por checar o processo (script da imagem base, usa pgrep).
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD healthcheck-queue
-
-
-FROM runtime AS reverb
-
-STOPSIGNAL SIGTERM
-
-CMD ["php", "/var/www/html/artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
-
-
-FROM runtime AS scheduler
-
-STOPSIGNAL SIGTERM
-
-CMD ["php", "/var/www/html/artisan", "schedule:work"]
-
-# A imagem base herda um HEALTHCHECK de curl no nginx, que não existe neste estágio e o deixaria unhealthy;
-# o Coolify usa o HEALTHCHECK da imagem. Troca por checar o processo (script da imagem base, usa pgrep).
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD healthcheck-schedule

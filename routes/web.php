@@ -26,9 +26,14 @@ use App\Livewire\Settings\Retention;
 use App\Livewire\Settings\Sectors;
 use App\Livewire\Settings\Tags;
 use App\Livewire\Settings\Users;
+use App\Livewire\Setup\FirstSteps;
+use App\Livewire\Setup\Install;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/inbox')->name('home');
+
+Route::get('instalar', Install::class)->name('instalar');
+Route::get('primeiros-passos', FirstSteps::class)->middleware(['auth', 'can:admin'])->name('primeiros-passos');
 
 Route::post('webhooks/waha', WahaWebhookController::class)->middleware('throttle:webhook')->name('webhooks.waha');
 Route::get('marca/logo', LogoController::class)->name('logo');

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\Setup\SetupState;
 use Database\Seeders\Cenarios\AlertasDoSino;
 use Database\Seeders\Cenarios\BolhasDeTamanhosVariados;
 use Database\Seeders\Cenarios\CanalConectado;
@@ -44,5 +45,7 @@ class AmbienteDeTesteSeeder extends Seeder
             AlertasDoSino::class,
             TicketsComSla::class,
         ]);
+
+        SetupState::markConcluded();
     }
 }

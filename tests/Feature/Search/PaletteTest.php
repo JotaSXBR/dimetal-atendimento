@@ -27,6 +27,14 @@ class PaletteTest extends TestCase
         return Livewire::actingAs($user)->test(Palette::class)->set('q', $q);
     }
 
+    public function test_o_campo_de_busca_tem_name_e_id(): void
+    {
+        $html = $this->palette($this->atendente())->html();
+
+        $this->assertStringContainsString('name="q"', $html);
+        $this->assertStringContainsString('id="palette-input"', $html);
+    }
+
     private function atendente(?Sector $sector = null): User
     {
         $user = User::factory()->create(['role' => UserRole::ATENDENTE]);

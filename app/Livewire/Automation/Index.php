@@ -12,6 +12,7 @@ use App\Services\Bot\WorkflowTemplates;
 use DomainException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -50,7 +51,12 @@ class Index extends Component
         $this->authorize('supervisor');
 
         $this->newName = trim($this->newName);
-        $this->validate(['newName' => ['required', 'string', 'max:120']], [
+        $this->validate([
+            'newName' => ['required', 'string', 'max:120'],
+            'template' => ['required', Rule::in(array_column(WorkflowTemplates::all(), 'key'))],
+        ], [
+            'template.in' => 'Escolha um dos modelos da lista.',
+            'template.required' => 'Escolha um dos modelos da lista.',
             'newName.required' => 'Dê um nome ao workflow.',
             'newName.max' => 'O nome pode ter até 120 caracteres.',
         ]);

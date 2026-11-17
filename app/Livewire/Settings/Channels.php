@@ -2,10 +2,9 @@
 
 namespace App\Livewire\Settings;
 
-use App\Enums\AuditAction;
+use App\Actions\Channels\CreateChannel;
 use App\Models\Channel;
 use App\Models\WahaEvent;
-use App\Services\Audit\Auditor;
 use App\Settings\WahaSettings;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
@@ -19,15 +18,7 @@ class Channels extends Component
 
     public function addChannel(): void
     {
-        $this->validate([
-            'sessionName' => ['required', 'regex:/^[A-Za-z0-9_-]{1,60}$/', 'unique:channels,waha_session'],
-        ], [
-            'sessionName.regex' => 'Use só letras, números, hífen e sublinhado.',
-            'sessionName.unique' => 'Já existe um canal com essa sessão.',
-        ]);
-
-        Channel::create(['name' => $this->sessionName, 'waha_session' => $this->sessionName]);
-        Auditor::record(AuditAction::ChannelCreated, auth()->user(), $this->sessionName);
+        app(CreateChannel::class)($this->sessionName, auth()->user());
 
         $this->reset('sessionName');
     }

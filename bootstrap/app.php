@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RedirectToSetup;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Global (não só `web`): as respostas de erro e as rotas fora do grupo `web` também levam os cabeçalhos.
         $middleware->append(SecurityHeaders::class);
+
+        $middleware->web(append: [RedirectToSetup::class]);
 
         $middleware->validateCsrfTokens(except: [
             'webhooks/waha',
