@@ -5,6 +5,7 @@ namespace App\Livewire\Setup;
 use App\Actions\Channels\CreateChannel;
 use App\Livewire\Concerns\ReceivesAvatar;
 use App\Models\Channel;
+use App\Models\Setting;
 use App\Models\Workflow;
 use App\Services\Bot\DefaultWorkflow;
 use App\Services\Bot\WorkflowPublisher;
@@ -24,6 +25,9 @@ class FirstSteps extends Component
 {
     use ReceivesAvatar;
 
+    /** O canal criado por este assistente, para retomar de onde parou. */
+    private const CHANNEL_KEY = 'setup.canal';
+
     public string $name = '';
 
     public string $sessionName = 'principal';
@@ -38,8 +42,8 @@ class FirstSteps extends Component
 
         $this->name = CompanySettings::name();
         $this->step = SetupState::step();
-        $id = $this->step === 'canal' ? Channel::query()->orderBy('id')->value('id') : null;
-        $this->channelId = is_numeric($id) ? (int) $id : null;
+        $id = $this->step === 'canal' ? Setting::get(self::CHANNEL_KEY) : null;
+        $this->channelId = is_int($id) ? $id : null;
     }
 
     public function saveLogo(): void
@@ -74,6 +78,10 @@ class FirstSteps extends Component
     {
         $this->guard();
 
+        if (SetupState::step() !== 'segmento') {
+            return;
+        }
+
         $user = auth()->user() ?? abort(403);
 
         try {
@@ -91,6 +99,10 @@ class FirstSteps extends Component
     {
         $this->guard();
 
+        if ($this->channelId !== null || SetupState::step() !== 'canal') {
+            return;
+        }
+
         $channel = app(CreateChannel::class)($this->sessionName, auth()->user());
 
         if (SetupState::segment() === ApplySegment::DISTRIBUIDORA) {
@@ -101,6 +113,7 @@ class FirstSteps extends Component
             }
         }
 
+        Setting::put(self::CHANNEL_KEY, $channel->id, 'int');
         $this->channelId = $channel->id;
     }
 
@@ -108,6 +121,10 @@ class FirstSteps extends Component
     #[On('echo-private:inbox,.channel.status')]
     public function onChannelStatus(array $payload = []): void
     {
+        if (SetupState::concluded()) {
+            return;
+        }
+
         if ($this->channelId === null || ($payload['channel_id'] ?? null) !== $this->channelId) {
             $this->skipRender();
 

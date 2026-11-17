@@ -6,6 +6,7 @@ use App\Enums\ChannelStatus;
 use App\Enums\UserRole;
 use App\Livewire\Setup\FirstSteps;
 use App\Models\Channel;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workflow;
 use App\Services\Bot\DefaultWorkflow;
@@ -57,9 +58,79 @@ class FirstStepsTest extends TestCase
     public function test_volta_no_passo_em_que_parou(): void
     {
         SetupState::setStep('canal');
-        Channel::factory()->create(['name' => 'Canal do assistente', 'waha_session' => 'principal']);
+        $channel = Channel::factory()->create(['name' => 'Canal do assistente', 'waha_session' => 'principal']);
+        Setting::put('setup.canal', $channel->id, 'int');
+        Channel::factory()->create(['name' => 'Outro canal', 'waha_session' => 'outro']);
 
-        Livewire::actingAs($this->admin())->test(FirstSteps::class)->assertSee('Canal do assistente');
+        Livewire::actingAs($this->admin())->test(FirstSteps::class)
+            ->assertSee('Canal do assistente')
+            ->assertDontSee('Outro canal');
+    }
+
+    public function test_sem_a_marca_do_assistente_nao_retoma_canal_nenhum(): void
+    {
+        SetupState::setStep('canal');
+        Channel::factory()->create(['name' => 'Canal alheio', 'waha_session' => 'alheio']);
+
+        Livewire::actingAs($this->admin())->test(FirstSteps::class)->assertDontSee('Canal alheio');
+    }
+
+    public function test_nome_vazio_ou_grande_demais_e_recusado_e_o_passo_fica(): void
+    {
+        $component = Livewire::actingAs($this->admin())->test(FirstSteps::class);
+
+        $component->set('name', '')->call('saveCompany')->assertHasErrors('name');
+        $component->set('name', str_repeat('a', 121))->call('saveCompany')->assertHasErrors('name');
+
+        $this->assertSame('empresa', SetupState::step());
+    }
+
+    public function test_sessao_invalida_e_recusada(): void
+    {
+        $admin = $this->admin();
+        app(ApplySegment::class)(ApplySegment::EM_BRANCO, $admin);
+
+        Livewire::actingAs($admin)->test(FirstSteps::class)->set('sessionName', 'com espaço')->call('createChannel')->assertHasErrors('sessionName');
+
+        $this->assertSame(0, Channel::count());
+    }
+
+    public function test_criar_canal_duas_vezes_cria_um_so(): void
+    {
+        $admin = $this->admin();
+        app(ApplySegment::class)(ApplySegment::EM_BRANCO, $admin);
+
+        $component = Livewire::actingAs($admin)->test(FirstSteps::class)->call('createChannel');
+        $component->set('sessionName', 'segundo')->call('createChannel');
+
+        $this->assertSame(1, Channel::count());
+    }
+
+    public function test_criar_canal_fora_do_passo_do_canal_nao_cria(): void
+    {
+        Livewire::actingAs($this->admin())->test(FirstSteps::class)->call('createChannel');
+
+        $this->assertSame(0, Channel::count());
+    }
+
+    public function test_escolher_segmento_fora_do_passo_do_segmento_nao_faz_nada(): void
+    {
+        Livewire::actingAs($this->admin())->test(FirstSteps::class)->call('chooseSegment', ApplySegment::DISTRIBUIDORA);
+
+        $this->assertNull(SetupState::segment());
+        $this->assertSame('empresa', SetupState::step());
+    }
+
+    public function test_status_depois_de_concluida_nao_faz_nada(): void
+    {
+        $admin = $this->admin();
+        app(ApplySegment::class)(ApplySegment::EM_BRANCO, $admin);
+        $component = Livewire::actingAs($admin)->test(FirstSteps::class)->call('createChannel');
+        $channel = Channel::firstOrFail();
+        $channel->update(['status' => ChannelStatus::WORKING]);
+        SetupState::markConcluded();
+
+        $component->call('onChannelStatus', ['channel_id' => $channel->id, 'status' => 'WORKING'])->assertNoRedirect();
     }
 
     public function test_distribuidora_no_assistente_avanca_para_o_canal(): void
