@@ -12,7 +12,7 @@ class AuditActionTest extends TestCase
 {
     public function test_todo_caso_tem_rotulo_e_grupo_conhecido(): void
     {
-        $this->assertCount(20, AuditAction::cases());
+        $this->assertCount(24, AuditAction::cases());
         $this->assertSame(['Acesso', 'Usuários', 'Backup', 'Configurações'], AuditAction::groups());
 
         foreach (AuditAction::cases() as $action) {
