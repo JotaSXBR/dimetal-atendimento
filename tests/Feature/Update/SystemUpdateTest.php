@@ -20,6 +20,7 @@ use App\Support\AuditLogText;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -132,10 +133,16 @@ class SystemUpdateTest extends TestCase
         $run = $this->mock(RunBackup::class);
         $skips ? $run->shouldNotReceive('__invoke') : $run->shouldReceive('__invoke')->once()->andReturn($file);
         SystemUpdate::start(null, '0.1.0', '0.2.0')?->moveTo($status);
+        Log::spy();
 
         $skips
             ? $this->artisan('app:backup-database')->expectsOutputToContain('atualização')->assertSuccessful()
             : $this->artisan('app:backup-database')->expectsOutputToContain('Backup gravado')->assertSuccessful();
+
+        // O console do `schedule:work` ninguém lê: o diário pulado também vai para o log.
+        $skips
+            ? Log::shouldHaveReceived('warning')->withArgs(fn (string $message): bool => str_contains($message, 'backup diário foi pulado'))->once()
+            : Log::shouldNotHaveReceived('warning');
     }
 
     public function test_frases_da_auditoria(): void

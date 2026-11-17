@@ -12,6 +12,7 @@ use App\Services\Backup\ManualBackupState;
 use App\Services\Backup\Restore\RestoreProgress;
 use App\Services\Backup\RunBackup;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 class BackupDatabaseCommand extends Command
@@ -65,6 +66,7 @@ class BackupDatabaseCommand extends Command
         // A atualização fez o próprio backup minutos antes; o diário no meio dela só disputaria o banco.
         if (! $manual && in_array(SystemUpdate::open()?->status, [UpdateStatus::Aplicando, UpdateStatus::Reiniciando], true)) {
             $this->warn('Há uma atualização do sistema em andamento; o backup diário foi pulado.');
+            Log::warning('Há uma atualização do sistema em andamento; o backup diário foi pulado.');
 
             return true;
         }
