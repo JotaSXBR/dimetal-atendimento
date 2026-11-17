@@ -61,9 +61,9 @@ class BubbleColorsTest extends TestCase
         $html = $this->html($this->ticket->messages()->firstOrFail());
 
         $client = $this->bubble($html, 'Oi do cliente');
-        $this->assertStringContainsString('bg-surface', $client);
+        $this->assertStringContainsString('[--bubble-bg:var(--color-surface)]', $client);
         $this->assertStringContainsString('border-line', $client);
-        $this->assertStringContainsString('bg-accent-soft', $this->bubble($html, 'Resposta do atendente'));
+        $this->assertStringContainsString('[--bubble-bg:var(--color-accent-soft)]', $this->bubble($html, 'Resposta do atendente'));
     }
 
     public function test_bolha_do_bot_tem_o_tom_do_bot_e_o_rotulo_no_mesmo_tom(): void
@@ -71,7 +71,7 @@ class BubbleColorsTest extends TestCase
         $this->message(MessageDirection::OUT, MessageOrigin::BOT, 'Resposta automática do bot');
         $html = $this->html($this->ticket->messages()->firstOrFail());
 
-        $this->assertStringContainsString('bg-bot/15', $this->bubble($html, 'Resposta automática do bot'));
+        $this->assertStringContainsString('[--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-surface))]', $this->bubble($html, 'Resposta automática do bot'));
         $this->assertMatchesRegularExpression('/text-bot[^>]*>[^<]*Automação · resposta automática/', $html);
     }
 
