@@ -57,14 +57,10 @@ class System extends Component
         $this->authorize('admin');
         $token = trim($this->tokenInput);
 
-        try {
-            $this->validate(['panelUrl' => ['nullable', 'url', 'max:255'], 'tokenInput' => ['nullable', 'string', 'max:500']], [
-                'panelUrl.url' => 'Informe a URL completa do painel, com https://.',
-            ]);
-        } finally {
-            // Sai do snapshot mesmo com erro de validação: senão o segredo digitado volta para a tela.
-            $this->reset('tokenInput');
-        }
+        // Com erro de validação o token também sai do snapshot: o `dehydrate()` o limpa em toda resposta.
+        $this->validate(['panelUrl' => ['nullable', 'url', 'max:255'], 'tokenInput' => ['nullable', 'string', 'max:500']], [
+            'panelUrl.url' => 'Informe a URL completa do painel, com https://.',
+        ]);
 
         UpdateSettings::setPanelUrl(rtrim(trim($this->panelUrl), '/') ?: null);
 
@@ -74,6 +70,12 @@ class System extends Component
 
         $this->reset('connectionErrors', 'connectionMessage');
         $this->panelUrl = UpdateSettings::panelUrl() ?? '';
+    }
+
+    /** O `wire:model` manda o token junto com qualquer ação: só o `saveConnection` o usa, e nenhuma resposta o devolve à tela. */
+    public function dehydrate(): void
+    {
+        $this->tokenInput = '';
     }
 
     public function removeToken(): void

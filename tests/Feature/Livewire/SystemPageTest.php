@@ -83,12 +83,14 @@ class SystemPageTest extends TestCase
         Livewire::actingAs($this->admin())->test(System::class)->assertDontSee('Atualizar para');
     }
 
+    /** O token chega no mesmo pedido do salvar, como o `wire:model` do navegador manda (um `set` separado já o descartaria). */
+    private const SAVE = ['method' => 'saveConnection', 'params' => [], 'path' => ''];
+
     public function test_token_nunca_aparece_no_html_nem_no_snapshot(): void
     {
         $component = Livewire::actingAs($this->admin())->test(System::class)
             ->set('panelUrl', 'https://outro.example')
-            ->set('tokenInput', '9|token-novo-secreto')
-            ->call('saveConnection')
+            ->update(calls: [self::SAVE], updates: ['tokenInput' => '9|token-novo-secreto'])
             ->assertSee('Token salvo em')
             ->assertSee('Trocar');
 
@@ -263,9 +265,27 @@ class SystemPageTest extends TestCase
     {
         $component = Livewire::actingAs($this->admin())->test(System::class)
             ->set('panelUrl', 'sem-esquema')
-            ->set('tokenInput', '9|token-digitado-secreto')
-            ->call('saveConnection')
+            ->update(calls: [self::SAVE], updates: ['tokenInput' => '9|token-digitado-secreto'])
             ->assertHasErrors('panelUrl')
+            ->assertSet('tokenInput', '');
+
+        $this->assertStringNotContainsString('token-digitado-secreto', json_encode($component->snapshot));
+        $this->assertSame('7|segredo-do-token', UpdateSettings::token());
+    }
+
+    /** @return array<string, array{string}> */
+    public static function acoesQueNaoSalvam(): array
+    {
+        return ['testar conexão' => ['testConnection'], 'ligar a consulta' => ['toggleCheck'], 'atualizar a tela' => ['$refresh']];
+    }
+
+    /** O `wire:model` manda o token digitado junto com a próxima ação, seja ela qual for: só o salvar o usa, e nenhuma resposta o devolve. */
+    #[DataProvider('acoesQueNaoSalvam')]
+    public function test_token_digitado_e_nao_salvo_some_do_snapshot_em_outra_acao(string $method): void
+    {
+        $this->fakeWorld();
+        $component = Livewire::actingAs($this->admin())->test(System::class)
+            ->update(calls: $method === '$refresh' ? [] : [['method' => $method, 'params' => [], 'path' => '']], updates: ['tokenInput' => '9|token-digitado-secreto'])
             ->assertSet('tokenInput', '');
 
         $this->assertStringNotContainsString('token-digitado-secreto', json_encode($component->snapshot));
@@ -275,8 +295,7 @@ class SystemPageTest extends TestCase
     public function test_token_grande_demais_nao_e_salvo(): void
     {
         Livewire::actingAs($this->admin())->test(System::class)
-            ->set('tokenInput', str_repeat('a', 501))
-            ->call('saveConnection')
+            ->update(calls: [self::SAVE], updates: ['tokenInput' => str_repeat('a', 501)])
             ->assertHasErrors('tokenInput')
             ->assertSet('tokenInput', '');
 
