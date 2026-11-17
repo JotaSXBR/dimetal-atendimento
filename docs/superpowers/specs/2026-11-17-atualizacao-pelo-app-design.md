@@ -183,6 +183,18 @@ sozinha quando o sistema subir" e tenta de novo até o app responder (404 e 502 
 Ver decisão 5: o job `production` faz a primeira subida (compose + versão, com devolução) e, no PR seguinte à primeira Release com
 o botão, sai do workflow. Os segredos `COOLIFY_PRODUCTION_UUID` deixam de ser usados.
 
+### Backup e restauração entre versões (pergunta do dono, 17/11)
+
+- **Backup antigo em versão nova** (já funciona): a restauração roda o passo "Atualizando o esquema" (`Maintenance::migrate`) depois
+  da troca, então o banco recebe as migrações da versão instalada, inclusive as que transformam dados.
+- **Backup novo em versão velha** (novo): no passo de verificação, antes da troca, a restauração compara a tabela `migrations` do
+  banco restaurado com as migrações que esta versão conhece. Havendo alguma desconhecida, desfaz e recusa com "Este backup foi feito
+  numa versão mais nova (X). Atualize o sistema para essa versão antes de restaurar."
+- **O backup guarda a versão** em que foi feito (nos metadados do arquivo ou no nome) e a tela de Backups mostra ("feito na 0.2.0").
+  A recuperação guiada do `docs/deploy.md` diz qual backup usar: o que o botão fez logo antes de atualizar.
+- **Regra**: toda mudança de dados vai em migração, nunca em comando avulso, para que restaurar um backup antigo também atualize os
+  dados.
+
 ### Regra do compose
 
 Toda mudança no `docker-compose.yml` precisa funcionar quando aplicada por cima de uma instalação existente: variável nova com
