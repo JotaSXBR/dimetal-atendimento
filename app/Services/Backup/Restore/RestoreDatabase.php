@@ -4,8 +4,10 @@ namespace App\Services\Backup\Restore;
 
 use App\Enums\AuditAction;
 use App\Enums\ChannelStatus;
+use App\Enums\UpdateStatus;
 use App\Jobs\RecoverMessagesJob;
 use App\Models\Channel;
+use App\Models\SystemUpdate;
 use App\Notifications\BackupRestored;
 use App\Services\Alerts\AlertRecipients;
 use App\Services\Audit\Auditor;
@@ -157,7 +159,10 @@ class RestoreDatabase
             $run->swapped = true;
         });
 
-        $this->step('migrate', fn () => $this->maintenance->migrate());
+        $this->step('migrate', function () use ($run): void {
+            $this->maintenance->migrate();
+            $this->bestEffort($run, 'Não foi possível encerrar a atualização do sistema que veio aberta no banco restaurado.', fn () => $this->closeOpenUpdates());
+        });
 
         $this->step('resume', function () use ($run): void {
             $this->maintenance->restartWorkers();
@@ -171,6 +176,21 @@ class RestoreDatabase
         $this->step('recover', function () use ($run): void {
             $this->bestEffort($run, 'A recuperação das mensagens do WhatsApp falhou; use a recuperação manual em cada canal.', fn () => $this->recoverMessages($run->from ?? CarbonImmutable::now()));
         });
+    }
+
+    /**
+     * O backup feito pelo botão de atualizar leva a linha da atualização aberta; no banco novo ela travaria backup e restauração e o
+     * vigia mandaria um alerta falso. Fecha sem alerta nem auditoria de atualização (a restauração já é auditada).
+     */
+    private function closeOpenUpdates(): void
+    {
+        SystemUpdate::query()->whereIn('status', array_column(UpdateStatus::openCases(), 'value'))->update([
+            'status' => UpdateStatus::Falhou->value,
+            'message' => 'Fechada pela restauração do banco.',
+            'step_at' => now(),
+            'finished_at' => now(),
+            'notified_at' => now(),
+        ]);
     }
 
     /** Um `RecoverMessagesJob` por canal ativo e conectado, do backup (no máximo `recover_hours` atrás) até agora. */

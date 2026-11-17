@@ -3,13 +3,16 @@
 namespace Tests\Feature\Backup\Restore;
 
 use App\Enums\ChannelStatus;
+use App\Enums\UpdateStatus;
 use App\Enums\UserRole;
 use App\Jobs\RecoverMessagesJob;
 use App\Jobs\RestoreDatabaseJob;
 use App\Models\AuditLog;
 use App\Models\Channel;
+use App\Models\SystemUpdate;
 use App\Models\User;
 use App\Notifications\BackupRestored;
+use App\Notifications\UpdateFinished;
 use App\Services\Backup\BackupFile;
 use App\Services\Backup\BackupKind;
 use App\Services\Backup\DumpFailed;
@@ -167,6 +170,30 @@ class RestoreDatabaseTest extends TestCase
         $this->assertSame(['inspect', 'safety', 'restore', 'verify', 'swap', 'migrate', 'resume', 'recover'], array_column($state['steps'], 'key'));
         $this->assertSame('dimetal-2026-11-12-1000-manual.dump', BackupStatus::lastRestore()['file'] ?? null);
         $this->assertSame('Jessé <jotasx@example.com>', BackupStatus::lastRestore()['actor'] ?? null);
+    }
+
+    /** O backup feito pelo botão de atualizar leva a linha aberta: depois da troca ela não pode travar backups nem gerar alerta falso. */
+    public function test_atualizacao_aberta_que_veio_no_banco_restaurado_e_fechada_sem_alerta(): void
+    {
+        $this->maintenance->shouldReceive('migrate')->andReturnUsing(function (): void {
+            $this->calls[] = 'migrate';
+            // o banco restaurado chega com a atualização que estava em `backup` quando o dump foi feito
+            SystemUpdate::start(null, '0.1.0', '0.2.0')?->moveTo(UpdateStatus::Backup);
+        });
+
+        $this->run_();
+
+        $this->assertSame('done', $this->state()['status']);
+        $this->assertNull(SystemUpdate::open());
+        $update = SystemUpdate::query()->sole();
+        $this->assertSame(UpdateStatus::Falhou, $update->status);
+        $this->assertSame('Fechada pela restauração do banco.', $update->message);
+        $this->assertNotNull($update->notified_at);
+        $this->assertNotNull($update->finished_at);
+
+        $this->artisan('app:update-watch')->assertSuccessful();
+        Notification::assertNotSentTo(User::all(), UpdateFinished::class);
+        $this->assertSame(['restore.succeeded'], AuditLog::query()->pluck('action')->all());
     }
 
     public function test_sucesso_grava_restore_succeeded_na_auditoria(): void
