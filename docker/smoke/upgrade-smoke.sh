@@ -4,29 +4,41 @@
 # confere migrações, /up, /login sem cair no /instalar e os dados.
 # Uso: upgrade-smoke.sh <imagem-candidata-local> [--from vX.Y.Z]. Sem --from, a última Release estável. Derruba tudo no fim.
 set -euo pipefail
-IMG="${1:?uso: upgrade-smoke.sh <imagem-candidata-local> [--from vX.Y.Z]}"
-FROM="${3:-}"
-[ "${2:-}" != --from ] || [ -n "$FROM" ] || { echo "uso: upgrade-smoke.sh <imagem> [--from vX.Y.Z]"; exit 2; }
+usage() { echo "uso: upgrade-smoke.sh <imagem-candidata-local> [--from vX.Y.Z]"; exit 2; }
+IMG="${1:-}"
+[ -n "$IMG" ] || usage
+FROM=
+case "$#:${2:-}" in
+  1:) ;;
+  3:--from) FROM=$3; [ -n "$FROM" ] || usage ;;
+  *) usage ;;
+esac
 REPO=fluxie-tech/fluxie-inbox
 if [ -z "$FROM" ]; then
-  # releases/latest redireciona para a tag da última Release estável; sem API nem token
-  FROM=$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest")
-  FROM=${FROM##*/}
+  # releases/latest redireciona para a tag da última Release estável; sem API nem token. Sem nenhuma, fica em /releases.
+  url=$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest") ||
+    { echo "FALHA: não consegui consultar a última Release de $REPO"; exit 1; }
+  [[ "$url" == */releases/tag/* ]] || { echo "FALHA: $REPO não tem Release estável publicada ($url)"; exit 1; }
+  FROM=${url##*/}
 fi
-OLD=$(mktemp)
-curl -fsSL "https://github.com/$REPO/releases/download/$FROM/docker-compose.yml" -o "$OLD"
+url="https://github.com/$REPO/releases/download/$FROM/docker-compose.yml"
+OLD_COMPOSE=$(curl -fsSL "$url") || { echo "FALHA: não baixei o docker-compose.yml da Release $FROM ($url)"; exit 1; }
 SMOKE_PROJECT=fluxie-upgrade-smoke
+OLD=$(mktemp)
 SMOKE_FILES=(-f "$(cygpath -m "$OLD" 2>/dev/null || echo "$OLD")")
 source "$(dirname "$0")/lib.sh"
 # A versão é a etiqueta da candidata (sha-… no CI); o compose puxa ghcr.io/…:$FLUXIE_VERSION, então a candidata ganha esse nome.
 VERSION=${IMG##*:}
 TAGGED=ghcr.io/$REPO:$VERSION
 [ "$IMG" != "$TAGGED" ] || TAGGED=
-trap 'dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -f "$ENVF" "$OLD"; [ -z "$TAGGED" ] || docker rmi "$TAGGED" >/dev/null 2>&1 || true' EXIT
+CREATED= # só apaga a etiqueta se foi este script que a criou
+[ -z "$TAGGED" ] || docker image inspect "$TAGGED" >/dev/null 2>&1 || CREATED=$TAGGED
+trap 'dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -f "$ENVF" "$OLD"; [ -z "$CREATED" ] || docker rmi "$CREATED" >/dev/null 2>&1 || true' EXIT
+printf '%s\n' "$OLD_COMPOSE" >"$OLD"
 SERVICES=(app worker scheduler reverb waha)
 healthy() { # <fase>
   for s in "${SERVICES[@]}"; do
-    wait_for "$s" healthy 240 || { dc logs "$s" 2>&1 | tail -60; fail "$1: $s não ficou healthy"; }
+    wait_for "$s" healthy 240 || { dc logs "$s" 2>&1 | tail -60 || true; fail "$1: $s não ficou healthy"; }
   done
 }
 http() { dc exec -T app curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$1" || echo erro; }
@@ -60,8 +72,10 @@ echo "antes:  $before"
 echo "3. troca para o compose candidato com FLUXIE_VERSION=$VERSION ($IMG)"
 [ -z "$TAGGED" ] || docker tag "$IMG" "$TAGGED"
 export FLUXIE_VERSION=$VERSION
+# valida antes da troca: com o compose candidato inválido, o `down -v` do trap também falharia e deixaria a fase 1 de pé
+docker compose -p "$SMOKE_PROJECT" -f docker-compose.yml --env-file "$(cygpath -m "$ENVF" 2>/dev/null || echo "$ENVF")" config -q ||
+  fail "compose candidato inválido"
 SMOKE_FILES=(-f docker-compose.yml)
-dc config -q
 dc up -d --pull missing "${SERVICES[@]}"
 healthy "depois da troca"
 
