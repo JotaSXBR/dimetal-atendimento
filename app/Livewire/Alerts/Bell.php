@@ -165,6 +165,7 @@ class Bell extends Component
                 'skipped' => ['circle-stack', 'warn', 'Backup diário não rodou', 'Outro backup estava em andamento'],
                 default => ['circle-stack', 'danger', 'Backup do banco falhou', 'Veja Configuração > Backup do banco'],
             },
+            'update' => ['arrow-up-circle', 'accent', 'Versão '.(is_string($data['version'] ?? null) ? $data['version'] : '').' disponível', 'Veja Configuração > Sistema'],
             'recovery' => ['inbox-arrow-down', 'accent', ($data['state'] ?? '') === 'imported' ? 'Histórico importado' : 'Mensagens recuperadas', $this->recoveryDetail($data, $channel)],
             default => ['bell', 'accent', 'Alerta', $detail],
         };
