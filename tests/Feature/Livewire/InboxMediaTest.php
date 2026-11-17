@@ -256,12 +256,20 @@ class InboxMediaTest extends TestCase
     }
 
     /** O `w-fit` encolhe o contêiner até o conteúdo; sem `max-w-full` a foto (w-72) passa da bolha no celular. */
-    public function test_contener_da_foto_nao_passa_da_bolha(): void
+    public function test_conteiner_da_foto_nao_passa_da_bolha(): void
     {
         $html = $this->screen(['media_ref' => 'f.jpg', 'media_mime' => 'image/jpeg'])->html();
 
-        $this->assertMatchesRegularExpression('/<div[^>]*class="([^"]*)"[^>]*>\s*<button[^>]*cursor-zoom-in/', $html);
-        preg_match('/<div[^>]*class="([^"]*)"[^>]*>\s*<button[^>]*cursor-zoom-in/', $html, $m);
+        $this->assertSame(1, preg_match('/<div[^>]*class="([^"]*)"[^>]*>\s*<button[^>]*cursor-zoom-in/', $html, $m));
+        $this->assertContains('w-fit', explode(' ', $m[1]));
+        $this->assertContains('max-w-full', explode(' ', $m[1]));
+    }
+
+    public function test_conteiner_do_video_nao_passa_da_bolha(): void
+    {
+        $html = $this->screen(['media_ref' => 'v.mp4', 'media_mime' => 'video/mp4'])->html();
+
+        $this->assertSame(1, preg_match('/<div[^>]*class="([^"]*)"[^>]*>\s*<video/', $html, $m));
         $this->assertContains('w-fit', explode(' ', $m[1]));
         $this->assertContains('max-w-full', explode(' ', $m[1]));
     }
