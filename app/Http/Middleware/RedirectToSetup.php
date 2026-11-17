@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 /** Instalação em configuração: leva ao /instalar (sem admin) ou ao /primeiros-passos (admin logado). */
 class RedirectToSetup
 {
+    /** @param  Closure(Request): Response  $next */
     public function handle(Request $request, Closure $next): Response
     {
         // Rotas liberadas primeiro: a restauração não pode consultar o banco que está sendo restaurado.
