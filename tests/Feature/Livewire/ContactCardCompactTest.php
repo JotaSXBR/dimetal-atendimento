@@ -63,7 +63,7 @@ class ContactCardCompactTest extends TestCase
         $tickets = $this->past(7);
 
         $card = $this->card(['compact' => true])
-            ->assertSee('Anteriores (7)')
+            ->assertSee('Atendimentos anteriores (7)')
             ->assertSee('Ver todos no Histórico')
             ->assertSeeHtml('contactId='.$this->contact->id);
 
@@ -77,7 +77,7 @@ class ContactCardCompactTest extends TestCase
     {
         $this->past(5);
 
-        $this->card(['compact' => true])->assertSee('Anteriores (5)')->assertDontSee('Ver todos no Histórico');
+        $this->card(['compact' => true])->assertSee('Atendimentos anteriores (5)')->assertDontSee('Ver todos no Histórico');
     }
 
     public function test_sem_anteriores_o_bloco_vem_fechado(): void
@@ -94,7 +94,7 @@ class ContactCardCompactTest extends TestCase
 
         $html = $this->card(['compact' => true])->html();
 
-        $this->assertStringContainsString('Anteriores (2)', $html);
+        $this->assertStringContainsString('Atendimentos anteriores (2)', $html);
         $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $this->detailsTag($html, 'details-history'));
     }
 
@@ -237,6 +237,33 @@ class ContactCardCompactTest extends TestCase
 
         $this->assertStringContainsString('2026-000953', $html);
         $this->assertStringNotContainsString('ticketId='.$hidden->id, $html);
+    }
+
+    public function test_anteriores_viram_cartoes_e_so_os_abriveis_tem_seta(): void
+    {
+        $channel = Channel::factory()->create();
+        $mine = Sector::factory()->create();
+        $make = fn (Sector $sector, string $protocol): Ticket => Ticket::factory()->create([
+            'channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'sector_id' => $sector->id,
+            'status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subDay(), 'protocol' => $protocol,
+        ]);
+        $openable = $make($mine, '2026-000961');
+        $make(Sector::factory()->create(), '2026-000962');
+        $agent = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $agent->sectors()->attach($mine);
+
+        $xpath = $this->dom(Livewire::actingAs($agent)->test(ContactCard::class, ['contactId' => $this->contact->id, 'compact' => true])->html());
+        $card = fn (string $protocol) => $xpath->query('//*[@data-testid="details-history"]//*[@data-link-card][.//*[@data-link-card-title][normalize-space()="'.$protocol.'"]]')->item(0);
+
+        $link = $card('2026-000961');
+        $this->assertInstanceOf(\DOMElement::class, $link);
+        $this->assertSame('a', $link->tagName);
+        $this->assertSame(route('historico', ['ticketId' => $openable->id]), $link->getAttribute('href'));
+        $this->assertSame(1, $xpath->query('.//*[@data-link-card-chevron]', $link)->length);
+
+        $static = $card('2026-000962');
+        $this->assertInstanceOf(\DOMElement::class, $static);
+        $this->assertSame(0, $xpath->query('.//*[@data-link-card-chevron]', $static)->length);
     }
 
     private function channelWith(string $session, string $phone): Channel

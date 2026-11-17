@@ -37,30 +37,25 @@
             @endif
         </x-disclosure>
 
-        <x-disclosure :title="'Anteriores ('.$historyTotal.')'" :open="false" testid="details-history">
+        <x-disclosure :title="'Atendimentos anteriores ('.$historyTotal.')'" :open="false" testid="details-history">
             <ul class="space-y-2">
                 @forelse ($history as $past)
                     @php($mine = in_array($past->id, $openable, true))
                     @php($closed = $past->status === \App\Enums\TicketStatus::ENCERRADO)
                     @php($otherNumber = $currentChannelId !== null && $past->channel_id !== $currentChannelId)
                     @php($number = $past->channel?->phoneLabel() ?? $past->channel?->name ?? '')
-                    <li class="text-xs" wire:key="history-{{ $past->id }}">
-                        @if ($mine && $closed)
-                            <a href="{{ route('historico', ['ticketId' => $past->id]) }}" wire:navigate class="inline-flex min-h-6 items-center font-mono text-ink underline-offset-2 hover:underline">{{ $past->protocol }}</a>
-                        @elseif ($mine && ! $readonly)
-                            {{-- Só a Fila tem `select`; no Histórico (somente leitura) o pai é outro componente. --}}
-                            <button type="button" wire:click="$parent.select({{ $past->id }})" class="inline-flex min-h-6 items-center font-mono text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</button>
-                        @elseif ($mine)
-                            <a href="{{ route('inbox', ['ticket' => $past->id]) }}" wire:navigate class="inline-flex min-h-6 items-center font-mono text-accent-content underline-offset-2 hover:underline">{{ $past->protocol }}</a>
-                        @else
-                            <span class="font-mono text-ink">{{ $past->protocol }}</span>
-                        @endif
-                        <span class="text-ink-3">· {{ $past->opened_at->timezone($tz)->format('d/m/Y') }}@if ($mine) · {{ $past->sector?->name ?? 'Fila geral' }}@endif</span>
-                        @if (! $closed && $otherNumber)
-                            <p class="font-semibold text-warn">também tem ticket aberto no número {{ $number }} ({{ $past->status->label() }})</p>
-                        @else
-                            <p class="flex flex-wrap items-center gap-1 text-ink-2"><x-status-badge :status="$past->status" />@if ($past->close_outcome)<x-status-badge :status="$past->close_outcome" />@endif @if ($otherNumber)<span>· número {{ $number }}</span>@endif</p>
-                        @endif
+                    {{-- Só a Fila tem `select`; no Histórico (somente leitura) o pai é outro componente, então o aberto vai à Inbox por link. --}}
+                    @php($href = $mine && $closed ? route('historico', ['ticketId' => $past->id]) : ($mine && $readonly ? route('inbox', ['ticket' => $past->id]) : null))
+                    @php($select = $mine && ! $closed && ! $readonly ? '$parent.select('.$past->id.')' : null)
+                    <li wire:key="history-{{ $past->id }}">
+                        <x-link-card :href="$href" :title="$past->protocol" :wire:click="$select">
+                            <span class="block">{{ $past->opened_at->timezone($tz)->format('d/m/Y') }}@if ($mine) · {{ $past->sector?->name ?? 'Fila geral' }}@endif</span>
+                            @if (! $closed && $otherNumber)
+                                <span class="block font-semibold text-warn">também tem ticket aberto no número {{ $number }} ({{ $past->status->label() }})</span>
+                            @else
+                                <span class="mt-1 flex flex-wrap items-center gap-1"><x-status-badge :status="$past->status" />@if ($past->close_outcome)<x-status-badge :status="$past->close_outcome" />@endif @if ($otherNumber)<span>· número {{ $number }}</span>@endif</span>
+                            @endif
+                        </x-link-card>
                     </li>
                 @empty
                     <li class="text-xs text-ink-3">Nenhum atendimento ainda.</li>
