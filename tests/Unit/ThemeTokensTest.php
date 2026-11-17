@@ -430,6 +430,6 @@ class ThemeTokensTest extends TestCase
     {
         $css = (string) file_get_contents(dirname(__DIR__, 2).'/resources/css/app.css');
 
-        $this->assertMatchesRegularExpression('/html:has\(\[data-page-layout\]\)\s*\{[^}]*scrollbar-gutter:\s*stable/', $css);
+        $this->assertMatchesRegularExpression('/html:has\(\[data-page-layout\]\)[^{]*\{[^}]*scrollbar-gutter\s*:\s*stable/', $css);
     }
 }

@@ -221,7 +221,7 @@ flow-node { display: block; }
     display: none !important;
 }
 
-/* A barra de rolagem da janela aparece e some entre páginas; sem reservá-la, o bloco centralizado (submenu das Configurações) pulava 7 px. */
+/* A barra de rolagem da janela aparece e some entre páginas; sem reservá-la, o bloco centralizado (submenu das Configurações) se deslocava pela metade da largura dela. */
 html:has([data-page-layout]) {
     scrollbar-gutter: stable;
 }

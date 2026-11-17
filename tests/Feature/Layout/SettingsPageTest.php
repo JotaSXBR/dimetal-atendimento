@@ -83,13 +83,15 @@ class SettingsPageTest extends TestCase
 
     public function test_layout_de_pagina_marca_o_main(): void
     {
-        foreach (['/configuracoes/setores', '/contatos'] as $url) {
+        foreach (['/configuracoes/setores', '/contatos', '/relatorios', '/auditoria'] as $url) {
             $this->assertCount(1, $this->xpath($this->page(UserRole::ADMIN, $url))->query('//*[@role="main"][@data-page-layout]'), $url);
         }
     }
 
     public function test_inbox_nao_marca_o_main(): void
     {
-        $this->assertStringNotContainsString('data-page-layout', $this->page(UserRole::ADMIN, '/inbox'));
+        foreach (['/inbox', '/historico'] as $url) {
+            $this->assertStringNotContainsString('data-page-layout', $this->page(UserRole::ADMIN, $url), $url);
+        }
     }
 }

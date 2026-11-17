@@ -297,9 +297,26 @@ class InboxTranscriptTest extends TestCase
 
         $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
         preg_match('/<button[^>]*data-testid="message-menu-button"[^>]*>/', $html, $m);
+        preg_match('/\sclass="([^"]*)"/', $m[0], $c);
+        $classes = preg_split('/\s+/', trim($c[1]));
 
-        foreach (['opacity-0', 'group-hover:opacity-100', 'focus-visible:opacity-100', '[@media(hover:none)]:opacity-100', 'translate-x-1', 'group-hover:translate-x-0', 'focus-visible:translate-x-0', 'motion-reduce:translate-x-0'] as $classe) {
-            $this->assertStringContainsString($classe, $m[0]);
+        foreach (['opacity-0', 'group-hover:opacity-100', 'focus-visible:opacity-100', '[@media(hover:none)]:opacity-100', 'translate-x-1', 'group-hover:translate-x-0', 'focus-visible:translate-x-0', 'motion-reduce:translate-x-0', 'transition-[opacity,translate]'] as $classe) {
+            $this->assertContains($classe, $classes);
+        }
+    }
+
+    public function test_chevron_oculto_nao_captura_clique(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Oi')->update(['wa_message_id' => 'W1']);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+        preg_match('/<button[^>]*data-testid="message-menu-button"[^>]*>/', $html, $m);
+        preg_match('/\sclass="([^"]*)"/', $m[0], $c);
+        $classes = preg_split('/\s+/', trim($c[1]));
+
+        foreach (['pointer-events-none', 'group-hover:pointer-events-auto', 'focus-visible:pointer-events-auto', '[@media(hover:none)]:pointer-events-auto'] as $classe) {
+            $this->assertContains($classe, $classes);
         }
     }
 
