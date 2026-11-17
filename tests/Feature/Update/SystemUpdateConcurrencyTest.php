@@ -32,10 +32,11 @@ class SystemUpdateConcurrencyTest extends TestCase
             $this->assertNotNull(SystemUpdate::start(null, '0.1.0', '0.2.0'));
             $worker->start();
 
-            // Só segue quando o filho está de fato parado na trava (sem sleep fixo).
+            // Só segue quando o filho está de fato parado na trava (sem sleep fixo); o filtro por banco isola testes paralelos.
             $deadline = microtime(true) + 20;
 
-            while (DB::table('pg_locks')->where('locktype', 'advisory')->where('granted', false)->doesntExist()) {
+            while (DB::table('pg_locks')->where('locktype', 'advisory')->where('granted', false)
+                ->whereRaw('database = (select oid from pg_database where datname = current_database())')->doesntExist()) {
                 $this->assertLessThan($deadline, microtime(true), 'O filho não chegou à trava: '.$worker->getErrorOutput());
                 usleep(50_000);
             }
