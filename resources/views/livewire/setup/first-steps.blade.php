@@ -70,7 +70,7 @@
         @endif
 
         <div>
-            <button type="button" wire:click="skip" class="text-sm font-medium text-ink-2 underline underline-offset-2 hover:text-ink">Pular, conecto depois</button>
+            <flux:button type="button" variant="ghost" wire:click="skip" class="-ms-4">Pular, conecto depois</flux:button>
         </div>
     @endif
 </div>
