@@ -7,7 +7,10 @@ final readonly class Version
 {
     private const PATTERN = '/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z.-]+)?$/';
 
-    /** @param  list<string>  $pre */
+    /**
+     * @param  list<int>  $core
+     * @param  list<string>  $pre
+     */
     private function __construct(private array $core, private array $pre) {}
 
     public static function parse(string $text): ?self
@@ -37,16 +40,24 @@ final readonly class Version
             if ($b === null) {
                 return true; // mais identificadores vence
             }
-            if ($a === $b) {
-                continue;
+            if ($a !== $b) {
+                return self::compareIdentifier($a, $b) > 0;
             }
-            $na = ctype_digit($a);
-            $nb = ctype_digit($b);
-
-            return $na && $nb ? (int) $a > (int) $b : ($na === $nb ? $a > $b : $nb);
         }
 
         return false;
+    }
+
+    /** Números sem estouro de int (mais longo vence, igual compara por texto); número antes de texto; texto por strcmp. */
+    private static function compareIdentifier(string $a, string $b): int
+    {
+        $na = ctype_digit($a);
+        $nb = ctype_digit($b);
+        if ($na && $nb) {
+            return strlen($a) <=> strlen($b) ?: strcmp($a, $b);
+        }
+
+        return $na === $nb ? strcmp($a, $b) : ($nb ? 1 : -1);
     }
 
     public function __toString(): string

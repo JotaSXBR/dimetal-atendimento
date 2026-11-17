@@ -8,7 +8,7 @@ final class InstalledVersion
     {
         $env = config('fluxie.version');
 
-        return is_string($env) && $env !== '' ? $env : (string) config('fluxie.build');
+        return is_string($env) && $env !== '' ? $env : config()->string('fluxie.build');
     }
 
     public function release(): ?Version

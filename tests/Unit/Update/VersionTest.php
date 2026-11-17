@@ -16,6 +16,16 @@ class VersionTest extends TestCase
         $this->assertFalse(Version::parse('1.0.0')->greaterThan(Version::parse('1.0.0+build')));
     }
 
+    public function test_identificador_alfanumerico_compara_como_texto(): void
+    {
+        $this->assertTrue(Version::parse('1.0.0-9e1')->greaterThan(Version::parse('1.0.0-1e10')));
+    }
+
+    public function test_identificador_numerico_enorme_nao_estoura(): void
+    {
+        $this->assertTrue(Version::parse('1.0.0-100000000000000000000')->greaterThan(Version::parse('1.0.0-99999999999999999999')));
+    }
+
     public function test_desenvolvimento_nao_e_release(): void
     {
         foreach (['sha-abc', 'edge', 'dev', ''] as $texto) {
