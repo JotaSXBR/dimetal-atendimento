@@ -48,7 +48,8 @@ class InstallTest extends TestCase
 
     public function test_codigo_errado_nao_cria_nada(): void
     {
-        $this->preencher('errado')->call('save')->assertHasErrors('code');
+        $component = $this->preencher('errado')->call('save')->assertHasErrors('code');
+        $this->assertSame(1, substr_count($component->html(), 'Código inválido.'));
 
         $this->assertSame(0, User::count());
     }

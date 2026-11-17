@@ -30,9 +30,6 @@
 
         <form wire:submit="saveCompany" class="space-y-4 rounded-[14px] border border-line bg-surface p-5">
             <flux:input label="Nome fantasia" wire:model="name" autofocus />
-            @error('name')
-                <p class="text-xs text-danger" role="alert">{{ $message }}</p>
-            @enderror
 
             <flux:button type="submit" variant="primary">Continuar</flux:button>
         </form>
@@ -63,9 +60,6 @@
                 <form wire:submit="createChannel" class="flex items-end gap-2">
                     <div class="flex-1">
                         <flux:input wire:model="sessionName" label="Nome da sessão" placeholder="principal" />
-                        @error('sessionName')
-                            <p class="mt-2 text-xs text-danger" role="alert">{{ $message }}</p>
-                        @enderror
                     </div>
                     <flux:button type="submit" variant="primary" wire:loading.attr="disabled">Criar canal</flux:button>
                 </form>

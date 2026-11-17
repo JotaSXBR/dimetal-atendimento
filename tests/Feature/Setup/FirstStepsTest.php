@@ -80,6 +80,7 @@ class FirstStepsTest extends TestCase
         $component = Livewire::actingAs($this->admin())->test(FirstSteps::class);
 
         $component->set('name', '')->call('saveCompany')->assertHasErrors('name');
+        $this->assertSame(1, substr_count($component->html(), 'Informe o nome da empresa.'));
         $component->set('name', str_repeat('a', 121))->call('saveCompany')->assertHasErrors('name');
 
         $this->assertSame('empresa', SetupState::step());
@@ -90,7 +91,8 @@ class FirstStepsTest extends TestCase
         $admin = $this->admin();
         app(ApplySegment::class)(ApplySegment::EM_BRANCO, $admin);
 
-        Livewire::actingAs($admin)->test(FirstSteps::class)->set('sessionName', 'com espaço')->call('createChannel')->assertHasErrors('sessionName');
+        $component = Livewire::actingAs($admin)->test(FirstSteps::class)->set('sessionName', 'com espaço')->call('createChannel')->assertHasErrors('sessionName');
+        $this->assertSame(1, substr_count($component->html(), 'Use só letras, números, hífen e sublinhado.'));
 
         $this->assertSame(0, Channel::count());
     }
