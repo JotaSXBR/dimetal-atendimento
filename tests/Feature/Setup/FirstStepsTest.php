@@ -58,12 +58,17 @@ class FirstStepsTest extends TestCase
         SetupState::setStep('canal');
         Setting::saving(fn (Setting $s) => $s->key === 'setup.canal' ? throw new \RuntimeException('falha') : null);
 
+        $message = null;
+
         try {
             Livewire::actingAs($this->admin())->test(FirstSteps::class)->call('createChannel');
-        } catch (\RuntimeException) {
+        } catch (\RuntimeException $e) {
+            $message = $e->getMessage();
         }
 
+        $this->assertSame('falha', $message);
         $this->assertSame(0, Channel::query()->count());
+        $this->assertNull(Setting::get('setup.canal'));
     }
 
     public function test_empresa_grava_nome_e_avanca(): void
