@@ -77,11 +77,11 @@ nova**. É o "redesenho visual do dono" que a auditoria `docs/ux-audit/2026-11-1
 | Badge Neutro/Conectado/Perto de estourar/SLA estourado/Bot | `x-status-badge` / `flux:badge` |
 | Banner Atenção/Erro/Info, Faixas crítica/grave/confirmação/ativar som | `flux:callout` e as faixas de alerta existentes |
 | Empty State | `x-empty-state` (existe) |
-| Card | `x-card` (novo: cabeçalho opcional com título e ação, conteúdo) |
+| Card | `flux:card` (free) |
 | Field, Toggle Row | `flux:field` / `flux:switch` com texto (padronizar o arranjo) |
 | Skeleton Row | `x-skeleton-rows` (existe) |
 | Stat | `x-stat` (novo, cartões dos Relatórios) |
-| Table Header Row, Table Row, Table Footer | `x-table` (novo: cabeçalho, linhas, rodapé com informação e paginação quando a tela já pagina) |
+| Table Header Row, Table Row, Table Footer | `flux:table` (free), com `paginate` quando a tela já pagina |
 | Cartão com seta (atendimentos anteriores) | `x-link-card` (novo: título, linha secundária, chevron; link para o ticket) |
 
 Nomes dos componentes novos são sugestão; o plano pode ajustar, sem duplicar o que já existe em `resources/views/components`.
@@ -111,6 +111,23 @@ Antes da fatia 1:
   frames de função fora do app depois de ajustados, nós ocultos ou vazios e variáveis sem uso.
 - Antes de apagar qualquer frame, a lista do que sai vai ao dono numa pergunta; o resto da organização é minha.
 
+## Componentes próprios x Flux free 2.21 (dono, 17/11: sempre conferir o free antes)
+
+O Flux free instalado (2.21) já tem `card` (com `card.header`, `card.heading`, `card.actions`, `card.body`, `card.footer`) e
+`table` (`columns`, `column` com `sortable`, `rows`, `row`, `cell`, `paginate`, `bleed`): nada de `x-card` nem `x-table`
+próprios. Levantamento dos componentes que temos:
+
+| Nosso | Free tem? | Decisão | Fatia |
+|---|---|---|---|
+| `ui/field` (input + rótulo à mão) | sim, `flux:field`/`flux:input` | trocar | 6 (instalação/login) |
+| nav de `x-settings-page` | sim, `flux:navlist` (com grupos) | trocar, no visual do Settings Nav Item | 5 |
+| `audit-tabs` | sim, `flux:navbar` (abas de navegação) | trocar | 4 |
+| `confirm-dialog` (`<dialog>` nativo + `data-confirm`) | sim, `flux:modal` | avaliar na fatia 2: só troca se o build CSP e o `data-confirm` global continuarem | 2 |
+| `status-badge` | `flux:badge` tem cores nomeadas fora dos tokens | manter (decisão da série UX de 10/11) | — |
+| `popover`, `tag-picker`, `bar-chart`, `disclosure` | não (Pro) | manter | — |
+| `empty-state`, `skeleton-rows` | `skeleton` sim (já usado dentro); estado vazio não | manter | 1 |
+| Stat, cartão com seta | não | criar `x-stat` (fatia 4) e `x-link-card` (fatia 2), na fatia que os usa primeiro | 2 e 4 |
+
 ## Tema escuro
 
 As variáveis do Pencil ganham o modo escuro com os valores do bloco `.dark` de `resources/css/app.css` (zinc-900 de fundo,
@@ -119,8 +136,11 @@ conferida nos dois modos no Pencil antes do código, e no navegador depois.
 
 **Tokens 1:1 entre Pencil e app.** O Pencil tem variáveis sem par no `app.css` (`danger-soft`, `ok-soft`, `bot-soft`,
 `table-head`, `muted`, `line-strong`, `sidebar`, `sb-*`), e o layout usa zinc cru (`bg-white dark:bg-zinc-800` no body, fundo
-da sidebar). A fatia 1 reconcilia: cada uma vira token no `app.css` (contraste medido no `ThemeTokensTest`) ou
-`color-mix` sobre token existente, e o Pencil passa a usar os nomes do app (`accent-foreground`, `danger-foreground`). O
+da sidebar). Reconciliação (17/11): no Pencil, as duplicatas viraram os tokens do app (`table-head` e `sidebar` →
+`canvas`, `sb-active` → `surface`, `sb-*` → `ink*`/`accent-soft`, `accent-ink`/`danger-ink` → `accent-foreground`/
+`danger-foreground`); as que não têm par (`muted`, `line-strong`, `danger-soft`, `ok-soft`, `bot-soft`) viram token no
+`app.css` na fatia do primeiro uso (o `ThemeTokensTest` exige que todo token tenha uso), com contraste medido. A fatia 1
+troca o zinc cru dos layouts pelos tokens. O
 plano de cada fatia traz o fundo real de cada área nos dois temas (a bolha do bot errou por misturar sobre `surface` quando
 o fundo era `canvas`).
 
