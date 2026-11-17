@@ -24,6 +24,7 @@ use App\Livewire\Settings\GoogleContacts;
 use App\Livewire\Settings\QuickReplies;
 use App\Livewire\Settings\Retention;
 use App\Livewire\Settings\Sectors;
+use App\Livewire\Settings\System;
 use App\Livewire\Settings\Tags;
 use App\Livewire\Settings\Users;
 use App\Livewire\Setup\FirstSteps;
@@ -69,6 +70,7 @@ Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('configuracoes/google/redirect', [GoogleConnectionController::class, 'redirect'])->name('configuracoes.google.redirect');
     Route::get('configuracoes/google/callback', [GoogleConnectionController::class, 'callback'])->name('configuracoes.google.callback');
     Route::get('configuracoes/retencao', Retention::class)->name('configuracoes.retencao');
+    Route::get('configuracoes/sistema', System::class)->name('configuracoes.sistema');
     Route::get('configuracoes/backups', Backups::class)->name('configuracoes.backups');
     Route::get('configuracoes/backups/{name}', BackupDownloadController::class)->where('name', '[A-Za-z0-9._-]+')->name('configuracoes.backups.baixar');
     Route::get('configuracoes/setores', Sectors::class)->name('configuracoes.setores');

@@ -30,3 +30,4 @@ import './transcript-visibility';
 import './channel-qr';
 import './avatar-cropper';
 import './flow-editor';
+import './system-update';
