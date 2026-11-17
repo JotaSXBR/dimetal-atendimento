@@ -47,7 +47,6 @@ Branch `feat/assistente-primeiro-acesso`, revisão final.
 | # | Onde | O quê | Decisão |
 |---|------|-------|---------|
 | P1 | `app/Livewire/Setup/FirstSteps.php` (`createChannel`) | Se o request morrer entre criar o canal e gravar `setup.canal`, a retomada cria um segundo canal. Improvável; o canal a mais se apaga em Canais | advisor |
-| P2 | Campo de sessão do canal (componente da tela Canais) | `outline: none` no foco; conferir se a borda do campo marca o foco e, se não, dar foco visível | advisor |
 | P3 | `/primeiros-passos` | A barra lateral completa aparece durante os primeiros passos (os links voltam ao assistente pelo middleware). Esconder ou manter | dono |
 | P5 | Busca global (Ctrl K), `<input type="search">` | Sem `id` nem `name`: o Chrome aponta "form field should have id or name" em todas as telas. Anterior a este branch | advisor |
 
