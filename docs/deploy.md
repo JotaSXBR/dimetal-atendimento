@@ -1,344 +1,106 @@
-# Deploy no Coolify — `main` e `beta`
+# Instalação no Coolify
 
-O ambiente beta descrito aqui será substituído no projeto 2 (instalação por compose). Os nomes `dimetal-*` de projeto, rede, domínio e buckets do beta são os de hoje e ficam até lá.
+O Fluxie Inbox roda como um único Service de Docker Compose no Coolify: app, worker, scheduler, Reverb (tempo real), WAHA
+(WhatsApp), PostgreSQL, Redis e RustFS (mídia e backups). Segredos e senhas internas o Coolify gera sozinho.
 
-Dois projetos no mesmo VPS, cada um completo e independente: seis recursos separados, cada um com
-start/stop, logs, terminal e limites próprios.
+## 1. Requisitos
 
-## 1. Topologia
+- Coolify v4 em um servidor com Docker.
+- Um domínio (ou subdomínio) apontando para o servidor, para o HTTPS.
 
-Projeto `dimetal-main` (produção) e projeto `dimetal-beta` (teste), cada um com:
+## 2. Instalar
 
-| Recurso | Tipo no Coolify | Domínio | Volume |
-|---|---|---|---|
-| `app` | Application (Git, `/docker/Dockerfile`) | **sim**, HTTPS | `/var/www/html/storage/app` |
-| `worker` | Application (mesmo Dockerfile, `queue:work`) | não | **o mesmo** `/var/www/html/storage/app` do `app` |
-| `scheduler` | Application (mesmo Dockerfile, `schedule:work`) | não | **o mesmo** `/var/www/html/storage/app` do `app` |
-| `pg` | Database PostgreSQL 18 | não | gerenciado pelo Coolify |
-| `redis` | Database Redis 8 | não | gerenciado pelo Coolify |
-| `waha` | Application (imagem `devlikeapro/waha:gows-2026.10.1`) | não | `/app/.sessions`, `/app/.media` |
+1. No Coolify, crie um projeto e, dentro dele, um recurso do tipo **Service** → **Docker Compose Empty**.
+2. Abra a página de **Releases** do repositório (`https://github.com/fluxie-tech/fluxie-inbox/releases`), baixe o
+   `docker-compose.yml` anexado à Release mais recente e cole o conteúdo no editor do Service. Use sempre o arquivo da
+   Release: ele já traz a versão da imagem daquela Release; o arquivo da `main` aponta para uma versão de desenvolvimento.
+3. No serviço `app`, informe o domínio (`https://seu.dominio`). Só o `app` recebe domínio: o tempo real (websocket) sai pelo
+   mesmo domínio, em `/app`, pelo nginx do app, sem rota própria no Coolify.
+4. Faça o deploy e espere todos os serviços ficarem saudáveis. O `app` roda as migrações ao subir.
+5. No terminal do serviço `app` (Coolify → Service → `app` → Terminal), crie o administrador:
 
-Não há `compose.coolify.yaml`. Um Service ou uma aplicação docker-compose apareceria como **um**
-recurso com vários containers pendurados — exatamente o que não queremos.
+   ```
+   php artisan app:create-user voce@exemplo.com "Seu Nome" --role=admin
+   ```
 
-Recursos separados só se falam por uma rede Docker compartilhada. O beta vive na rede própria `dimetal-beta` (os demais
-projetos do Coolify ficam fora dela). Por isso:
-
-- os Applications têm **Connect to predefined network** ligado;
-- a API do Coolify não dá apelido de rede ao WAHA, ao app nem ao worker: o host que um usa para falar com o outro é o UUID do
-  container (`WAHA_URL`, `DB_HOST`, `REDIS_HOST`). Só o `rustfs-beta` tem apelido (`custom_network_aliases: rustfs-beta`);
-- `pg` e `redis` não aceitam alias na API: o host é o nome interno que o Coolify gera e mostra na
-  URL interna (estável entre deploys).
-
-## 2. Variáveis
-
-Tudo é configurado por recurso, na aba Environment. **Toda variável é só de runtime** (desmarque "Available at Buildtime"
-em cada uma, inclusive as novas): o `docker/Dockerfile` não declara nenhum `ARG`, então o build não precisa delas, e marcadas
-como buildtime elas viram `--build-arg` no log do deploy (segredos inclusive) e disparam o aviso de `APP_ENV`. O que muda por projeto:
-
-```
-APP_KEY=base64:...
-APP_URL=https://dimetal-beta.fluxie.com.br
-DB_HOST=<host da URL interna do pg>
-DB_PASSWORD=<senha do pg>
-REDIS_HOST=<host da URL interna do redis>
-REDIS_PASSWORD=<senha do redis>
-AUTORUN_ENABLED=true        # só no app; worker e scheduler usam false
-WAHA_URL=http://<uuid do waha-beta>:3000   # app e worker (o worker envia mensagens)
-WAHA_API_KEY=<mesma chave do container waha>
-```
-
-O restante é fixo e igual nos três serviços PHP: `APP_ENV=production`, `APP_DEBUG=false`,
-`APP_TIMEZONE=UTC` (as telas exibem em `APP_DISPLAY_TIMEZONE`, padrão `America/Sao_Paulo`), `LOG_CHANNEL=stderr`, `DB_CONNECTION=pgsql`, `DB_PORT=5432`,
-`DB_DATABASE=fluxie`, `DB_USERNAME=fluxie`, `REDIS_CLIENT=phpredis`, `REDIS_PORT=6379`,
-`SESSION_DRIVER=redis`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis`.
+   O comando pergunta a senha (mínimo de 8 caracteres). Rodar de novo com o mesmo e-mail atualiza o usuário.
+6. Entre no painel, abra **Canais**, escolha **Conectar** e leia o QR (ou use o código de pareamento) no WhatsApp. Confirme que
+   o canal fica **Conectado** e envie uma mensagem de teste.
 
 Em instalação existente, não troque `APP_NAME`: ele é a base dos prefixos de cache, Redis e do cookie de sessão, e trocar
-desloga todos e deixa o cache órfão. Se precisar trocar, fixe antes `CACHE_PREFIX`, `REDIS_PREFIX` e `SESSION_COOKIE` com os valores atuais.
+desloga todos e deixa o cache órfão. Se precisar trocar, fixe antes `CACHE_PREFIX`, `REDIS_PREFIX` e `SESSION_COOKIE` com os
+valores atuais.
 
-`AUTORUN_ENABLED=true` roda migrate/caches/storage link no start do `app`. Ligar isso em worker ou
-scheduler faz três migrações concorrentes.
+Os dados ficam em volumes nomeados (banco, Redis, mídia, sessão do WhatsApp). O volume de sessão do WAHA é o que faz o QR
+sobreviver a atualizações: não o apague.
 
-No `waha`, a matriz completa está em
-[`docs/superpowers/specs/waha-config.md`](superpowers/specs/waha-config.md). O essencial:
+### Depois de instalar (opcional): Google Contatos
 
-```
-WAHA_WORKER_ID=waha-beta
-WHATSAPP_DEFAULT_ENGINE=GOWS
-WAHA_API_KEY=<chave>
-WAHA_PRESENCE_AUTO_ONLINE=False
-WAHA_EVENTS_DOWNLOAD_MEDIA=true
-```
+A credencial é do próprio cliente: crie um cliente OAuth no console do Google e preencha `GOOGLE_CLIENT_ID` e
+`GOOGLE_CLIENT_SECRET` nas variáveis do Service, com a URL de retorno `https://seu.dominio/configuracoes/google/callback`.
+Uma versão futura vai levar essa configuração para a tela do painel.
 
-`message.any` é obrigatório: `message` não entrega o que foi enviado por outro aparelho da conta, e
-sem ele não existe registro `fora_do_painel`. O webhook usa o alias interno, não o domínio público.
+## 3. Atualizar
 
-O webhook, os eventos e o HMAC não são mais variáveis do WAHA: o app os registra na sessão ao clicar
-**Conectar** (segredo derivado da `APP_KEY`). Para o webhook ir pela rede interna, defina
-`WAHA_WEBHOOK_URL=http://app-beta:8080/webhooks/waha` no app e no worker (a imagem escuta na 8080; sem a porta o WAHA leva ECONNREFUSED); sem a variável usa `APP_URL`. Depois de mudá-la, reaplique a sessão (Conectar no cartão do canal) para o WAHA gravar o novo endereço.
+1. Faça um backup antes: no painel, **Configuração → Backup do banco → Fazer backup agora** (ver
+   [`backup-e-restauracao.md`](backup-e-restauracao.md)).
+2. Leia as notas da nova Release.
+3. Nas variáveis do Service, troque `FLUXIE_VERSION` para a versão nova (por exemplo `0.2.0`). Se a variável ainda não
+   existir, crie-a.
+4. Use **Pull Latest Images & Restart**. O `app` roda as migrações ao subir.
 
-Healthchecks do Coolify (a troca de container só acontece quando o novo está saudável):
+**Regra das migrações.** Entre o app novo subir e o worker, o scheduler e o Reverb trocarem, há código das duas versões
+rodando contra o mesmo banco. Toda migração precisa funcionar com o código da versão anterior: adicionar coluna nullable ou
+tabela nova é seguro; remover ou renomear coluna, mudar tipo ou reescrever dados que o código velho ainda grava vai em dois
+lançamentos (primeiro o código novo que não usa mais o campo, depois a migração que o remove).
 
-| Serviço | Tipo | Verificação |
-|---|---|---|
-| `app` | http | `GET /up` na porta 8080, início de 15 s, 5 tentativas |
-| `waha` | http | `GET /ping` na porta 3000, host `localhost`, retorno 200 (não exige API key) |
-| `worker` | HEALTHCHECK do Dockerfile | `healthcheck-queue` (script da imagem base; confirma o `queue:work`) |
-| `scheduler` | HEALTHCHECK do Dockerfile | `healthcheck-schedule` (script da imagem base; confirma o `schedule:work`) |
+**Rollback.** Volte `FLUXIE_VERSION` para a versão anterior e reinicie com pull. Migração destrutiva exige migração de volta
+escrita à mão, ou restaurar o backup feito antes de atualizar.
 
-A imagem do WAHA não tem `curl` nem `wget`, então healthcheck `cmd` com `curl` reprova; o tipo `http`
-funciona porque a requisição parte do Coolify.
+## 4. Para nós
 
-## 3. Domínio e HTTPS
+### Ambientes
 
-Só o `app` recebe domínio. O Coolify cuida do certificado; `bootstrap/app.php` confia no proxy
-(`trustProxies(at: '*')`), sem o que o Laravel geraria URLs `http://` e cookies sem `Secure`.
+- **staging** (`staging.inbox.fluxie.com.br`): **Application** com build pack Docker Compose, lendo o `docker-compose.yml` da
+  `main`. Cada merge verde na `main` publica as tags `edge` e `sha-<sha>` e o workflow `release-image` grava
+  `FLUXIE_VERSION=sha-<sha>` no staging e faz o deploy.
+- **production** (`inbox.fluxie.com.br`): **Service** com o compose colado da Release (como no passo 2 acima). Ao publicar uma
+  Release `vX.Y.Z`, o workflow cria as tags `X.Y.Z` e `X.Y`, anexa à Release o compose com a versão no padrão, grava
+  `FLUXIE_VERSION` e reinicia o Service com pull.
 
-## 4. Persistência da sessão
+### Segredos do repositório
 
-O volume `/app/.sessions` do `waha` é o que faz o QR sobreviver a redeploy. `/app/.media` é mídia
-temporária do WAHA — o app guarda a própria cópia, então não é backup.
-
-`app` guarda em `/var/www/html/storage/app` a cópia local dos anexos enviados pelo painel (pasta
-`private/outbound`). O upload acontece no `app`, mas quem envia ao WAHA é o `worker` (fila `outbound`) e
-quem apaga as cópias com mais de 90 dias é o `scheduler` (`app:purge-media`): **os três precisam montar o
-mesmo volume nomeado em `/var/www/html/storage/app`**. Sem isso o anexo sobe, mas o worker não acha o
-arquivo e a mensagem falha com "O arquivo deste anexo não está mais disponível no servidor".
-
-Upload de anexo: cada arquivo (até 16 MB) sobe numa requisição própria. A imagem base já aceita 100 MB
-(`NGINX_CLIENT_MAX_BODY_SIZE`, `PHP_UPLOAD_MAX_FILE_SIZE` e `PHP_POST_MAX_SIZE` valem 100M), então nada a
-ajustar; se algum dia essas variáveis forem reduzidas, mantenha ao menos 20 MB. O worker usa o
-`PHP_MEMORY_LIMIT=256M` da imagem: um anexo de 16 MB em base64 cabe com folga.
-
-## 5. Fluxo de branches
-
-- `main` → produção. Recebe merge apenas por PR com os checks `tests` e `static` verdes.
-- `beta` → ambiente de teste.
-- Antes de empurrar: `composer hooks:install` (uma vez por clone) liga o `.githooks/pre-push`, que roda Pint e Larastan em segundos; a suíte fica no CI.
-- `beta` é sincronizada a partir de `main` (`git push origin main:beta`), não o contrário.
-
-### Imagem base do PHP
-
-O `docker/Dockerfile` parte de `ghcr.io/fluxie-tech/fluxie-php-base:8.5`, com `intl`, `gd`, `bcmath` e as demais extensões já
-compiladas (`docker/base/Dockerfile`). Compilá-las a cada deploy custava ~95 s, porque o Coolify descarta o cache de build.
-O workflow `base-image` reconstrói e publica a imagem quando `docker/base/**` muda, toda segunda-feira (correções do
-sistema) e sob demanda. **Uma vez só:** o pacote `fluxie-php-base` precisa estar público (GitHub → Packages → Package settings
-→ Change visibility), senão o Coolify não consegue baixá-lo; em "Manage Actions access" o repositório deve ter permissão de escrita.
-Os assets são gerados com Node 26 (`node:26-alpine`), o mesmo do CI. **Versões:** o PHP do CI vem do `FROM serversideup/php`
-de `docker/base/Dockerfile` e o Node do `FROM node` de `docker/Dockerfile` (ação `.github/actions/versions`); o Dependabot atualiza esses
-dois `FROM`, e o CI acompanha. Postgres e Redis do CI devem ser iguais aos do `compose.yaml` (o job `static` confere). A imagem base é publicada com a tag da
-versão do PHP (`:8.5`, `:8.6`...); quando o PHP muda, o Dependabot (`/docker`) propõe o novo `FROM` do app.
-
-O deploy **não** é automático no push do Coolify: `is_auto_deploy_enabled=false` nos Applications. Quem
-dispara é o workflow `.github/workflows/deploy-beta.yml` (seção 7). Com healthcheck ligado, a versão
-antiga só cai depois que a nova fica saudável.
-
-## 6. Primeiro deploy
-
-1. Crie os Databases (`pg`, `redis`) e os quatro Applications. Como fazer pela API:
-   [`docs/deploy-coolify-api.md`](deploy-coolify-api.md).
-2. Preencha as variáveis da seção 2 em cada recurso.
-3. Deploy nos Databases, depois `waha`, depois `app`. `worker` e `scheduler` por último.
-4. No terminal do `app`: `php artisan db:seed --force` (cinco setores) e
-   `php artisan app:create-user email@exemplo.com.br "Nome" --role=admin`.
-5. **Canais** → decidir sobre "Importar histórico" (desmarcado) → **Conectar** → QR ou código de
-   pareamento.
-6. Confirmar **Conectado** e enviar o texto de teste.
-
-Recursos do beta hoje:
-
-| Recurso | UUID |
+| Segredo | Para quê |
 |---|---|
-| `app-beta` | `ovjv8pdwn4xwgeqdoosm74eu` |
-| `worker-beta` | `od6r6whgbew10eef86wslm8h` |
-| `scheduler-beta` | `b8kblgpyk9xeujbpwjjsollk` |
-| `reverb-beta` | `94ros1mnr2avnwjzk36rcpgc` |
-| `waha-beta` | `msejoznzpyh9oixj6q5nmtei` |
-| `pg-beta` | `e9innv6fcldtcmtsvhxncf4v` |
-| `redis-beta` | `zuwtns1l3p0gjps6vuuvbjfv` |
-| `rustfs-beta` | `xz8pmcy7ojw7umn9y1yszf0q` |
+| `COOLIFY_URL`, `COOLIFY_API_TOKEN` | API do Coolify. O token precisa das permissões deploy, read (sem ela o workflow não espera o deploy terminar) e escrita de variáveis. |
+| `COOLIFY_STAGING_UUID` | UUID da Application do staging. Sem ele o workflow publica a imagem e pula o deploy. |
+| `COOLIFY_PRODUCTION_UUID` | UUID do Service da production. Sem ele a Release promove a imagem e pula a atualização. |
 
-O beta vive na rede Docker `dimetal-beta` (recriado em 05/11; o anterior foi apagado em 06/11). Os hosts de `WAHA_URL`,
-`DB_HOST` e `REDIS_HOST` são o UUID do container; só o `rustfs-beta` tem apelido de rede (`AWS_ENDPOINT=http://rustfs-beta:9000`).
-**Ao recriar um recurso, apague o antigo:** um app velho no mesmo domínio recebe metade das requisições (Traefik) com as variáveis velhas.
+Como fazer pela API: [`deploy-coolify-api.md`](deploy-coolify-api.md).
 
-### Mídia no RustFS (beta)
+### Soltar uma versão
 
-`MEDIA_DISK=s3` mais `AWS_ENDPOINT`, `AWS_BUCKET=dimetal-beta-media`, `AWS_USE_PATH_STYLE_ENDPOINT=true` e as chaves do bucket, só nas
-variáveis do app, do worker e do scheduler. O pós-deploy do app roda `php artisan app:prepare-media`, que cria o bucket se faltar. O mesmo comando prepara o bucket dos backups do banco (`BACKUP_BUCKET`, ver `config/backup.php`).
-O job `ResolveMessageMediaJob` copia a mídia recebida do WAHA para o bucket por um stream temporário rebobinável (o SDK do S3 rebobina
-o corpo para assinar o envio); a falha de gravação leva o motivo do driver para o log.
+1. Confira que o commit a lançar passou pelo `tests` na `main` (a imagem `sha-<sha>` dele precisa existir; sem ela o workflow
+   falha).
+2. Crie a Release com o `gh`:
 
-### Backup do banco
+   ```
+   gh release create vX.Y.Z --target main --generate-notes
+   ```
 
-`BACKUP_BUCKET` (por exemplo `dimetal-beta-backups`, no mesmo RustFS das chaves `AWS_*`) no app, no worker e no scheduler. O comando
-`app:backup-database` roda no scheduler às 02:15 (horário de exibição) e o cliente `pg_dump` 18 vem nos estágios `worker` e `scheduler`
-do `docker/Dockerfile`. Operação, tela e restauração: `docs/backup-e-restauracao.md`.
+3. Acompanhe o workflow `release-image` no Actions: ele promove a imagem, anexa o compose e atualiza a production.
 
-A restauração pela tela põe o sistema em manutenção por alguns segundos e exige o modo de manutenção compartilhado: `APP_MAINTENANCE_DRIVER=cache` e `APP_MAINTENANCE_STORE=redis` no app, no worker e no scheduler (sem isso a tela recusa restaurar). O cliente `pg_dump`/`pg_restore` 18 vai em todos os estágios da imagem.
+Releases só no formato `vX.Y.Z`; outra tag falha na validação.
 
-### Filas (dentro do `worker-beta`)
+### Não escalar o worker
 
-O estágio `worker` roda `docker/worker.sh`, que inicia **seis** processos de fila no mesmo container, um por tipo de
-trabalho, para um lento não segurar os outros:
+O `worker` roda vários processos de fila no mesmo container (um por tipo de trabalho). Não use réplicas dele: com mais de um
+processo nas filas de envio e do Google, a ordem das mensagens se perde.
 
-| Fila | Processo | O que carrega |
-|---|---|---|
-| `outbound` | `--tries=1`, **um único** | envio ao cliente (`SendTicketMessageJob`, `DrainOutboxJob`, `GoOfflineJob`) |
-| `inbound` | `--tries=3` | ingestão do webhook do WAHA (`HandleWahaEvent`) e download de mídia (`ResolveMessageMediaJob`) |
-| `realtime`, `default` | `--tries=3` | avisos de tela (Reverb) e, por rede de segurança, o que cair em `default` |
-| `google` | `--tries=1`, **um único** | contatos para o Google (`SyncContactToGoogleJob`) |
-| `history` | `--tries=1`, `--timeout=900`, **um único** | recuperação de mensagens após queda (`RecoverMessagesJob`) e importação inicial (`ImportHistoryJob`) |
-| `media` | `--tries=3` | download da mídia das mensagens recuperadas e importadas (`ResolveMessageMediaJob`), para o backlog não atrasar a recuperação |
+## 5. Diagnóstico
 
-O envio humanizado (visto, digitando, pausa, envio) leva segundos, e um só consumidor em `outbound` garante que as
-mensagens de cada conversa saiam na ordem. O People API do Google pede escrita sequencial, por isso `google` também tem
-um processo só, e uma lentidão ou limite (429) dele atrasa apenas a sincronização de contatos. Se um dos processos
-morrer, o script encerra os outros e o container sai com erro, para o Coolify reiniciar todos juntos. O `retry_after` da
-fila (`REDIS_QUEUE_RETRY_AFTER`, padrão 180) fica acima do timeout do job (120). **Não escale réplicas** do `worker-beta`:
-com mais de um processo em `outbound` (ou `google`), a ordem se perde. Cada processo é um `php` residente, então o
-container pede uns 300 MB. Ao trocar o formato de um job (como o `SendTicketMessageJob` na fatia de mídia), esvazie a
-fila antiga antes do deploy: um job serializado pelo código velho falha no worker novo. Jobs que já estavam em `default`
-na hora do deploy continuam sendo processados (o processo `realtime` também lê `default`). Um teste
-(`QueueRoutingTest`) garante que toda fila usada pelo código tem consumidor no `worker.sh`.
-
-**Filas `history` e `media`:** quem faz o deploy desta fatia precisa **redeployar o `worker-beta`** (o `worker.sh` ganhou o processo
-novo). Sem isso, a recuperação, a importação e a mídia delas ficam paradas na fila. Esse worker usa a conexão
-`redis_history` (`config/queue.php`, `REDIS_HISTORY_QUEUE_RETRY_AFTER`, padrão 960 s), com `retry_after` acima do
-`--timeout` do worker (900 s) e do job (840 s): na conexão `redis` (180 s) um job longo seria reentregue enquanto ainda
-roda. As filas normais continuam na conexão `redis`. Um teste (`QueueRoutingTest`) confere essa relação.
-
-### Recuperação e importação de histórico
-
-- **Recuperação:** automática após queda de 5 min ou mais, botão no card do canal e varredura diária às 04:15 (ver
-  `docs/superpowers/specs/waha-config.md`). Idempotente.
-- **Importação inicial:** a caixa "Importar histórico" do card (máximo de **30 dias**) roda uma vez, na primeira vez que o
-  canal fica `WORKING`. O botão **Importar agora** (com o canal conectado, com confirmação e seletor próprio de 1, 5, 15 ou 30 dias) repete a importação
-  quantas vezes for preciso (idempotente: o que já existe é ignorado). Cada chat vira um ticket encerrado (`closed_reason = importado`), fora de relatórios e da aba
-  "Encerrados"; chat com cliente sem resposta nas últimas 48 h entra aberto. Baixa a mídia na fila `media`: confira o
-  espaço do volume `/app/.media` antes de importar muitos dias.
-- **Reações, edições e apagadas:** o webhook passa a assinar também `message.edited`. Canais **já conectados** só recebem a
-  nova lista quando a configuração do webhook for reaplicada (botão de conectar do card: faz um `PUT` na sessão e custa uma
-  queda de cerca de 1 s). Uma edição guarda as versões anteriores (tabela `message_edits`, migration nova: redeploy do `app-beta`; a ingestão e os jobs rodam no `worker-beta`, que também precisa de redeploy)
-  e a conversa mostra o texto novo com "Antes: …" embaixo. A conversa ordena por horário de envio, não por chegada.
-- **Teto da importação:** a janela inteira fica na memória do worker (~9,5 KB por mensagem, medidos; o worker tem 256 MB), então a
-  leitura para em **15 mil mensagens**, indo da mais nova para a mais antiga (o que sobra é o mais recente), grava
-  `Importação limitada ao teto de mensagens` no log e o resumo do sino diz "limitada a 15.000 mensagens"; repetir com menos dias.
-- **Mensagem escrita offline e reentregue ao vivo** (até 30 min de atraso) passa pelo bot e pela resposta de fora do horário.
-- **Listagem do WAHA:** a janela vai em fatias de 24 h; uma fatia que bate o teto de 20 mil mensagens grava um aviso no log
-  (`Listagem do WAHA bateu o teto de páginas`).
-
-### Google Contatos (variáveis)
-
-`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `GOOGLE_REDIRECT_URI` (`{APP_URL}/configuracoes/google/callback`, igual ao
-cadastrado no console do Google) entram no `app-beta`. O `worker-beta` e o `scheduler-beta` precisam das mesmas três
-variáveis (o worker renova o token e fala com o People API). A conta se conecta em *Configurações → Google Contatos*
-(só admin). A varredura `app:sync-google-contacts` roda a cada 10 minutos no `scheduler`.
-
-### Mídia no WAHA
-
-O WAHA guarda os arquivos (entrada e saída) no volume `/app/.media`; o Laravel guarda só a referência e serve o
-arquivo por `GET /midia/{mensagem}` (autorizado pelo ticket). Retenção de 90 dias:
-`WHATSAPP_FILES_FOLDER=/app/.media`, `WHATSAPP_FILES_LIFETIME=7776000` (a limpeza usa temporizador interno do WAHA;
-o teto antigo de ~24 dias foi corrigido na 2026.4.1). O volume não tem backup. Conferir depois de reiniciar o WAHA
-que arquivos antigos ainda expiram; se não, plano B: `find /app/.media -mtime +90 -delete` por cron no host.
-
-### Tarefas agendadas
-
-O `scheduler-beta` roda `schedule:work`. Entre as tarefas: `app:close-inactive-tickets`, a cada 10 minutos
-(encerra ticket parado há mais de 24 h cuja última mensagem é nossa), e `app:recover-messages`, todo dia às 04:15. Nova tarefa em `routes/console.php` entra
-sozinha no próximo deploy do scheduler; a opção "pode transferir" de um usuário se muda por
-`php artisan app:user-can-transfer {email} {on|off}` (terminal do `app-beta` no Coolify).
-
-### Alerta de queda do WhatsApp
-
-A faixa vermelha, o som crítico e o aviso no sino só aparecem depois de **60 s** fora de "Conectado" (o GOWS reconecta sozinho
-em ~1 s algumas vezes por dia); "Aguardando QR" e "Falhou" avisam na hora. O job `ConfirmChannelDownJob` roda na fila
-`realtime`. Detalhes em `docs/superpowers/specs/waha-config.md`.
-
-### Reverb (tempo real da Inbox)
-
-Origens aceitas no websocket: `config/reverb.php` lê `REVERB_ALLOWED_ORIGINS` (hosts ou URLs separados por
-vírgula, aceita curinga) e, sem ela, usa o host do `APP_URL`. O Reverb compara só o host da origem. Não use
-`*` em produção.
-
-`reverb-beta` é um Application do mesmo Dockerfile, estágio `reverb` (`reverb:start` na porta 8080),
-alias `reverb-beta`, healthcheck `http` em `/up`, sem migração (`AUTORUN_ENABLED=false`).
-
-- **Navegador → Reverb**: não há DNS curinga, então o websocket sai pelo mesmo domínio do app, no
-  caminho `/app` (`domains: https://dimetal-beta.fluxie.com.br/app` no `reverb-beta`). O front lê o
-  endereço de `window.location`; `REVERB_PUBLIC_URL` só é preenchida em desenvolvimento
-  (`http://localhost:8080`).
-- O Coolify liga `is_stripprefix_enabled` por padrão e remove `/app` antes de repassar: o Reverb recebia
-  `/<chave>` e respondia 404. No `reverb-beta` o campo fica **desligado** (`PATCH` com
-  `{"is_stripprefix_enabled":false}` e novo deploy).
-- **App/worker → Reverb**: rede interna, `REVERB_HOST=reverb-beta`, `REVERB_PORT=8080`,
-  `REVERB_SCHEME=http`.
-- Variáveis comuns a `app-beta`, `worker-beta` e `reverb-beta`: `BROADCAST_CONNECTION=reverb`,
-  `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET` (os mesmos valores nos três). O `reverb-beta`
-  também leva as variáveis base do worker (`APP_KEY`, banco, Redis), pois sobe o framework.
-
-## 7. Atualização e rollback
-
-Merge em `main` → workflow `tests` → se passar, `deploy-beta` sincroniza a branch `beta` e faz o deploy **em
-ordem**, esperando cada etapa terminar com sucesso (status `finished` no Coolify, que só troca o container
-depois do healthcheck): primeiro `app-beta`, que roda o `migrate --force` no start; depois `worker-beta`,
-`scheduler-beta` e `reverb-beta` (o `waha-beta` fica de fora: tag fixa e sessão única do WhatsApp). Se uma
-etapa falhar, o workflow para e não troca o resto. Para esperar, o token em `COOLIFY_API_TOKEN` precisa das permissões `deploy` **e `read`**
-(o Coolify responde 403 ao consultar o status com token só de deploy). Sem `read`, o workflow emite um
-aviso e segue sem esperar: os deploys sobem em fila, sem garantia de ordem. O Coolify limita builds simultâneas (padrão 2), por isso
-o workflow não manda tudo de uma vez. Segredos do repositório:
-`COOLIFY_URL` e `COOLIFY_API_TOKEN`. Branches de PR são apagadas ao mergear. O volume preserva a
-sessão, então o WhatsApp volta sozinho (`WAHA_WORKER_RESTART_SESSIONS=true`).
-
-**Regra das migrações (expand/contract).** Entre o app novo subir e o worker, o scheduler e o reverb trocarem,
-há código das duas versões rodando contra o mesmo banco. Toda migração precisa funcionar com o código da
-versão anterior: adicionar coluna nullable ou tabela nova é seguro; remover ou renomear coluna, mudar tipo
-ou reescrever dados que o código velho ainda grava vai em dois deploys (primeiro o código novo que não usa
-mais o campo, depois a migração que o remove).
-
-Rollback: reimplante o commit anterior. Migrações destrutivas exigem migração de volta escrita à mão
-— evite drop de coluna no mesmo deploy que remove o código que a usa.
-
-## 8. Diagnóstico
-
-- **Status estranho na tela Canais** → logs do `waha`; ele loga o engine GOWS e a sessão.
+- **Status estranho na tela Canais** → logs do `waha`; ele loga o engine e a sessão.
 - **Webhook não chega** → o app responde `401` quando o HMAC não confere e nada é gravado.
-- **Sessão perdida a cada deploy** → volume `/app/.sessions` não está montado.
-- **Contato não recebe notificação** → presença ficou `online`; `WAHA_PRESENCE_AUTO_ONLINE=False`
-  evita isso.
-- **Fila parada** → `worker` precisa estar rodando com o mesmo `QUEUE_CONNECTION` do `app`.
-- **`worker`/`scheduler` rodando o servidor web em vez do comando** → o Coolify ignora `start_command` em build
-  por Dockerfile; confira `dockerfile_target_build` (`worker`/`scheduler`) e os estágios do Dockerfile.
-- **`worker`/`scheduler` unhealthy** → o Coolify usa o `HEALTHCHECK` do estágio do Dockerfile (`healthcheck-queue`/
-  `healthcheck-schedule`, com `pgrep`). Sem ele o estágio herda o `curl` no nginx da imagem base e reprova, e a API
-  do Coolify não tem campo para trocar o tipo para `cmd`. Corrija no Dockerfile **e** desligue o healthcheck do painel
-  do recurso (`health_check_enabled: false` no `PATCH`): com ele ligado o Coolify injeta o próprio check HTTP em `/` e o
-  container continua `unhealthy`, mesmo com o `HEALTHCHECK` do estágio certo (conferido em 11/11 no beta).
-- **`waha` unhealthy** → use healthcheck tipo `http` em `/ping`; o tipo `cmd` com `curl` reprova porque a
-  imagem não tem `curl` nem `wget`.
-- **404 do Traefik ou certificado inválido** → o `domains` do recurso não é o domínio real, ou o
-  deploy não rodou depois de gravá-lo.
-
-## 9. Checklist de prova no beta
-
-1. Projeto `beta` no ar com o chip de teste.
-2. Configurações → WhatsApp salva e testa.
-3. Canais → Conectar → QR aparece → escanear.
-4. Repetir a autenticação usando **código de pareamento**, com o QR visível durante o processo.
-5. Status vira **Conectado**.
-6. `channels.backfill_days` ficou `0` com a importação desmarcada.
-7. Mensagem do celular para o número gera evento `message` em "Últimos eventos".
-8. Texto enviado pelo formulário chega no celular; o contato vê **"visto por último"**, nunca
-   "online".
-9. **Prova do eco (bug #2299 do GOWS)**: envie pelo **celular** para um contato e confirme em qual
-   conversa o evento `fromMe` cai. Se cair na conversa errada, fixar
-   `devlikeapro/waha:gows-2026.7.1` e reavaliar quando a issue fechar.
-10. Confirmar que `message.any` chega em "Últimos eventos" para o envio feito pelo celular.
-11. Enviar pelo painel e confirmar que **não** aparece uma segunda mensagem marcada como enviada
-    fora do painel.
-12. Reiniciar o container `waha`: volta **Conectado** sem pedir QR.
-13. Card do canal → *Recuperar mensagens* (1 h): o sino mostra o resumo; rodar de novo não cria mensagem nem ticket novo.
-14. Confirmar na resposta real do WAHA (terminal do `app-beta`) que `GET /api/{sessão}/chats/all/messages` funciona neste
-    GOWS e se a listagem traz reação, edição e apagamento; se `chats/all` falhar, implementar a varredura por chat.
-15. Repetir no `main` com o número real.
+- **QR pedido de novo depois de atualizar** → o volume `waha-sessions` foi apagado ou trocado.
+- **Fila parada** → confira se o serviço `worker` está saudável.
+- **404 ou certificado inválido** → o domínio do serviço `app` não é o real, ou falta um deploy depois de gravá-lo.

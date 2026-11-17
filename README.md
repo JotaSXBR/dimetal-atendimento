@@ -55,7 +55,7 @@ administrador inicial. Outros usuários: `php artisan app:create-user email@exem
 
 ## Instalação no Coolify
 
-Em preparação. O roteiro atual de deploy está em [`docs/deploy.md`](docs/deploy.md).
+O roteiro de instalação (Service de Docker Compose, primeiro acesso e atualização) está em [`docs/deploy.md`](docs/deploy.md).
 
 ## Testes e qualidade
 

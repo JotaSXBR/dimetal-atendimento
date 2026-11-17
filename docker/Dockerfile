@@ -54,9 +54,17 @@ RUN npm run build
 
 FROM base AS runtime
 
+ARG VERSION=dev
+LABEL org.opencontainers.image.version="${VERSION}"
+
 USER root
 
 COPY --from=assets --chown=www-data:www-data /build/public/build ./public/build
+
+# Scripts e proxy usados pelo compose: worker.sh (fila), proxy do Reverb em /app e buckets na entrada (depois das automações).
+COPY --chmod=755 docker/worker.sh /usr/local/bin/worker.sh
+COPY docker/nginx/reverb-proxy.conf /etc/nginx/server-opts.d/reverb-proxy.conf
+COPY --chmod=755 docker/entrypoint/60-prepare-media.sh /etc/entrypoint.d/60-prepare-media.sh
 
 RUN chown -R www-data:www-data storage bootstrap/cache
 
@@ -97,8 +105,6 @@ FROM runtime AS worker
 STOPSIGNAL SIGTERM
 
 # Um processo por fila (outbound, inbound, realtime+default e google), no mesmo container (ver docker/worker.sh).
-COPY --chmod=755 docker/worker.sh /usr/local/bin/worker.sh
-
 CMD ["/usr/local/bin/worker.sh"]
 
 # A imagem base herda um HEALTHCHECK de curl no nginx, que não existe neste estágio e o deixaria unhealthy;

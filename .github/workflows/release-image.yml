@@ -1,0 +1,169 @@
+name: release-image
+
+# Imagem versionada ghcr.io/fluxie-tech/fluxie-inbox.
+#  - push verde na main (workflow_run do `tests`): publica `edge` e `sha-<sha>` e atualiza o staging.
+#  - Release `vX.Y.Z`: promove `sha-<sha do commit da tag>` para `X.Y.Z` e `X.Y`, anexa o compose da versão e atualiza a production.
+# Sem COOLIFY_STAGING_UUID / COOLIFY_PRODUCTION_UUID o workflow publica e pula o deploy com um aviso.
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [main]
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-image-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/fluxie-tech/fluxie-inbox
+
+jobs:
+  edge:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - name: Build the runtime image
+        run: docker build --target runtime -f docker/Dockerfile --build-arg "VERSION=sha-$SHA" -t "$IMAGE:sha-$SHA" .
+
+      - name: Compose smoke test
+        run: bash docker/smoke/compose-smoke.sh "$IMAGE:sha-$SHA"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push edge and sha tags
+        run: |
+          docker tag "$IMAGE:sha-$SHA" "$IMAGE:edge"
+          docker push "$IMAGE:sha-$SHA"
+          docker push "$IMAGE:edge"
+
+  deploy-staging:
+    needs: edge
+    runs-on: ubuntu-slim
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      # Esperar exige que COOLIFY_API_TOKEN tenha a permissão "read" além de "deploy" (ver coolify.sh).
+      - name: Deploy no staging
+        env:
+          UUID: ${{ secrets.COOLIFY_STAGING_UUID }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+        run: |
+          [ -n "$UUID" ] || { echo "::notice::COOLIFY_STAGING_UUID não definido: imagem publicada, deploy do staging pulado"; exit 0; }
+          source .github/scripts/coolify.sh
+          coolify_set_env applications "$UUID" FLUXIE_VERSION "sha-$SHA"
+          coolify_deploy_wait "$UUID"
+
+  retag:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.tags.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate the tag
+        id: tags
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          source .github/scripts/coolify.sh
+          out=$(release_tags "$TAG") || { echo "::error::Tag $TAG fora do padrão vX.Y.Z"; exit 1; }
+          read -r full minor <<< "$out"
+          echo "version=$full" >> "$GITHUB_OUTPUT"
+          echo "minor=$minor" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # github.sha numa Release é o commit da tag.
+      - name: Promote sha tag to X.Y.Z and X.Y
+        env:
+          SHA: ${{ github.sha }}
+          FULL: ${{ steps.tags.outputs.version }}
+          MINOR: ${{ steps.tags.outputs.minor }}
+        run: |
+          docker buildx imagetools inspect "$IMAGE:sha-$SHA" >/dev/null ||
+            { echo "::error::Imagem $IMAGE:sha-$SHA não existe: o commit da tag não passou pelo push verde na main"; exit 1; }
+          docker buildx imagetools create -t "$IMAGE:$FULL" -t "$IMAGE:$MINOR" "$IMAGE:sha-$SHA"
+
+  compose-asset:
+    needs: retag
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Attach the versioned compose to the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ needs.retag.outputs.version }}
+        run: |
+          pattern='\$\{FLUXIE_VERSION:-[^}]*\}'
+          grep -qE "$pattern" docker-compose.yml || { echo "::error::docker-compose.yml sem FLUXIE_VERSION"; exit 1; }
+          sed -E "s#$pattern#\${FLUXIE_VERSION:-$VERSION}#g" docker-compose.yml > "$RUNNER_TEMP/docker-compose.yml"
+          grep -qF "FLUXIE_VERSION:-$VERSION}" "$RUNNER_TEMP/docker-compose.yml" || { echo "::error::troca da versão não aconteceu"; exit 1; }
+          cp "$RUNNER_TEMP/docker-compose.yml" docker-compose.yml
+          gh release upload "$TAG" docker-compose.yml --clobber
+
+  production:
+    needs: [retag, compose-asset]
+    runs-on: ubuntu-slim
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Atualiza a production
+        env:
+          UUID: ${{ secrets.COOLIFY_PRODUCTION_UUID }}
+          VERSION: ${{ needs.retag.outputs.version }}
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+        run: |
+          [ -n "$UUID" ] || { echo "::notice::COOLIFY_PRODUCTION_UUID não definido: imagem promovida, atualização da production pulada"; exit 0; }
+          source .github/scripts/coolify.sh
+          coolify_set_env services "$UUID" FLUXIE_VERSION "$VERSION"
+          coolify_restart_service "$UUID"
