@@ -1,0 +1,40 @@
+name: already-tested
+description: >-
+  Diz se a árvore do commit já passou num run verde do workflow tests, num PR do próprio repositório. Nunca falha:
+  qualquer erro deixa tested=false, e quem chama roda tudo.
+
+inputs:
+  token:
+    description: "Token com actions: read"
+    required: true
+
+outputs:
+  tested:
+    description: "true quando a árvore já passou num PR; false em qualquer outro caso"
+    value: ${{ steps.lookup.outputs.tested }}
+
+runs:
+  using: composite
+  steps:
+    - id: lookup
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REPO: ${{ github.repository }}
+        SHA: ${{ github.sha }}
+      run: |
+        tested=false
+        if tree=$(gh api "repos/$REPO/commits/$SHA" --jq .commit.tree.sha) &&
+           runs=$(gh api "repos/$REPO/actions/artifacts?name=tested-tree-$tree&per_page=20" \
+             --jq '.artifacts[] | select(.expired | not) | .workflow_run.id'); then
+          for run in $runs; do
+            ok=$(gh api "repos/$REPO/actions/runs/$run" \
+              --jq '.name == "tests" and .event == "pull_request" and .conclusion == "success" and .head_repository.full_name == "'"$REPO"'"') || continue
+            if [ "$ok" = true ]; then
+              tested=true
+              echo "::notice::Árvore $tree já passou no run $run do PR; suíte não repetida"
+              break
+            fi
+          done
+        fi
+        echo "tested=$tested" >> "$GITHUB_OUTPUT"
