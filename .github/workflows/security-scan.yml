@@ -1,7 +1,7 @@
 name: security-scan
 
 # Varreduras pesadas: imagem Docker e scan dinâmico contra o staging. Rodam por agendamento (segunda de manhã), sob demanda
-# (`gh workflow run security-scan`) e, no PR, só quando mudam o que elas olham. Separadas do `tests` para nunca travar o deploy.
+# (`gh workflow run security-scan`) e, no PR, só a da imagem e quando muda o que ela olha. Separadas do `tests` para nunca travar o deploy.
 on:
   pull_request:
     paths:
@@ -60,7 +60,9 @@ jobs:
           exit-code: '1'
           format: table
 
+  # Varre o staging (código da main), não o do PR: no PR seria um minuto de runner sem relação com a mudança.
   dynamic:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-26.04
     timeout-minutes: 20
 
