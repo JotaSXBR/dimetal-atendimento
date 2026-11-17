@@ -260,6 +260,8 @@ class BackupCatalogTest extends TestCase
         $this->assertSame('0.0.0-teste.1', BackupCatalog::versionIn('fluxie-2026-11-15-0300-antes-v0.0.0-teste.1.dump'));
         $this->assertNull(BackupCatalog::versionIn('fluxie-2026-11-15-0300-antes.dump'));
         $this->assertNull(BackupCatalog::versionIn('arquivo enviado'));
+        // O nome de um envio é texto de fora: o `$` sozinho casaria antes de uma quebra de linha final.
+        $this->assertNull(BackupCatalog::versionIn("fluxie-2026-11-15-0300-antes-v0.3.0.dump\n"));
     }
 
     public function test_prune_conta_nomes_com_e_sem_versao_no_mesmo_tipo(): void
