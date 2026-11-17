@@ -303,6 +303,26 @@ class InboxTranscriptTest extends TestCase
         }
     }
 
+    public function test_setinha_sobre_midia_ou_citacao_flutua_sem_degrade(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Texto simples')->update(['wa_message_id' => 'W1']);
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'W2', 'body' => 'com citação', 'quoted_wa_message_id' => 'W1', 'quoted_snapshot' => ['author' => 'Maria', 'type' => 'text', 'excerpt' => 'antiga']]);
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'W3', 'type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'f.jpg', 'media_ref' => 'files/f.jpg']);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+        preg_match_all('/<button[^>]*data-testid="message-menu-button"[^>]*>/', $html, $m);
+
+        $this->assertCount(3, $m[0]);
+        $this->assertStringContainsString('linear-gradient', $m[0][0]);
+        $this->assertStringNotContainsString('rounded-full', $m[0][0]);
+        foreach ([$m[0][1], $m[0][2]] as $botao) {
+            $this->assertStringContainsString('rounded-full', $botao);
+            $this->assertStringContainsString('shadow-sm', $botao);
+            $this->assertStringNotContainsString('linear-gradient', $botao);
+        }
+    }
+
     public function test_mensagem_apagada_nao_tem_menu(): void
     {
         [$me, $ticket] = $this->mine();
