@@ -153,12 +153,13 @@ jobs:
   # Este job só faz a primeira subida da production (0.1.0 -> primeira versão com o botão Atualizar); um PR depois dessa Release
   # o remove, e dali em diante a production se atualiza pelo botão, como os terceiros. Sem backup antes: a production ainda não
   # tem número nem uso. Grava o compose da Release (o asset que o compose-asset acabou de anexar, o mesmo que terceiros colam) e
-  # FLUXIE_VERSION; se gravar ou reiniciar falhar, devolve compose e versão guardados (hoje 0.1.0, sem a variável gravada) e falha.
+  # FLUXIE_VERSION; se gravar ou reiniciar falhar, devolve compose e versão guardados (hoje 0.1.0, sem a variável gravada),
+  # reinicia sem pull na versão anterior e falha. timeout-minutes cobre os dois restarts (~11 min cada) com folga.
   production:
     needs: [retag, compose-asset]
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-slim
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

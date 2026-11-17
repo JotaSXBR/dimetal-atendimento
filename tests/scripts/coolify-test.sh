@@ -95,6 +95,8 @@ coolify_set_env services abc FLUXIE_VERSION 1.2.3 >/dev/null 2>&1
 coolify_set_env applications abc FLUXIE_VERSION sha-1 >/dev/null 2>&1
 check "set_env services manda is_preview false" '{"key":"FLUXIE_VERSION","value":"1.2.3","is_preview":false}' "$(sed -n 1p "$BODIES")"
 check "set_env applications mantém o corpo" '{"key":"FLUXIE_VERSION","value":"sha-1"}' "$(sed -n 2p "$BODIES")"
+coolify_set_env applications abc NOME 'a"b\c' >/dev/null 2>&1
+check "set_env escapa o valor" 'a"b\c' "$(sed -n 3p "$BODIES" | jq -r .value)"
 
 PATCH_CODE=404 POST_CODE=201 rc=0; : > "$LOG"
 coolify_set_env services abc FLUXIE_VERSION 1.2.3 >/dev/null 2>&1 || rc=$?
@@ -122,7 +124,7 @@ case "$ERR" in *"$COOLIFY_API_TOKEN"*) echo "FALHA: token vazou na saída"; fail
 
 # restart: sleep falso e status programado em $SEQ (um por linha; o último se repete), lido de um arquivo contador.
 sleep() { :; }
-IDX=$(mktemp); trap 'rm -f "$LOG" "$IDX"' EXIT
+IDX=$(mktemp); trap 'rm -rf "$LOG" "$BODIES" "$WORK" "$IDX"' EXIT
 _coolify_service_status() {
   local n; n=$(($(cat "$IDX") + 1)); echo "$n" > "$IDX"
   echo "$SEQ" | sed -n "${n}p" | grep . || echo "$SEQ" | tail -n 1
@@ -152,6 +154,10 @@ run_update() {
 GUARDA="|GET /api/v1/services/abc|GET /api/v1/services/abc/envs"
 APLICA="|PATCH /api/v1/services/abc|PATCH /api/v1/services/abc/envs|POST /api/v1/services/abc/restart?latest=true"
 DEVOLVE="|PATCH /api/v1/services/abc|PATCH /api/v1/services/abc/envs"
+VOLTA="|POST /api/v1/services/abc/restart"
+# 31 leituras sem saúde esgotam o primeiro restart (1 na fase 1, 30 na fase 2); depois o Service volta saudável.
+FALHA_E_VOLTA="$(for _ in $(seq 31); do echo exited; done)
+running:healthy"
 PATCH_CODE=200 ENVS_JSON='[{"key":"APP_KEY","value":"x","is_preview":false}]'
 
 run_update "restarting
@@ -162,13 +168,18 @@ decoded 1 > "$WORK/enviado.yml"
 cmp -s "$WORK/novo.yml" "$WORK/enviado.yml" || { echo "FALHA: update_service não gravou o compose novo"; fail=1; }
 check "update_service grava a versão" '{"key":"FLUXIE_VERSION","value":"0.2.0","is_preview":false}' "$(sed -n 2p "$BODIES")"
 
-run_update "exited"
+run_update "$FALHA_E_VOLTA"
 check "update_service com restart falho sai 1" 1 "$([ "$rc" -ne 0 ] && echo 1 || echo 0)"
-check "update_service com restart falho devolve (chamadas)" "$GUARDA$APLICA$DEVOLVE" "$(cat "$LOG")"
+check "update_service com restart falho devolve e reinicia sem pull (chamadas)" "$GUARDA$APLICA$DEVOLVE$VOLTA" "$(cat "$LOG")"
 decoded 3 > "$WORK/devolvido.yml"
 cmp -s "$WORK/antigo.yml" "$WORK/devolvido.yml" || { echo "FALHA: a devolução não regravou o compose guardado"; fail=1; }
 check "devolução sem FLUXIE_VERSION gravada volta para 0.1.0" '{"key":"FLUXIE_VERSION","value":"0.1.0","is_preview":false}' "$(sed -n 4p "$BODIES")"
-case "$OUT" in *"::error::"*) ;; *) echo "FALHA: restart falho sem ::error:: (veio '$OUT')"; fail=1 ;; esac
+case "$OUT" in *"::error::"*"reiniciado na versão anterior"*) ;; *) echo "FALHA: faltou dizer que voltou à versão anterior (veio '$OUT')"; fail=1 ;; esac
+
+run_update "exited"
+check "segundo restart falho sai 1" 1 "$([ "$rc" -ne 0 ] && echo 1 || echo 0)"
+check "segundo restart falho (chamadas)" "$GUARDA$APLICA$DEVOLVE$VOLTA" "$(cat "$LOG")"
+case "$OUT" in *"::error::"*"atenção manual no Coolify"*"docs/deploy.md"*) ;; *) echo "FALHA: segundo restart falho sem pedir atenção manual (veio '$OUT')"; fail=1 ;; esac
 
 ENVS_JSON='[{"key":"FLUXIE_VERSION","value":"0.1.5","is_preview":false}]'
 run_update "exited"
