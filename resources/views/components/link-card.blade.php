@@ -10,8 +10,8 @@
 <{{ $tag }}
     @if ($tag === 'a') href="{{ $href }}" wire:navigate @endif
     @if ($tag === 'button') type="button" @endif
-    {{ $attributes->class(['flex w-full min-h-6 items-center gap-2 rounded-lg bg-canvas px-2.5 py-2 text-left text-xs', 'hover:bg-muted' => $interactive]) }}
     data-link-card
+    {{ $attributes->class(['flex w-full min-h-6 items-center gap-2 rounded-lg bg-canvas px-2.5 py-2 text-left text-xs', 'hover:bg-muted' => $interactive]) }}
 >
     <span class="block min-w-0 flex-1">
         <span class="block font-mono text-ink-2" data-link-card-title>{{ $title }}</span>

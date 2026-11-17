@@ -314,6 +314,22 @@ class ContactCardCompactTest extends TestCase
             ->assertDontSee('também tem ticket aberto');
     }
 
+    public function test_na_fila_o_anterior_aberto_e_um_botao_com_seta(): void
+    {
+        $channel = $this->channelWith('a', '5516999990001');
+        $current = $this->ticketOn($channel, TicketStatus::ENCERRADO);
+        $open = $this->ticketOn($channel, TicketStatus::AGUARDANDO);
+
+        $xpath = $this->dom($this->card(['compact' => true, 'currentTicketId' => $current->id])->html());
+        $card = $xpath->query('//*[@data-testid="details-history"]//*[@data-link-card][.//*[@data-link-card-title][normalize-space()="'.$open->protocol.'"]]')->item(0);
+
+        $this->assertInstanceOf(\DOMElement::class, $card);
+        $this->assertSame('button', $card->tagName);
+        $this->assertSame('button', $card->getAttribute('type'));
+        $this->assertSame('$parent.select('.$open->id.')', $card->getAttribute('wire:click'));
+        $this->assertSame(1, $xpath->query('.//*[@data-link-card-chevron]', $card)->length);
+    }
+
     public function test_somente_leitura_mostra_o_aberto_sem_link(): void
     {
         $current = $this->ticketOn($this->channelWith('a', '5516999990001'), TicketStatus::ENCERRADO);
