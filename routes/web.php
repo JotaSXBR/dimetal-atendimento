@@ -30,6 +30,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/inbox')->name('home');
 
+// Placeholders: as tarefas 3 e 6 trocam por componentes Livewire.
+Route::get('instalar', fn () => 'instalar')->name('instalar');
+Route::get('primeiros-passos', fn () => 'primeiros-passos')->middleware(['auth', 'can:admin'])->name('primeiros-passos');
+
 Route::post('webhooks/waha', WahaWebhookController::class)->middleware('throttle:webhook')->name('webhooks.waha');
 Route::get('marca/logo', LogoController::class)->name('logo');
 

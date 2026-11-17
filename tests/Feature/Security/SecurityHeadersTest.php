@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Security;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SecurityHeadersTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_envia_os_cabecalhos_que_o_servidor_web_nao_envia(): void
     {
         $response = $this->get('/login');
