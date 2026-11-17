@@ -128,6 +128,9 @@ final class ApplyUpdate
             $this->coolify->setEnv(self::VERSION_KEY, $update->previous_version ?? throw new CoolifyException('A versão anterior não ficou guardada.'));
         } catch (Throwable $e) {
             report($e);
+            // O Coolify pode ficar com os valores novos: a linha deixa de dizer `revertida` e o vigia avisa de novo.
+            $this->fail($update->refresh(), 'A atualização foi desfeita pelo vigia, mas não foi possível regravar o compose e a versão anteriores no Coolify. Siga a recuperação do docs/deploy.md.');
+            $update->update(['notified_at' => null]);
         }
     }
 

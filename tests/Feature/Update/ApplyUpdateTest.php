@@ -420,6 +420,28 @@ class ApplyUpdateTest extends TestCase
         $this->assertSame('0.1.0', end($envs)['value']);
     }
 
+    public function test_desfazer_a_gravacao_que_falha_deixa_falhou_com_a_recuperacao_e_pede_novo_alerta(): void
+    {
+        $this->backupOk();
+        $patches = 0;
+        $this->world['service_patch'] = function () use (&$patches): array {
+            if (++$patches === 1) { // o vigia devolve enquanto o job grava, e já avisou
+                SystemUpdate::query()->whereKey($this->update->id)->update(['status' => UpdateStatus::Revertida->value, 'notified_at' => now()]);
+
+                return [200, ['message' => 'ok']];
+            }
+
+            return [500, ['message' => 'quebrou']];
+        };
+
+        $update = $this->apply();
+
+        $this->assertSame(UpdateStatus::Falhou, $update->status);
+        $this->assertNull($update->notified_at);
+        $this->assertStringContainsString('docs/deploy.md', (string) $update->message);
+        $this->assertSame(1, AuditLog::query()->where('action', AuditAction::UpdateFailed->value)->count());
+    }
+
     #[DataProvider('estadosAlemDeConferindo')]
     public function test_job_repetido_em_estado_posterior_nao_chama_nada(UpdateStatus $status): void
     {
