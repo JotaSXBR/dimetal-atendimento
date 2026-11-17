@@ -49,6 +49,8 @@ Branch `feat/assistente-primeiro-acesso`, revisão final.
 | P1 | `app/Livewire/Setup/FirstSteps.php` (`createChannel`) | Se o request morrer entre criar o canal e gravar `setup.canal`, a retomada cria um segundo canal. Improvável; o canal a mais se apaga em Canais | advisor |
 | P2 | Campo de sessão do canal (componente da tela Canais) | `outline: none` no foco; conferir se a borda do campo marca o foco e, se não, dar foco visível | advisor |
 | P3 | `/primeiros-passos` | A barra lateral completa aparece durante os primeiros passos (os links voltam ao assistente pelo middleware). Esconder ou manter | dono |
+| P4 | `resources/views/livewire/setup/first-steps.blade.php` (botão "Pular, conecto depois") | Virou link de texto alinhado ao cartão; a área de toque no celular ficou da altura do texto (menos de 24 px). Dar altura mínima sem recuo lateral | advisor |
+| P5 | Busca global (Ctrl K), `<input type="search">` | Sem `id` nem `name`: o Chrome aponta "form field should have id or name" em todas as telas. Anterior a este branch | advisor |
 
 ## Pendências maiores já combinadas (não são menores de revisão)
 
