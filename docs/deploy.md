@@ -44,11 +44,58 @@ Uma versão futura vai levar essa configuração para a tela do painel.
 
 ## 3. Atualizar
 
+### Pelo app
+
+Vale para instalação de Release rodando como Service do Coolify (o Coolify injeta `COOLIFY_RESOURCE_UUID` no container). A
+0.1.0 ainda não tem o botão: a primeira atualização dela é a manual, abaixo. Versão de desenvolvimento (`sha-…`) não mostra o
+botão.
+
+**Token do Coolify.** Uma vez só:
+
+1. Confira que o acesso à API está ligado nas configurações do Coolify e que você é admin ou dono do time.
+2. Coolify → **Keys & Tokens** → **API Tokens** → **Create New Token**, com as permissões:
+
+   | Permissão | Para quê |
+   |---|---|
+   | `read` | ler o Service |
+   | `read:sensitive` | ler o compose e as variáveis |
+   | `write` | gravar o compose e `FLUXIE_VERSION` |
+   | `deploy` | reiniciar o Service |
+
+   Nunca `root` nem `delete`.
+3. Copie o token: ele aparece uma vez só.
+4. No painel, **Configurações → Sistema → Conexão com o Coolify**: informe a URL do painel do Coolify, cole o token, salve e
+   use **Testar conexão**. O teste lê o compose, lê e grava as variáveis (regrava o mesmo valor) e confere a permissão
+   `deploy` sem reiniciar nada; cada falha aparece em português.
+
+O token não volta à tela (aparece "token salvo em DD/MM"); **Trocar** grava outro e **Remover** apaga. Ele vale para todos os
+recursos daquele time do Coolify: se o Coolify tem outros projetos, crie um time só para o Fluxie.
+
+**Aviso de versão nova.** Uma consulta diária às 07:40 (liga e desliga na mesma tela; **Consultar agora** força) mostra a
+versão disponível e **Ver novidades**, e avisa os admins no sino uma vez por versão. Pré-releases só aparecem com
+`FLUXIE_UPDATE_PRERELEASE=true` nas variáveis do Service (só para staging e testes).
+
+**Atualizar.** **Atualizar para X.Y.Z** pede a palavra `ATUALIZAR` e mostra os passos (conferindo, backup, aplicando,
+reiniciando) e o resultado:
+
+1. Confere o token e as permissões, a imagem da versão nova e o compose da Release.
+2. Faz um backup com a versão no nome (`…-v<versão>.dump`).
+3. Grava o compose da Release e `FLUXIE_VERSION` no Service e reinicia com pull. O sistema fica fora 1 a 2 minutos.
+4. Se o reinício falhar, ou a versão nova não subir em 10 minutos com a anterior ainda rodando, o app devolve sozinho o compose
+   e a versão anteriores.
+5. Se a versão nova subir mas não confirmar em 60 minutos (por exemplo, migração quebrou), a atualização fica como "falhou":
+   siga o [Rollback](#rollback).
+
+Os admins recebem um alerta no sino no fim, em qualquer resultado.
+
+### À mão
+
 1. Faça um backup antes: no painel, **Configuração → Backup do banco → Fazer backup agora** (ver
    [`backup-e-restauracao.md`](backup-e-restauracao.md)).
 2. Leia as notas da nova Release.
-3. Nas variáveis do Service, troque `FLUXIE_VERSION` para a versão nova (por exemplo `0.2.0`). Se a variável ainda não
-   existir, crie-a.
+3. Cole no editor do Service o `docker-compose.yml` da Release nova e, nas variáveis do Service, troque `FLUXIE_VERSION` para
+   a versão nova (por exemplo `0.2.0`), os dois juntos. Depois que o botão ou o workflow gravou `FLUXIE_VERSION`, colar só o
+   compose não troca a imagem: a variável vence o padrão do arquivo.
 4. Use **Pull Latest Images & Restart**. O `app` roda as migrações ao subir.
 
 **Regra das migrações.** Entre o app novo subir e o worker, o scheduler e o Reverb trocarem, há código das duas versões
@@ -56,8 +103,17 @@ rodando contra o mesmo banco. Toda migração precisa funcionar com o código da
 tabela nova é seguro; remover ou renomear coluna, mudar tipo ou reescrever dados que o código velho ainda grava vai em dois
 lançamentos (primeiro o código novo que não usa mais o campo, depois a migração que o remove).
 
-**Rollback.** Volte `FLUXIE_VERSION` para a versão anterior e reinicie com pull. Migração destrutiva exige migração de volta
-escrita à mão, ou restaurar o backup feito antes de atualizar.
+### Rollback
+
+Quando a versão nova não sobe ou a atualização ficou como "falhou":
+
+1. No Coolify, volte o compose da versão anterior (o `docker-compose.yml` da Release dela) e `FLUXIE_VERSION` para a versão
+   anterior, e reinicie.
+2. No painel, **Configurações → Backup do banco**, restaure o backup feito logo antes de atualizar: pelo botão, é o que traz a
+   versão anterior no nome.
+
+Backup de versão mais velha restaura em versão mais nova (a restauração roda as migrações). Backup de versão mais nova em
+versão mais velha é recusado ("Atualize o sistema para essa versão antes de restaurar").
 
 ## 4. Para nós
 
@@ -67,8 +123,10 @@ escrita à mão, ou restaurar o backup feito antes de atualizar.
   `main`. Cada merge verde na `main` publica as tags `edge` e `sha-<sha>` e o workflow `release-image` grava
   `FLUXIE_VERSION=sha-<sha>` no staging e faz o deploy.
 - **production** (`inbox.fluxie.com.br`): **Service** com o compose colado da Release (como no passo 2 acima). Ao publicar uma
-  Release `vX.Y.Z`, o workflow cria as tags `X.Y.Z` e `X.Y`, anexa à Release o compose com a versão no padrão, grava
-  `FLUXIE_VERSION` e reinicia o Service com pull.
+  Release `vX.Y.Z`, o workflow cria as tags `X.Y.Z` e `X.Y` e anexa à Release o compose com a versão no padrão. O job
+  `production` grava o compose e `FLUXIE_VERSION` e reinicia o Service com pull, devolvendo os dois se falhar; pula
+  pré-releases. Ele existe só para a primeira atualização da production (0.1.0 → primeira versão com o botão); um PR seguinte
+  o tira, e daí em diante a production se atualiza pelo app.
 
 ### Segredos do repositório
 
@@ -90,7 +148,16 @@ escrita à mão, ou restaurar o backup feito antes de atualizar.
 
 3. Acompanhe o workflow `release-image` no Actions: ele promove a imagem, anexa o compose e atualiza a production.
 
-Releases só no formato `vX.Y.Z`; outra tag falha na validação.
+Releases só no formato `vX.Y.Z`; outra tag falha na validação. Pré-release publica só a tag completa (sem `X.Y`) e não
+atualiza a production.
+
+O CI roda a fumaça de atualização (`docker/smoke/upgrade-smoke.sh`): sobe o compose da Release anterior, cria dados e troca
+para o compose e a imagem candidatos. Para ela seguir verde:
+
+- Toda mudança no `docker-compose.yml` precisa funcionar aplicada por cima de uma instalação existente: variável nova com
+  padrão ou gerada pelo Coolify (`SERVICE_*`), nada que dependa de recolar o arquivo.
+- Toda mudança de dados vai em migração, nunca em comando avulso, para que restaurar um backup antigo também atualize os
+  dados.
 
 ### Não escalar o worker
 

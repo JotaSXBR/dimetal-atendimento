@@ -72,6 +72,10 @@ Requisitos: Coolify v4 em um servidor com Docker e um domínio (ou subdomínio) 
 Sem o código, dá para criar o administrador no terminal do `app` com `php artisan app:create-user` (detalhes em
 [`docs/deploy.md`](docs/deploy.md)).
 
+Atualizar pelo app: crie no Coolify um token de API (`read`, `read:sensitive`, `write`, `deploy`) e cole em
+**Configurações → Sistema**; o botão **Atualizar** aparece quando há versão nova (passo a passo em
+[`docs/deploy.md`](docs/deploy.md#pelo-app)).
+
 Atualização, backup, Google Contatos e diagnóstico estão em [`docs/deploy.md`](docs/deploy.md).
 
 ## Testes e qualidade
