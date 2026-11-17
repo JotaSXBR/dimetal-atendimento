@@ -108,6 +108,8 @@ Recursos descartáveis no projeto `fluxie-inbox`, ambiente `staging`, apagados n
   mas não oferece atualizar.
 - A 0.1.0 não tem botão: a primeira atualização dela é pelo workflow (production) ou por recolar o compose (terceiros), como o
   `docs/deploy.md` já ensina.
+- Limitação: o `FLUXIE_BUILD` é sempre `sha-…` (a Release só retaga a imagem do build), então não reconhece Release. Sem
+  `FLUXIE_VERSION` a instalação aparece como desenvolvimento, sem botão; o caminho é colar o compose da Release e a versão juntos.
 
 ### Consulta diária
 
