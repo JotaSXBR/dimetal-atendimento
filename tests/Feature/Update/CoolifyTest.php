@@ -66,14 +66,21 @@ class CoolifyTest extends TestCase
             && $r->hasHeader('Accept', 'application/json'));
     }
 
-    public function test_url_do_painel_sem_barra_no_fim_tambem_serve(): void
+    /** @return array<string, array{string}> */
+    public static function urlsDoPainel(): array
     {
-        UpdateSettings::setPanelUrl('https://painel.example');
-        Http::fake([self::BASE.'/services/svc123' => $this->raw('service-ok')]);
+        return ['sem barra' => ['https://painel.example'], 'com barra' => ['https://painel.example/']];
+    }
+
+    #[DataProvider('urlsDoPainel')]
+    public function test_url_do_painel_com_ou_sem_barra_monta_a_mesma_url(string $panel): void
+    {
+        UpdateSettings::setPanelUrl($panel);
+        Http::fake(['*' => $this->raw('service-ok')]);
 
         app(Coolify::class)->compose();
 
-        Http::assertSentCount(1);
+        Http::assertSent(fn (Request $r) => $r->url() === 'https://painel.example/api/v1/services/svc123');
     }
 
     public function test_compose_sem_docker_compose_raw_falha(): void
@@ -121,7 +128,7 @@ class CoolifyTest extends TestCase
     {
         Http::fake([self::BASE.'/services/svc123/envs' => Http::sequence()->push($this->fx('coolify-patch-env-full-404'), 404)->push($this->fx('env-409'), 409)]);
 
-        $this->fails(fn () => app(Coolify::class)->setEnv('A', 'b'), 409, '409');
+        $this->fails(fn () => app(Coolify::class)->setEnv('A', 'b'), 409, 'já existe');
     }
 
     public function test_put_compose_manda_base64(): void
@@ -180,7 +187,10 @@ class CoolifyTest extends TestCase
             '403 write' => [403, 'coolify-patch-env-read-403', 'token não tem a permissão write'],
             '403 deploy' => [403, 'coolify-restart-nodeploy-403', 'token não tem a permissão deploy'],
             '404' => [404, 'coolify-get-service-404', 'não encontrado'],
-            '500' => [500, 'erro-500', '500'],
+            '409' => [409, 'env-409', 'já existe'],
+            '500' => [500, 'erro-500', 'erro interno (HTTP 500)'],
+            '503' => [503, 'erro-500', 'erro interno (HTTP 503)'],
+            '418' => [418, 'erro-500', 'erro (HTTP 418)'],
         ];
     }
 
@@ -190,8 +200,43 @@ class CoolifyTest extends TestCase
         Http::fake(['*' => $this->raw($fixture, $status)]);
         $c = app(Coolify::class);
 
-        $this->fails(fn () => $c->compose(), $status, $contains);
-        $this->fails(fn () => $c->restart(true), $status, $contains);
+        foreach ([
+            fn () => $c->compose(),
+            fn () => $c->envs(),
+            fn () => $c->setEnv('A', 'b'),
+            fn () => $c->putCompose('x'),
+            fn () => $c->restart(true),
+        ] as $call) {
+            $this->fails($call, $status, $contains);
+        }
+    }
+
+    public function test_404_reais_do_coolify_viram_nao_encontrado(): void
+    {
+        $c = app(Coolify::class);
+
+        Http::fake(['*' => $this->raw('coolify-envs-read-on-missing-404', 404)]);
+        $this->fails(fn () => $c->envs(), 404, 'não encontrado');
+
+        Http::fake(['*' => $this->raw('coolify-patch-service-full-404', 404)]);
+        $this->fails(fn () => $c->putCompose('x'), 404, 'não encontrado');
+
+        Http::fake(['*' => Http::sequence()->push($this->fx('coolify-patch-env-full-404'), 404)->push($this->fx('coolify-post-env-full-404'), 404)]);
+        $this->fails(fn () => $c->setEnv('A', 'b'), 404, 'não encontrado');
+    }
+
+    public function test_is_preview_so_e_preview_quando_verdadeiro(): void
+    {
+        Http::fake(['*' => Http::response([
+            ['key' => 'A', 'value' => '1', 'is_preview' => 0],
+            ['key' => 'B', 'value' => '2', 'is_preview' => '0'],
+            ['key' => 'C', 'value' => '3', 'is_preview' => null],
+            ['key' => 'D', 'value' => '4'],
+            ['key' => 'E', 'value' => '5', 'is_preview' => 1],
+            ['key' => 'F', 'value' => '6', 'is_preview' => 'true'],
+        ])]);
+
+        $this->assertSame(['A' => '1', 'B' => '2', 'C' => '3', 'D' => '4'], app(Coolify::class)->envs());
     }
 
     public function test_sem_conexao_tem_status_zero_e_nao_vaza_token(): void

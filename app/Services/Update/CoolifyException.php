@@ -23,6 +23,8 @@ final class CoolifyException extends RuntimeException
                 ? "O token não tem a permissão {$m[1]} no Coolify."
                 : 'O token não tem permissão para esta operação no Coolify.',
             $status === 404 => 'Recurso não encontrado no Coolify.',
+            $status === 409 => 'Essa variável já existe no Coolify.',
+            $status >= 500 => "O Coolify respondeu com erro interno (HTTP {$status}).",
             default => "O Coolify respondeu com erro (HTTP {$status}).",
         }, $status);
     }

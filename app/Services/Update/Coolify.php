@@ -26,7 +26,7 @@ final class Coolify
         $envs = [];
 
         foreach ((array) $this->send('GET', '/envs')->json() as $env) {
-            if (is_array($env) && is_string($env['key'] ?? null) && ($env['is_preview'] ?? false) === false) {
+            if (is_array($env) && is_string($env['key'] ?? null) && ! filter_var($env['is_preview'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 $envs[$env['key']] = is_string($env['value'] ?? null) ? $env['value'] : null;
             }
         }
