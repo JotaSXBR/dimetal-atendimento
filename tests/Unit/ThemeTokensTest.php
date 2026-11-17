@@ -437,9 +437,12 @@ class ThemeTokensTest extends TestCase
     public function test_layouts_nao_usam_zinc_nem_branco_cru(): void
     {
         $layouts = dirname(__DIR__, 2).'/resources/views/layouts';
-        $files = [$layouts.'/app.blade.php', $layouts.'/inbox.blade.php', $layouts.'/setup.blade.php', ...glob($layouts.'/app/*.blade.php')];
+        $fixed = [$layouts.'/app.blade.php', $layouts.'/inbox.blade.php', $layouts.'/setup.blade.php'];
+        $app = glob($layouts.'/app/*.blade.php') ?: [];
+        $this->assertNotEmpty($app, 'layouts/app/ sem arquivos: o glob não achou nada');
         $offenders = [];
-        foreach ($files as $file) {
+        foreach ([...$fixed, ...$app] as $file) {
+            $this->assertFileExists($file);
             foreach (file($file) ?: [] as $n => $line) {
                 if (preg_match('/bg-white|dark:bg-zinc-|border-zinc-|var\(--color-zinc-/', $line, $m) === 1) {
                     $offenders[] = basename($file).':'.($n + 1).' '.$m[0];
