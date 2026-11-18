@@ -98,11 +98,58 @@ class InboxHeaderTest extends TestCase
         }
     }
 
-    public function test_sla_fica_na_primeira_linha_junto_do_status(): void
+    /** Com o Transferir avulso, o "…" só sobra em coluna larga se tiver Reatribuir. */
+    public function test_transferir_e_botao_na_coluna_larga_e_item_do_menu_na_estreita(): void
+    {
+        $xpath = $this->xpath(TicketStatus::EM_ATENDIMENTO, ['assigned_user_id' => User::factory()->create()->id]);
+
+        $button = $xpath->query('//header//button[@data-testid="header-transfer"]')->item(0);
+        $this->assertNotNull($button);
+        $this->assertSame("openPanel('transfer')", $button->getAttribute('wire:click'));
+        $this->assertSame('Transferir', trim($button->textContent));
+        // `hidden` puro perde para o `inline-flex` de base do flux:button (vem depois no CSS); a variante de container ganha.
+        $this->assertStringContainsString('@max-3xl:hidden', $button->getAttribute('class'));
+        $this->assertDoesNotMatchRegularExpression('/(^|\s)hidden(\s|$)/', $button->getAttribute('class'));
+
+        $item = $xpath->query('//header//*[@data-testid="header-more-menu"]//*[@data-flux-menu-item][normalize-space(.)="Transferir"]')->item(0);
+        $this->assertNotNull($item);
+        $this->assertStringContainsString('@3xl:hidden', $item->getAttribute('class'));
+
+        $reassign = $xpath->query('//header//*[@data-testid="header-more-menu"]//*[@data-flux-menu-item][normalize-space(.)="Reatribuir"]')->item(0);
+        $this->assertStringNotContainsString('@3xl:hidden', $reassign->getAttribute('class'));
+        // Com Reatribuir, o gatilho do "…" fica em qualquer largura.
+        $this->assertSame(0, $xpath->query('//header//button[@aria-label="Mais ações"]/ancestor-or-self::*[contains(@class,"@3xl:hidden")]')->length);
+    }
+
+    public function test_menu_mais_some_na_coluna_larga_quando_so_tem_transferir(): void
+    {
+        $attendant = User::factory()->create(['role' => UserRole::ATENDENTE, 'can_transfer' => true]);
+
+        $xpath = $this->xpath(TicketStatus::EM_ATENDIMENTO, ['assigned_user_id' => $attendant->id], $attendant);
+
+        $this->assertNotNull($xpath->query('//header//button[@aria-label="Mais ações"]')->item(0));
+        $this->assertSame(1, $xpath->query('//header//button[@aria-label="Mais ações"]/ancestor-or-self::*[contains(@class,"@3xl:hidden")]')->length);
+    }
+
+    public function test_ordem_das_acoes_do_cabecalho(): void
+    {
+        $xpath = $this->xpath(TicketStatus::EM_ATENDIMENTO, ['assigned_user_id' => User::factory()->create()->id]);
+
+        $order = [];
+        foreach ($xpath->query('//header//button[@aria-controls="ticket-details"]/../*') as $node) {
+            $label = trim((string) preg_replace('/\s+/', ' ', $node->getAttribute('aria-label') ?: $node->textContent));
+            $order[] = $node->getAttribute('data-testid') ?: ($node->hasAttribute('data-flux-dropdown') ? 'menu' : $label);
+        }
+
+        $this->assertSame(['header-transfer', 'Tomar', 'menu', 'Encerrar'], array_values(array_slice($order, 2)));
+    }
+
+    public function test_sla_vai_para_a_linha_de_baixo(): void
     {
         $xpath = $this->xpath();
 
-        $sla = $xpath->query('//*[@data-testid="header-title"]//*[@data-testid="header-sla"]')->item(0);
+        $this->assertSame(0, $xpath->query('//*[@data-testid="header-title"]//*[@data-testid="header-sla"]')->length);
+        $sla = $xpath->query('//*[@data-testid="header-line"]/preceding-sibling::*[@data-testid="header-sla"]')->item(0);
 
         $this->assertNotNull($sla);
         $this->assertStringContainsString('SLA estourado: venceu', trim(preg_replace('/\s+/', ' ', $sla->textContent)));
