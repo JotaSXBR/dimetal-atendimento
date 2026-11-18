@@ -100,7 +100,26 @@ class InboxQueueCardTest extends TestCase
         return new \DOMXPath($dom);
     }
 
-    public function test_atendente_fica_na_coluna_da_direita_entre_o_setor_e_as_nao_lidas(): void
+    /** Arranjo do Pencil: o tempo na linha do nome; setor, atendente e não lidas na linha do selo (sem coluna da direita). */
+    public function test_tempo_na_linha_do_nome_e_setor_atendente_e_nao_lidas_na_linha_do_selo(): void
+    {
+        $vendas = Sector::factory()->create(['name' => 'Vendas']);
+        $suporte = Sector::factory()->create(['name' => 'Suporte']);
+        $ticket = $this->ticket(['sector_id' => $vendas->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id]);
+        Message::factory()->for($ticket)->create(['direction' => MessageDirection::IN, 'sent_at' => now()->subMinutes(3)]);
+        $this->ticket(['sector_id' => $suporte->id, 'contact_id' => Contact::factory()->create(['name' => 'Outro'])->id]);
+
+        $xpath = $this->xpath($this->html());
+        $card = '//button[@*[name()="wire:key"]="ticket-'.$ticket->id.'"]';
+
+        $this->assertSame(1, $xpath->query($card.'//*[@data-testid="card-time"]/parent::*/span[normalize-space()="Joaquim"]')->length, 'o tempo divide a linha com o nome');
+        $line = $card.'//*[@data-testid="card-status"]/parent::*';
+        $this->assertSame(1, $xpath->query($line.'/*[@data-testid="card-unread"]')->length, 'não lidas na linha do selo');
+        $this->assertSame(1, $xpath->query($line.'/*[@data-testid="card-sector"]')->length, 'setor na linha do selo');
+        $this->assertSame(1, $xpath->query($line.'/*[.//*[@data-testid="card-assignee-name"]]')->length, 'atendente na linha do selo');
+    }
+
+    public function test_atendente_fica_entre_o_setor_e_as_nao_lidas(): void
     {
         $vendas = Sector::factory()->create(['name' => 'Vendas']);
         $suporte = Sector::factory()->create(['name' => 'Suporte']);
@@ -114,7 +133,7 @@ class InboxQueueCardTest extends TestCase
         $this->assertNotContains(false, $positions);
         $sorted = $positions;
         sort($sorted);
-        $this->assertSame($sorted, $positions, 'a coluna da direita vai de hora, setor, atendente a não lidas');
+        $this->assertSame($sorted, $positions, 'a leitura vai de hora, setor, atendente a não lidas');
         $this->assertStringNotContainsString('data-testid="card-meta"', $html, 'com um só canal a linha de baixo some');
     }
 

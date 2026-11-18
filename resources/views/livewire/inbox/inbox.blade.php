@@ -134,7 +134,10 @@
                             </span>
 
                             <span class="min-w-0 flex-1">
-                                <span class="block truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
+                                <span class="flex items-baseline justify-between gap-2">
+                                    <span class="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
+                                    <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="shrink-0 font-mono text-xs text-ink-3">{{ \App\Support\WaitLabel::narrow($at, now()) }}</span>
+                                </span>
                                 @if ($chips->isNotEmpty())
                                     <span class="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
                                         @foreach ($chipsShown as $tag)
@@ -159,11 +162,8 @@
                                 <span class="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                     <x-status-badge :status="$item->status" data-testid="card-status" />
                                     <span data-testid="card-protocol" class="shrink-0 font-mono text-xs text-ink-3">{{ $item->protocol }}</span>
-                                </span>
-                            </span>
-
-                            <span class="flex shrink-0 flex-col items-end gap-1">
-                                <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="font-mono text-xs text-ink-3">{{ \App\Support\WaitLabel::narrow($at, now()) }}</span>
+                                    {{-- O que era a coluna da direita: empurrado para a direita da linha do selo, que quebra em vez de cortar. --}}
+                                    <span class="ms-auto"></span>
                                 @if ($showSector && $item->sector)
                                     <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-xs text-ink-2">{{ $item->sector->name }}</span>
                                 @endif
@@ -180,6 +180,7 @@
                                 @if ($unread > 0)
                                     <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-xs font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>
                                 @endif
+                                </span>
                             </span>
                         </button>
                     @endforeach
