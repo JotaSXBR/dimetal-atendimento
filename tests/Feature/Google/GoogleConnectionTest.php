@@ -229,4 +229,26 @@ class GoogleConnectionTest extends TestCase
 
         $this->assertSame(1, GoogleConnection::query()->count());
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_google_no_painel_do_desenho(): void
+    {
+        $panel = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="Conta do Google"]]';
+
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(GoogleContacts::class)->html());
+        $this->assertSame(1, $xpath->query($panel.'[contains(., "Nenhuma conta conectada.")]//a[contains(., "Conectar conta Google")]')->length);
+
+        $this->connection();
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(GoogleContacts::class)->html());
+        $this->assertSame(1, $xpath->query($panel.'[contains(., "fluxie@gmail.com")]//*[@data-status-tone]')->length);
+        $this->assertSame(3, $xpath->query($panel.'//dl/div/dt')->length);
+        $this->assertSame(1, $xpath->query($panel.'//*[@data-panel-footer][contains(., "Reconectar")]//*[@*[name()="wire:click"]="disconnect"]')->length);
+    }
 }

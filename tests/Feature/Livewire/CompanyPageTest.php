@@ -139,4 +139,25 @@ class CompanyPageTest extends TestCase
             ->assertSee('Fila')
             ->assertDontSee('Fila do setor');
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_empresa_no_painel_do_desenho(): void
+    {
+        $xpath = $this->xpath($this->page()->html());
+        $panel = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="%s"]]';
+
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Logotipo').'//*[@data-panel-subtitle]')->length);
+        $form = sprintf($panel, 'Nome e assinatura').'//form[@*[name()="wire:submit"]="save"]';
+        $this->assertSame(1, $xpath->query($form.'//*[@x-data="signatureToolbar"]')->length);
+        $this->assertSame(1, $xpath->query($form.'//*[@data-switch-row][.//*[normalize-space()="Assinatura das mensagens"]]//*[@*[name()="wire:model.live"]="signatureEnabled"]')->length);
+        $this->assertSame(1, $xpath->query($form.'//*[@data-preview]')->length);
+        $this->assertSame(1, $xpath->query($form.'//*[@data-panel-footer]//button[@type="submit"]')->length);
+    }
 }

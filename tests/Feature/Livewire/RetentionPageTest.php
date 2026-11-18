@@ -93,4 +93,15 @@ class RetentionPageTest extends TestCase
     {
         Livewire::actingAs(User::factory()->create(['role' => UserRole::SUPERVISOR]))->test(Retention::class)->assertForbidden();
     }
+
+    public function test_retencao_no_painel_do_desenho(): void
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.Livewire::actingAs($this->admin())->test(Retention::class)->html(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+        $panel = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="%s"]]';
+
+        $this->assertSame(4, $xpath->query(sprintf($panel, 'Prazo e uso').'//dl/div/dt')->length);
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Apagar agora a mídia com mais de 90 dias').'//button[@*[name()="wire:click"]="purgeNow"]')->length);
+    }
 }
