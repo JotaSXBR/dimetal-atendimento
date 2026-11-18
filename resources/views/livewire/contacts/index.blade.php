@@ -35,7 +35,7 @@
 
         {{-- Células com `px-4!`: o Flux zera o padding da primeira e da última coluna, e aqui a tabela fica dentro do cartão. --}}
         <div wire:loading.remove.delay wire:target="search" class="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
-            <flux:table :paginate="$contacts" pagination:class="px-4 pb-3" data-testid="contacts-table" class="min-w-[52rem]">
+            <flux:table data-testid="contacts-table" class="min-w-[52rem]">
                 <flux:table.columns class="bg-canvas">
                     <flux:table.column class="px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Contato</span></flux:table.column>
                     <flux:table.column class="w-40 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Telefone</span></flux:table.column>
@@ -77,6 +77,9 @@
                     @endforelse
                 </flux:table.rows>
             </flux:table>
+            @if ($contacts->hasPages())
+                <div class="border-t border-line px-4 py-3">{{ $contacts->links() }}</div>
+            @endif
         </div>
     </div>
 
