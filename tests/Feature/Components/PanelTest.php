@@ -30,6 +30,14 @@ class PanelTest extends TestCase
         $this->assertSame(1, $xpath->query('.//*[@data-test="corpo"]', $root)->length);
     }
 
+    public function test_titulo_longo_sem_espaco_quebra_em_vez_de_cortar(): void
+    {
+        $title = str_repeat('canal', 12);
+        $xpath = $this->xpath((string) $this->blade('<x-panel :title="$title">x</x-panel>', ['title' => $title]));
+
+        $this->assertStringContainsString('break-words', $xpath->query('//*[@data-panel]//h2')->item(0)?->getAttribute('class') ?? '');
+    }
+
     public function test_sem_subtitulo_nao_ha_subtitulo(): void
     {
         $xpath = $this->xpath((string) $this->blade('<x-panel title="Conexão">x</x-panel>'));

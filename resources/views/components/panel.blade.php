@@ -7,7 +7,7 @@
 <div data-panel {{ $attributes->class('overflow-hidden rounded-xl border border-line bg-surface') }}>
     <div data-panel-header class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3.5">
         <div class="min-w-0">
-            <h2 class="text-sm font-semibold text-ink">{{ $title }}</h2>
+            <h2 class="break-words text-sm font-semibold text-ink">{{ $title }}</h2>
             @if ($subtitle)
                 <p data-panel-subtitle class="text-xs text-ink-3">{{ $subtitle }}</p>
             @endif
