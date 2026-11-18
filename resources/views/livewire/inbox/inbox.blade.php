@@ -209,13 +209,13 @@
                     @php
                         $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
                     @endphp
-                    {{-- SLA no começo da linha de baixo (Pencil). Coluna estreita: o protocolo desce de linha (min-w-24) em vez de sumir; o SLA trunca em vez de estourar a largura. --}}
+                    {{-- SLA no começo da linha de baixo (Pencil). Coluna estreita: o protocolo desce de linha (min-w-24) em vez de sumir; o SLA quebra o texto em vez de estourar a largura. --}}
                     <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                         @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
                             @php
                                 $slaState = $ticket->slaState();
                             @endphp
-                            <span data-testid="header-sla" class="min-w-0 truncate text-xs font-medium whitespace-nowrap {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
+                            <span data-testid="header-sla" class="min-w-0 text-xs font-medium {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
                                 @if ($slaState === 'estourou')
                                     SLA estourado: venceu {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
                                 @else

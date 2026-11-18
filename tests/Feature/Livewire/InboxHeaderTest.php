@@ -170,12 +170,14 @@ class InboxHeaderTest extends TestCase
         $this->assertStringNotContainsString('shrink-0', $sla->getAttribute('class'));
     }
 
-    public function test_sla_do_cabecalho_nao_quebra_linha(): void
+    // O SLA abre a linha de baixo (que já quebra): em coluna estreita o texto quebra em vez de ser cortado.
+    public function test_sla_do_cabecalho_quebra_de_linha_em_vez_de_cortar(): void
     {
         $sla = $this->xpath()->query('//*[@data-testid="header-sla"]')->item(0);
 
         $this->assertNotNull($sla);
-        $this->assertStringContainsString('whitespace-nowrap', $sla->getAttribute('class'));
+        $this->assertStringNotContainsString('whitespace-nowrap', $sla->getAttribute('class'));
+        $this->assertStringNotContainsString('truncate', $sla->getAttribute('class'));
     }
 
     public function test_ticket_encerrado_nao_mostra_acoes_nem_sla(): void
