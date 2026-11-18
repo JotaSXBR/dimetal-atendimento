@@ -8,7 +8,8 @@
         <dl class="space-y-2.5">
             @foreach (array_filter([
                 'Nome' => $contact->label(),
-                'Empresa' => implode(' · ', array_filter([$contact->company, $contact->job_title])),
+                'Empresa' => $contact->company,
+                'Cargo' => $contact->job_title,
                 'Telefone' => $readonly ? $contact->phoneLabel() : null,
                 'E-mail' => $contact->email,
             ], fn ($value) => $value !== null && $value !== '') as $label => $value)

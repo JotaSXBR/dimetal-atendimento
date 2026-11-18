@@ -131,6 +131,20 @@ class TicketDetailsBlocksTest extends TestCase
     public function test_contato_em_linhas_rotuladas(): void
     {
         $contact = Contact::factory()->create(['company' => 'Dimetal', 'job_title' => 'Compras', 'email' => 'ana@example.com']);
+
+        $this->assertSame(['Nome' => $contact->label(), 'Empresa' => 'Dimetal', 'Cargo' => 'Compras', 'E-mail' => 'ana@example.com'], $this->contactRows($contact));
+    }
+
+    public function test_contato_so_com_cargo_nao_mostra_empresa(): void
+    {
+        $contact = Contact::factory()->create(['company' => null, 'job_title' => 'Gerente', 'email' => null]);
+
+        $this->assertSame(['Nome' => $contact->label(), 'Cargo' => 'Gerente'], $this->contactRows($contact));
+    }
+
+    /** @return array<string, string> rótulo => valor das linhas do bloco Contato no painel da Inbox */
+    private function contactRows(Contact $contact): array
+    {
         $ticket = Ticket::factory()->create(['channel_id' => Channel::factory()->create()->id, 'contact_id' => $contact->id, 'status' => TicketStatus::AGUARDANDO]);
 
         $dom = new \DOMDocument;
@@ -140,7 +154,7 @@ class TicketDetailsBlocksTest extends TestCase
             $rows[trim($row->getElementsByTagName('dt')->item(0)->textContent)] = trim($row->getElementsByTagName('dd')->item(0)->textContent);
         }
 
-        $this->assertSame(['Nome' => $contact->label(), 'Empresa' => 'Dimetal · Compras', 'E-mail' => 'ana@example.com'], $rows);
+        return $rows;
     }
 
     public function test_titulos_de_secao_em_caixa_alta(): void
