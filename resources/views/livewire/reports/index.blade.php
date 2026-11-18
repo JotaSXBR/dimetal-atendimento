@@ -15,21 +15,24 @@
     </dl>
 
     @if ($schedulerStale)
-        <flux:callout variant="warning" icon="exclamation-triangle" role="alert" text="O verificador de SLA não roda há mais de 3 minutos. Os alertas de espera podem estar atrasados." />
+        <div class="rounded-xl border border-warn-line bg-warn-soft p-4 text-sm text-warn" role="alert">
+            O verificador de SLA não roda há mais de 3 minutos. Os alertas de espera podem estar atrasados.
+        </div>
     @endif
 
     {{-- Células com `px-4!`: o Flux zera o padding da primeira e da última coluna, e aqui a tabela encosta nas bordas do painel. --}}
     <div data-panel class="overflow-hidden rounded-xl border border-line bg-surface">
-        <div class="px-4 py-3.5">
+        <div class="border-b border-line px-4 py-3.5">
             <h2 class="text-sm font-semibold text-ink">Aguardando resposta além do SLA</h2>
             <p class="text-xs text-ink-3">Clientes esperando resposta humana, perto de estourar ou já estourados (só conta o horário de funcionamento).</p>
         </div>
 
         @if ($data['waiting'] === [])
-            <p class="border-t border-line p-4 text-sm text-ink-3">Ninguém esperando além do SLA agora.</p>
+            <p class="p-4 text-sm text-ink-3">Ninguém esperando além do SLA agora.</p>
         @else
             <div class="overflow-x-auto">
                 <flux:table class="w-full min-w-[52rem]">
+                    <caption class="sr-only">Aguardando resposta além do SLA</caption>
                     <flux:table.columns class="bg-canvas">
                         <flux:table.column class="px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Cliente</span></flux:table.column>
                         <flux:table.column class="w-40 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Setor</span></flux:table.column>
@@ -71,12 +74,13 @@
     </div>
 
     <div data-panel class="overflow-hidden rounded-xl border border-line bg-surface">
-        <div class="px-4 py-3.5">
+        <div class="border-b border-line px-4 py-3.5">
             <h2 class="text-sm font-semibold text-ink">Desempenho por atendente</h2>
             <p class="text-xs text-ink-3">Assumidos, primeira resposta e encerrados no período.</p>
         </div>
         <div class="overflow-x-auto">
             <flux:table class="w-full min-w-[40rem]">
+                <caption class="sr-only">Desempenho por atendente</caption>
                 <flux:table.columns class="bg-canvas">
                     <flux:table.column class="px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Atendente</span></flux:table.column>
                     <flux:table.column align="end" class="w-28 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Assumidos</span></flux:table.column>

@@ -58,6 +58,40 @@ class ReportsMarkupTest extends TestCase
         $this->assertSame(1, $xpath->query("//section[contains(concat(' ', normalize-space(@class), ' '), ' max-w-[120rem] ')]")->length);
     }
 
+    public function test_aviso_do_verificador_usa_os_tokens_de_aviso(): void
+    {
+        // Sem batida no cache, o verificador conta como parado.
+        $alert = $this->page()->query("//*[@role='alert'][contains(., 'O verificador de SLA')]")->item(0);
+
+        $this->assertInstanceOf(\DOMElement::class, $alert);
+        $this->assertContains('bg-warn-soft', explode(' ', $alert->getAttribute('class')));
+        $this->assertFalse($alert->hasAttribute('data-flux-callout'));
+    }
+
+    public function test_paineis_com_borda_no_cabecalho_e_tabelas_nomeadas_na_largura_toda(): void
+    {
+        $agent = User::factory()->create(['name' => 'Ana Lima']);
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create([
+            'assigned_user_id' => $agent->id, 'opened_at' => now(), 'status' => 'aguardando',
+            'waiting_since' => now()->subHour(), 'sla_warn_at' => now()->subMinutes(30), 'sla_due_at' => now()->subMinutes(10),
+        ]);
+        $xpath = $this->page();
+
+        $headers = $xpath->query('//*[@data-panel]/*[1]');
+        $this->assertSame(3, $headers->length);
+        foreach ($headers as $header) {
+            $this->assertInstanceOf(\DOMElement::class, $header);
+            $this->assertContains('border-b', explode(' ', $header->getAttribute('class')));
+        }
+
+        foreach (['Aguardando resposta além do SLA', 'Desempenho por atendente'] as $title) {
+            $table = $xpath->query($this->panel($title).'//table')->item(0);
+            $this->assertInstanceOf(\DOMElement::class, $table, "tabela {$title}");
+            $this->assertSame($title, trim($xpath->query('./caption', $table)->item(0)?->textContent ?? ''));
+            $this->assertContains('w-full', explode(' ', $table->getAttribute('class')));
+        }
+    }
+
     public function test_desempenho_mostra_avatar_do_atendente(): void
     {
         $agent = User::factory()->create(['name' => 'Ana Lima']);
