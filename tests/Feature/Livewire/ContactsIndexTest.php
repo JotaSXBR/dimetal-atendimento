@@ -125,6 +125,19 @@ class ContactsIndexTest extends TestCase
         $this->assertMatchesRegularExpression('/<td[^>]*class="[^"]*\bz-10\b[^"]*"[^>]*data-flux-cell>(?:(?!<\/td>).)*data-testid="contact-chip"/s', $html);
     }
 
+    public function test_tabela_ocupa_o_cartao_e_trunca_nome_longo(): void
+    {
+        $name = str_repeat('Maria Aparecida Fernanda ', 4);
+        Contact::factory()->create(['name' => $name, 'company' => 'Distribuidora Longa']);
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('/<table[^>]*class="[^"]*\bw-full\b[^"]*"[^>]*data-testid="contacts-table"|<table[^>]*data-testid="contacts-table"[^>]*class="[^"]*\bw-full\b/', $html);
+        $this->assertMatchesRegularExpression('/<span[^>]*class="[^"]*\btruncate\b[^"]*"[^>]*title="'.preg_quote(e(trim($name)), '/').'"|<span[^>]*title="'.preg_quote(e(trim($name)), '/').'"[^>]*class="[^"]*\btruncate\b/', $html);
+        $this->assertMatchesRegularExpression('/<span[^>]*title="Distribuidora Longa"/', $html);
+        $this->assertMatchesRegularExpression('/<th[^>]*class="[^"]*\brelative\b[^"]*"[^>]*data-flux-column>\s*<div[^>]*>\s*<span class="sr-only">Ações<\/span>/', $html);
+    }
+
     public function test_linha_selecionada_usa_muted(): void
     {
         $contact = Contact::factory()->create();

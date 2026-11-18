@@ -35,12 +35,12 @@
 
         {{-- Células com `px-4!`: o Flux zera o padding da primeira e da última coluna, e aqui a tabela fica dentro do cartão. --}}
         <div wire:loading.remove.delay wire:target="search" class="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
-            <flux:table data-testid="contacts-table" class="min-w-[52rem]">
+            <flux:table data-testid="contacts-table" class="w-full min-w-[52rem]">
                 <flux:table.columns class="bg-canvas">
                     <flux:table.column class="px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Contato</span></flux:table.column>
                     <flux:table.column class="w-40 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Telefone</span></flux:table.column>
                     <flux:table.column class="w-60 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Etiquetas</span></flux:table.column>
-                    <flux:table.column class="w-44 px-4! border-line!"><span class="sr-only">Ações</span></flux:table.column>
+                    <flux:table.column class="relative w-44 px-4! border-line!"><span class="sr-only">Ações</span></flux:table.column>
                 </flux:table.columns>
                 <flux:table.rows>
                     @forelse ($contacts as $contact)
@@ -50,9 +50,9 @@
                                 <button type="button" wire:click="select({{ $contact->id }})" class="flex w-full min-w-0 items-center gap-3 text-start after:absolute after:inset-0">
                                     <x-avatar :src="$contact->avatarUrl()" :name="$contact->label()" shape="round" size="sm" decorative />
                                     <span class="min-w-0 flex-1">
-                                        <span class="block truncate text-[13px] font-medium text-ink">{{ $contact->label() }}</span>
+                                        <span class="block truncate text-[13px] font-medium text-ink" title="{{ $contact->label() }}">{{ $contact->label() }}</span>
                                         @if ($contact->company)
-                                            <span class="block truncate text-xs text-ink-3">{{ $contact->company }}</span>
+                                            <span class="block truncate text-xs text-ink-3" title="{{ $contact->company }}">{{ $contact->company }}</span>
                                         @endif
                                     </span>
                                 </button>
