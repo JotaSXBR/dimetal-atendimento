@@ -35,9 +35,11 @@
         @endif
 
         @if (! $readonly && $ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
-            @php($breached = $ticket->slaState() === 'estourou')
+            @php($slaState = $ticket->slaState())
+            @php($breached = $slaState === 'estourou')
             @php($when = app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()))
-            <div data-testid="details-sla" role="status" @class(['mt-2.5 rounded-lg p-2.5 text-xs font-semibold', 'bg-danger/10 text-danger' => $breached, 'bg-warn-soft text-warn' => ! $breached])>
+            {{-- Sem `role="status"`: o anúncio ao leitor de tela fica só no `header-sla` do cabeçalho. --}}
+            <div data-testid="details-sla" @class(['mt-2.5 rounded-lg p-2.5 text-xs font-semibold', 'bg-danger/10 text-danger' => $breached, 'bg-warn-soft text-warn' => $slaState === 'perto', 'bg-muted text-ink-2' => $slaState === null])>
                 {{ $breached ? 'SLA estourado: venceu '.$when : 'Responder até '.$when }}
             </div>
         @endif

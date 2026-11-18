@@ -74,10 +74,15 @@ class TicketDetailsBlocksTest extends TestCase
     {
         $html = $this->inboxHtml();
 
-        $this->tag($html, 'details-ticket');
-        foreach (['Canal', 'Setor', 'Responsável', 'Aberto em'] as $label) {
-            $this->assertStringContainsString('<dt class="text-xs text-ink-3">'.$label.'</dt>', $html);
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+        $labels = [];
+        foreach ((new \DOMXPath($dom))->query('//details[@data-testid="details-ticket"]//dl/div') as $row) {
+            $this->assertNotSame('', trim($row->getElementsByTagName('dd')->item(0)->textContent));
+            $labels[] = trim($row->getElementsByTagName('dt')->item(0)->textContent);
         }
+
+        $this->assertSame(['Canal', 'Setor', 'Responsável', 'Aberto em'], $labels);
         $this->assertStringContainsString('data-testid="header-line"', $html);
     }
 
@@ -91,10 +96,17 @@ class TicketDetailsBlocksTest extends TestCase
         };
         $box = fn (string $html): ?string => preg_match('/<[^>]*data-testid="details-sla".*?<\/div>/s', $html, $m) ? $m[0] : null;
 
-        $waiting = $box($sla(['waiting_since' => now()->subMinute(), 'sla_due_at' => now()->addHour()]));
-        $this->assertNotNull($waiting);
-        $this->assertStringContainsString('Responder até', $waiting);
-        $this->assertStringContainsString('bg-warn-soft', $waiting);
+        $onTime = $box($sla(['waiting_since' => now()->subMinute(), 'sla_warn_at' => now()->addMinutes(30), 'sla_due_at' => now()->addHour()]));
+        $this->assertNotNull($onTime);
+        $this->assertStringContainsString('Responder até', $onTime);
+        $this->assertStringContainsString('bg-muted', $onTime);
+        $this->assertStringNotContainsString('text-warn', $onTime);
+        $this->assertStringNotContainsString('role="status"', $onTime);
+
+        $near = $box($sla(['waiting_since' => now()->subMinutes(40), 'sla_warn_at' => now()->subMinute(), 'sla_due_at' => now()->addHour()]));
+        $this->assertNotNull($near);
+        $this->assertStringContainsString('Responder até', $near);
+        $this->assertStringContainsString('bg-warn-soft', $near);
 
         $breached = $box($sla(['waiting_since' => now()->subHours(2), 'sla_due_at' => now()->subHour()]));
         $this->assertNotNull($breached);
