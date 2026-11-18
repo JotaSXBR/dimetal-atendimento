@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.respostas" title="Respostas rápidas" subtitle="Digite / na mensagem para inserir. O texto entra editável: leia o histórico antes de enviar valores ou prazos." width="3xl">
+<x-settings-page route="configuracoes.respostas" title="Respostas rápidas" subtitle="Digite / na mensagem para inserir. O texto entra editável: leia o histórico antes de enviar valores ou prazos." width="wide">
     <x-slot:actions>
         <flux:button variant="primary" icon="plus" wire:click="newReply">Nova resposta</flux:button>
     </x-slot:actions>

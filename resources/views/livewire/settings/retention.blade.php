@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.retencao" title="Anexos e retenção" subtitle="O texto das mensagens, o protocolo e a linha do tempo ficam para sempre. Só os arquivos têm prazo." width="3xl">
+<x-settings-page route="configuracoes.retencao" title="Anexos e retenção" subtitle="O texto das mensagens, o protocolo e a linha do tempo ficam para sempre. Só os arquivos têm prazo.">
 <div class="mt-6 space-y-6">
     <dl class="divide-y divide-line rounded-[14px] border border-line bg-surface text-sm">
         <div class="flex justify-between gap-4 px-4 py-3">

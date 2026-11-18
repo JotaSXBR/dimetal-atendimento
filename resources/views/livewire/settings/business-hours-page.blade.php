@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.horario" title="Horário e SLA" subtitle="Faixas por dia, feriados, resposta fora do horário e prazo de primeira resposta" width="3xl">
+<x-settings-page route="configuracoes.horario" title="Horário e SLA" subtitle="Faixas por dia, feriados, resposta fora do horário e prazo de primeira resposta">
     <div class="mt-6">
         <div class="space-y-6">
             <form wire:submit="saveHours" class="rounded-[14px] border border-line bg-surface p-5">

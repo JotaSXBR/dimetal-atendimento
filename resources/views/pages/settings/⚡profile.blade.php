@@ -93,11 +93,9 @@ new #[Title('Perfil')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    @include('partials.settings-heading')
-
     <flux:heading level="2" class="sr-only">{{ __('Profile settings') }}</flux:heading>
 
-    <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
+    <x-pages::settings.layout route="profile.edit" :heading="__('Profile')" :subheading="__('Update your name and email address')">
         <div class="mt-6">
             <x-avatar-uploader model="photo" action="saveAvatar" :current="auth()->user()->avatarUrl()" :name="auth()->user()->name" shape="round">
                 @if (auth()->user()->avatar_path)

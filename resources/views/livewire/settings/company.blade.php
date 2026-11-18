@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.empresa" title="Empresa e assinatura" subtitle="Nome, logotipo e assinatura que aparecem no sistema e nas mensagens." width="3xl">
+<x-settings-page route="configuracoes.empresa" title="Empresa e assinatura" subtitle="Nome, logotipo e assinatura que aparecem no sistema e nas mensagens.">
     <section class="mt-6 space-y-3 rounded-[14px] border border-line bg-surface p-5" aria-labelledby="logo-title">
         <div>
             <p id="logo-title" class="text-sm font-semibold text-ink">Logotipo</p>

@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.usuarios" title="Usuários" subtitle="Quem atende, em quais setores, e quem pode transferir tickets." width="6xl">
+<x-settings-page route="configuracoes.usuarios" title="Usuários" subtitle="Quem atende, em quais setores, e quem pode transferir tickets." width="wide">
     <x-slot:actions>
         <flux:button variant="primary" size="sm" icon="plus" wire:click="newUser">Novo usuário</flux:button>
     </x-slot:actions>

@@ -49,6 +49,44 @@ class SettingsPageTest extends TestCase
         $this->assertStringNotContainsString('Páginas de', $html);
     }
 
+    public function test_menu_usa_navlist_com_a_pagina_atual(): void
+    {
+        $html = $this->page(UserRole::ADMIN, '/configuracoes/canais');
+        $xpath = $this->xpath($html);
+
+        $nav = '//nav[@aria-label="Configuração"]';
+        $this->assertGreaterThan(0, $xpath->query($nav.'//*[@data-flux-navlist-item]')->length);
+        $current = $xpath->query($nav.'//*[@data-flux-navlist-item][@aria-current="page"]');
+        $this->assertSame(1, $current->length);
+        $this->assertSame(route('configuracoes.canais'), $current->item(0)?->getAttribute('href'));
+        $this->assertSame(1, $xpath->query($nav.'//*[@data-flux-navlist-item][@data-current]')->length);
+        $this->assertSame(['Atendimento', 'Equipe', 'Conexões', 'Empresa'], $this->groupTitles($xpath));
+        $this->assertStringContainsString('max-w-[120rem]', $html);
+    }
+
+    public function test_minha_conta_usa_o_mesmo_arranjo(): void
+    {
+        $html = $this->page(UserRole::ATENDENTE, '/settings/profile');
+        $xpath = $this->xpath($html);
+
+        $nav = '//nav[@aria-label="Minha conta"]';
+        $items = $xpath->query($nav.'//*[@data-flux-navlist-item]');
+        $this->assertSame(4, $items->length);
+        $current = $xpath->query($nav.'//*[@data-flux-navlist-item][@aria-current="page"]');
+        $this->assertSame(1, $current->length);
+        $this->assertSame('Perfil', trim($current->item(0)?->textContent ?? ''));
+        $this->assertSame(['Minha conta'], array_map(fn ($n) => trim($n->textContent), iterator_to_array($xpath->query($nav.'//*[@data-test="settings-group-title"]'))));
+        $this->assertSame('Perfil', trim($xpath->query('//*[@data-page-header]//h1')->item(0)?->textContent ?? ''));
+        $this->assertStringNotContainsString('Seu perfil, sua segurança e suas preferências', $html);
+        $this->withSession(['auth.password_confirmed_at' => time()]);
+        foreach (['/settings/security' => 'Alterar senha', '/settings/appearance' => 'Aparência', '/settings/alerts' => 'Meus alertas'] as $url => $title) {
+            $tab = $this->xpath($this->page(UserRole::ATENDENTE, $url));
+            $this->assertSame($title, trim($tab->query('//*[@data-page-header]//h1')->item(0)?->textContent ?? ''), $url);
+            // O cabeçalho não tem margem de baixo: o conteúdo da aba desce 24 px (mt-6), como no desenho.
+            $this->assertSame(1, $tab->query('//*[@data-page-header]/following-sibling::*[1][contains(concat(" ", @class, " "), " mt-6 ")]')->length, $url);
+        }
+    }
+
     public function test_supervisor_so_ve_os_grupos_que_pode_abrir(): void
     {
         $xpath = $this->xpath($this->page(UserRole::SUPERVISOR, '/configuracoes/usuarios'));

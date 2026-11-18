@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.backups" title="Backup do banco" subtitle="Cópia diária do banco (conversas, tickets, contatos e configuração), guardada no RustFS. Os anexos têm cópia à parte." width="3xl">
+<x-settings-page route="configuracoes.backups" title="Backup do banco" subtitle="Cópia diária do banco (conversas, tickets, contatos e configuração), guardada no RustFS. Os anexos têm cópia à parte." width="wide">
 <div class="mt-6 space-y-6" @if ($manual['status'] === 'running') wire:poll.3s @endif>
     <dl class="divide-y divide-line rounded-[14px] border border-line bg-surface text-sm">
         <div class="flex justify-between gap-4 px-4 py-3">

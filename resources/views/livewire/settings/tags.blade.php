@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.etiquetas" title="Etiquetas" subtitle="Etiqueta do contato diz quem é o cliente e acompanha o contato (VIP, revenda); etiqueta da conversa diz o assunto do atendimento. A Automação aplica as duas (bloco Etiquetar) e a fila filtra por elas. Apagar uma etiqueta a remove de todos." width="3xl">
+<x-settings-page route="configuracoes.etiquetas" title="Etiquetas" subtitle="Etiqueta do contato diz quem é o cliente e acompanha o contato (VIP, revenda); etiqueta da conversa diz o assunto do atendimento. A Automação aplica as duas (bloco Etiquetar) e a fila filtra por elas. Apagar uma etiqueta a remove de todos." width="wide">
     <x-slot:actions>
         <flux:button variant="primary" icon="plus" wire:click="newTag('conversa')">Nova etiqueta</flux:button>
     </x-slot:actions>

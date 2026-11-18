@@ -72,6 +72,21 @@ class NavigationTest extends TestCase
         ], $groups(UserRole::ADMIN));
     }
 
+    public function test_account_groups(): void
+    {
+        $groups = array_map(
+            fn (array $items): array => array_map(fn (NavItem $item): array => [$item->label, $item->route, $item->icon], $items),
+            $this->nav()->accountGroups(),
+        );
+
+        $this->assertSame(['Minha conta' => [
+            ['Perfil', 'profile.edit', 'user'],
+            ['Segurança', 'security.edit', 'shield-check'],
+            ['Aparência', 'appearance.edit', 'sun'],
+            ['Meus alertas', 'alerts.edit', 'bell'],
+        ]], $groups);
+    }
+
     public function test_settings_entry_e_o_primeiro_item_visivel(): void
     {
         $this->assertSame('configuracoes.setores', $this->nav()->settingsEntry($this->user(UserRole::ADMIN))?->route);

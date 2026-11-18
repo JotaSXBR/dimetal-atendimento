@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.setores" title="Setores" subtitle="Ativo aparece no menu e recebe tickets. Fora do menu não aparece no menu, mas continua recebendo transferências. Desativado não recebe nada novo; o histórico permanece. Só dá para apagar um setor sem uso." width="3xl">
+<x-settings-page route="configuracoes.setores" title="Setores" subtitle="Ativo aparece no menu e recebe tickets. Fora do menu não aparece no menu, mas continua recebendo transferências. Desativado não recebe nada novo; o histórico permanece. Só dá para apagar um setor sem uso." width="wide">
     <form wire:submit="create($wire.newName)" class="mt-6 flex flex-wrap items-end gap-2 rounded-[14px] border border-line bg-surface p-4">
         <div class="min-w-48 flex-1">
             <flux:input wire:model="newName" label="Novo setor" placeholder="Ex.: Logística" maxlength="60" autocomplete="off" />

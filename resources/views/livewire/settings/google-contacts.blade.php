@@ -1,4 +1,4 @@
-<x-settings-page route="configuracoes.google" title="Google Contatos" subtitle="Os contatos que você edita no sistema são copiados para o Google Contatos da empresa (só de ida). Contato que nunca foi editado não é enviado." width="3xl">
+<x-settings-page route="configuracoes.google" title="Google Contatos" subtitle="Os contatos que você edita no sistema são copiados para o Google Contatos da empresa (só de ida). Contato que nunca foi editado não é enviado.">
     @if (session('google_error'))
         <flux:callout class="mt-4" variant="danger" icon="exclamation-triangle" :text="session('google_error')" />
     @endif
