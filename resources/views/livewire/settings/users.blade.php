@@ -67,27 +67,29 @@
         @endif
 
         <x-panel title="Equipe" :subtitle="$users->count().' '.($users->count() === 1 ? 'pessoa' : 'pessoas')">
-            {{-- Cabeçalho só visual (cada linha já diz tudo); abaixo de md setores e tickets voltam para a linha do e-mail. --}}
-            <div data-test="users-columns" aria-hidden="true" class="hidden gap-4 border-b border-line bg-canvas px-4 py-2 text-xs font-semibold text-ink-3 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_10rem_13rem]">
+            {{-- Colunas só no 2xl (em 1280 a coluna de conteúdo não comporta 4 colunas: o nome sumia). Subgrid alinha as
+                 colunas `auto` entre as linhas. Cabeçalho só visual: cada linha já diz tudo. --}}
+            <div class="2xl:grid 2xl:grid-cols-[minmax(16rem,2fr)_minmax(0,1fr)_auto_auto] 2xl:gap-x-4">
+            <div data-test="users-columns" aria-hidden="true" class="hidden border-b border-line bg-canvas px-4 py-2 text-xs font-semibold text-ink-3 2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid">
                 <span>Usuário</span>
                 <span>Setores</span>
                 <span>Tickets</span>
                 <span></span>
             </div>
 
-            <ul>
+            <ul class="2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid">
                 @foreach ($users as $user)
                     @php
                         $tickets = $user->open_tickets_count === 0
                             ? 'sem tickets abertos'
                             : $user->open_tickets_count.' '.($user->open_tickets_count === 1 ? 'ticket aberto' : 'tickets abertos');
                     @endphp
-                    <li class="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_10rem_13rem] md:gap-4" wire:key="user-{{ $user->id }}">
-                        <div class="flex min-w-0 flex-1 items-center gap-3">
+                    <li class="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid" wire:key="user-{{ $user->id }}">
+                        <div class="flex min-w-0 grow basis-64 items-center gap-3">
                             <x-avatar :src="$user->avatarUrl()" :name="$user->name" shape="round" size="sm" decorative />
                             <div class="min-w-0 flex-1">
-                                <p class="flex items-center gap-2 text-sm font-semibold text-ink">
-                                    <span class="truncate">{{ $user->name }}</span>
+                                <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-ink">
+                                    <span data-test="user-name" class="max-w-full truncate">{{ $user->name }}</span>
                                     <x-status-badge tone="neutral">{{ $user->role->label() }}</x-status-badge>
                                     @unless ($user->active)
                                         <x-status-badge tone="neutral">Inativo</x-status-badge>
@@ -95,7 +97,7 @@
                                 </p>
                                 <p class="truncate text-xs text-ink-3">
                                     {{ $user->email }}
-                                    <span class="md:hidden">
+                                    <span class="2xl:hidden">
                                         @if ($user->sectors->isNotEmpty())
                                             · {{ $user->sectors->pluck('name')->implode(', ') }}
                                         @endif
@@ -105,10 +107,10 @@
                             </div>
                         </div>
 
-                        <p class="hidden truncate text-xs text-ink-2 md:block">{{ $user->sectors->pluck('name')->implode(', ') }}</p>
-                        <p class="hidden text-xs text-ink-3 md:block">{{ $tickets }}</p>
+                        <p class="hidden truncate text-xs text-ink-2 2xl:block">{{ $user->sectors->pluck('name')->implode(', ') }}</p>
+                        <p class="hidden text-xs whitespace-nowrap text-ink-3 2xl:block">{{ $tickets }}</p>
 
-                        <div class="flex items-center gap-2 md:justify-end">
+                        <div class="ms-auto flex flex-wrap items-center gap-2 2xl:justify-end">
                             @can('update', $user)
                                 <flux:button size="xs" icon="pencil-square" wire:click="edit({{ $user->id }})">Editar</flux:button>
 
@@ -124,6 +126,7 @@
                     </li>
                 @endforeach
             </ul>
+            </div>
         </x-panel>
     </div>
 </x-settings-page>

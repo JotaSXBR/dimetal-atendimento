@@ -140,6 +140,7 @@ class TagsTest extends TestCase
         $panel = fn (string $title): string => '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="'.$title.'"]]';
 
         foreach (['contato' => 'Do contato', 'conversa' => 'Da conversa'] as $scope => $title) {
+            $this->assertSame(1, $xpath->query('//*[@data-panel][@role="region"][@aria-label="'.$title.'"]')->length, $title.' é região');
             $this->assertSame(1, $xpath->query($panel($title).'//*[@data-panel-actions]//button[@*[name()="wire:click"]="newTag(\''.$scope.'\')"]')->length, $title);
         }
 

@@ -43,7 +43,7 @@
         @endif
 
         @foreach ([['scope' => 'contato', 'title' => 'Do contato', 'tags' => $contactTags, 'empty' => 'Nenhuma etiqueta do contato.', 'uses' => 'contacts_count', 'unit' => ['contato', 'contatos']], ['scope' => 'conversa', 'title' => 'Da conversa', 'tags' => $ticketTags, 'empty' => 'Nenhuma etiqueta da conversa.', 'uses' => 'tickets_count', 'unit' => ['ticket', 'tickets']]] as $group)
-            <x-panel :title="$group['title']">
+            <x-panel :title="$group['title']" role="region" :aria-label="$group['title']">
                 <x-slot:actions>
                     <flux:button size="xs" variant="subtle" icon="plus" wire:click="newTag('{{ $group['scope'] }}')">Nova</flux:button>
                 </x-slot:actions>
