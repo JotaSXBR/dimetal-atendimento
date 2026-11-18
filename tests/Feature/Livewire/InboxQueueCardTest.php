@@ -105,18 +105,35 @@ class InboxQueueCardTest extends TestCase
     {
         $vendas = Sector::factory()->create(['name' => 'Vendas']);
         $suporte = Sector::factory()->create(['name' => 'Suporte']);
-        $ticket = $this->ticket(['sector_id' => $vendas->id, 'status' => TicketStatus::EM_ATENDIMENTO, 'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id]);
+        $ticket = $this->ticket([
+            'contact_id' => Contact::factory()->create(['name' => 'Rosana Prado'])->id,
+            'sector_id' => $vendas->id,
+            'status' => TicketStatus::EM_ATENDIMENTO,
+            'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id,
+        ]);
         Message::factory()->for($ticket)->create(['direction' => MessageDirection::IN, 'sent_at' => now()->subMinutes(3)]);
         $this->ticket(['sector_id' => $suporte->id, 'contact_id' => Contact::factory()->create(['name' => 'Outro'])->id]);
 
         $xpath = $this->xpath($this->html());
         $card = '//button[@*[name()="wire:key"]="ticket-'.$ticket->id.'"]';
 
-        $this->assertSame(1, $xpath->query($card.'//*[@data-testid="card-time"]/parent::*/span[normalize-space()="Joaquim"]')->length, 'o tempo divide a linha com o nome');
-        $line = $card.'//*[@data-testid="card-status"]/parent::*';
-        $this->assertSame(1, $xpath->query($line.'/*[@data-testid="card-unread"]')->length, 'não lidas na linha do selo');
-        $this->assertSame(1, $xpath->query($line.'/*[@data-testid="card-sector"]')->length, 'setor na linha do selo');
-        $this->assertSame(1, $xpath->query($line.'/*[.//*[@data-testid="card-assignee-name"]]')->length, 'atendente na linha do selo');
+        $this->assertSame(1, $xpath->query($card.'//*[@data-testid="card-time"]/parent::*/span[normalize-space()="Rosana Prado"]')->length, 'o tempo divide a linha com o nome');
+        $group = $card.'//*[@data-testid="card-status"]/parent::*/*[@data-testid="card-extras"]';
+        $this->assertSame(1, $xpath->query($group)->length, 'o grupo à direita fica na linha do selo');
+        $this->assertSame(1, $xpath->query($group.'/*[@data-testid="card-unread"]')->length, 'não lidas no grupo');
+        $this->assertSame(1, $xpath->query($group.'/*[@data-testid="card-sector"]')->length, 'setor no grupo');
+        $this->assertSame(1, $xpath->query($group.'/*[.//*[@data-testid="card-assignee-name"]]')->length, 'atendente no grupo');
+    }
+
+    /** Sem setor, atendente nem não lidas, o grupo da direita não existe (nada de espaço vazio na linha do selo). */
+    public function test_sem_setor_atendente_nem_nao_lidas_a_linha_do_selo_nao_tem_o_grupo(): void
+    {
+        $this->ticket();
+
+        $xpath = $this->xpath($this->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-testid="card-status"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-testid="card-extras"]')->length);
     }
 
     public function test_atendente_fica_entre_o_setor_e_as_nao_lidas(): void

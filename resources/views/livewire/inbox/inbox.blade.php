@@ -121,6 +121,8 @@
                                 $hasMeta = $showChannel;
                                 $at = $item->waiting_since ?? $item->last_inbound_at ?? $item->opened_at;
                                 $unread = (int) $item->getAttribute('unread');
+                                $showSectorChip = $showSector && $item->sector;
+                                $showAssignee = $item->assignee && $tab !== 'meus';
                             @endphp
                             <span class="relative shrink-0">
                                 <x-avatar :src="$item->contact->avatarUrl()" :name="$item->contact->label()" shape="round" size="lg" decorative />
@@ -162,24 +164,27 @@
                                 <span class="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                     <x-status-badge :status="$item->status" data-testid="card-status" />
                                     <span data-testid="card-protocol" class="shrink-0 font-mono text-xs text-ink-3">{{ $item->protocol }}</span>
-                                    {{-- O que era a coluna da direita: empurrado para a direita da linha do selo, que quebra em vez de cortar. --}}
-                                    <span class="ms-auto"></span>
-                                @if ($showSector && $item->sector)
-                                    <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-xs text-ink-2">{{ $item->sector->name }}</span>
-                                @endif
-                                @if ($item->assignee && $tab !== 'meus')
-                                    <span class="inline-flex max-w-24 items-center gap-1 text-xs text-ink-2">
-                                        <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
-                                        @php
-                                            $fullName = trim((string) preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', $item->assignee->name));
-                                        @endphp
-                                        <span class="sr-only">Atendente: {{ $fullName }}</span>
-                                        <span data-testid="card-assignee-name" aria-hidden="true" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ preg_split('/[\s\x{00A0}]+/u', $fullName)[0] ?: $fullName }}</span>
-                                    </span>
-                                @endif
-                                @if ($unread > 0)
-                                    <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-xs font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>
-                                @endif
+                                    @if ($showSectorChip || $showAssignee || $unread > 0)
+                                        {{-- O que era a coluna da direita: à direita da linha do selo, e quando quebra continua à direita. --}}
+                                        <span data-testid="card-extras" class="ms-auto flex flex-wrap items-center justify-end gap-2">
+                                            @if ($showSectorChip)
+                                                <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-xs text-ink-2">{{ $item->sector->name }}</span>
+                                            @endif
+                                            @if ($showAssignee)
+                                                <span class="inline-flex max-w-24 items-center gap-1 text-xs text-ink-2">
+                                                    <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
+                                                    @php
+                                                        $fullName = trim((string) preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', $item->assignee->name));
+                                                    @endphp
+                                                    <span class="sr-only">Atendente: {{ $fullName }}</span>
+                                                    <span data-testid="card-assignee-name" aria-hidden="true" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ preg_split('/[\s\x{00A0}]+/u', $fullName)[0] ?: $fullName }}</span>
+                                                </span>
+                                            @endif
+                                            @if ($unread > 0)
+                                                <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-xs font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>
+                                            @endif
+                                        </span>
+                                    @endif
                                 </span>
                             </span>
                         </button>
