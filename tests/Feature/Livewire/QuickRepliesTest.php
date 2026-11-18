@@ -174,4 +174,27 @@ class QuickRepliesTest extends TestCase
             ->call('useQuickReply', $reply->id)
             ->assertNotFound();
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_respostas_no_painel_do_desenho(): void
+    {
+        $page = $this->page();
+
+        $this->assertSame(1, $this->xpath($page->html())->query('//*[@data-panel]//*[@data-empty-state-icon]')->length, 'vazio no painel, não compacto');
+
+        $form = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="%s"]]//form[@*[name()="wire:submit"]="save"]';
+        $this->assertSame(1, $this->xpath($page->call('newReply')->html())->query(sprintf($form, 'Nova resposta'))->length);
+
+        $reply = QuickReply::query()->create(['shortcut' => 'preco', 'body' => 'Tabela']);
+        $xpath = $this->xpath($page->call('edit', $reply->id)->html());
+        $this->assertSame(1, $xpath->query(sprintf($form, 'Editar resposta'))->length);
+        $this->assertSame(1, $xpath->query('//*[@data-panel]//li[@*[name()="wire:key"]="reply-'.$reply->id.'"]')->length);
+    }
 }

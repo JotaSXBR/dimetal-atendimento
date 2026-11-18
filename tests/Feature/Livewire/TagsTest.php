@@ -123,4 +123,32 @@ class TagsTest extends TestCase
 
         $page->set('tagId', $tag->id)->assertSee('Com Etiqueta')->assertDontSee('Sem Etiqueta');
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_etiquetas_no_painel_do_desenho(): void
+    {
+        $tag = Tag::factory()->create(['name' => 'Orçamento']);
+        $page = Livewire::actingAs($this->supervisor())->test(Tags::class);
+        $xpath = $this->xpath($page->html());
+        $panel = fn (string $title): string => '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="'.$title.'"]]';
+
+        foreach (['contato' => 'Do contato', 'conversa' => 'Da conversa'] as $scope => $title) {
+            $this->assertSame(1, $xpath->query($panel($title).'//*[@data-panel-actions]//button[@*[name()="wire:click"]="newTag(\''.$scope.'\')"]')->length, $title);
+        }
+
+        $this->assertSame(1, $xpath->query($panel('Do contato').'//*[@data-empty-state]')->length);
+        $this->assertSame(0, $xpath->query($panel('Do contato').'//*[@data-empty-state-icon]')->length, 'vazio compacto');
+        $this->assertSame(1, $xpath->query($panel('Da conversa').'//li[@*[name()="wire:key"]="tag-'.$tag->id.'"]')->length);
+
+        $form = $panel('%s').'//form[@*[name()="wire:submit"]="save"]';
+        $this->assertSame(1, $this->xpath($page->call('newTag', 'contato')->html())->query(sprintf($form, 'Nova etiqueta'))->length);
+        $this->assertSame(1, $this->xpath($page->call('edit', $tag->id)->html())->query(sprintf($form, 'Editar etiqueta'))->length);
+    }
 }

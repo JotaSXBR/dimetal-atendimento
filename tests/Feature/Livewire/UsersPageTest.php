@@ -222,4 +222,34 @@ class UsersPageTest extends TestCase
             ->assertSee('Chefe Admin')
             ->assertDontSeeHtml('wire:click="edit('.$admin->id.')"');
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_usuarios_no_painel_do_desenho(): void
+    {
+        $target = User::factory()->create(['role' => UserRole::ATENDENTE, 'name' => 'Maria Inativa', 'active' => false]);
+        $page = Livewire::actingAs($this->as(UserRole::ADMIN))->test(Users::class);
+
+        $list = $this->xpath($page->html());
+        $panel = '//*[@data-panel][.//li[@*[name()="wire:key"]="user-'.$target->id.'"]]';
+        $this->assertSame(1, $list->query($panel)->length, 'a lista fica num painel');
+        $columns = array_map(fn (\DOMNode $n): string => trim($n->textContent), iterator_to_array($list->query($panel.'//*[@data-test="users-columns"]/*')));
+        $this->assertSame(['Usuário', 'Setores', 'Tickets'], array_values(array_filter($columns)));
+        $this->assertSame(1, $list->query($panel.'//li//*[@data-status-tone="neutral"][contains(., "Atendente")]')->length);
+        $this->assertSame(1, $list->query($panel.'//li//*[@data-status-tone="neutral"][contains(., "Inativo")]')->length);
+
+        $form = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="%s"]]//form[@*[name()="wire:submit"]="save"]';
+        $created = $this->xpath($page->call('newUser')->html());
+        $this->assertSame(1, $created->query(sprintf($form, 'Novo usuário'))->length);
+        $buttons = array_map(fn (\DOMNode $n): string => trim($n->textContent), iterator_to_array($created->query(sprintf($form, 'Novo usuário').'//button')));
+        $this->assertSame(['Salvar', 'Cancelar'], $buttons);
+
+        $this->assertSame(1, $this->xpath($page->call('edit', $target->id)->html())->query(sprintf($form, 'Editar usuário'))->length);
+    }
 }
