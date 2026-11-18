@@ -219,3 +219,8 @@ em 17/11/2026).
   Conversar, quando houver); sai o "Encerrar ticket" do rodapé no Pencil. Substitui o "ação Encerrar no rodapé" da fatia 2.
 - **Transferir** (dono): botão no cabeçalho quando a coluna da conversa tem largura; em coluna estreita volta para o menu
   "…", onde Reatribuir continua.
+
+## Decididos no início da fatia 3 (17/11/2026)
+
+- **Gaveta do contato** (dono): abre na ficha de leitura do Pencil (dados, etiquetas, observações, atendimentos anteriores em
+  `x-link-card`, rodapé Conversar + Editar contato); "Editar contato" troca para o formulário de hoje, como no painel da Inbox.
