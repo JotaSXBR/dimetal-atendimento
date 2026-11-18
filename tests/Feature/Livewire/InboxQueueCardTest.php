@@ -63,6 +63,18 @@ class InboxQueueCardTest extends TestCase
         return $m[1];
     }
 
+    /** O único elemento do HTML que casa com o XPath. */
+    private function node(string $html, string $xpath): \DOMElement
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$html);
+        $nodes = (new \DOMXPath($dom))->query($xpath);
+
+        $this->assertSame(1, $nodes->length, "{$xpath} deveria casar um elemento");
+
+        return $nodes->item(0);
+    }
+
     public function test_lista_da_fila_e_relative_para_o_sr_only_nao_escapar_do_corte(): void
     {
         $this->ticket();
@@ -359,7 +371,7 @@ class InboxQueueCardTest extends TestCase
         $html = $this->html();
 
         $this->assertStringContainsString('data-status-tone="'.TicketStatus::AGUARDANDO->tone().'"', $this->part($html, 'card-status', tag: true));
-        $this->assertMatchesRegularExpression('/data-testid="card-status"[^>]*>.*?Aguardando\s*<\/span>/s', $html);
+        $this->assertSame('Aguardando', trim($this->node($html, '//*[@data-testid="card-status"]')->textContent));
         $this->assertSame($ticket->protocol, trim($this->part($html, 'card-protocol')));
         $this->assertStringContainsString('font-mono', $this->part($html, 'card-protocol', tag: true));
     }
@@ -367,10 +379,13 @@ class InboxQueueCardTest extends TestCase
     public function test_cartao_selecionado_usa_muted(): void
     {
         $ticket = $this->ticket();
+        $other = $this->ticket(['contact_id' => Contact::factory()->create(['name' => 'Outro'])->id]);
 
         $html = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class)->call('select', $ticket->id)->html();
+        $classes = fn (Ticket $t): array => preg_split('/\s+/', trim($this->node($html, '//button[@*[name()="wire:key"]="ticket-'.$t->id.'"]')->getAttribute('class')));
 
-        $this->assertMatchesRegularExpression('/wire:key="ticket-'.$ticket->id.'"\s+class="[^"]*hover:bg-muted bg-muted"/', $html);
+        $this->assertContains('bg-muted', $classes($ticket));
+        $this->assertNotContains('bg-muted', $classes($other));
     }
 
     public function test_titulo_do_grupo_em_caixa_alta(): void
@@ -387,7 +402,7 @@ class InboxQueueCardTest extends TestCase
 
         $html = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class, ['tab' => 'encerrados'])->html();
 
-        $this->assertMatchesRegularExpression('/data-testid="card-status"[^>]*>.*?Encerrado\s*<\/span>/s', $html);
+        $this->assertSame('Encerrado', trim($this->node($html, '//*[@data-testid="card-status"]')->textContent));
         $this->assertSame($ticket->protocol, trim($this->part($html, 'card-protocol')));
     }
 
