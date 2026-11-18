@@ -115,7 +115,9 @@ class BackupsPageTest extends TestCase
         Livewire::actingAs($this->admin())->test(Backups::class)
             ->assertOk()
             ->assertSee('Não foi possível ler o bucket de backups')
-            ->assertDontSee('credencial recusada');
+            ->assertDontSee('credencial recusada')
+            // Sem arquivos para listar, o painel da lista sairia só com o cabeçalho: o aviso já explica.
+            ->assertDontSee('Backups guardados');
     }
 
     public function test_quem_nao_e_admin_nao_executa(): void

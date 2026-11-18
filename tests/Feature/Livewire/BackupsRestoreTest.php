@@ -354,7 +354,7 @@ class BackupsRestoreTest extends TestCase
         $this->assertSame(1, $xpath->query(sprintf($panel, 'Bancos guardados').'//*[@*[name()="wire:click"]="chooseStored(\'fluxie_antes_202611131000\')"]')->length);
 
         $xpath = $this->xpath($page->call('chooseBackup', self::NAME)->html());
-        $check = '//*[@data-panel][@aria-labelledby="restore-check"][./*[@data-panel-header]//h2[@id="restore-check"][normalize-space()="Conferência antes de restaurar"]]';
+        $check = '//*[@data-panel][@role="region"][@aria-labelledby="restore-check"][./*[@data-panel-header]//h2[@id="restore-check"][normalize-space()="Conferência antes de restaurar"]]';
         $this->assertSame(1, $xpath->query($check.'//input[@*[name()="wire:model.live.debounce.250ms"]="confirm"]')->length);
     }
 

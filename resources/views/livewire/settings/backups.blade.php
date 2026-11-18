@@ -69,7 +69,7 @@
     @endif
 
     @if ($source !== null || $target !== null)
-        <x-panel :title="$target !== null ? 'Voltar para o banco guardado' : 'Conferência antes de restaurar'" title-id="restore-check" aria-labelledby="restore-check">
+        <x-panel :title="$target !== null ? 'Voltar para o banco guardado' : 'Conferência antes de restaurar'" title-id="restore-check" role="region" aria-labelledby="restore-check">
             <div class="p-4">
                 <dl class="divide-y divide-line text-sm">
                     <div class="flex justify-between gap-4 py-2"><dt class="text-ink-2">{{ $target !== null ? 'Banco' : 'Arquivo' }}</dt><dd class="font-mono break-all text-ink">{{ $info['name'] ?? '' }}</dd></div>
@@ -110,27 +110,27 @@
         </x-panel>
     @endif
 
-    <x-panel title="Backups guardados">
-        @forelse ($files as $file)
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0">
-                <div class="min-w-0">
-                    <p class="font-mono text-sm break-all text-ink">{{ $file->name }}</p>
-                    <p class="mt-0.5 text-xs text-ink-3">
-                        {{ $file->kind->label() }} · {{ $file->createdAt->format('d/m/Y H:i') }} · {{ number_format($file->size / 1_000_000, 1, ',', '.') }} MB
-                        @if ($file->version)<span class="whitespace-nowrap"> · feito na {{ $file->version }}</span>@endif
-                    </p>
+    @if (count($files) > 0 || ! $unreadable)
+        <x-panel title="Backups guardados">
+            @forelse ($files as $file)
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0">
+                    <div class="min-w-0">
+                        <p class="font-mono text-sm break-all text-ink">{{ $file->name }}</p>
+                        <p class="mt-0.5 text-xs text-ink-3">
+                            {{ $file->kind->label() }} · {{ $file->createdAt->format('d/m/Y H:i') }} · {{ number_format($file->size / 1_000_000, 1, ',', '.') }} MB
+                            @if ($file->version)<span class="whitespace-nowrap"> · feito na {{ $file->version }}</span>@endif
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <flux:button size="sm" wire:click="chooseBackup('{{ $file->name }}')" wire:loading.attr="disabled" wire:target="chooseBackup">Restaurar</flux:button>
+                        <flux:button size="sm" icon="arrow-down-tray" href="{{ route('configuracoes.backups.baixar', $file->name) }}" download>Baixar</flux:button>
+                    </div>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <flux:button size="sm" wire:click="chooseBackup('{{ $file->name }}')" wire:loading.attr="disabled" wire:target="chooseBackup">Restaurar</flux:button>
-                    <flux:button size="sm" icon="arrow-down-tray" href="{{ route('configuracoes.backups.baixar', $file->name) }}" download>Baixar</flux:button>
-                </div>
-            </div>
-        @empty
-            @unless ($unreadable)
+            @empty
                 <x-empty-state icon="circle-stack" title="Nenhum backup ainda." description="O primeiro sai no horário automático, ou use Fazer backup agora." />
-            @endunless
-        @endforelse
-    </x-panel>
+            @endforelse
+        </x-panel>
+    @endif
 
     @if ($allowUpload)
         <x-panel title="Restaurar de um arquivo do seu computador" subtitle="Um backup deste sistema (`.dump`, até {{ $uploadMaxMb }} MB), por exemplo vindo da cópia da empresa. O arquivo é conferido antes de qualquer coisa.">

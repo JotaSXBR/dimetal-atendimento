@@ -46,7 +46,7 @@
         </x-panel>
 
         @if ($installed !== null && $hasService)
-            <x-panel title="Conexão com o Coolify" subtitle="O token precisa das permissões read, read:sensitive, write e deploy (nunca delete).">
+            <x-panel title-id="coolify-title" role="region" aria-labelledby="coolify-title" title="Conexão com o Coolify" subtitle="O token precisa das permissões read, read:sensitive, write e deploy (nunca delete).">
                 <div class="p-4">
                     <form wire:submit="saveConnection" class="max-w-md space-y-3">
                         <flux:input wire:model="panelUrl" label="URL do painel" type="url" placeholder="https://coolify.suaempresa.com.br" autocomplete="off" />
@@ -84,7 +84,7 @@
         @endif
 
         @if ($last !== null)
-            <x-panel title="Atualização para {{ $last->to_version }}">
+            <x-panel title="Atualização para {{ $last->to_version }}" title-id="update-title" role="region" aria-labelledby="update-title">
                 @if ($open)
                 <ol class="text-sm">
                     @foreach ($steps as $step)
@@ -118,7 +118,7 @@
 
         @if ($canUpdate && $target !== null && ! $open)
             @if ($confirming)
-                <x-panel x-data="updateConfirm" title="Atualizar para {{ $target }}">
+                <x-panel x-data="updateConfirm" title="Atualizar para {{ $target }}" title-id="confirm-title" role="region" aria-labelledby="confirm-title">
                     <div class="p-4">
                         <div class="space-y-2 text-sm text-ink-2">
                             <p>O sistema faz um backup do banco, grava a nova versão no Coolify e reinicia. Fica fora do ar por alguns minutos.</p>
