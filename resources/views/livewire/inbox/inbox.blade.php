@@ -80,9 +80,9 @@
                                 <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
                                 <span class="font-mono text-xs text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m H:i') }}</span>
                             </span>
-                            <span class="mt-1 flex min-w-0 items-center gap-2 text-xs text-ink-2">
+                            <span class="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-2">
                                 <x-status-badge :status="$item->status" data-testid="card-status" />
-                                <span data-testid="card-protocol" class="truncate font-mono text-xs text-ink-3">{{ $item->protocol }}</span>
+                                <span data-testid="card-protocol" class="shrink-0 font-mono text-xs text-ink-3">{{ $item->protocol }}</span>
                                 <span class="truncate">{{ $item->close_outcome?->label() ?? $item->closed_reason?->label() }}</span>
                             </span>
                         </span>
@@ -156,9 +156,9 @@
                                         @endif
                                     </span>
                                 @endif
-                                <span class="mt-1 flex min-w-0 items-center gap-2">
+                                <span class="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                     <x-status-badge :status="$item->status" data-testid="card-status" />
-                                    <span data-testid="card-protocol" class="truncate font-mono text-xs text-ink-3">{{ $item->protocol }}</span>
+                                    <span data-testid="card-protocol" class="shrink-0 font-mono text-xs text-ink-3">{{ $item->protocol }}</span>
                                 </span>
                             </span>
 

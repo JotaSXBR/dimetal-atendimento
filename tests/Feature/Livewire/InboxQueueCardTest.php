@@ -376,6 +376,24 @@ class InboxQueueCardTest extends TestCase
         $this->assertStringContainsString('font-mono', $this->part($html, 'card-protocol', tag: true));
     }
 
+    /** Nada some: sem espaço ao lado do selo, o protocolo desce de linha em vez de ser cortado (na fila e no histórico recente). */
+    public function test_protocolo_desce_de_linha_em_vez_de_ser_cortado(): void
+    {
+        $this->ticket();
+        $this->ticket(['status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subHour()]);
+        $user = User::factory()->create(['role' => UserRole::ADMIN]);
+
+        foreach (['todos', 'encerrados'] as $tab) {
+            $protocol = $this->node(Livewire::actingAs($user)->test(Inbox::class, ['tab' => $tab])->html(), '//*[@data-testid="card-protocol"]');
+            $tokens = fn (\DOMElement $el): array => preg_split('/\s+/', trim($el->getAttribute('class')));
+
+            $this->assertNotContains('truncate', $tokens($protocol), $tab);
+            $this->assertContains('shrink-0', $tokens($protocol), $tab);
+            $this->assertInstanceOf(\DOMElement::class, $protocol->parentNode);
+            $this->assertContains('flex-wrap', $tokens($protocol->parentNode), $tab);
+        }
+    }
+
     public function test_cartao_selecionado_usa_muted(): void
     {
         $ticket = $this->ticket();
