@@ -225,6 +225,15 @@ class AutomationIndexTest extends TestCase
         $this->page()->set('newName', '  ')->call('create')->assertHasErrors(['newName' => 'required']);
     }
 
+    public function test_duplicar_e_apagar_ficam_juntos_sem_quebrar_linha(): void
+    {
+        Workflow::factory()->create(['name' => 'Original']);
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('/<div class="[^"]*flex-nowrap[^"]*">\s*<button[^>]*aria-label="Duplicar Original"[^>]*>.*?<\/button>\s*<button[^>]*aria-label="Apagar Original"/s', $html);
+    }
+
     public function test_duplica_e_apaga(): void
     {
         $workflow = Workflow::factory()->create(['name' => 'Original']);

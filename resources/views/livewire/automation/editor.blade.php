@@ -1,5 +1,5 @@
 <div
-    class="flex h-[calc(100dvh-4rem)] min-h-[32rem] flex-col"
+    class="flex min-h-0 flex-1 flex-col"
     {{-- O x-data carrega o grafo da carga da página; sem isto o Livewire reescreve o atributo a cada gravação e o Alpine recria o editor (perde a seleção). --}}
     wire:ignore.self
     x-data="flowEditor($wire)"
@@ -53,12 +53,12 @@
             <div wire:ignore class="flow-canvas absolute inset-0 overflow-hidden bg-canvas" x-ref="canvas" aria-label="Canvas do workflow"></div>
 
             <div class="absolute start-3 top-3 z-10 flex flex-wrap gap-1" role="toolbar" aria-label="Controles do canvas">
-                <flux:button size="sm" x-on:click="undo()" x-bind:disabled="failed || !canUndo">Desfazer</flux:button>
-                <flux:button size="sm" x-on:click="redo()" x-bind:disabled="failed || !canRedo">Refazer</flux:button>
-                <flux:button size="sm" x-on:click="zoom(1 / 1.25)" x-bind:disabled="failed" aria-label="Afastar">−</flux:button>
-                <flux:button size="sm" x-on:click="zoom(1.25)" x-bind:disabled="failed" aria-label="Aproximar">+</flux:button>
-                <flux:button size="sm" x-on:click="fit()" x-bind:disabled="failed">Centralizar</flux:button>
-                <flux:button size="sm" x-on:click="organize()" x-bind:disabled="failed">Organizar blocos</flux:button>
+                <flux:button size="xs" x-on:click="undo()" x-bind:disabled="failed || !canUndo">Desfazer</flux:button>
+                <flux:button size="xs" x-on:click="redo()" x-bind:disabled="failed || !canRedo">Refazer</flux:button>
+                <flux:button size="xs" x-on:click="zoom(1 / 1.25)" x-bind:disabled="failed" aria-label="Afastar">−</flux:button>
+                <flux:button size="xs" x-on:click="zoom(1.25)" x-bind:disabled="failed" aria-label="Aproximar">+</flux:button>
+                <flux:button size="xs" x-on:click="fit()" x-bind:disabled="failed">Centralizar</flux:button>
+                <flux:button size="xs" x-on:click="organize()" x-bind:disabled="failed">Organizar blocos</flux:button>
             </div>
 
             {{-- Menu do clique direito: no fundo adiciona bloco; num bloco duplica ou apaga (o Início não). --}}
@@ -135,7 +135,7 @@
 
             <p x-show="simOutcome" class="rounded-lg border border-line bg-canvas p-2 text-xs font-semibold text-ink" x-text="simOutcomeText"></p>
 
-            <form x-show="simSession" class="space-y-1" x-on:submit.prevent="testReply()">
+            <form x-show="simSession" class="sticky -bottom-4 space-y-1 border-t border-line bg-surface pt-2 pb-4" x-on:submit.prevent="testReply()">
                 <label class="block text-xs text-ink-2" for="sim-text">Resposta do cliente</label>
                 <div class="flex gap-2">
                     <input id="sim-text" type="text" maxlength="1000" autocomplete="off" wire:model="simText" x-bind:disabled="busy || simOutcome" class="min-w-0 flex-1 rounded-lg border border-line bg-surface p-2 text-sm text-ink">

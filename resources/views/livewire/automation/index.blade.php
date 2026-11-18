@@ -71,8 +71,10 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <flux:button size="sm" icon="pencil-square" :href="route('automacao.editar', $workflow)" wire:navigate>Editar</flux:button>
                             <flux:button size="sm" variant="subtle" wire:click="toggle({{ $workflow->id }})">Versões ({{ $workflow->versions_count }})</flux:button>
-                            <flux:button size="sm" variant="subtle" icon="document-duplicate" wire:click="duplicate({{ $workflow->id }})" aria-label="Duplicar {{ $workflow->name }}" />
-                            <flux:button size="sm" variant="subtle" icon="trash" wire:click="delete({{ $workflow->id }})" data-confirm="Apagar o workflow {{ $workflow->name }}?" data-confirm-label="Apagar" data-confirm-tone="danger" aria-label="Apagar {{ $workflow->name }}" />
+                            <div class="flex flex-nowrap items-center gap-2">
+                                <flux:button size="sm" variant="subtle" icon="document-duplicate" wire:click="duplicate({{ $workflow->id }})" aria-label="Duplicar {{ $workflow->name }}" />
+                                <flux:button size="sm" variant="subtle" icon="trash" wire:click="delete({{ $workflow->id }})" data-confirm="Apagar o workflow {{ $workflow->name }}?" data-confirm-label="Apagar" data-confirm-tone="danger" aria-label="Apagar {{ $workflow->name }}" />
+                            </div>
                         </div>
                     </div>
 

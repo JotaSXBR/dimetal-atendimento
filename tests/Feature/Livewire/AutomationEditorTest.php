@@ -227,6 +227,15 @@ class AutomationEditorTest extends TestCase
         }
     }
 
+    /** Ferramenta de tela cheia: o layout sem margem (o da Fila) dá a altura; os avisos do topo não fazem a página rolar. */
+    public function test_editor_ocupa_a_altura_da_tela_sem_rolar_a_pagina(): void
+    {
+        $html = $this->actingAs($this->user)->get('/automacao/'.$this->workflow->id)->assertOk()->getContent();
+
+        $this->assertStringContainsString('flex h-[calc(100dvh-3.5rem)] flex-col !p-0 lg:h-dvh', $html);
+        $this->assertStringNotContainsString('h-[calc(100dvh-4rem)]', $html);
+    }
+
     public function test_atendente_nao_chama_as_acoes(): void
     {
         Livewire::actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))
