@@ -157,6 +157,17 @@ class SystemLogPageTest extends TestCase
         $badge = $xpath->query('.//*[@data-status-tone="neutral"]', $row->item(0));
         $this->assertSame(1, $badge->length);
         $this->assertSame(AuditAction::tryFrom('auth.logout')?->label() ?? 'auth.logout', trim($badge->item(0)->textContent));
+        $this->assertSame('10.0.0.9', trim($xpath->query('./td[4]', $row->item(0))->item(0)?->textContent ?? ''));
+    }
+
+    public function test_log_sem_ip_mostra_travessao_na_coluna_ip(): void
+    {
+        $this->log('auth.logout', ip: null);
+        $id = DB::table('audit_logs')->value('id');
+        $row = $this->xpath($this->page()->html())->query('//*[@data-panel]//tr[@*[name()="wire:key"]="log-'.$id.'"]')->item(0);
+
+        $this->assertNotNull($row);
+        $this->assertSame('—', trim((new \DOMXPath($row->ownerDocument))->query('./td[4]', $row)->item(0)?->textContent ?? ''));
     }
 
     public function test_auditoria_do_sistema_vazia_mostra_estado_vazio_com_circulo(): void
