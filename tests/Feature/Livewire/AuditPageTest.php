@@ -116,4 +116,36 @@ class AuditPageTest extends TestCase
         $this->assertMatchesRegularExpression('#<a href="[^"]*/historico\?ticketId='.$closed->id.'"[^>]*>\s*2026-000901\s*</a>#', $html);
         $this->assertMatchesRegularExpression('#<a href="[^"]*/inbox"[^>]*>\s*2026-000902\s*</a>#', $html);
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_auditoria_em_tabela_larga_num_painel(): void
+    {
+        $event = $this->event('claimed', User::factory()->create(['name' => 'Ana Atendente']));
+        $xpath = $this->xpath($this->page()->html());
+
+        $this->assertSame(1, $xpath->query("//section[contains(concat(' ', normalize-space(@class), ' '), ' max-w-[120rem] ')]")->length);
+        $this->assertSame(1, $xpath->query('//*[@data-panel]//table[caption[normalize-space()="Eventos de tickets"]]')->length);
+        $columns = array_map(fn (\DOMNode $th): string => trim($th->textContent), iterator_to_array($xpath->query('//*[@data-panel]//table//th')));
+        $this->assertSame(['Data e hora', 'Usuário', 'Ação', 'Ticket', 'Detalhe'], $columns);
+
+        $row = $xpath->query('//*[@data-panel]//tr[@*[name()="wire:key"]="event-'.$event->id.'"]');
+        $this->assertSame(1, $row->length);
+        $badge = $xpath->query('.//*[@data-status-tone="neutral"]', $row->item(0));
+        $this->assertSame(1, $badge->length);
+        $this->assertSame('Assumido', trim($badge->item(0)->textContent));
+    }
+
+    public function test_auditoria_vazia_mostra_estado_vazio_com_circulo(): void
+    {
+        $xpath = $this->xpath($this->page()->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-panel]//table//td//*[@data-empty-state-icon]')->length);
+    }
 }
