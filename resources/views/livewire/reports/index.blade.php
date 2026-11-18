@@ -28,7 +28,7 @@
         </div>
 
         @if ($data['waiting'] === [])
-            <p class="p-4 text-sm text-ink-3">Ninguém esperando além do SLA agora.</p>
+            <x-empty-state icon="clock" title="Ninguém esperando além do SLA agora." />
         @else
             <div class="overflow-x-auto">
                 <flux:table class="w-full min-w-[52rem]">
@@ -67,7 +67,7 @@
         </div>
         <div class="p-4">
             @if ($data['by_sector'] === [])
-                <x-empty-state compact icon="chart-bar" title="Nenhum ticket no período." />
+                <x-empty-state icon="chart-bar" title="Nenhum ticket no período." />
             @else
                 <x-bar-chart caption="Volume por setor" :rows="collect($data['by_sector'])->map(fn ($row) => ['label' => $row['name'], 'value' => $row['count']])->all()" />
             @endif
@@ -104,7 +104,7 @@
                     @empty
                         <flux:table.row>
                             <flux:table.cell colspan="4" class="whitespace-normal border-line!">
-                                <x-empty-state compact icon="chart-bar" title="Nenhum atendimento no período." />
+                                <x-empty-state icon="chart-bar" title="Nenhum atendimento no período." />
                             </flux:table.cell>
                         </flux:table.row>
                     @endforelse

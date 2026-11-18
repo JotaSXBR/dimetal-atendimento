@@ -109,6 +109,16 @@ class ReportsMarkupTest extends TestCase
         }
     }
 
+    public function test_paineis_vazios_usam_o_estado_vazio_com_circulo(): void
+    {
+        $xpath = $this->page();
+
+        foreach (['Aguardando resposta além do SLA' => 'Ninguém esperando além do SLA agora.', 'Volume por setor' => 'Nenhum ticket no período.', 'Desempenho por atendente' => 'Nenhum atendimento no período.'] as $panel => $title) {
+            $empty = $this->panel($panel)."//*[@data-empty-state][.//p[normalize-space()='{$title}']]";
+            $this->assertSame(1, $xpath->query($empty.'//*[@data-empty-state-icon]')->length, $panel);
+        }
+    }
+
     public function test_desempenho_mostra_avatar_do_atendente(): void
     {
         $agent = User::factory()->create(['name' => 'Ana Lima']);

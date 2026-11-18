@@ -28,6 +28,24 @@ class StatTest extends TestCase
         $this->assertSame(0, $semNota->query('//*[@data-stat-note]')->length);
     }
 
+    public function test_tom_desconhecido_falha(): void
+    {
+        try {
+            $this->blade('<x-stat label="Vencidos" :value="3" tone="warn" />')->__toString();
+        } catch (\Throwable $e) {
+            // O Blade embrulha a exceção do componente em `ViewException`: a original está no fim da cadeia.
+            while ($e->getPrevious() !== null) {
+                $e = $e->getPrevious();
+            }
+            $this->assertInstanceOf(\InvalidArgumentException::class, $e);
+            $this->assertStringContainsString('warn', $e->getMessage());
+
+            return;
+        }
+
+        $this->fail('x-stat deveria recusar o tom "warn"');
+    }
+
     public function test_tom_danger_pinta_o_valor(): void
     {
         $value = $this->xpath((string) $this->blade('<x-stat label="Vencidos" :value="3" tone="danger" />'))->query('//*[@data-stat-value]')->item(0);
