@@ -224,3 +224,11 @@ em 17/11/2026).
 
 - **Gaveta do contato** (dono): abre na ficha de leitura do Pencil (dados, etiquetas, observações, atendimentos anteriores em
   `x-link-card`, rodapé Conversar + Editar contato); "Editar contato" troca para o formulário de hoje, como no painel da Inbox.
+
+## Decididos no início da fatia 5 (18/11/2026)
+
+- **Ritmo** (dono): fatias 5, 6 e 7 em sequência, sem parada de aprovação; decisões que seriam do dono saem do advisor e de
+  pesquisa e vão ao ledger como Ruling; no fim, um PR único do branch, sem merge.
+- **Configurações e Minha conta** (Ruling): coluna única (sem lateral de 360 px, que em 1280 deixaria ~340 px à principal);
+  Usuários e Setores seguem separados; Minha conta no mesmo arranjo das Configurações (menu com o grupo "Minha conta" e o
+  cabeçalho com o título da aba). Detalhes no plano da fatia 5.
