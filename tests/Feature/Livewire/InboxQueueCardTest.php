@@ -352,6 +352,45 @@ class InboxQueueCardTest extends TestCase
         $this->assertStringNotContainsString('data-testid="card-meta"', $html);
     }
 
+    public function test_cartao_mostra_status_e_protocolo(): void
+    {
+        $ticket = $this->ticket();
+
+        $html = $this->html();
+
+        $this->assertStringContainsString('data-status-tone="'.TicketStatus::AGUARDANDO->tone().'"', $this->part($html, 'card-status', tag: true));
+        $this->assertMatchesRegularExpression('/data-testid="card-status"[^>]*>.*?Aguardando\s*<\/span>/s', $html);
+        $this->assertSame($ticket->protocol, trim($this->part($html, 'card-protocol')));
+        $this->assertStringContainsString('font-mono', $this->part($html, 'card-protocol', tag: true));
+    }
+
+    public function test_cartao_selecionado_usa_muted(): void
+    {
+        $ticket = $this->ticket();
+
+        $html = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class)->call('select', $ticket->id)->html();
+
+        $this->assertMatchesRegularExpression('/wire:key="ticket-'.$ticket->id.'"\s+class="[^"]*hover:bg-muted bg-muted"/', $html);
+    }
+
+    public function test_titulo_do_grupo_em_caixa_alta(): void
+    {
+        $this->ticket();
+
+        $this->assertMatchesRegularExpression('/<p class="[^"]*uppercase[^"]*tracking-wider[^"]*font-bold[^"]*text-warn[^"]*">\s*Aguardando · 1/', $this->html());
+    }
+
+    /** O histórico recente (Mais > Encerrados) também mostra o selo, aqui o de Encerrado. */
+    public function test_cartao_do_historico_recente_mostra_selo_de_encerrado(): void
+    {
+        $ticket = $this->ticket(['status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subHour()]);
+
+        $html = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class, ['tab' => 'encerrados'])->html();
+
+        $this->assertMatchesRegularExpression('/data-testid="card-status"[^>]*>.*?Encerrado\s*<\/span>/s', $html);
+        $this->assertSame($ticket->protocol, trim($this->part($html, 'card-protocol')));
+    }
+
     public function test_sla_estourado_vira_ponto_com_texto_para_leitor_de_tela(): void
     {
         $this->ticket(['waiting_since' => now()->subHour(), 'sla_warn_at' => now()->subMinutes(30), 'sla_due_at' => now()->subMinute()]);
