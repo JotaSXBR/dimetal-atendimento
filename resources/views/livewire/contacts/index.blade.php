@@ -34,19 +34,20 @@
         <x-skeleton-rows :rows="4" wire:loading.delay wire:target="search" class="mt-4 rounded-xl border border-line bg-surface" />
 
         {{-- Células com `px-4!`: o Flux zera o padding da primeira e da última coluna, e aqui a tabela fica dentro do cartão. --}}
-        <div wire:loading.remove.delay wire:target="search" class="mt-4 overflow-x-auto rounded-xl border border-line bg-surface">
+        <div wire:loading.remove.delay wire:target="search" class="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
             <flux:table :paginate="$contacts" pagination:class="px-4 pb-3" data-testid="contacts-table" class="min-w-[52rem]">
                 <flux:table.columns class="bg-canvas">
-                    <flux:table.column class="px-4!"><span class="text-xs font-semibold text-ink-3">Contato</span></flux:table.column>
-                    <flux:table.column class="w-40 px-4!"><span class="text-xs font-semibold text-ink-3">Telefone</span></flux:table.column>
-                    <flux:table.column class="w-60 px-4!"><span class="text-xs font-semibold text-ink-3">Etiquetas</span></flux:table.column>
-                    <flux:table.column class="w-44 px-4!"><span class="sr-only">Ações</span></flux:table.column>
+                    <flux:table.column class="px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Contato</span></flux:table.column>
+                    <flux:table.column class="w-40 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Telefone</span></flux:table.column>
+                    <flux:table.column class="w-60 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Etiquetas</span></flux:table.column>
+                    <flux:table.column class="w-44 px-4! border-line!"><span class="sr-only">Ações</span></flux:table.column>
                 </flux:table.columns>
                 <flux:table.rows>
                     @forelse ($contacts as $contact)
-                        <flux:table.row wire:key="contact-{{ $contact->id }}" class="hover:bg-muted {{ $selectedId === $contact->id ? 'bg-muted' : '' }}">
-                            <flux:table.cell class="px-4! py-[11px]">
-                                <button type="button" wire:click="select({{ $contact->id }})" class="flex w-full min-w-0 items-center gap-3 text-start">
+                        <flux:table.row wire:key="contact-{{ $contact->id }}" class="relative hover:bg-muted {{ $selectedId === $contact->id ? 'bg-muted' : '' }}">
+                            <flux:table.cell class="px-4! py-[11px] border-line!">
+                                {{-- Área de clique esticada: o ::after cobre a linha toda, então qualquer ponto dela abre a ficha. --}}
+                                <button type="button" wire:click="select({{ $contact->id }})" class="flex w-full min-w-0 items-center gap-3 text-start after:absolute after:inset-0">
                                     <x-avatar :src="$contact->avatarUrl()" :name="$contact->label()" shape="round" size="sm" decorative />
                                     <span class="min-w-0 flex-1">
                                         <span class="block truncate text-[13px] font-medium text-ink">{{ $contact->label() }}</span>
@@ -56,11 +57,11 @@
                                     </span>
                                 </button>
                             </flux:table.cell>
-                            <flux:table.cell class="px-4! py-[11px] font-mono text-xs text-ink-2">{{ $contact->phoneLabel() }}</flux:table.cell>
-                            <flux:table.cell class="px-4! py-[11px]">
+                            <flux:table.cell class="px-4! py-[11px] border-line!"><span class="font-mono text-xs text-ink-2">{{ $contact->phoneLabel() }}</span></flux:table.cell>
+                            <flux:table.cell class="px-4! py-[11px] border-line!">
                                 <x-contact-chips :contact="$contact" testid="contact-chip" />
                             </flux:table.cell>
-                            <flux:table.cell class="px-4! py-[11px]">
+                            <flux:table.cell class="relative z-10 px-4! py-[11px] border-line!">
                                 <div class="flex items-center justify-end gap-2">
                                     @include('livewire.contacts.chat-button', ['contact' => $contact])
                                     <flux:icon.chevron-right class="size-3.5 text-ink-3" aria-hidden="true" />
@@ -69,7 +70,7 @@
                         </flux:table.row>
                     @empty
                         <flux:table.row>
-                            <flux:table.cell colspan="4" class="whitespace-normal">
+                            <flux:table.cell colspan="4" class="whitespace-normal border-line!">
                                 <x-empty-state icon="users" title="Nenhum contato encontrado." description="Tente outro nome ou telefone." />
                             </flux:table.cell>
                         </flux:table.row>

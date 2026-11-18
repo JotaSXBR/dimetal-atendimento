@@ -104,6 +104,16 @@ class ContactsIndexTest extends TestCase
         $this->assertMatchesRegularExpression('/<tr[^>]*wire:key="contact-'.$contact->id.'"[^>]*>.*Maria Souza.*'.preg_quote($contact->phoneLabel(), '/').'.*Conversar.*<\/tr>/s', $html);
     }
 
+    public function test_linha_inteira_abre_a_ficha_e_conversar_fica_acima(): void
+    {
+        $contact = Contact::factory()->create();
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('/<button[^>]*wire:click="select\('.$contact->id.'\)"[^>]*class="[^"]*after:inset-0/', $html);
+        $this->assertMatchesRegularExpression('/<td[^>]*class="[^"]*\bz-10\b[^"]*"[^>]*data-flux-cell>(?:(?!<\/td>).)*Conversar/s', $html);
+    }
+
     public function test_linha_selecionada_usa_muted(): void
     {
         $contact = Contact::factory()->create();
