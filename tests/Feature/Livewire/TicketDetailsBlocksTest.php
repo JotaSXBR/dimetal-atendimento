@@ -70,12 +70,71 @@ class TicketDetailsBlocksTest extends TestCase
         $this->assertStringContainsString('wire:ignore.self', $this->tag($this->historyHtml(), 'details-timeline'));
     }
 
-    public function test_painel_do_inbox_nao_tem_o_bloco_ticket_que_o_cabecalho_ja_mostra(): void
+    public function test_painel_do_inbox_tem_o_bloco_ticket(): void
     {
         $html = $this->inboxHtml();
 
-        $this->assertStringNotContainsString('data-testid="details-ticket"', $html);
-        $this->assertStringNotContainsString('Responsável', $html);
+        $this->tag($html, 'details-ticket');
+        foreach (['Canal', 'Setor', 'Responsável', 'Aberto em'] as $label) {
+            $this->assertStringContainsString('<dt class="text-xs text-ink-3">'.$label.'</dt>', $html);
+        }
+        $this->assertStringContainsString('data-testid="header-line"', $html);
+    }
+
+    public function test_aviso_de_sla_no_painel_so_com_ticket_esperando(): void
+    {
+        $sla = function (array $attributes): string {
+            $ticket = $this->ticket(TicketStatus::AGUARDANDO);
+            $ticket->forceFill($attributes)->save();
+
+            return Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)->html();
+        };
+        $box = fn (string $html): ?string => preg_match('/<[^>]*data-testid="details-sla".*?<\/div>/s', $html, $m) ? $m[0] : null;
+
+        $waiting = $box($sla(['waiting_since' => now()->subMinute(), 'sla_due_at' => now()->addHour()]));
+        $this->assertNotNull($waiting);
+        $this->assertStringContainsString('Responder até', $waiting);
+        $this->assertStringContainsString('bg-warn-soft', $waiting);
+
+        $breached = $box($sla(['waiting_since' => now()->subHours(2), 'sla_due_at' => now()->subHour()]));
+        $this->assertNotNull($breached);
+        $this->assertStringContainsString('SLA estourado', $breached);
+        $this->assertStringContainsString('bg-danger/10', $breached);
+
+        $this->assertNull($box($sla(['waiting_since' => now()->subMinute(), 'sla_due_at' => null])));
+    }
+
+    public function test_historico_mantem_ticket_encerrado_e_sem_aviso_de_sla(): void
+    {
+        $ticket = $this->ticket(TicketStatus::ENCERRADO);
+        $ticket->forceFill(['waiting_since' => now()->subHours(2), 'sla_due_at' => now()->subHour()])->save();
+        $html = Livewire::actingAs($this->admin())->test(History::class)->call('select', $ticket->id)->html();
+
+        $this->tag($html, 'details-ticket');
+        $this->assertStringContainsString('Encerrado em', $html);
+        $this->assertStringContainsString('Motivo', $html);
+        $this->assertStringNotContainsString('details-sla', $html);
+    }
+
+    public function test_contato_em_linhas_rotuladas(): void
+    {
+        $contact = Contact::factory()->create(['company' => 'Dimetal', 'job_title' => 'Compras', 'email' => 'ana@example.com']);
+        $ticket = Ticket::factory()->create(['channel_id' => Channel::factory()->create()->id, 'contact_id' => $contact->id, 'status' => TicketStatus::AGUARDANDO]);
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.Livewire::actingAs($this->admin())->test(Inbox::class)->call('select', $ticket->id)->html(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $rows = [];
+        foreach ((new \DOMXPath($dom))->query('//details[@data-testid="details-contact"]//dl/div') as $row) {
+            $rows[trim($row->getElementsByTagName('dt')->item(0)->textContent)] = trim($row->getElementsByTagName('dd')->item(0)->textContent);
+        }
+
+        $this->assertSame(['Nome' => $contact->label(), 'Empresa' => 'Dimetal · Compras', 'E-mail' => 'ana@example.com'], $rows);
+    }
+
+    public function test_titulos_de_secao_em_caixa_alta(): void
+    {
+        $this->assertSame(1, preg_match('/<summary class="([^"]*)"/', $this->inboxHtml(), $m));
+        $this->assertEmpty(array_diff(['uppercase', 'tracking-wider', 'font-bold'], explode(' ', $m[1])));
     }
 
     public function test_painel_do_historico_mantem_o_bloco_ticket_com_encerrado_em_e_motivo(): void
@@ -85,6 +144,7 @@ class TicketDetailsBlocksTest extends TestCase
         $this->tag($html, 'details-ticket');
         $this->assertStringContainsString('Encerrado em', $html);
         $this->assertStringContainsString('Responsável', $html);
+        $this->assertStringContainsString('<dt class="text-xs text-ink-3">Telefone</dt>', $html);
     }
 
     public function test_um_unico_bloco_de_etiquetas_com_as_linhas_conversa_e_contato(): void

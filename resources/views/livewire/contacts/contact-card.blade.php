@@ -5,18 +5,19 @@
     <div class="contents text-sm">
         {{-- O telefone já está no cabeçalho da conversa; só o Histórico (somente leitura, sem esse cabeçalho) o mostra aqui. --}}
         <x-disclosure title="Contato" testid="details-contact">
-        <div>
-            <p class="font-semibold text-ink">{{ $contact->label() }}</p>
-            @if ($contact->company || $contact->job_title)
-                <p class="text-ink-2">{{ implode(' · ', array_filter([$contact->company, $contact->job_title])) }}</p>
-            @endif
-            @if ($readonly)
-                <p class="font-mono text-xs text-ink-2">{{ $contact->phoneLabel() }}</p>
-            @endif
-            @if ($contact->email)
-                <p class="truncate text-xs text-ink-2">{{ $contact->email }}</p>
-            @endif
-        </div>
+        <dl class="space-y-2.5">
+            @foreach (array_filter([
+                'Nome' => $contact->label(),
+                'Empresa' => implode(' · ', array_filter([$contact->company, $contact->job_title])),
+                'Telefone' => $readonly ? $contact->phoneLabel() : null,
+                'E-mail' => $contact->email,
+            ], fn ($value) => $value !== null && $value !== '') as $label => $value)
+                <div class="space-y-0.5">
+                    <dt class="text-xs text-ink-3">{{ $label }}</dt>
+                    <dd @class(['text-sm font-medium break-words text-ink', 'font-mono' => $label === 'Telefone'])>{{ $value }}</dd>
+                </div>
+            @endforeach
+        </dl>
         </x-disclosure>
 
         {{-- Um bloco só: a linha "Conversa" (as etiquetas do ticket) e a linha "Contato". --}}

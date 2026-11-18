@@ -2,8 +2,8 @@
 
 {{-- Painel de detalhes: o estado (`details`, `sheet`) vive no x-data da tela que o contém. Em tela pequena abre por cima da conversa.
      Coluna flex de rolagem com `p-4`: o rodapé de ações do cartão do contato (`sticky -bottom-4 -mx-4 -mb-4`) depende desse `p-4`; se mudar o padding, mude os negativos.
-     No Inbox o painel é só do contato (Contato, Etiquetas, Observações, Anteriores): canal, setor, responsável e protocolo estão no cabeçalho da conversa.
-     O Histórico (somente leitura) não tem esse cabeçalho de conversa e mantém o bloco Ticket. --}}
+     Bloco Ticket nos dois (desenho do Pencil), mesmo repetindo a linha do cabeçalho da conversa; Encerrado em, Motivo e Resumo só quando existem.
+     Aviso de SLA no fim do bloco, só na Inbox, com a mesma condição e o mesmo texto do cabeçalho. --}}
 <aside
     id="ticket-details"
     aria-label="Detalhes do ticket"
@@ -12,9 +12,8 @@
 >
     <flux:button size="sm" variant="subtle" icon="arrow-left" class="mb-3 self-start 2xl:hidden" x-on:click="sheet = false">Voltar à conversa</flux:button>
 
-    @if ($readonly)
-        <x-disclosure title="Ticket" testid="details-ticket">
-        <dl class="space-y-2 text-sm">
+    <x-disclosure title="Ticket" testid="details-ticket">
+        <dl class="space-y-2.5">
             @foreach (array_filter([
                 'Canal' => $ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : ''),
                 'Setor' => $ticket->sector?->name ?? 'Fila geral',
@@ -23,9 +22,9 @@
                 'Encerrado em' => $ticket->closed_at?->timezone($tz)->format('d/m/Y H:i'),
                 'Motivo' => $ticket->close_outcome?->label() ?? $ticket->closed_reason?->label(),
             ], fn ($value) => $value !== null) as $label => $value)
-                <div>
+                <div class="space-y-0.5">
                     <dt class="text-xs text-ink-3">{{ $label }}</dt>
-                    <dd class="text-ink">{{ $value }}</dd>
+                    <dd class="text-sm font-medium break-words text-ink">{{ $value }}</dd>
                 </div>
             @endforeach
         </dl>
@@ -34,8 +33,15 @@
             <h2 class="mt-4 text-xs font-semibold text-ink-3">Resumo do atendimento</h2>
             <p class="mt-1 text-sm break-words whitespace-pre-wrap text-ink">{{ $ticket->close_summary }}</p>
         @endif
-        </x-disclosure>
-    @endif
+
+        @if (! $readonly && $ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
+            @php($breached = $ticket->slaState() === 'estourou')
+            @php($when = app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()))
+            <div data-testid="details-sla" role="status" @class(['mt-2.5 rounded-lg p-2.5 text-xs font-semibold', 'bg-danger/10 text-danger' => $breached, 'bg-warn-soft text-warn' => ! $breached])>
+                {{ $breached ? 'SLA estourado: venceu '.$when : 'Responder até '.$when }}
+            </div>
+        @endif
+    </x-disclosure>
 
     <livewire:contacts.contact-card :contact-id="$ticket->contact_id" :compact="true" :readonly="$readonly" :current-ticket-id="$ticket->id" :key="'contact-'.$ticket->contact_id" />
 
