@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire;
 use App\Enums\UserRole;
 use App\Livewire\Contacts\Index;
 use App\Models\Contact;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Features\SupportTesting\Testable;
@@ -112,6 +113,16 @@ class ContactsIndexTest extends TestCase
 
         $this->assertMatchesRegularExpression('/<button[^>]*wire:click="select\('.$contact->id.'\)"[^>]*class="[^"]*after:inset-0/', $html);
         $this->assertMatchesRegularExpression('/<td[^>]*class="[^"]*\bz-10\b[^"]*"[^>]*data-flux-cell>(?:(?!<\/td>).)*Conversar/s', $html);
+    }
+
+    public function test_celula_das_etiquetas_fica_acima_da_area_de_clique(): void
+    {
+        $contact = Contact::factory()->create();
+        $contact->tags()->attach(Tag::factory()->create());
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('/<td[^>]*class="[^"]*\bz-10\b[^"]*"[^>]*data-flux-cell>(?:(?!<\/td>).)*data-testid="contact-chip"/s', $html);
     }
 
     public function test_linha_selecionada_usa_muted(): void

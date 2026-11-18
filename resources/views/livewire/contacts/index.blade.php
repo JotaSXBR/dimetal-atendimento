@@ -58,7 +58,7 @@
                                 </button>
                             </flux:table.cell>
                             <flux:table.cell class="px-4! py-[11px] border-line!"><span class="font-mono text-xs text-ink-2">{{ $contact->phoneLabel() }}</span></flux:table.cell>
-                            <flux:table.cell class="px-4! py-[11px] border-line!">
+                            <flux:table.cell class="relative z-10 px-4! py-[11px] border-line!">
                                 <x-contact-chips :contact="$contact" testid="contact-chip" />
                             </flux:table.cell>
                             <flux:table.cell class="relative z-10 px-4! py-[11px] border-line!">
