@@ -116,6 +116,7 @@ class InboxHeaderTest extends TestCase
         $this->assertStringContainsString('@3xl:hidden', $item->getAttribute('class'));
 
         $reassign = $xpath->query('//header//*[@data-testid="header-more-menu"]//*[@data-flux-menu-item][normalize-space(.)="Reatribuir"]')->item(0);
+        $this->assertNotNull($reassign);
         $this->assertStringNotContainsString('@3xl:hidden', $reassign->getAttribute('class'));
         // Com Reatribuir, o gatilho do "…" fica em qualquer largura.
         $this->assertSame(0, $xpath->query('//header//button[@aria-label="Mais ações"]/ancestor-or-self::*[contains(@class,"@3xl:hidden")]')->length);
@@ -154,6 +155,19 @@ class InboxHeaderTest extends TestCase
         $this->assertNotNull($sla);
         $this->assertStringContainsString('SLA estourado: venceu', trim(preg_replace('/\s+/', ' ', $sla->textContent)));
         $this->assertSame('status', $sla->getAttribute('role'));
+    }
+
+    /** SLA longo em coluna estreita: o protocolo desce de linha em vez de encolher até sumir, e o SLA não estoura a largura. */
+    public function test_linha_do_protocolo_nao_some_com_sla_longo(): void
+    {
+        $xpath = $this->xpath();
+        $line = $xpath->query('//*[@data-testid="header-line"]')->item(0);
+        $sla = $xpath->query('//*[@data-testid="header-sla"]')->item(0);
+
+        $this->assertMatchesRegularExpression('/(^|\s)flex-wrap(\s|$)/', $line->parentNode->getAttribute('class'));
+        $this->assertStringContainsString('min-w-24', $line->getAttribute('class'));
+        $this->assertStringContainsString('min-w-0', $sla->getAttribute('class'));
+        $this->assertStringNotContainsString('shrink-0', $sla->getAttribute('class'));
     }
 
     public function test_sla_do_cabecalho_nao_quebra_linha(): void
