@@ -70,62 +70,62 @@
             {{-- Colunas só no 2xl (em 1280 a coluna de conteúdo não comporta 4 colunas: o nome sumia). Subgrid alinha as
                  colunas `auto` entre as linhas. Cabeçalho só visual: cada linha já diz tudo. --}}
             <div class="2xl:grid 2xl:grid-cols-[minmax(16rem,2fr)_minmax(0,1fr)_auto_auto] 2xl:gap-x-4">
-            <div data-test="users-columns" aria-hidden="true" class="hidden border-b border-line bg-canvas px-4 py-2 text-xs font-semibold text-ink-3 2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid">
-                <span>Usuário</span>
-                <span>Setores</span>
-                <span>Tickets</span>
-                <span></span>
-            </div>
+                <div data-test="users-columns" aria-hidden="true" class="hidden border-b border-line bg-canvas px-4 py-2 text-xs font-semibold text-ink-3 2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid">
+                    <span>Usuário</span>
+                    <span>Setores</span>
+                    <span>Tickets</span>
+                    <span></span>
+                </div>
 
-            <ul class="2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid">
-                @foreach ($users as $user)
-                    @php
-                        $tickets = $user->open_tickets_count === 0
-                            ? 'sem tickets abertos'
-                            : $user->open_tickets_count.' '.($user->open_tickets_count === 1 ? 'ticket aberto' : 'tickets abertos');
-                    @endphp
-                    <li class="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid" wire:key="user-{{ $user->id }}">
-                        <div class="flex min-w-0 grow basis-64 items-center gap-3">
-                            <x-avatar :src="$user->avatarUrl()" :name="$user->name" shape="round" size="sm" decorative />
-                            <div class="min-w-0 flex-1">
-                                <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-ink">
-                                    <span data-test="user-name" class="max-w-full truncate">{{ $user->name }}</span>
-                                    <x-status-badge tone="neutral">{{ $user->role->label() }}</x-status-badge>
-                                    @unless ($user->active)
-                                        <x-status-badge tone="neutral">Inativo</x-status-badge>
-                                    @endunless
-                                </p>
-                                <p class="truncate text-xs text-ink-3">
-                                    {{ $user->email }}
-                                    <span class="2xl:hidden">
-                                        @if ($user->sectors->isNotEmpty())
-                                            · {{ $user->sectors->pluck('name')->implode(', ') }}
-                                        @endif
-                                        · {{ $tickets }}
-                                    </span>
-                                </p>
+                <ul class="2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid">
+                    @foreach ($users as $user)
+                        @php
+                            $tickets = $user->open_tickets_count === 0
+                                ? 'sem tickets abertos'
+                                : $user->open_tickets_count.' '.($user->open_tickets_count === 1 ? 'ticket aberto' : 'tickets abertos');
+                        @endphp
+                        <li class="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 2xl:col-span-full 2xl:grid 2xl:grid-cols-subgrid" wire:key="user-{{ $user->id }}">
+                            <div class="flex min-w-0 grow basis-64 items-center gap-3">
+                                <x-avatar :src="$user->avatarUrl()" :name="$user->name" shape="round" size="sm" decorative />
+                                <div class="min-w-0 flex-1">
+                                    <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-ink">
+                                        <span data-test="user-name" class="max-w-full truncate">{{ $user->name }}</span>
+                                        <x-status-badge tone="neutral">{{ $user->role->label() }}</x-status-badge>
+                                        @unless ($user->active)
+                                            <x-status-badge tone="neutral">Inativo</x-status-badge>
+                                        @endunless
+                                    </p>
+                                    <p class="truncate text-xs text-ink-3">
+                                        {{ $user->email }}
+                                        <span class="2xl:hidden">
+                                            @if ($user->sectors->isNotEmpty())
+                                                · {{ $user->sectors->pluck('name')->implode(', ') }}
+                                            @endif
+                                            · {{ $tickets }}
+                                        </span>
+                                    </p>
+                                </div>
                             </div>
-                        </div>
 
-                        <p class="hidden truncate text-xs text-ink-2 2xl:block">{{ $user->sectors->pluck('name')->implode(', ') }}</p>
-                        <p class="hidden text-xs whitespace-nowrap text-ink-3 2xl:block">{{ $tickets }}</p>
+                            <p class="hidden truncate text-xs text-ink-2 2xl:block">{{ $user->sectors->pluck('name')->implode(', ') }}</p>
+                            <p class="hidden text-xs whitespace-nowrap text-ink-3 2xl:block">{{ $tickets }}</p>
 
-                        <div class="ms-auto flex flex-wrap items-center gap-2 2xl:justify-end">
-                            @can('update', $user)
-                                <flux:button size="xs" icon="pencil-square" wire:click="edit({{ $user->id }})">Editar</flux:button>
+                            <div class="ms-auto flex flex-wrap items-center gap-2 2xl:justify-end">
+                                @can('update', $user)
+                                    <flux:button size="xs" icon="pencil-square" wire:click="edit({{ $user->id }})">Editar</flux:button>
 
-                                @if ($user->active)
-                                    @can('deactivate', $user)
-                                        <flux:button size="xs" variant="subtle" wire:click="toggleActive({{ $user->id }})" data-confirm="Desativar {{ $user->name }}? A pessoa é desconectada agora{{ $user->open_tickets_count > 0 ? ' e os '.$user->open_tickets_count.' tickets abertos dela continuam atribuídos a ela até alguém reatribuir' : '' }}." data-confirm-label="Desativar" data-confirm-tone="danger">Desativar</flux:button>
-                                    @endcan
-                                @else
-                                    <flux:button size="xs" variant="subtle" wire:click="toggleActive({{ $user->id }})">Reativar</flux:button>
-                                @endif
-                            @endcan
-                        </div>
-                    </li>
-                @endforeach
-            </ul>
+                                    @if ($user->active)
+                                        @can('deactivate', $user)
+                                            <flux:button size="xs" variant="subtle" wire:click="toggleActive({{ $user->id }})" data-confirm="Desativar {{ $user->name }}? A pessoa é desconectada agora{{ $user->open_tickets_count > 0 ? ' e os '.$user->open_tickets_count.' tickets abertos dela continuam atribuídos a ela até alguém reatribuir' : '' }}." data-confirm-label="Desativar" data-confirm-tone="danger">Desativar</flux:button>
+                                        @endcan
+                                    @else
+                                        <flux:button size="xs" variant="subtle" wire:click="toggleActive({{ $user->id }})">Reativar</flux:button>
+                                    @endif
+                                @endcan
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
             </div>
         </x-panel>
     </div>
