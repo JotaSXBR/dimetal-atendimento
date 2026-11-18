@@ -6,11 +6,11 @@
 
     @if ($configured)
         <form wire:submit="save" class="flex flex-col gap-4">
-            <x-ui.field name="code" label="Código da instalação" wire:model="code" autocomplete="off" autofocus required />
-            <x-ui.field name="name" label="Nome" wire:model="name" autocomplete="name" required />
-            <x-ui.field name="email" label="E-mail" type="email" wire:model="email" autocomplete="email" required />
-            <x-ui.field name="password" label="Senha" type="password" wire:model="password" autocomplete="new-password" required />
-            <x-ui.field name="password_confirmation" label="Confirmar senha" type="password" wire:model="password_confirmation" autocomplete="new-password" required />
+            <flux:input name="code" label="Código da instalação" wire:model="code" autocomplete="off" autofocus required />
+            <flux:input name="name" label="Nome" wire:model="name" autocomplete="name" required />
+            <flux:input name="email" label="E-mail" type="email" wire:model="email" autocomplete="email" required />
+            <flux:input name="password" label="Senha" type="password" wire:model="password" autocomplete="new-password" required />
+            <flux:input name="password_confirmation" label="Confirmar senha" type="password" wire:model="password_confirmation" autocomplete="new-password" required />
 
             <flux:button variant="primary" type="submit" class="w-full" data-test="install-button">
                 Criar administrador
