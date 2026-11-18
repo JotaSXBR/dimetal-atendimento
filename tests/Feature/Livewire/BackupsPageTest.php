@@ -194,4 +194,19 @@ class BackupsPageTest extends TestCase
         $this->assertSame('backup.manual_requested', $log->action);
         $this->assertSame($admin->id, $log->actor_user_id);
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_backups_vazio_no_painel_do_desenho(): void
+    {
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(Backups::class)->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="Backups guardados"]]//*[@data-empty-state-icon]')->length);
+    }
 }

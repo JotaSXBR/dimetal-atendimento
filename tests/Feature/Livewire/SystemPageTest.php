@@ -327,4 +327,35 @@ class SystemPageTest extends TestCase
 
         Livewire::actingAs($this->admin())->test(System::class)->call('checkNow')->assertSee('0.3.0');
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_sistema_no_painel_do_desenho(): void
+    {
+        $panel = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="%s"]]';
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(System::class)->html());
+
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Versão').'//dl[contains(., "Versão instalada")]')->length);
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Consulta de novas versões').'//*[@*[name()="wire:click"]="checkNow"]')->length);
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Conexão com o Coolify').'//form[@*[name()="wire:submit"]="saveConnection"]')->length);
+
+        SystemUpdate::start(null, '0.1.0', '0.2.0')?->moveTo(UpdateStatus::Backup);
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(System::class)->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-system-update][@*[name()="wire:poll.3s"]]//*[@data-update-lost]')->length);
+        $this->assertGreaterThan(0, $xpath->query(sprintf($panel, 'Atualização para 0.2.0').'//*[@data-step][@data-state]')->length);
+    }
+
+    public function test_confirmacao_de_atualizar_no_painel_do_desenho(): void
+    {
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(System::class)->call('askUpdate')->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-panel][@x-data="updateConfirm"][./*[@data-panel-header]//h2[normalize-space()="Atualizar para 0.2.0"]]//*[@*[name()="wire:click"]="update"]')->length);
+    }
 }

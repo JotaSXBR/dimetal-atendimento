@@ -331,4 +331,38 @@ class BackupsRestoreTest extends TestCase
 
         $this->page()->assertSee('Última restauração')->assertSee('Jessé');
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_backups_no_painel_do_desenho(): void
+    {
+        $this->admin->shouldReceive('stored')->andReturn([$this->stored()]);
+        $page = $this->page();
+        $xpath = $this->xpath($page->html());
+        $panel = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="%s"]]';
+
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Situação').'//dl[contains(., "Último backup bom")]')->length);
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Fazer um backup agora').'//*[@*[name()="wire:click"]="runNow"]')->length);
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Backups guardados').'//*[contains(., "'.self::NAME.'")]//*[@*[name()="wire:click"]="chooseBackup(\''.self::NAME.'\')"]')->length);
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Restaurar de um arquivo do seu computador').'//input[@type="file"][@*[name()="wire:model"]="upload"]')->length);
+        $this->assertSame(1, $xpath->query(sprintf($panel, 'Bancos guardados').'//*[@*[name()="wire:click"]="chooseStored(\'fluxie_antes_202611131000\')"]')->length);
+
+        $xpath = $this->xpath($page->call('chooseBackup', self::NAME)->html());
+        $check = '//*[@data-panel][@aria-labelledby="restore-check"][./*[@data-panel-header]//h2[@id="restore-check"][normalize-space()="Conferência antes de restaurar"]]';
+        $this->assertSame(1, $xpath->query($check.'//input[@*[name()="wire:model.live.debounce.250ms"]="confirm"]')->length);
+    }
+
+    public function test_problema_da_restauracao_num_painel_sem_cabecalho(): void
+    {
+        $this->inspector->shouldReceive('inspect')->andThrow(new InvalidDump('Este arquivo não é um backup deste sistema.'));
+        $xpath = $this->xpath($this->page()->call('chooseBackup', self::NAME)->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-restore-problem][@role="alert"][contains(@class, "rounded-xl")][not(.//*[@data-panel-header])][contains(., "Não foi possível seguir")]')->length);
+    }
 }
