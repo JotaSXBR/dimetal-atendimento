@@ -93,6 +93,42 @@ class ContactsIndexTest extends TestCase
         $this->assertSame(0, Contact::query()->count());
     }
 
+    public function test_contatos_em_tabela_com_as_colunas_do_app(): void
+    {
+        $contact = Contact::factory()->create(['name' => 'Maria Souza', 'wa_id' => '5516997524950@c.us']);
+
+        $html = $this->page()->html();
+
+        $this->assertStringContainsString('data-testid="contacts-table"', $html);
+        $this->assertMatchesRegularExpression('/<thead.*Contato.*Telefone.*Etiquetas.*<\/thead>/s', $html);
+        $this->assertMatchesRegularExpression('/<tr[^>]*wire:key="contact-'.$contact->id.'"[^>]*>.*Maria Souza.*'.preg_quote($contact->phoneLabel(), '/').'.*Conversar.*<\/tr>/s', $html);
+    }
+
+    public function test_linha_selecionada_usa_muted(): void
+    {
+        $contact = Contact::factory()->create();
+
+        $html = $this->page()->set('selectedId', $contact->id)->html();
+
+        preg_match('/<tr[^>]*wire:key="contact-'.$contact->id.'"[^>]*>/', $html, $row);
+        $this->assertMatchesRegularExpression('/class="(?:[^"]*\s)?bg-muted[\s"]/', $row[0] ?? '');
+        foreach (glob(resource_path('views/livewire/contacts/*.blade.php')) ?: [] as $view) {
+            $this->assertStringNotContainsString('surface-2', (string) file_get_contents($view), $view);
+        }
+    }
+
+    public function test_pagina_usa_a_largura_de_gestao(): void
+    {
+        $this->page()->assertSeeHtml('max-w-[120rem]')->assertDontSeeHtml('max-w-4xl');
+    }
+
+    public function test_busca_sem_resultado_mostra_estado_vazio_na_tabela(): void
+    {
+        $html = $this->page()->set('search', 'ninguém')->html();
+
+        $this->assertMatchesRegularExpression('/data-testid="contacts-table".*<tbody.*Nenhum contato encontrado\..*<\/tbody>/s', $html);
+    }
+
     public function test_novo_contato_exige_nome(): void
     {
         $this->page()->set('newPhone', '16997524950')->set('newName', '')->call('createContact')->assertHasErrors(['newName']);
