@@ -42,12 +42,19 @@ class LoginScreenTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->from('/login')
+        $html = $this->from('/login')
             ->followingRedirects()
             ->post(route('login.store'), ['email' => $user->email, 'password' => 'senha-errada'])
             ->assertOk()
             ->assertSee(__('auth.failed'))
-            ->assertSee('aria-invalid="true"', false);
+            ->getContent();
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($html);
+        $xpath = new \DOMXPath($dom);
+
+        $this->assertSame('true', $xpath->query('//input[@name="email"]')->item(0)?->getAttribute('aria-invalid'));
+        $this->assertSame('', $xpath->query('//input[@name="password"]')->item(0)?->getAttribute('aria-invalid'));
     }
 
     public function test_cadastro_publico_nao_existe(): void
