@@ -13,6 +13,7 @@ use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\GoogleConnection;
 use App\Models\Sector;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -237,6 +238,38 @@ class ContactCardTest extends TestCase
             $this->assertStringContainsString($expected, $text);
         }
         $this->assertSame(1, $this->xpath($html)->query('//a[@href="https://silva.com.br"][@target="_blank"][@rel="noopener"]')->length);
+    }
+
+    public function test_ficha_mostra_o_apelido_quando_existe(): void
+    {
+        $this->contact->update(['nickname' => 'Mari']);
+
+        $text = $this->xpath($this->card()->html())->query('//*[@data-testid="contact-sheet"]')->item(0)?->textContent ?? '';
+
+        $this->assertStringContainsString('Apelido', $text);
+        $this->assertStringContainsString('Mari', $text);
+    }
+
+    /** O `data-focus-target` da raiz procura o seletor por `contact-tags`: os chips só de leitura da ficha usam outro testid. */
+    public function test_etiquetas_da_ficha_nao_usam_o_testid_do_seletor(): void
+    {
+        $this->contact->tags()->attach(Tag::factory()->contato()->create(['name' => 'Revenda']));
+
+        $xpath = $this->xpath($this->card()->html());
+
+        $this->assertStringContainsString('Revenda', $xpath->query('//*[@data-testid="contact-sheet"]//*[@data-testid="contact-sheet-tags"]')->item(0)?->textContent ?? '');
+        $this->assertSame(0, $xpath->query('//*[@data-testid="contact-sheet"]//*[@data-testid="contact-tags"]')->length);
+    }
+
+    /** O flyout tem `min-h-dvh` e `p-8`: a ficha ocupa a altura útil e o rodapé desce ao fim; o nome não passa sob o X. */
+    public function test_ficha_e_coluna_com_rodape_no_fim_e_nome_livre_do_fechar(): void
+    {
+        $xpath = $this->xpath($this->card()->html());
+        $classes = fn (string $query): array => explode(' ', $xpath->query($query)->item(0)?->getAttribute('class') ?? '');
+
+        $this->assertContains('flex-col', $classes('//*[@data-testid="contact-sheet"]'));
+        $this->assertContains('mt-auto', $classes('//*[@data-testid="contact-sheet"]//*[@data-testid="contact-actions"]'));
+        $this->assertContains('pe-8', $classes('//*[@data-testid="contact-sheet"]//h2/..'));
     }
 
     public function test_editar_contato_abre_o_formulario_e_salvar_volta_a_ficha(): void

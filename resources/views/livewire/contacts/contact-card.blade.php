@@ -93,16 +93,19 @@
     </div>
 @elseif (! $compact && ! $editing)
     {{-- Gaveta de Contatos: ficha de leitura; "Editar contato" troca para o formulário e salvar volta para cá. --}}
-    <div data-testid="contact-sheet" class="space-y-4 text-sm">
+    {{-- Coluna da altura útil do flyout (`min-h-dvh` menos o `p-8`): o rodapé desce ao fim com `mt-auto` e gruda com `sticky` em contato longo. --}}
+    <div data-testid="contact-sheet" class="flex min-h-[calc(100dvh-4rem)] flex-col gap-4 text-sm">
         <div class="flex items-center gap-3">
             <x-avatar :src="$contact->avatarUrl()" :name="$contact->label()" shape="round" size="lg" decorative />
-            <div class="min-w-0">
+            {{-- `pe-8`: o X do flyout é absoluto no canto e o nome longo não passa por baixo dele. --}}
+            <div class="min-w-0 pe-8">
                 <h2 class="text-base font-semibold break-words text-ink">{{ $contact->label() }}</h2>
                 <p class="font-mono text-ink-2">{{ $contact->phoneLabel() }}</p>
             </div>
         </div>
 
         @php($rows = array_filter([
+            'Apelido' => $contact->nickname,
             'E-mail' => $contact->email,
             'Empresa' => $contact->company,
             'Cargo' => $contact->job_title,
@@ -127,7 +130,7 @@
                     </div>
                 @endif
                 @if ($contactTags->isNotEmpty())
-                    <div class="space-y-0.5" data-testid="contact-tags">
+                    <div class="space-y-0.5" data-testid="contact-sheet-tags">
                         <dt class="text-xs text-ink-3">Etiquetas</dt>
                         <dd class="flex flex-wrap items-center gap-1.5">
                             @foreach ($contactTags as $tag)
@@ -180,7 +183,7 @@
         </div>
 
         {{-- Rodapé fixo da gaveta, no arranjo do painel da Inbox. `-bottom-8 -mx-8 -mb-8` acertam o `p-8` do `flux:modal` flyout. --}}
-        <div data-testid="contact-actions" class="sticky -bottom-8 -mx-8 -mb-8 bg-surface px-8 pt-1 pb-8">
+        <div data-testid="contact-actions" class="sticky -bottom-8 -mx-8 -mb-8 mt-auto bg-surface px-8 pt-1 pb-8">
             <flux:separator class="mb-3" />
             <flux:button.group>
                 @include('livewire.contacts.chat-button', ['contact' => $contact, 'class' => 'flex-1', 'variant' => 'filled', 'size' => 'xs'])
