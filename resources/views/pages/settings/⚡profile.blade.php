@@ -94,57 +94,60 @@ new #[Title('Perfil')] class extends Component {
 
 <section class="w-full">
     <x-pages::settings.layout route="profile.edit" :heading="__('Profile')" :subheading="__('Update your name and email address')">
-        <div>
-            <x-avatar-uploader model="photo" action="saveAvatar" :current="auth()->user()->avatarUrl()" :name="auth()->user()->name" shape="round">
-                @if (auth()->user()->avatar_path)
-                    <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" data-confirm="Remover a sua foto?" data-confirm-label="Remover" data-confirm-tone="danger">Remover</flux:button>
-                @endif
-            </x-avatar-uploader>
-        </div>
-
-        <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
-            <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
-
-            <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
-
-                {{-- @chisel-email-verification --}}
-                @if ($this->hasUnverifiedEmail)
-                    <div>
-                        <flux:text class="mt-4">
-                            {{ __('Your email address is unverified.') }}
-
-                            <flux:link class="text-sm cursor-pointer" wire:click.prevent="resendVerificationNotification">
-                                {{ __('Click here to re-send the verification email.') }}
-                            </flux:link>
-                        </flux:text>
-
-                        @if (session('status') === 'verification-link-sent')
-                            <flux:text class="mt-2 font-medium !text-ok">
-                                {{ __('A new verification link has been sent to your email address.') }}
-                            </flux:text>
+        <div class="space-y-5">
+            <x-panel title="Dados da conta">
+                <div class="border-b border-line p-4">
+                    <x-avatar-uploader model="photo" action="saveAvatar" :current="auth()->user()->avatarUrl()" :name="auth()->user()->name" shape="round">
+                        @if (auth()->user()->avatar_path)
+                            <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" data-confirm="Remover a sua foto?" data-confirm-label="Remover" data-confirm-tone="danger">Remover</flux:button>
                         @endif
-                    </div>
-                @endif
-                {{-- @end-chisel-email-verification --}}
-            </div>
-
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full" data-test="update-profile-button">
-                        {{ __('Save') }}
-                    </flux:button>
+                    </x-avatar-uploader>
                 </div>
 
-            </div>
-        </form>
+                <form wire:submit="updateProfileInformation">
+                    <div class="grid gap-4 p-4 md:grid-cols-2">
+                        <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
 
-        {{-- @chisel-email-verification --}}
-        @if ($this->showDeleteUser)
-        {{-- @end-chisel-email-verification --}}
-            <livewire:pages::settings.delete-user-form />
-        {{-- @chisel-email-verification --}}
-        @endif
-        {{-- @end-chisel-email-verification --}}
+                        <div>
+                            <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
+
+                            {{-- @chisel-email-verification --}}
+                            @if ($this->hasUnverifiedEmail)
+                                <div>
+                                    <flux:text class="mt-4">
+                                        {{ __('Your email address is unverified.') }}
+
+                                        <flux:link class="text-sm cursor-pointer" wire:click.prevent="resendVerificationNotification">
+                                            {{ __('Click here to re-send the verification email.') }}
+                                        </flux:link>
+                                    </flux:text>
+
+                                    @if (session('status') === 'verification-link-sent')
+                                        <flux:text class="mt-2 font-medium !text-ok">
+                                            {{ __('A new verification link has been sent to your email address.') }}
+                                        </flux:text>
+                                    @endif
+                                </div>
+                            @endif
+                            {{-- @end-chisel-email-verification --}}
+                        </div>
+                    </div>
+
+                    <div data-panel-footer class="flex items-center gap-3 border-t border-line px-4 py-3">
+                        <flux:button variant="primary" type="submit" size="sm" data-test="update-profile-button">
+                            {{ __('Save') }}
+                        </flux:button>
+                    </div>
+                </form>
+            </x-panel>
+
+            {{-- @chisel-email-verification --}}
+            @if ($this->showDeleteUser)
+            {{-- @end-chisel-email-verification --}}
+                <livewire:pages::settings.delete-user-form />
+            {{-- @chisel-email-verification --}}
+            @endif
+            {{-- @end-chisel-email-verification --}}
+        </div>
     </x-pages::settings.layout>
 </section>

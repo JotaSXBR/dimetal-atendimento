@@ -75,54 +75,53 @@ new #[Title('Meus alertas')] class extends Component {
 
 <section class="w-full">
     <x-pages::settings.layout route="alerts.edit" heading="Meus alertas" subheading="Som, repetição e balão do navegador. Valem só para o seu usuário.">
-        <form wire:submit="save" class="space-y-6">
-            <div class="space-y-3">
-                <p class="text-xs font-semibold text-ink-3">Som por tipo</p>
-                <flux:switch wire:model="soundMessage" label="Mensagem em ticket meu" />
-                <flux:switch wire:model="soundQueue" label="Ticket novo na minha fila" />
-                <flux:switch wire:model="soundAssigned" label="Ticket atribuído ou transferido a mim" />
-                <flux:switch wire:model="soundSla" label="SLA perto de estourar ou estourado" description="Desligar cala o som e o balão do SLA." />
-            </div>
+        <form wire:submit="save" class="space-y-5">
+            <x-panel title="Som por tipo">
+                <div class="border-b border-line px-4 py-3"><flux:switch wire:model="soundMessage" label="Mensagem em ticket meu" /></div>
+                <div class="border-b border-line px-4 py-3"><flux:switch wire:model="soundQueue" label="Ticket novo na minha fila" /></div>
+                <div class="border-b border-line px-4 py-3"><flux:switch wire:model="soundAssigned" label="Ticket atribuído ou transferido a mim" /></div>
+                <div class="px-4 py-3"><flux:switch wire:model="soundSla" label="SLA perto de estourar ou estourado" description="Desligar cala o som e o balão do SLA." /></div>
+            </x-panel>
 
-            <div class="space-y-3">
-                <p class="text-xs font-semibold text-ink-3">Repetição e balão</p>
-                <flux:switch wire:model="repeat" label="Repetir até resolver" description="Só SLA estourado e WhatsApp caído repetem." />
+            <x-panel title="Repetição e balão">
+                <div class="border-b border-line px-4 py-3"><flux:switch wire:model="repeat" label="Repetir até resolver" description="Só SLA estourado e WhatsApp caído repetem." /></div>
                 <div
+                    class="px-4 py-3"
                     x-data="desktopAlerts"
                     x-on:click="ask()">
                     <flux:switch wire:model="desktop" label="Balão do navegador" description="Só WhatsApp caído e SLA estourado, sem texto do cliente. O navegador pede permissão." />
                 </div>
-            </div>
+            </x-panel>
 
-            <div class="space-y-2">
-                <label for="alert-volume" class="text-xs font-semibold text-ink-3">Volume</label>
-                <div class="flex items-center gap-3">
-                    <input id="alert-volume" type="range" min="0" max="100" step="5" wire:model.live.debounce.300ms="volume" class="h-6 w-full accent-accent" />
-                    <span class="w-10 text-end text-sm font-semibold">{{ $volume }}%</span>
+            <x-panel title="Volume e prévia">
+                <div class="space-y-2 border-b border-line px-4 py-3">
+                    <label for="alert-volume" class="text-sm text-ink-2">Volume</label>
+                    <div class="flex items-center gap-3">
+                        <input id="alert-volume" type="range" min="0" max="100" step="5" wire:model.live.debounce.300ms="volume" class="h-6 w-full accent-accent" />
+                        <span class="w-10 text-end font-mono text-xs font-semibold text-ink">{{ $volume }}%</span>
+                    </div>
+                    <flux:error name="volume" />
                 </div>
-                <flux:error name="volume" />
-            </div>
 
-            <div class="space-y-2">
-                <p class="text-xs font-semibold text-ink-3">Silenciar o alerta crítico</p>
-                <flux:text size="sm">Cala só o som do WhatsApp caído. A faixa vermelha continua até a conexão voltar.</flux:text>
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="space-y-2 px-4 py-3">
+                    <p class="text-sm text-ink-2">Prévia dos sons</p>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (['comum' => 'Comum', 'sla' => 'SLA', 'critico' => 'Crítico'] as $kind => $label)
+                            <flux:button type="button" icon="speaker-wave" size="sm" x-on:click="$dispatch('alerts-preview', { kind: '{{ $kind }}' })">{{ $label }}</flux:button>
+                        @endforeach
+                    </div>
+                </div>
+            </x-panel>
+
+            <x-panel title="Silenciar o alerta crítico" subtitle="Cala só o som do WhatsApp caído. A faixa vermelha continua até a conexão voltar.">
+                <div class="flex flex-wrap items-center gap-2 px-4 py-3">
                     <flux:button type="button" wire:click="mute(15)" icon="bell-slash" size="sm">15 minutos</flux:button>
                     <flux:button type="button" wire:click="mute(60)" icon="bell-slash" size="sm">1 hora</flux:button>
                     @if ($this->mutedUntil)
                         <span class="text-xs text-ink-3" role="status">Silenciado até {{ $this->mutedUntil->setTimezone(config('app.display_timezone'))->format('H:i') }}</span>
                     @endif
                 </div>
-            </div>
-
-            <div class="space-y-2">
-                <p class="text-xs font-semibold text-ink-3">Prévia dos sons</p>
-                <div class="flex flex-wrap gap-2">
-                    @foreach (['comum' => 'Comum', 'sla' => 'SLA', 'critico' => 'Crítico'] as $kind => $label)
-                        <flux:button type="button" icon="speaker-wave" size="sm" x-on:click="$dispatch('alerts-preview', { kind: '{{ $kind }}' })">{{ $label }}</flux:button>
-                    @endforeach
-                </div>
-            </div>
+            </x-panel>
 
             <flux:button variant="primary" type="submit" data-test="save-alerts-button">Salvar</flux:button>
         </form>

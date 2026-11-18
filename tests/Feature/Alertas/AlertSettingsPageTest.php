@@ -69,4 +69,21 @@ class AlertSettingsPageTest extends TestCase
 
         $this->assertSame(70, $outro->fresh()->alertSettings()->volume);
     }
+
+    public function test_alertas_no_painel_do_desenho(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->get(route('alerts.edit'))->assertOk()->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+
+        $form = '//form[@*[name()="wire:submit"]="save"]';
+        $panel = fn (string $title): string => $form.'//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="'.$title.'"]]';
+        $titles = array_map(fn (\DOMNode $h): string => trim($h->textContent), iterator_to_array($xpath->query($form.'//*[@data-panel]/*[@data-panel-header]//h2')));
+
+        $this->assertSame(['Som por tipo', 'Repetição e balão', 'Volume e prévia', 'Silenciar o alerta crítico'], $titles);
+        $this->assertSame(1, $xpath->query($panel('Repetição e balão').'//*[@x-data="desktopAlerts"]')->length);
+        $this->assertSame(1, $xpath->query($panel('Volume e prévia').'//input[@id="alert-volume"]')->length);
+        $this->assertSame(1, $xpath->query($form.'//*[@data-test="save-alerts-button"]')->length);
+    }
 }
