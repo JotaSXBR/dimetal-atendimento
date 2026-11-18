@@ -95,7 +95,7 @@
                                             <x-status-badge tone="neutral">Inativo</x-status-badge>
                                         @endunless
                                     </p>
-                                    <p class="truncate text-xs text-ink-3">
+                                    <p class="text-xs wrap-anywhere text-ink-3">
                                         {{ $user->email }}
                                         <span class="2xl:hidden">
                                             @if ($user->sectors->isNotEmpty())
@@ -110,7 +110,7 @@
                             <p class="hidden truncate text-xs text-ink-2 2xl:block">{{ $user->sectors->pluck('name')->implode(', ') }}</p>
                             <p class="hidden text-xs whitespace-nowrap text-ink-3 2xl:block">{{ $tickets }}</p>
 
-                            <div class="ms-auto flex flex-wrap items-center gap-2 2xl:justify-end">
+                            <div class="ms-auto flex flex-wrap items-center gap-2 2xl:ms-0">
                                 @can('update', $user)
                                     <flux:button size="xs" icon="pencil-square" wire:click="edit({{ $user->id }})">Editar</flux:button>
 

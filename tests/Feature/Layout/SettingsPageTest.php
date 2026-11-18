@@ -49,6 +49,15 @@ class SettingsPageTest extends TestCase
         $this->assertStringNotContainsString('Páginas de', $html);
     }
 
+    public function test_menu_rolavel_traz_o_item_atual_para_a_vista(): void
+    {
+        $xpath = $this->xpath($this->page(UserRole::ADMIN, '/configuracoes/sistema'));
+
+        $scroller = $xpath->query('//nav[@aria-label="Configuração"]//*[@x-data="currentInView"]');
+        $this->assertSame(1, $scroller->length);
+        $this->assertSame(1, $xpath->query('.//a[@aria-current="page"]', $scroller->item(0))->length);
+    }
+
     public function test_menu_usa_navlist_com_a_pagina_atual(): void
     {
         $html = $this->page(UserRole::ADMIN, '/configuracoes/canais');

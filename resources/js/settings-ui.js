@@ -1,9 +1,26 @@
 // Pequenos componentes das telas de Configuração (setores, assinatura, alertas). A lógica fica aqui, e não em `x-data` inline,
 // porque o build CSP do Alpine não aceita método, `if` nem várias instruções no atributo (ver tests/Unit/AlpineCspSubsetTest.php).
 
+import { centerScrollLeft } from './scroll-center.js';
 import { shown } from './shown.js';
 
 document.addEventListener('alpine:init', () => {
+    // Menu de Configuração abaixo de lg rola na horizontal: o item atual nasce no meio da vista (e a barra de rolagem
+    // acompanha). Roda a cada carga, inclusive após wire:navigate, que monta o menu de novo. No lg nada rola e nada muda.
+    window.Alpine.data('currentInView', () => ({
+        init() {
+            const item = this.$el.querySelector('[aria-current="page"]');
+
+            if (item) {
+                this.$el.scrollLeft = centerScrollLeft({
+                    container: this.$el.getBoundingClientRect(),
+                    item: item.getBoundingClientRect(),
+                    scrollLeft: this.$el.scrollLeft,
+                });
+            }
+        },
+    }));
+
     // Renomear setor na própria linha (resources/views/livewire/settings/sectors.blade.php).
     window.Alpine.data('sectorRow', (name) => ({
         editing: false,

@@ -10,7 +10,7 @@
     @if ($groups !== [])
         {{-- O título do grupo é nosso: o heading do flux:navlist.group pinta zinc. Item com 40 px em toda largura. --}}
         <flux:navlist :aria-label="$label" class="shrink-0 lg:w-56">
-            <div class="flex gap-6 overflow-x-auto lg:flex-col lg:gap-5 lg:overflow-visible">
+            <div x-data="currentInView" class="flex gap-6 overflow-x-auto lg:flex-col lg:gap-5 lg:overflow-visible">
                 @foreach ($groups as $group => $items)
                     <div class="shrink-0">
                         <p data-test="settings-group-title" class="px-3 pb-1 text-xs font-semibold text-ink-3">{{ $group }}</p>
