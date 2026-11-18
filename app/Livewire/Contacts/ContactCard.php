@@ -32,7 +32,7 @@ class ContactCard extends Component
 
     public ContactForm $form;
 
-    /** No Inbox a ficha abre em resumo; o formulário só aparece em "Editar". Em Contatos ela é sempre o formulário. */
+    /** No Inbox a ficha abre em resumo; o formulário só aparece em "Editar". Em Contatos (gaveta) abre na ficha de leitura, também com "Editar". */
     public bool $compact = false;
 
     public bool $editing = false;

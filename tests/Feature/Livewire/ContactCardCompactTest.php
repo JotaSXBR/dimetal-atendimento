@@ -151,9 +151,9 @@ class ContactCardCompactTest extends TestCase
         $this->card(['compact' => true])->assertSee('Reenviar');
     }
 
-    public function test_em_contatos_o_formulario_continua_aberto(): void
+    public function test_em_contatos_abre_na_ficha_de_leitura_com_editar(): void
     {
-        $this->card()->assertSee('Salvar contato')->assertDontSee('Editar contato');
+        $this->card()->assertSee('Editar contato')->assertDontSee('Salvar contato');
     }
 
     public function test_somente_leitura_nao_edita_nem_salva(): void
@@ -219,8 +219,8 @@ class ContactCardCompactTest extends TestCase
 
         $html = $this->card()->html();
 
-        $this->assertMatchesRegularExpression('#<a href="[^"]*/historico\?ticketId='.$closed->id.'"[^>]*>\s*2026-000951\s*</a>#', $html);
-        $this->assertMatchesRegularExpression('#<a href="[^"]*/inbox\?ticket='.$open->id.'"[^>]*>\s*2026-000952\s*</a>#', $html);
+        $this->assertMatchesRegularExpression('#<a\s+href="[^"]*/historico\?ticketId='.$closed->id.'"[^>]*>(?:(?!</a>).)*2026-000951#s', $html);
+        $this->assertMatchesRegularExpression('#<a\s+href="[^"]*/inbox\?ticket='.$open->id.'"[^>]*>(?:(?!</a>).)*2026-000952#s', $html);
     }
 
     public function test_em_contatos_ticket_que_o_usuario_nao_ve_fica_sem_link(): void
