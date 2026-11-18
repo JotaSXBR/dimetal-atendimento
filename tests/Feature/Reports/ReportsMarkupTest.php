@@ -29,6 +29,46 @@ class ReportsMarkupTest extends TestCase
         $this->assertSame(0, $xpath->query('//dl/div/*[not(self::dt or self::dd)]')->length);
     }
 
+    private function page(): \DOMXPath
+    {
+        $html = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Index::class)->html();
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    private function panel(string $title): string
+    {
+        return "//*[@data-panel][.//h2[normalize-space()='{$title}']]";
+    }
+
+    public function test_relatorios_usam_stats_e_paineis(): void
+    {
+        $xpath = $this->page();
+
+        $this->assertSame(4, $xpath->query('//dl//*[@data-stat]')->length);
+        foreach (['Aguardando resposta além do SLA', 'Volume por setor', 'Desempenho por atendente'] as $title) {
+            $this->assertSame(1, $xpath->query($this->panel($title))->length, "painel {$title}");
+        }
+
+        $this->assertSame(1, $xpath->query('//*[@data-flux-radio-group-segmented]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-page-header-actions]//*[@data-flux-radio-group-segmented]')->length);
+        $this->assertSame(1, $xpath->query("//section[contains(concat(' ', normalize-space(@class), ' '), ' max-w-[120rem] ')]")->length);
+    }
+
+    public function test_desempenho_mostra_avatar_do_atendente(): void
+    {
+        $agent = User::factory()->create(['name' => 'Ana Lima']);
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create(['assigned_user_id' => $agent->id, 'opened_at' => now()]);
+
+        $row = $this->page()->query($this->panel('Desempenho por atendente')."//tr[.//*[normalize-space()='Ana Lima']]")->item(0);
+
+        $this->assertInstanceOf(\DOMElement::class, $row);
+        $this->assertSame(1, (new \DOMXPath($row->ownerDocument))->query('.//*[@data-flux-avatar]', $row)->length);
+    }
+
     public function test_volume_por_setor_usa_o_grafico_de_barras(): void
     {
         $sector = Sector::factory()->create(['name' => 'Comercial']);
