@@ -28,7 +28,7 @@
         <p class="border-b border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger" role="alert">{{ $message }}</p>
     @enderror
 
-    <div x-show="errors.length > 0" x-cloak class="border-b border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">
+    <div x-show="errors.length > 0" x-cloak class="max-h-32 shrink-0 overflow-y-auto border-b border-warn-line bg-warn-soft px-4 py-2 text-sm text-warn" role="alert">
         <p class="font-semibold">Corrija antes de publicar:</p>
         <ul class="mt-1 list-disc ps-5">
             <template x-for="error in errors" x-bind:key="error">
@@ -37,7 +37,8 @@
         </ul>
     </div>
 
-    <div class="flex min-h-0 flex-1">
+    {{-- Altura mínima: com a lista de erros e as faixas, o canvas não some (a página rola em tela baixa). --}}
+    <div class="flex min-h-64 flex-1">
         <aside class="w-44 shrink-0 space-y-1 overflow-y-auto border-e border-line bg-surface p-3" aria-label="Blocos">
             <p class="text-xs font-semibold text-ink-3">Adicionar bloco</p>
             <template x-for="(block, index) in palette" x-bind:key="block.key">
@@ -135,6 +136,7 @@
 
             <p x-show="simOutcome" class="rounded-lg border border-line bg-canvas p-2 text-xs font-semibold text-ink" x-text="simOutcomeText"></p>
 
+            {{-- O -bottom-4 e o pb-4 cobrem o p-4 do painel: sem isso a conversa aparece por baixo do formulário preso. --}}
             <form x-show="simSession" class="sticky -bottom-4 space-y-1 border-t border-line bg-surface pt-2 pb-4" x-on:submit.prevent="testReply()">
                 <label class="block text-xs text-ink-2" for="sim-text">Resposta do cliente</label>
                 <div class="flex gap-2">

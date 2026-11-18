@@ -236,6 +236,15 @@ class AutomationEditorTest extends TestCase
         $this->assertStringNotContainsString('h-[calc(100dvh-4rem)]', $html);
     }
 
+    /** Com a altura fixa, a lista de erros longa não pode espremer o canvas até sumir. */
+    public function test_lista_de_erros_tem_teto_e_o_canvas_tem_altura_minima(): void
+    {
+        $html = Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html();
+
+        $this->assertMatchesRegularExpression('/<div x-show="errors.length (?:>|&gt;) 0"[^>]*class="[^"]*max-h-32[^"]*overflow-y-auto/', $html);
+        $this->assertStringContainsString('<div class="flex min-h-64 flex-1">', $html);
+    }
+
     public function test_atendente_nao_chama_as_acoes(): void
     {
         Livewire::actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))
