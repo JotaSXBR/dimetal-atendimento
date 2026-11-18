@@ -109,7 +109,7 @@
                 <flux:button size="xs" x-on:click="testSilence()" x-bind:disabled="busy || !testWaiting()">Simular silêncio</flux:button>
             </div>
 
-            <div x-show="hasSimErrors" class="rounded-md border border-warn-line bg-warn-soft p-2 text-xs text-warn" role="alert">
+            <div x-show="hasSimErrors" class="rounded-lg border border-warn-line bg-warn-soft p-2 text-xs text-warn" role="alert">
                 <p class="font-semibold">Corrija o fluxo antes de testar:</p>
                 <ul class="mt-1 list-disc ps-4">
                     <template x-for="error in $wire.simErrors" x-bind:key="error">
@@ -133,7 +133,7 @@
                 </template>
             </div>
 
-            <p x-show="simOutcome" class="rounded-md border border-line bg-canvas p-2 text-xs font-semibold text-ink" x-text="simOutcomeText"></p>
+            <p x-show="simOutcome" class="rounded-lg border border-line bg-canvas p-2 text-xs font-semibold text-ink" x-text="simOutcomeText"></p>
 
             <form x-show="simSession" class="space-y-1" x-on:submit.prevent="testReply()">
                 <label class="block text-xs text-ink-2" for="sim-text">Resposta do cliente</label>

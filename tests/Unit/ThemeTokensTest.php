@@ -213,7 +213,7 @@ class ThemeTokensTest extends TestCase
 
     public function test_icone_de_cada_categoria_tem_contraste_sobre_o_canvas_nos_dois_temas(): void
     {
-        preg_match('/\.flow-canvas\s*\{([^}]*)\}/', $this->css(), $light);
+        preg_match('/^\.flow-canvas\s*\{([^}]*)\}/m', $this->css(), $light);
         preg_match('/\.dark \.flow-canvas\s*\{([^}]*)\}/', $this->css(), $dark);
 
         foreach (['light' => $light[1] ?? '', 'dark' => $dark[1] ?? ''] as $theme => $block) {
