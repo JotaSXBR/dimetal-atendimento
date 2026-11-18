@@ -20,6 +20,20 @@ class PageHeaderTest extends TestCase
         $this->assertSame('Ação', trim($xpath->query('.//*[@data-page-header-actions]//button', $root)->item(0)?->textContent ?? ''));
     }
 
+    /** Com base própria o bloco do título encolhe e quebra o subtítulo: as ações só descem quando faltam ~20rem para o texto. */
+    public function test_bloco_do_titulo_encolhe_antes_de_derrubar_as_acoes(): void
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->blade('<x-page-header title="T" subtitle="S"><button>Ação</button></x-page-header>'), LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        $titles = (new \DOMXPath($dom))->query('//*[@data-page-header]//h1/ancestor::div[1]')->item(0);
+        $this->assertNotNull($titles);
+        $classes = explode(' ', $titles->getAttribute('class'));
+        foreach (['min-w-0', 'grow', 'basis-80'] as $class) {
+            $this->assertContains($class, $classes);
+        }
+    }
+
     public function test_abas_ficam_dentro_do_cabecalho(): void
     {
         $dom = new \DOMDocument;

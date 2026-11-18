@@ -292,5 +292,9 @@ class AutomationIndexTest extends TestCase
         $this->assertSame(1, $xpath->query($panel('Workflows').'//*[@*[name()="wire:key"]="workflow-'.$workflow->id.'"]')->length);
         $this->assertSame('1 workflow', trim($xpath->query($panel('Workflows').'//*[@data-panel-subtitle]')->item(0)?->textContent ?? ''));
         $this->assertSame(1, $xpath->query($panel('Novo workflow').'//form[@*[name()="wire:submit"]="create"]')->length);
+
+        Workflow::factory()->create(['name' => 'Fluxo Y']);
+        $two = $this->xpath($this->page()->html());
+        $this->assertSame('2 workflows', trim($two->query($panel('Workflows').'//*[@data-panel-subtitle]')->item(0)?->textContent ?? ''));
     }
 }
