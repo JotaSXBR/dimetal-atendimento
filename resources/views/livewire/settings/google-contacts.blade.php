@@ -11,10 +11,10 @@
             </div>
 
             @if ($connection->last_error)
-                <p class="border-b border-line px-4 py-3 text-xs text-danger" role="alert">Último erro: {{ $connection->last_error }}</p>
+                <p class="px-4 pt-3 text-xs text-danger" role="alert">Último erro: {{ $connection->last_error }}</p>
             @endif
 
-            <dl class="grid grid-cols-3 gap-3 p-4 text-sm">
+            <dl class="grid grid-cols-1 gap-3 p-4 text-sm sm:grid-cols-3">
                 <div><dt class="text-xs text-ink-3">Enviados</dt><dd class="font-mono text-xs text-ink">{{ $synced }} sincronizado{{ $synced === 1 ? '' : 's' }}</dd></div>
                 <div><dt class="text-xs text-ink-3">Na fila</dt><dd class="font-mono text-xs text-ink">{{ $pending }} pendente{{ $pending === 1 ? '' : 's' }}</dd></div>
                 <div><dt class="text-xs text-ink-3">Com erro</dt><dd class="font-mono text-xs text-ink">{{ $failed }}</dd></div>

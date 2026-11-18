@@ -8,7 +8,7 @@
         <x-panel title="Faixas de atendimento" subtitle="Várias faixas no mesmo dia permitem pausa de almoço. Dia sem faixa fica fechado. Sem nenhuma faixa, o atendimento conta como sempre aberto.">
             <form wire:submit="saveHours">
                 @foreach (\App\Livewire\Settings\BusinessHoursPage::WEEKDAYS as $weekday => $label)
-                    <div class="flex flex-wrap items-start gap-x-4 gap-y-2 border-b border-line px-4 py-3" wire:key="day-{{ $weekday }}">
+                    <div class="flex flex-wrap items-start gap-x-4 gap-y-2 border-t border-line px-4 py-3 first:border-t-0" wire:key="day-{{ $weekday }}">
                         <p data-day-name class="w-28 shrink-0 pt-1.5 text-sm font-medium text-ink">{{ $label }}</p>
 
                         <div data-day-windows class="order-last w-full min-w-0 space-y-2 sm:order-none sm:w-auto sm:flex-1">
@@ -32,7 +32,7 @@
                     </div>
                 @endforeach
 
-                <div data-panel-footer class="flex items-center gap-3 px-4 py-3">
+                <div data-panel-footer class="flex items-center gap-3 border-t border-line px-4 py-3">
                     <flux:button type="submit" variant="primary" size="sm">Salvar horário</flux:button>
                     @if (session('saved'))
                         <p class="text-xs text-ok" role="status">{{ session('saved') }}</p>
