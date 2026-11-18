@@ -139,6 +139,16 @@ class SecurityTest extends TestCase
         $this->assertSame(1, $xpath->query($this->panel('Chaves de acesso').'[contains(., "Nenhuma chave de acesso ainda")]')->length);
     }
 
+    public function test_codigos_de_recuperacao_sao_secao_do_painel_e_nao_um_cartao_dentro_dele(): void
+    {
+        $user = User::factory()->withTwoFactor()->create();
+        $xpath = $this->xpath($this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])->get(route('security.edit'))->assertOk()->getContent());
+
+        $panel = $this->panel('Verificação em duas etapas');
+        $this->assertSame(1, $xpath->query($panel.'[contains(., "Desativar 2FA")]')->length);
+        $this->assertSame(0, $xpath->query($panel.'//*[contains(concat(" ", @class, " "), " rounded-xl ") or contains(concat(" ", @class, " "), " shadow-sm ")]')->length);
+    }
+
     /** O Flux pinta zinc nos próprios controles; a regra vale para o markup nosso da aba. */
     public function test_seguranca_sem_zinc_cru_no_markup_da_aba(): void
     {

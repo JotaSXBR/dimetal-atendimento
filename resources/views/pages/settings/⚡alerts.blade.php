@@ -123,7 +123,7 @@ new #[Title('Meus alertas')] class extends Component {
                 </div>
             </x-panel>
 
-            <flux:button variant="primary" type="submit" data-test="save-alerts-button">Salvar</flux:button>
+            <flux:button variant="primary" type="submit" size="sm" data-test="save-alerts-button">Salvar</flux:button>
         </form>
     </x-pages::settings.layout>
 </section>

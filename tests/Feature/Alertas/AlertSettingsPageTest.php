@@ -84,6 +84,6 @@ class AlertSettingsPageTest extends TestCase
         $this->assertSame(['Som por tipo', 'Repetição e balão', 'Volume e prévia', 'Silenciar o alerta crítico'], $titles);
         $this->assertSame(1, $xpath->query($panel('Repetição e balão').'//*[@x-data="desktopAlerts"]')->length);
         $this->assertSame(1, $xpath->query($panel('Volume e prévia').'//input[@id="alert-volume"]')->length);
-        $this->assertSame(1, $xpath->query($form.'//*[@data-test="save-alerts-button"]')->length);
+        $this->assertSame(1, $xpath->query($form.'//*[@data-test="save-alerts-button"][@data-flux-button][contains(concat(" ", @class, " "), " h-8 ")]')->length);
     }
 }
