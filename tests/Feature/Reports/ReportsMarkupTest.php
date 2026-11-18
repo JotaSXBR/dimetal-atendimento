@@ -92,6 +92,23 @@ class ReportsMarkupTest extends TestCase
         }
     }
 
+    /** As colunas fixas cabem o conteúdo (data mono e selo) e deixam a do cliente legível. */
+    public function test_colunas_fixas_da_espera_deixam_espaco_ao_cliente(): void
+    {
+        Ticket::factory()->for(Channel::factory()->connected()->create())->create([
+            'opened_at' => now(), 'status' => 'aguardando',
+            'waiting_since' => now()->subHour(), 'sla_warn_at' => now()->subMinutes(30), 'sla_due_at' => now()->subMinutes(10),
+        ]);
+        $xpath = $this->page();
+
+        $widths = ['Setor' => 'w-28', 'Responsável' => 'w-32', 'Esperando desde' => 'w-32', 'Limite' => 'w-32', 'Situação' => 'w-40'];
+        foreach ($widths as $header => $width) {
+            $th = $xpath->query($this->panel('Aguardando resposta além do SLA')."//th[normalize-space()='{$header}']")->item(0);
+            $this->assertInstanceOf(\DOMElement::class, $th, $header);
+            $this->assertContains($width, explode(' ', $th->getAttribute('class')), $header);
+        }
+    }
+
     public function test_desempenho_mostra_avatar_do_atendente(): void
     {
         $agent = User::factory()->create(['name' => 'Ana Lima']);

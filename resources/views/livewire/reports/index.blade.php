@@ -35,9 +35,10 @@
                     <caption class="sr-only">Aguardando resposta além do SLA</caption>
                     <flux:table.columns class="bg-canvas">
                         <flux:table.column class="px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Cliente</span></flux:table.column>
-                        <flux:table.column class="w-40 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Setor</span></flux:table.column>
-                        <flux:table.column class="w-44 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Responsável</span></flux:table.column>
-                        <flux:table.column class="w-36 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Esperando desde</span></flux:table.column>
+                        {{-- Larguras medidas nas fontes: data mono de 14 px = 92 px, selo "Perto de estourar" = 128 px (mais o px-4 da célula). --}}
+                        <flux:table.column class="w-28 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Setor</span></flux:table.column>
+                        <flux:table.column class="w-32 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Responsável</span></flux:table.column>
+                        <flux:table.column class="w-32 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Esperando desde</span></flux:table.column>
                         <flux:table.column class="w-32 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Limite</span></flux:table.column>
                         <flux:table.column class="w-40 px-4! border-line!"><span class="text-xs font-semibold text-ink-3">Situação</span></flux:table.column>
                     </flux:table.columns>
@@ -45,8 +46,8 @@
                         @foreach ($data['waiting'] as $row)
                             <flux:table.row>
                                 <flux:table.cell class="px-4! py-[11px] border-line!"><a href="{{ route('inbox') }}" wire:navigate class="block min-h-6 truncate text-sm leading-6 text-ink underline-offset-2 hover:underline" title="{{ $row['contact'] }}">{{ $row['contact'] }}</a></flux:table.cell>
-                                <flux:table.cell class="px-4! py-[11px] border-line!"><span class="block truncate text-sm text-ink-2">{{ $row['sector'] ?? 'Fila geral' }}</span></flux:table.cell>
-                                <flux:table.cell class="px-4! py-[11px] border-line!"><span class="block truncate text-sm text-ink-2">{{ $row['agent'] ?? '—' }}</span></flux:table.cell>
+                                <flux:table.cell class="px-4! py-[11px] border-line!"><span class="block truncate text-sm text-ink-2" title="{{ $row['sector'] ?? 'Fila geral' }}">{{ $row['sector'] ?? 'Fila geral' }}</span></flux:table.cell>
+                                <flux:table.cell class="px-4! py-[11px] border-line!"><span class="block truncate text-sm text-ink-2" title="{{ $row['agent'] ?? '—' }}">{{ $row['agent'] ?? '—' }}</span></flux:table.cell>
                                 <flux:table.cell class="px-4! py-[11px] border-line!"><span class="font-mono text-sm text-ink-2">{{ $row['since']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</span></flux:table.cell>
                                 <flux:table.cell class="px-4! py-[11px] border-line!"><span class="font-mono text-sm text-ink-2">{{ $row['due']->timezone(config('app.display_timezone'))->format('d/m H:i') }}</span></flux:table.cell>
                                 <flux:table.cell class="px-4! py-[11px] border-line!">
