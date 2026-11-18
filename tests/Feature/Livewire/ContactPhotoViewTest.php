@@ -64,7 +64,8 @@ class ContactPhotoViewTest extends TestCase
         $this->ticketFor($contact, $admin, TicketStatus::ENCERRADO)->forceFill(['closed_at' => now()])->save();
         $route = '/avatares/contacts/'.$contact->id;
 
-        Livewire::actingAs($admin)->test(ContactsIndex::class)->assertSee($route, false)->assertSee('data-size="lg"', false);
+        // A tabela de Contatos usa o avatar de 32 px (sm) do desenho do Pencil.
+        Livewire::actingAs($admin)->test(ContactsIndex::class)->assertSee($route, false)->assertSee('data-size="sm"', false);
         Livewire::actingAs($admin)->test(HistoryIndex::class)->assertSee($route, false)->assertSee('data-size="lg"', false);
     }
 }
