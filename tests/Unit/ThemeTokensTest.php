@@ -202,6 +202,30 @@ class ThemeTokensTest extends TestCase
         $this->assertMatchesRegularExpression('/rete-minimap\s*\{[^}]*filter:\s*grayscale\(1\)/', $this->css());
     }
 
+    public function test_bloco_do_editor_tem_cabecalho_neutro_e_a_categoria_so_no_icone(): void
+    {
+        preg_match('/\.flow-head\s*\{([^}]*)\}/', $this->css(), $head);
+
+        $this->assertStringContainsString('background: var(--color-canvas)', $head[1] ?? '');
+        $this->assertStringNotContainsString('--flow-cat', $head[1] ?? '');
+        $this->assertMatchesRegularExpression('/\.flow-head svg\s*\{[^}]*color:\s*var\(--flow-cat\)/', $this->css());
+    }
+
+    public function test_icone_de_cada_categoria_tem_contraste_sobre_o_canvas_nos_dois_temas(): void
+    {
+        preg_match('/\.flow-canvas\s*\{([^}]*)\}/', $this->css(), $light);
+        preg_match('/\.dark \.flow-canvas\s*\{([^}]*)\}/', $this->css(), $dark);
+
+        foreach (['light' => $light[1] ?? '', 'dark' => $dark[1] ?? ''] as $theme => $block) {
+            preg_match_all('/--flow-cat-([a-z]+):\s*(#[0-9a-fA-F]{6})/', $block, $m, PREG_SET_ORDER);
+            $this->assertCount(6, $m, $theme);
+
+            foreach ($m as [, $cat, $hex]) {
+                $this->assertGreaterThanOrEqual(3.0, $this->ratio($hex, $this->themes()[$theme]['canvas']), "{$theme}: {$cat}");
+            }
+        }
+    }
+
     public function test_o_flux_enxerga_o_zinc_de_verdade_sem_remapear_para_stone(): void
     {
         $this->assertDoesNotMatchRegularExpression('/--color-zinc-\d+:\s*var\(--color-stone/', $this->css());

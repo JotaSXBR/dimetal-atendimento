@@ -195,10 +195,13 @@ flow-node { display: block; }
     gap: 6px;
     padding: 8px 10px;
     border-radius: 8px 8px 0 0;
-    background: color-mix(in srgb, var(--flow-cat) 14%, var(--color-surface));
-    color: var(--flow-cat);
+    border-bottom: 1px solid var(--color-line);
+    background: var(--color-canvas);
+    color: var(--color-ink);
     font-weight: 600;
 }
+/* A categoria do bloco aparece só no ícone (o SVG desenha com currentColor). */
+.flow-head svg { flex-shrink: 0; width: 14px; height: 14px; color: var(--flow-cat); }
 .flow-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink); }
 
 .flow-body { padding: 6px 10px; color: var(--color-ink-2); overflow-wrap: anywhere; }

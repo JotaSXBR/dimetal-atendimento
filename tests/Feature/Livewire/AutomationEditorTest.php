@@ -212,6 +212,21 @@ class AutomationEditorTest extends TestCase
             ->assertSee('rodape_sair');
     }
 
+    public function test_editor_com_cabecalho_do_desenho(): void
+    {
+        $html = Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html();
+
+        $this->assertMatchesRegularExpression('/<header[^>]*data-editor-header[^>]*>(.*?)<\/header>/s', $html);
+        preg_match('/<header[^>]*data-editor-header[^>]*>(.*?)<\/header>/s', $html, $header);
+
+        $this->assertStringContainsString('href="'.route('automacao').'"', $header[1]);
+        $this->assertMatchesRegularExpression('/<h1[^>]*>\s*Triagem\s*<\/h1>/', $header[1]);
+
+        foreach (['Salvar rascunho', 'Validar', 'Testar', 'Publicar'] as $action) {
+            $this->assertStringContainsString($action, $header[1]);
+        }
+    }
+
     public function test_atendente_nao_chama_as_acoes(): void
     {
         Livewire::actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))
