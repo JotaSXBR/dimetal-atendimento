@@ -8,7 +8,7 @@
 >
     <header data-editor-header class="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-6 py-4">
         <div class="min-w-40 flex-1">
-            <a href="{{ route('automacao') }}" wire:navigate class="inline-flex min-h-6 items-center text-xs text-ink-3 hover:text-ink hover:underline">← Automação</a>
+            <a href="{{ route('automacao') }}" wire:navigate class="inline-flex min-h-8 items-center text-xs text-ink-3 hover:text-ink hover:underline">← Automação</a>
             <h1 class="truncate text-xl font-medium text-ink">{{ $workflow->name }}</h1>
         </div>
 
