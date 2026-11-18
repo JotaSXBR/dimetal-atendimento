@@ -93,10 +93,8 @@ new #[Title('Perfil')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    <flux:heading level="2" class="sr-only">{{ __('Profile settings') }}</flux:heading>
-
     <x-pages::settings.layout route="profile.edit" :heading="__('Profile')" :subheading="__('Update your name and email address')">
-        <div class="mt-6">
+        <div>
             <x-avatar-uploader model="photo" action="saveAvatar" :current="auth()->user()->avatarUrl()" :name="auth()->user()->name" shape="round">
                 @if (auth()->user()->avatar_path)
                     <flux:button size="sm" type="button" variant="ghost" icon="trash" wire:click="removeAvatar" data-confirm="Remover a sua foto?" data-confirm-label="Remover" data-confirm-tone="danger">Remover</flux:button>

@@ -74,8 +74,6 @@ new #[Title('Meus alertas')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    <flux:heading level="2" class="sr-only">Meus alertas</flux:heading>
-
     <x-pages::settings.layout route="alerts.edit" heading="Meus alertas" subheading="Som, repetição e balão do navegador. Valem só para o seu usuário.">
         <form wire:submit="save" class="space-y-6">
             <div class="space-y-3">

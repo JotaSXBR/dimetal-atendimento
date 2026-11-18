@@ -79,11 +79,11 @@ class SettingsPageTest extends TestCase
         $this->assertSame('Perfil', trim($xpath->query('//*[@data-page-header]//h1')->item(0)?->textContent ?? ''));
         $this->assertStringNotContainsString('Seu perfil, sua segurança e suas preferências', $html);
         $this->withSession(['auth.password_confirmed_at' => time()]);
-        foreach (['/settings/security' => 'Alterar senha', '/settings/appearance' => 'Aparência', '/settings/alerts' => 'Meus alertas'] as $url => $title) {
+        foreach (['/settings/profile' => 'Perfil', '/settings/security' => 'Segurança', '/settings/appearance' => 'Aparência', '/settings/alerts' => 'Meus alertas'] as $url => $title) {
             $tab = $this->xpath($this->page(UserRole::ATENDENTE, $url));
             $this->assertSame($title, trim($tab->query('//*[@data-page-header]//h1')->item(0)?->textContent ?? ''), $url);
-            // O cabeçalho não tem margem de baixo: o conteúdo da aba desce 24 px (mt-6), como no desenho.
-            $this->assertSame(1, $tab->query('//*[@data-page-header]/following-sibling::*[1][contains(concat(" ", @class, " "), " mt-6 ")]')->length, $url);
+            // O h1 do cabeçalho já nomeia a aba: sem o h2 escondido repetindo o título antes dele.
+            $this->assertSame(0, $tab->query('//h2[contains(concat(" ", @class, " "), " sr-only ")]')->length, $url);
         }
     }
 

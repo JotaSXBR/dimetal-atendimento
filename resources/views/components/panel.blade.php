@@ -5,7 +5,7 @@
      seamless tem padding uniforme (24 px no md) e a faixa de cabeçalho exige `body="divided"`, com borda zinc, padding
      24/16 (md) ou 16/12 (xs) e o título no `flux:heading` zinc; seriam sobrescritas em quase toda parte. --}}
 <div data-panel {{ $attributes->class('overflow-hidden rounded-xl border border-line bg-surface') }}>
-    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3.5">
+    <div data-panel-header class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3.5">
         <div class="min-w-0">
             <h2 class="text-sm font-semibold text-ink">{{ $title }}</h2>
             @if ($subtitle)

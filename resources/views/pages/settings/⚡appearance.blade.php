@@ -8,8 +8,6 @@ new #[Title('Aparência')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    <flux:heading level="2" class="sr-only">{{ __('Appearance settings') }}</flux:heading>
-
     <x-pages::settings.layout route="appearance.edit" :heading="__('Appearance')" :subheading="__('Update the appearance settings for your account')">
         <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
             <flux:radio value="light" icon="sun">{{ __('Light') }}</flux:radio>

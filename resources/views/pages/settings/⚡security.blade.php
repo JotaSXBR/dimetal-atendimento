@@ -183,10 +183,8 @@ new #[Title('Segurança')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    <flux:heading level="2" class="sr-only">{{ __('Security settings') }}</flux:heading>
-
-    <x-pages::settings.layout route="security.edit" :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
-        <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-6">
+    <x-pages::settings.layout route="security.edit" :heading="__('Security settings')" subheading="Senha e formas de entrar na sua conta.">
+        <form method="POST" wire:submit="updatePassword" class="space-y-6">
             <flux:input
                 wire:model="current_password"
                 :label="__('Current password')"

@@ -64,7 +64,7 @@ class SecurityTest extends TestCase
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get(route('security.edit'))
             ->assertOk()
-            ->assertSee('Alterar senha')
+            ->assertSee('Senha atual')
             ->assertDontSee('Gerencie as suas chaves de acesso para entrar sem senha')
             ->assertDontSee('Adicione uma chave de acesso para entrar sem senha')
             ->assertDontSee('Verificação em duas etapas');

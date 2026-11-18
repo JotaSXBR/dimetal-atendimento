@@ -22,7 +22,11 @@ class PanelTest extends TestCase
         $this->assertNotNull($root);
         $this->assertSame('Conexão', trim($xpath->query('.//h2', $root)->item(0)?->textContent ?? ''));
         $this->assertSame('Estado do canal', trim($xpath->query('.//*[@data-panel-subtitle]', $root)->item(0)?->textContent ?? ''));
-        $this->assertSame('Editar', trim($xpath->query('.//*[@data-panel-actions]//button', $root)->item(0)?->textContent ?? ''));
+        $header = $xpath->query('./*[@data-panel-header]', $root)->item(0);
+        $this->assertNotNull($header);
+        $this->assertStringContainsString('border-b', $header->getAttribute('class'));
+        $this->assertSame('Editar', trim($xpath->query('.//*[@data-panel-actions]//button', $header)->item(0)?->textContent ?? ''));
+        $this->assertSame(0, $xpath->query('.//*[@data-test="corpo"]', $header)->length);
         $this->assertSame(1, $xpath->query('.//*[@data-test="corpo"]', $root)->length);
     }
 
