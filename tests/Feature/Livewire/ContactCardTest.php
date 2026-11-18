@@ -12,6 +12,8 @@ use App\Livewire\Inbox\Inbox;
 use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\GoogleConnection;
+use App\Models\Sector;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -209,6 +211,120 @@ class ContactCardTest extends TestCase
         Ticket::factory()->for($this->contact)->for(Channel::factory()->connected()->create())->create(['status' => TicketStatus::EM_ATENDIMENTO, 'protocol' => '2026-000500']);
 
         $this->card()->assertSee('2026-000500')->assertSee('Em atendimento')->assertDontSee('Nenhum atendimento ainda');
+    }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_gaveta_abre_na_ficha_de_leitura(): void
+    {
+        $this->contact->update([
+            'email' => 'maria@silva.com.br', 'company' => 'Metalúrgica Silva', 'job_title' => 'Compradora', 'phone2' => '(16) 3333-4444',
+            'birthday' => '1990-02-28', 'address' => 'Rua A, 10', 'urls' => ['https://silva.com.br'],
+        ]);
+
+        $html = $this->card()->assertDontSeeHtml('wire:model="form.name"')->html();
+        $sheet = $this->xpath($html)->query('//*[@data-testid="contact-sheet"]')->item(0);
+
+        $this->assertNotNull($sheet, 'ficha de leitura ausente');
+        $text = $sheet->textContent;
+        foreach (['Push Name', '(16) 99752-4950', 'E-mail', 'maria@silva.com.br', 'Empresa', 'Metalúrgica Silva', 'Cargo', 'Compradora',
+            'Outro telefone', '(16) 3333-4444', 'Aniversário', '28/02/1990', 'Endereço', 'Rua A, 10', 'Sites', 'Nenhuma observação.'] as $expected) {
+            $this->assertStringContainsString($expected, $text);
+        }
+        $this->assertSame(1, $this->xpath($html)->query('//a[@href="https://silva.com.br"][@target="_blank"][@rel="noopener"]')->length);
+    }
+
+    public function test_ficha_mostra_o_apelido_quando_existe(): void
+    {
+        $this->contact->update(['nickname' => 'Mari']);
+
+        $text = $this->xpath($this->card()->html())->query('//*[@data-testid="contact-sheet"]')->item(0)?->textContent ?? '';
+
+        $this->assertStringContainsString('Apelido', $text);
+        $this->assertStringContainsString('Mari', $text);
+    }
+
+    /** O `data-focus-target` da raiz procura o seletor por `contact-tags`: os chips só de leitura da ficha usam outro testid. */
+    public function test_etiquetas_da_ficha_nao_usam_o_testid_do_seletor(): void
+    {
+        $this->contact->tags()->attach(Tag::factory()->contato()->create(['name' => 'Revenda']));
+
+        $xpath = $this->xpath($this->card()->html());
+
+        $this->assertStringContainsString('Revenda', $xpath->query('//*[@data-testid="contact-sheet"]//*[@data-testid="contact-sheet-tags"]')->item(0)?->textContent ?? '');
+        $this->assertSame(0, $xpath->query('//*[@data-testid="contact-sheet"]//*[@data-testid="contact-tags"]')->length);
+    }
+
+    /** O flyout tem `min-h-dvh` e `p-8`: a ficha ocupa a altura útil e o rodapé desce ao fim; o nome não passa sob o X. */
+    public function test_ficha_e_coluna_com_rodape_no_fim_e_nome_livre_do_fechar(): void
+    {
+        $xpath = $this->xpath($this->card()->html());
+        $classes = fn (string $query): array => explode(' ', $xpath->query($query)->item(0)?->getAttribute('class') ?? '');
+
+        $this->assertContains('flex-col', $classes('//*[@data-testid="contact-sheet"]'));
+        $this->assertContains('mt-auto', $classes('//*[@data-testid="contact-sheet"]//*[@data-testid="contact-actions"]'));
+        $this->assertContains('pe-8', $classes('//*[@data-testid="contact-sheet"]//h2/..'));
+    }
+
+    public function test_editar_contato_abre_o_formulario_e_salvar_volta_a_ficha(): void
+    {
+        $card = $this->card()->assertSee('Editar contato')->call('toggleEdit')
+            ->assertSeeHtml('wire:model="form.name"')
+            ->assertDontSeeHtml('data-testid="contact-sheet"');
+        $this->assertSame(1, $this->xpath($card->html())->query('//button[@*[name()="wire:click"]="toggleEdit"][contains(., "Cancelar")]')->length);
+
+        $card->set('form.name', 'Maria Silva')->call('save')
+            ->assertHasNoErrors()
+            ->assertSeeHtml('data-testid="contact-sheet"')
+            ->assertDontSeeHtml('wire:model="form.name"')
+            ->assertSee('Maria Silva');
+    }
+
+    public function test_erro_de_validacao_mantem_o_formulario(): void
+    {
+        $this->card()->call('toggleEdit')->set('form.urls', ['nao e site'])->call('save')
+            ->assertHasErrors()
+            ->assertSeeHtml('wire:model="form.name"')
+            ->assertDontSeeHtml('data-testid="contact-sheet"');
+    }
+
+    public function test_ficha_sem_dados_opcionais_nao_mostra_rotulos_vazios(): void
+    {
+        $html = $this->card()->html();
+        $text = $this->xpath($html)->query('//*[@data-testid="contact-sheet"]')->item(0)?->textContent ?? '';
+
+        $this->assertStringContainsString('Push Name', $text);
+        foreach (['E-mail', 'Empresa', 'Cargo', 'Sites'] as $label) {
+            $this->assertStringNotContainsString($label, $text);
+        }
+    }
+
+    public function test_atendimentos_da_gaveta_em_cartao_e_so_os_abriveis_com_seta(): void
+    {
+        $channel = Channel::factory()->create();
+        $mine = Sector::factory()->create();
+        $make = fn (Sector $sector, string $protocol): Ticket => Ticket::factory()->create([
+            'channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'sector_id' => $sector->id,
+            'status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subDay(), 'protocol' => $protocol,
+        ]);
+        $readable = $make($mine, '2026-000971');
+        $make(Sector::factory()->create(), '2026-000972');
+        $this->user->sectors()->attach($mine);
+
+        $xpath = $this->xpath($this->card()->html());
+        $cards = $xpath->query('//*[@data-testid="contact-sheet"]//*[@data-link-card]');
+
+        $this->assertSame(2, $cards->length);
+        $withChevron = $xpath->query('//*[@data-testid="contact-sheet"]//*[@data-link-card][.//*[@data-link-card-chevron]]');
+        $this->assertSame(1, $withChevron->length);
+        $this->assertStringContainsString('2026-000971', $withChevron->item(0)?->textContent ?? '');
+        $this->assertStringContainsString('ticketId='.$readable->id, $withChevron->item(0)?->getAttribute('href') ?? '');
     }
 
     public function test_salvar_na_ficha_enfileira_o_envio_ao_google(): void

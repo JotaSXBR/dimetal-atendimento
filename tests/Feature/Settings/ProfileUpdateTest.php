@@ -86,4 +86,29 @@ class ProfileUpdateTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_perfil_no_painel_do_desenho(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $xpath = $this->xpath($this->get(route('profile.edit'))->assertOk()->getContent());
+
+        $dados = $this->panel('Dados da conta');
+        $this->assertSame(1, $xpath->query($dados.'//*[@data-testid="avatar-uploader"]')->length);
+        $this->assertSame(2, $xpath->query($dados.'//form[@*[name()="wire:submit"]="updateProfileInformation"]//*[contains(concat(" ", @class, " "), " grid ")]//input[@*[name()="wire:model"]="name" or @*[name()="wire:model"]="email"]')->length);
+        $this->assertSame(1, $xpath->query($dados.'//form//*[@data-test="update-profile-button"]')->length);
+        $this->assertSame(1, $xpath->query($this->panel('Excluir conta').'//*[@data-test="delete-user-button"]')->length);
+    }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    private function panel(string $title): string
+    {
+        return '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="'.$title.'"]]';
+    }
 }

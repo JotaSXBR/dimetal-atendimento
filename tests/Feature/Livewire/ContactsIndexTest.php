@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire;
 use App\Enums\UserRole;
 use App\Livewire\Contacts\Index;
 use App\Models\Contact;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Features\SupportTesting\Testable;
@@ -91,6 +92,75 @@ class ContactsIndexTest extends TestCase
         $this->page()->set('newPhone', '12')->set('newName', 'Ana')->call('createContact')->assertHasErrors(['newPhone']);
 
         $this->assertSame(0, Contact::query()->count());
+    }
+
+    public function test_contatos_em_tabela_com_as_colunas_do_app(): void
+    {
+        $contact = Contact::factory()->create(['name' => 'Maria Souza', 'wa_id' => '5516997524950@c.us']);
+
+        $html = $this->page()->html();
+
+        $this->assertStringContainsString('data-testid="contacts-table"', $html);
+        $this->assertMatchesRegularExpression('/<thead.*Contato.*Telefone.*Etiquetas.*<\/thead>/s', $html);
+        $this->assertMatchesRegularExpression('/<tr[^>]*wire:key="contact-'.$contact->id.'"[^>]*>.*Maria Souza.*'.preg_quote($contact->phoneLabel(), '/').'.*Conversar.*<\/tr>/s', $html);
+    }
+
+    public function test_linha_inteira_abre_a_ficha_e_conversar_fica_acima(): void
+    {
+        $contact = Contact::factory()->create();
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('/<button[^>]*wire:click="select\('.$contact->id.'\)"[^>]*class="[^"]*after:inset-0/', $html);
+        $this->assertMatchesRegularExpression('/<td[^>]*class="[^"]*\bz-10\b[^"]*"[^>]*data-flux-cell>(?:(?!<\/td>).)*Conversar/s', $html);
+    }
+
+    public function test_celula_das_etiquetas_fica_acima_da_area_de_clique(): void
+    {
+        $contact = Contact::factory()->create();
+        $contact->tags()->attach(Tag::factory()->create());
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('/<td[^>]*class="[^"]*\bz-10\b[^"]*"[^>]*data-flux-cell>(?:(?!<\/td>).)*data-testid="contact-chip"/s', $html);
+    }
+
+    public function test_tabela_ocupa_o_cartao_e_trunca_nome_longo(): void
+    {
+        $name = str_repeat('Maria Aparecida Fernanda ', 4);
+        Contact::factory()->create(['name' => $name, 'company' => 'Distribuidora Longa']);
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('/<table[^>]*class="[^"]*\bw-full\b[^"]*"[^>]*data-testid="contacts-table"|<table[^>]*data-testid="contacts-table"[^>]*class="[^"]*\bw-full\b/', $html);
+        $this->assertMatchesRegularExpression('/<span[^>]*class="[^"]*\btruncate\b[^"]*"[^>]*title="'.preg_quote(e(trim($name)), '/').'"|<span[^>]*title="'.preg_quote(e(trim($name)), '/').'"[^>]*class="[^"]*\btruncate\b/', $html);
+        $this->assertMatchesRegularExpression('/<span[^>]*title="Distribuidora Longa"/', $html);
+        $this->assertMatchesRegularExpression('/<th[^>]*class="[^"]*\brelative\b[^"]*"[^>]*data-flux-column>\s*<div[^>]*>\s*<span class="sr-only">Ações<\/span>/', $html);
+    }
+
+    public function test_linha_selecionada_usa_muted(): void
+    {
+        $contact = Contact::factory()->create();
+
+        $html = $this->page()->set('selectedId', $contact->id)->html();
+
+        preg_match('/<tr[^>]*wire:key="contact-'.$contact->id.'"[^>]*>/', $html, $row);
+        $this->assertMatchesRegularExpression('/class="(?:[^"]*\s)?bg-muted[\s"]/', $row[0] ?? '');
+        foreach (glob(resource_path('views/livewire/contacts/*.blade.php')) ?: [] as $view) {
+            $this->assertStringNotContainsString('surface-2', (string) file_get_contents($view), $view);
+        }
+    }
+
+    public function test_pagina_usa_a_largura_de_gestao(): void
+    {
+        $this->page()->assertSeeHtml('max-w-[120rem]')->assertDontSeeHtml('max-w-4xl');
+    }
+
+    public function test_busca_sem_resultado_mostra_estado_vazio_na_tabela(): void
+    {
+        $html = $this->page()->set('search', 'ninguém')->html();
+
+        $this->assertMatchesRegularExpression('/data-testid="contacts-table".*<tbody.*Nenhum contato encontrado\..*<\/tbody>/s', $html);
     }
 
     public function test_novo_contato_exige_nome(): void

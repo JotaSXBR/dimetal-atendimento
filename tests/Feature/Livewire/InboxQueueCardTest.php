@@ -63,6 +63,18 @@ class InboxQueueCardTest extends TestCase
         return $m[1];
     }
 
+    /** O único elemento do HTML que casa com o XPath. */
+    private function node(string $html, string $xpath): \DOMElement
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$html);
+        $nodes = (new \DOMXPath($dom))->query($xpath);
+
+        $this->assertSame(1, $nodes->length, "{$xpath} deveria casar um elemento");
+
+        return $nodes->item(0);
+    }
+
     public function test_lista_da_fila_e_relative_para_o_sr_only_nao_escapar_do_corte(): void
     {
         $this->ticket();
@@ -88,7 +100,43 @@ class InboxQueueCardTest extends TestCase
         return new \DOMXPath($dom);
     }
 
-    public function test_atendente_fica_na_coluna_da_direita_entre_o_setor_e_as_nao_lidas(): void
+    /** Arranjo do Pencil: o tempo na linha do nome; setor, atendente e não lidas na linha do selo (sem coluna da direita). */
+    public function test_tempo_na_linha_do_nome_e_setor_atendente_e_nao_lidas_na_linha_do_selo(): void
+    {
+        $vendas = Sector::factory()->create(['name' => 'Vendas']);
+        $suporte = Sector::factory()->create(['name' => 'Suporte']);
+        $ticket = $this->ticket([
+            'contact_id' => Contact::factory()->create(['name' => 'Rosana Prado'])->id,
+            'sector_id' => $vendas->id,
+            'status' => TicketStatus::EM_ATENDIMENTO,
+            'assigned_user_id' => User::factory()->create(['name' => 'Marina Souza'])->id,
+        ]);
+        Message::factory()->for($ticket)->create(['direction' => MessageDirection::IN, 'sent_at' => now()->subMinutes(3)]);
+        $this->ticket(['sector_id' => $suporte->id, 'contact_id' => Contact::factory()->create(['name' => 'Outro'])->id]);
+
+        $xpath = $this->xpath($this->html());
+        $card = '//button[@*[name()="wire:key"]="ticket-'.$ticket->id.'"]';
+
+        $this->assertSame(1, $xpath->query($card.'//*[@data-testid="card-time"]/parent::*/span[normalize-space()="Rosana Prado"]')->length, 'o tempo divide a linha com o nome');
+        $group = $card.'//*[@data-testid="card-status"]/parent::*/*[@data-testid="card-extras"]';
+        $this->assertSame(1, $xpath->query($group)->length, 'o grupo à direita fica na linha do selo');
+        $this->assertSame(1, $xpath->query($group.'/*[@data-testid="card-unread"]')->length, 'não lidas no grupo');
+        $this->assertSame(1, $xpath->query($group.'/*[@data-testid="card-sector"]')->length, 'setor no grupo');
+        $this->assertSame(1, $xpath->query($group.'/*[.//*[@data-testid="card-assignee-name"]]')->length, 'atendente no grupo');
+    }
+
+    /** Sem setor, atendente nem não lidas, o grupo da direita não existe (nada de espaço vazio na linha do selo). */
+    public function test_sem_setor_atendente_nem_nao_lidas_a_linha_do_selo_nao_tem_o_grupo(): void
+    {
+        $this->ticket();
+
+        $xpath = $this->xpath($this->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-testid="card-status"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-testid="card-extras"]')->length);
+    }
+
+    public function test_atendente_fica_entre_o_setor_e_as_nao_lidas(): void
     {
         $vendas = Sector::factory()->create(['name' => 'Vendas']);
         $suporte = Sector::factory()->create(['name' => 'Suporte']);
@@ -102,7 +150,7 @@ class InboxQueueCardTest extends TestCase
         $this->assertNotContains(false, $positions);
         $sorted = $positions;
         sort($sorted);
-        $this->assertSame($sorted, $positions, 'a coluna da direita vai de hora, setor, atendente a não lidas');
+        $this->assertSame($sorted, $positions, 'a leitura vai de hora, setor, atendente a não lidas');
         $this->assertStringNotContainsString('data-testid="card-meta"', $html, 'com um só canal a linha de baixo some');
     }
 
@@ -350,6 +398,66 @@ class InboxQueueCardTest extends TestCase
 
         $this->assertStringContainsString('data-testid="card-time"', $html);
         $this->assertStringNotContainsString('data-testid="card-meta"', $html);
+    }
+
+    public function test_cartao_mostra_status_e_protocolo(): void
+    {
+        $ticket = $this->ticket();
+
+        $html = $this->html();
+
+        $this->assertStringContainsString('data-status-tone="'.TicketStatus::AGUARDANDO->tone().'"', $this->part($html, 'card-status', tag: true));
+        $this->assertSame('Aguardando', trim($this->node($html, '//*[@data-testid="card-status"]')->textContent));
+        $this->assertSame($ticket->protocol, trim($this->part($html, 'card-protocol')));
+        $this->assertStringContainsString('font-mono', $this->part($html, 'card-protocol', tag: true));
+    }
+
+    /** Nada some: sem espaço ao lado do selo, o protocolo desce de linha em vez de ser cortado (na fila e no histórico recente). */
+    public function test_protocolo_desce_de_linha_em_vez_de_ser_cortado(): void
+    {
+        $this->ticket();
+        $this->ticket(['status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subHour()]);
+        $user = User::factory()->create(['role' => UserRole::ADMIN]);
+
+        foreach (['todos', 'encerrados'] as $tab) {
+            $protocol = $this->node(Livewire::actingAs($user)->test(Inbox::class, ['tab' => $tab])->html(), '//*[@data-testid="card-protocol"]');
+            $tokens = fn (\DOMElement $el): array => preg_split('/\s+/', trim($el->getAttribute('class')));
+
+            $this->assertNotContains('truncate', $tokens($protocol), $tab);
+            $this->assertContains('shrink-0', $tokens($protocol), $tab);
+            $this->assertInstanceOf(\DOMElement::class, $protocol->parentNode);
+            $this->assertContains('flex-wrap', $tokens($protocol->parentNode), $tab);
+        }
+    }
+
+    public function test_cartao_selecionado_usa_muted(): void
+    {
+        $ticket = $this->ticket();
+        $other = $this->ticket(['contact_id' => Contact::factory()->create(['name' => 'Outro'])->id]);
+
+        $html = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class)->call('select', $ticket->id)->html();
+        $classes = fn (Ticket $t): array => preg_split('/\s+/', trim($this->node($html, '//button[@*[name()="wire:key"]="ticket-'.$t->id.'"]')->getAttribute('class')));
+
+        $this->assertContains('bg-muted', $classes($ticket));
+        $this->assertNotContains('bg-muted', $classes($other));
+    }
+
+    public function test_titulo_do_grupo_em_caixa_alta(): void
+    {
+        $this->ticket();
+
+        $this->assertMatchesRegularExpression('/<p class="[^"]*uppercase[^"]*tracking-wider[^"]*font-bold[^"]*text-warn[^"]*">\s*Aguardando · 1/', $this->html());
+    }
+
+    /** O histórico recente (Mais > Encerrados) também mostra o selo, aqui o de Encerrado. */
+    public function test_cartao_do_historico_recente_mostra_selo_de_encerrado(): void
+    {
+        $ticket = $this->ticket(['status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subHour()]);
+
+        $html = Livewire::actingAs(User::factory()->create(['role' => UserRole::ADMIN]))->test(Inbox::class, ['tab' => 'encerrados'])->html();
+
+        $this->assertSame('Encerrado', trim($this->node($html, '//*[@data-testid="card-status"]')->textContent));
+        $this->assertSame($ticket->protocol, trim($this->part($html, 'card-protocol')));
     }
 
     public function test_sla_estourado_vira_ponto_com_texto_para_leitor_de_tela(): void

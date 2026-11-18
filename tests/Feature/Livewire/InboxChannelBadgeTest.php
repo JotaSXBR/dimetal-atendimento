@@ -55,7 +55,7 @@ class InboxChannelBadgeTest extends TestCase
 
         $header = $screen->call('select', $ticket->id)->html();
         $this->assertStringContainsString($ticket->protocol.' ·', $header);
-        // Só o texto visível (atributos como `data-line` e `title` repetem a linha): o item da lista e o cabeçalho. O painel de detalhes não repete mais o canal.
-        $this->assertSame(2, preg_match_all('/Suporte · \(16\) 98888-7777/', strip_tags($header)), 'item da lista e cabeçalho');
+        // Só o texto visível (atributos como `data-line` e `title` repetem a linha): o item da lista, o cabeçalho e o bloco Ticket do painel.
+        $this->assertSame(3, preg_match_all('/Suporte · \(16\) 98888-7777/', strip_tags($header)), 'item da lista, cabeçalho e painel');
     }
 }

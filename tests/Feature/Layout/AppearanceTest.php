@@ -37,4 +37,14 @@ class AppearanceTest extends TestCase
             $this->assertStringContainsString($label, $html);
         }
     }
+
+    public function test_aparencia_no_painel_do_desenho(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->get(route('appearance.edit'))->assertOk()->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        $panel = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="Tema"]]';
+        $this->assertSame(1, (new \DOMXPath($dom))->query($panel.'//*[@data-flux-radio-group-segmented]')->length);
+    }
 }

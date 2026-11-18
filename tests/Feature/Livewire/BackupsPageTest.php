@@ -115,7 +115,9 @@ class BackupsPageTest extends TestCase
         Livewire::actingAs($this->admin())->test(Backups::class)
             ->assertOk()
             ->assertSee('Não foi possível ler o bucket de backups')
-            ->assertDontSee('credencial recusada');
+            ->assertDontSee('credencial recusada')
+            // Sem arquivos para listar, o painel da lista sairia só com o cabeçalho: o aviso já explica.
+            ->assertDontSee('Backups guardados');
     }
 
     public function test_quem_nao_e_admin_nao_executa(): void
@@ -193,5 +195,20 @@ class BackupsPageTest extends TestCase
         $log = AuditLog::query()->sole();
         $this->assertSame('backup.manual_requested', $log->action);
         $this->assertSame($admin->id, $log->actor_user_id);
+    }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_backups_vazio_no_painel_do_desenho(): void
+    {
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(Backups::class)->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="Backups guardados"]]//*[@data-empty-state-icon]')->length);
     }
 }

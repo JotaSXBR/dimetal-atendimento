@@ -20,6 +20,7 @@
     --color-line: #e4e4e7; /* zinc-200 */
     --color-canvas: #fafafa; /* zinc-50 */
     --color-surface: #ffffff;
+    --color-muted: #f4f4f5; /* zinc-100: fundo discreto que aparece sobre surface */
     --color-accent: #27272a; /* zinc-800 */
     --color-accent-content: #27272a; /* zinc-800: texto/link de marca */
     --color-accent-foreground: #ffffff; /* texto sobre a marca */
@@ -80,6 +81,7 @@ select:focus[data-flux-control] {
         --color-line: #3f3f46; /* zinc-700 */
         --color-canvas: #18181b; /* zinc-900 */
         --color-surface: #27272a; /* zinc-800 */
+        --color-muted: #303036; /* entre zinc-800 e zinc-700, como no Pencil */
         --color-accent: #ffffff;
         --color-accent-content: #ffffff;
         --color-accent-foreground: #27272a; /* zinc-800 */
@@ -193,10 +195,13 @@ flow-node { display: block; }
     gap: 6px;
     padding: 8px 10px;
     border-radius: 8px 8px 0 0;
-    background: color-mix(in srgb, var(--flow-cat) 14%, var(--color-surface));
-    color: var(--flow-cat);
+    border-bottom: 1px solid var(--color-line);
+    background: var(--color-canvas);
+    color: var(--color-ink);
     font-weight: 600;
 }
+/* A categoria do bloco aparece só no ícone (o SVG desenha com currentColor). */
+.flow-head svg { flex-shrink: 0; width: 14px; height: 14px; color: var(--flow-cat); }
 .flow-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink); }
 
 .flow-body { padding: 6px 10px; color: var(--color-ink-2); overflow-wrap: anywhere; }
@@ -219,4 +224,9 @@ flow-node { display: block; }
 /* Faixa de aviso dispensada (resources/js/alert-dismiss.js): some da tela e do leitor de tela, mas fica no DOM (o som repetido depende dela). */
 [data-dismissed] {
     display: none !important;
+}
+
+/* A barra de rolagem da janela aparece e some entre páginas; sem reservá-la, o bloco centralizado (submenu das Configurações) se deslocava pela metade da largura dela. */
+html:has([data-page-layout]) {
+    scrollbar-gutter: stable;
 }

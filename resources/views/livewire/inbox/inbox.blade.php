@@ -71,7 +71,7 @@
                         type="button"
                         wire:click="select({{ $item->id }})"
                         wire:key="closed-{{ $item->id }}"
-                        class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
+                        class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-muted {{ $ticketId === $item->id ? 'bg-muted' : '' }}"
                     >
                         <x-avatar :src="$item->contact->avatarUrl()" :name="$item->contact->label()" shape="round" size="lg" decorative />
 
@@ -80,7 +80,11 @@
                                 <span class="truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
                                 <span class="font-mono text-xs text-ink-3">{{ $item->closed_at?->timezone($tz)->format('d/m H:i') }}</span>
                             </span>
-                            <span class="mt-0.5 block truncate text-xs text-ink-2">{{ $item->protocol }} · {{ $item->close_outcome?->label() ?? $item->closed_reason?->label() }}</span>
+                            <span class="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-2">
+                                <x-status-badge :status="$item->status" data-testid="card-status" />
+                                <span data-testid="card-protocol" class="shrink-0 font-mono text-xs text-ink-3">{{ $item->protocol }}</span>
+                                <span class="truncate">{{ $item->close_outcome?->label() ?? $item->closed_reason?->label() }}</span>
+                            </span>
                         </span>
                     </button>
                 @endforeach
@@ -97,7 +101,7 @@
             @else
             @foreach ([['Pendente', $pending, 'text-ink-3'], ['Aguardando', $waiting, 'text-warn'], ['Em atendimento', $active, 'text-accent-content']] as [$heading, $group, $tone])
                 @if ($group->isNotEmpty())
-                    <p class="px-4 pt-4 pb-1 text-xs font-semibold {{ $tone }}">
+                    <p class="px-4 pt-4 pb-1 text-xs uppercase tracking-wider font-bold {{ $tone }}">
                         {{ $heading }} · {{ $group->count() }}
                     </p>
 
@@ -106,7 +110,7 @@
                             type="button"
                             wire:click="select({{ $item->id }})"
                             wire:key="ticket-{{ $item->id }}"
-                            class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-canvas {{ $ticketId === $item->id ? 'bg-canvas' : '' }}"
+                            class="flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-muted {{ $ticketId === $item->id ? 'bg-muted' : '' }}"
                         >
                             @php
                                 $sla = $item->slaState();
@@ -117,6 +121,8 @@
                                 $hasMeta = $showChannel;
                                 $at = $item->waiting_since ?? $item->last_inbound_at ?? $item->opened_at;
                                 $unread = (int) $item->getAttribute('unread');
+                                $showSectorChip = $showSector && $item->sector;
+                                $showAssignee = $item->assignee && $tab !== 'meus';
                             @endphp
                             <span class="relative shrink-0">
                                 <x-avatar :src="$item->contact->avatarUrl()" :name="$item->contact->label()" shape="round" size="lg" decorative />
@@ -130,7 +136,10 @@
                             </span>
 
                             <span class="min-w-0 flex-1">
-                                <span class="block truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
+                                <span class="flex items-baseline justify-between gap-2">
+                                    <span class="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{{ $item->contact->label() }}</span>
+                                    <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="shrink-0 font-mono text-xs text-ink-3">{{ \App\Support\WaitLabel::narrow($at, now()) }}</span>
+                                </span>
                                 @if ($chips->isNotEmpty())
                                     <span class="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
                                         @foreach ($chipsShown as $tag)
@@ -152,26 +161,31 @@
                                         @endif
                                     </span>
                                 @endif
-                            </span>
-
-                            <span class="flex shrink-0 flex-col items-end gap-1">
-                                <span data-testid="card-time" x-data="relativeTime('{{ $at->toIso8601String() }}', 'narrow')" x-text="label" class="font-mono text-xs text-ink-3">{{ \App\Support\WaitLabel::narrow($at, now()) }}</span>
-                                @if ($showSector && $item->sector)
-                                    <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-xs text-ink-2">{{ $item->sector->name }}</span>
-                                @endif
-                                @if ($item->assignee && $tab !== 'meus')
-                                    <span class="inline-flex max-w-24 items-center gap-1 text-xs text-ink-2">
-                                        <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
-                                        @php
-                                            $fullName = trim((string) preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', $item->assignee->name));
-                                        @endphp
-                                        <span class="sr-only">Atendente: {{ $fullName }}</span>
-                                        <span data-testid="card-assignee-name" aria-hidden="true" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ preg_split('/[\s\x{00A0}]+/u', $fullName)[0] ?: $fullName }}</span>
-                                    </span>
-                                @endif
-                                @if ($unread > 0)
-                                    <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-xs font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>
-                                @endif
+                                <span class="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                    <x-status-badge :status="$item->status" data-testid="card-status" />
+                                    <span data-testid="card-protocol" class="shrink-0 font-mono text-xs text-ink-3">{{ $item->protocol }}</span>
+                                    @if ($showSectorChip || $showAssignee || $unread > 0)
+                                        {{-- O que era a coluna da direita: à direita da linha do selo, e quando quebra continua à direita. --}}
+                                        <span data-testid="card-extras" class="ms-auto flex flex-wrap items-center justify-end gap-2">
+                                            @if ($showSectorChip)
+                                                <span data-testid="card-sector" class="max-w-24 truncate rounded bg-canvas px-1.5 py-0.5 text-xs text-ink-2">{{ $item->sector->name }}</span>
+                                            @endif
+                                            @if ($showAssignee)
+                                                <span class="inline-flex max-w-24 items-center gap-1 text-xs text-ink-2">
+                                                    <x-avatar :src="$item->assignee->avatarUrl()" :name="$item->assignee->name" shape="round" size="xs" decorative />
+                                                    @php
+                                                        $fullName = trim((string) preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', $item->assignee->name));
+                                                    @endphp
+                                                    <span class="sr-only">Atendente: {{ $fullName }}</span>
+                                                    <span data-testid="card-assignee-name" aria-hidden="true" title="{{ $item->assignee->name }}" class="max-w-16 truncate">{{ preg_split('/[\s\x{00A0}]+/u', $fullName)[0] ?: $fullName }}</span>
+                                                </span>
+                                            @endif
+                                            @if ($unread > 0)
+                                                <span data-testid="card-unread" class="min-w-5 rounded-full bg-accent px-1.5 text-center font-mono text-xs font-semibold text-accent-foreground"><span aria-hidden="true">{{ $unread > 99 ? '99+' : $unread }}</span><span class="sr-only">mensagens não lidas: {{ $unread }}</span></span>
+                                            @endif
+                                        </span>
+                                    @endif
+                                </span>
                             </span>
                         </button>
                     @endforeach
@@ -205,11 +219,17 @@
                     <div data-testid="header-title" class="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-ink xl:flex-nowrap">
                         <span class="max-w-full min-w-0 truncate">{{ $name }}</span>
                         <x-status-badge :status="$ticket->status" class="shrink-0" />
+                    </div>
+                    @php
+                        $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
+                    @endphp
+                    {{-- SLA no começo da linha de baixo (Pencil). Coluna estreita: o protocolo desce de linha (min-w-24) em vez de sumir; o SLA quebra o texto em vez de estourar a largura. --}}
+                    <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                         @if ($ticket->status !== \App\Enums\TicketStatus::ENCERRADO && $ticket->waiting_since !== null && $ticket->sla_due_at !== null)
                             @php
                                 $slaState = $ticket->slaState();
                             @endphp
-                            <span data-testid="header-sla" class="text-xs font-medium whitespace-nowrap {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
+                            <span data-testid="header-sla" class="min-w-0 text-xs font-medium {{ $slaState === 'estourou' ? 'text-danger' : ($slaState === 'perto' ? 'text-warn' : 'text-ink') }}" role="status">
                                 @if ($slaState === 'estourou')
                                     SLA estourado: venceu {{ app(\App\Services\Inbox\BusinessHours::class)->whenLabel($ticket->sla_due_at, now()) }}
                                 @else
@@ -217,14 +237,11 @@
                                 @endif
                             </span>
                         @endif
-                    </div>
-                    @php
-                        $line = $ticket->protocol.' · '.$ticket->contact->phoneLabel().' · '.$ticket->channel->name.($showChannel ? ' · '.($ticket->channel->phoneLabel() ?? 'sem número') : '').' · '.($ticket->sector?->name ?? 'Fila geral').' · '.($ticket->assignee?->name ?? 'Não atribuído');
-                    @endphp
-                    {{-- `div`, não `p`: o conteúdo do tooltip do Flux é um bloco, e bloco dentro de `p` faz o navegador fechar o `p` antes dele. --}}
-                    <div data-testid="header-line" data-line="{{ $line }}" title="{{ $line }}" class="min-w-0 font-mono text-xs truncate text-ink-3">
-                        <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
-                        <span>{{ mb_substr($line, mb_strlen($ticket->protocol)) }}</span>
+                        {{-- `div`, não `p`: o conteúdo do tooltip do Flux é um bloco, e bloco dentro de `p` faz o navegador fechar o `p` antes dele. --}}
+                        <div data-testid="header-line" data-line="{{ $line }}" title="{{ $line }}" class="min-w-24 flex-1 font-mono text-xs truncate text-ink-3">
+                            <flux:tooltip content="Aberto em {{ $ticket->opened_at->timezone($tz)->format('d/m/Y H:i') }}"><span tabindex="0">{{ $ticket->protocol }}</span></flux:tooltip>
+                            <span>{{ mb_substr($line, mb_strlen($ticket->protocol)) }}</span>
+                        </div>
                     </div>
                     @if ($ticket->status === \App\Enums\TicketStatus::ENCERRADO)
                         <p class="max-h-16 overflow-y-auto text-xs break-words text-ink-2">
@@ -243,6 +260,11 @@
                     <flux:button size="sm" variant="subtle" icon="information-circle" class="2xl:hidden" x-on:click="sheet = true" aria-controls="ticket-details">Detalhes</flux:button>
                     <flux:button size="sm" variant="subtle" icon="information-circle" class="max-2xl:hidden" x-on:click="toggle()" aria-controls="ticket-details" x-bind:aria-expanded="details.toString()" x-bind:aria-label="details ? 'Recolher detalhes' : 'Mostrar detalhes'" />
 
+                    {{-- Transferir avulso só com a coluna larga; estreita, fica no "…". --}}
+                    @if ($canTransfer)
+                        <flux:button data-testid="header-transfer" size="sm" icon="arrows-right-left" class="@max-3xl:hidden" wire:click="openPanel('transfer')">Transferir</flux:button>
+                    @endif
+
                     @if ($canClaim)
                         <flux:button variant="primary" size="sm" icon="check" wire:click="claim" wire:loading.attr="disabled">Assumir</flux:button>
                     @endif
@@ -251,14 +273,14 @@
                         <flux:button size="sm" icon="arrow-uturn-left" wire:click="takeover({{ $ticket->assigned_user_id }})" data-confirm="Tomar este ticket de {{ $ticket->assignee?->name }}?" data-confirm-label="Tomar" data-confirm-tone="primary">Tomar</flux:button>
                     @endif
 
-                    {{-- Ações menos frequentes num menu: o cabeçalho fica com Assumir/Tomar/Encerrar e libera espaço em coluna estreita. Cada item respeita a mesma permissão de antes. --}}
+                    {{-- Ações menos frequentes num menu: Reatribuir sempre; Transferir só com a coluna estreita. Sem Reatribuir, o "…" some na coluna larga. Cada item respeita a mesma permissão de antes. --}}
                     @if ($canTransfer || $canReassign)
-                        <flux:dropdown position="bottom" align="end">
+                        <flux:dropdown position="bottom" align="end" @class(['@3xl:hidden' => ! $canReassign])>
                             <flux:button size="sm" icon="ellipsis-horizontal" aria-label="Mais ações" tooltip="Mais ações" />
 
                             <flux:menu data-testid="header-more-menu">
                                 @if ($canTransfer)
-                                    <flux:menu.item icon="arrows-right-left" wire:click="openPanel('transfer')">Transferir</flux:menu.item>
+                                    <flux:menu.item icon="arrows-right-left" class="@3xl:hidden" wire:click="openPanel('transfer')">Transferir</flux:menu.item>
                                 @endif
 
                                 @if ($canReassign)

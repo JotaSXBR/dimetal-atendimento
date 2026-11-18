@@ -64,7 +64,7 @@ class SecurityTest extends TestCase
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get(route('security.edit'))
             ->assertOk()
-            ->assertSee('Alterar senha')
+            ->assertSee('Senha atual')
             ->assertDontSee('Gerencie as suas chaves de acesso para entrar sem senha')
             ->assertDontSee('Adicione uma chave de acesso para entrar sem senha')
             ->assertDontSee('Verificação em duas etapas');
@@ -127,5 +127,51 @@ class SecurityTest extends TestCase
             ->call('updatePassword');
 
         $response->assertHasErrors(['current_password']);
+    }
+
+    public function test_seguranca_no_painel_do_desenho(): void
+    {
+        $user = User::factory()->create();
+        $xpath = $this->xpath($this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])->get(route('security.edit'))->assertOk()->getContent());
+
+        $this->assertSame(1, $xpath->query($this->panel('Atualizar senha').'//form//*[@data-test="update-password-button"]')->length);
+        $this->assertSame(1, $xpath->query($this->panel('Verificação em duas etapas').'[contains(., "Ativar 2FA")]')->length);
+        $this->assertSame(1, $xpath->query($this->panel('Chaves de acesso').'[contains(., "Nenhuma chave de acesso ainda")]')->length);
+    }
+
+    public function test_codigos_de_recuperacao_sao_secao_do_painel_e_nao_um_cartao_dentro_dele(): void
+    {
+        $user = User::factory()->withTwoFactor()->create();
+        $xpath = $this->xpath($this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])->get(route('security.edit'))->assertOk()->getContent());
+
+        $panel = $this->panel('Verificação em duas etapas');
+        $this->assertSame(1, $xpath->query($panel.'[contains(., "Desativar 2FA")]')->length);
+        $this->assertSame(0, $xpath->query($panel.'//*[contains(concat(" ", @class, " "), " rounded-xl ") or contains(concat(" ", @class, " "), " shadow-sm ")]')->length);
+    }
+
+    /** O Flux pinta zinc nos próprios controles; a regra vale para o markup nosso da aba. */
+    public function test_seguranca_sem_zinc_cru_no_markup_da_aba(): void
+    {
+        foreach ([
+            'pages/settings/⚡security.blade.php',
+            'pages/settings/⚡two-factor-setup-modal.blade.php',
+            'pages/settings/two-factor/⚡recovery-codes.blade.php',
+            'components/passkey-registration.blade.php',
+        ] as $file) {
+            $this->assertSame(0, substr_count((string) file_get_contents(resource_path('views/'.$file)), 'zinc-'), $file);
+        }
+    }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    private function panel(string $title): string
+    {
+        return '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="'.$title.'"]]';
     }
 }

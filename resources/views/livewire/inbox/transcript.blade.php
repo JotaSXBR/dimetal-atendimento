@@ -49,21 +49,24 @@
             $audio => 'audio',
             default => 'below',
         };
-        // Com o menu, o botão (24 px a 4 px da borda) fica no padding: pe-9 (36 px) reserva o espaço e nem texto nem horário passam por baixo dele.
+        // Folga igual dos dois lados (px-3). Com mouse o botão cobre o canto por cima do conteúdo, com degradê, como no WhatsApp Web; só no toque (sem hover) pe-9 reserva o espaço dele.
         $hasMenu = ! $readonly && ! $message->revoked_at && (auth()->user()?->can('reply', $message) ?? false);
+        // Degradê só funciona sobre texto; com citação ou mídia no topo da bolha (sem rótulo antes) o botão vira um círculo flutuante.
+        $menuOverMedia = $message->origin !== \App\Enums\MessageOrigin::BOT && ! $outside
+            && ($message->quoted_snapshot || $message->hasMedia() || in_array($message->type, ['view_once', 'location', 'contact'], true));
         $resend = $out && ! $readonly && $message->delivery_status === \App\Enums\DeliveryStatus::FAILED
             ? app(\App\Services\Inbox\ResendTicketMessage::class)->kind($message, auth()->user())
             : 'none';
     @endphp
 
     <div wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" class="group/row flex items-center gap-1 {{ $out ? 'justify-end' : 'justify-start' }} {{ $message->reactions->isNotEmpty() ? 'mb-3' : '' }}">
-        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl py-2 text-sm text-ink {{ $hasMenu ? 'ps-3 pe-9' : 'px-3' }} {{ match (true) {
+        <div x-data="messageEdit" class="group relative max-w-[75%] rounded-xl px-3 py-2 text-sm text-ink {{ $hasMenu ? '[@media(hover:none)]:pe-9' : '' }} {{ match (true) {
             // Cada tipo tem a sua cara: cliente (branca com borda), nossa (neutro suave), bot (tom do bot) e enviada pelo celular
             // (tracejada). O âmbar fica só para nota interna e aviso.
-            $outside => 'border border-dashed border-ink-3 bg-surface',
-            $message->origin === \App\Enums\MessageOrigin::BOT => 'bg-bot/15',
-            $out => 'bg-accent-soft',
-            default => 'border border-line bg-surface',
+            $outside => 'border border-dashed border-ink-3 bg-(--bubble-bg) [--bubble-bg:var(--color-surface)]',
+            $message->origin === \App\Enums\MessageOrigin::BOT => 'bg-(--bubble-bg) [--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-canvas))]',
+            $out => 'bg-(--bubble-bg) [--bubble-bg:var(--color-accent-soft)]',
+            default => 'border border-line bg-(--bubble-bg) [--bubble-bg:var(--color-surface)]',
         } }}">
             @if ($message->origin === \App\Enums\MessageOrigin::BOT)
                 <p class="mb-0.5 font-mono text-xs tracking-wide text-bot uppercase">Automação · resposta automática</p>
@@ -144,7 +147,7 @@
                     x-on:resize.window="open = false"
                     class="absolute end-1 top-1"
                 >
-                    <button type="button" data-testid="message-menu-button" x-ref="button" x-on:click="toggle()" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="inline-flex min-h-6 min-w-6 items-center justify-center rounded bg-surface/80 px-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-ink focus-visible:opacity-100 [@media(hover:none)]:opacity-100">
+                    <button type="button" data-testid="message-menu-button" x-ref="button" x-on:click="toggle()" x-bind:aria-expanded="open" aria-haspopup="menu" aria-label="Ações da mensagem" class="inline-flex min-h-6 min-w-6 items-center justify-center {{ $menuOverMedia ? 'rounded-full bg-surface shadow-sm' : 'rounded bg-[linear-gradient(to_right,transparent,var(--bubble-bg)_40%)] ps-3 pe-1' }} text-ink-3 pointer-events-none opacity-0 translate-x-1 transition-[opacity,translate] duration-(--duration-base) ease-(--ease-out) group-hover:translate-x-0 group-hover:opacity-100 hover:text-ink focus-visible:translate-x-0 focus-visible:opacity-100 motion-reduce:translate-x-0 [@media(hover:none)]:translate-x-0 [@media(hover:none)]:opacity-100 group-hover:pointer-events-auto focus-visible:pointer-events-auto [@media(hover:none)]:pointer-events-auto">
                         <svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
                     </button>
                     <div x-ref="menu" x-cloak x-show="open" x-bind:style="style" x-bind:class="placed ? 'opacity-100 scale-100' : 'opacity-0 scale-95'" x-transition:leave="transition duration-100 ease-out" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" x-on:click.outside="open = false" x-on:click="open = false" role="menu" class="fixed z-50 min-w-36 rounded-md border border-line bg-surface p-1 text-xs shadow-md transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]">

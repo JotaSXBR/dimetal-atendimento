@@ -212,6 +212,39 @@ class AutomationEditorTest extends TestCase
             ->assertSee('rodape_sair');
     }
 
+    public function test_editor_com_cabecalho_do_desenho(): void
+    {
+        $html = Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html();
+
+        $this->assertMatchesRegularExpression('/<header[^>]*data-editor-header[^>]*>(.*?)<\/header>/s', $html);
+        preg_match('/<header[^>]*data-editor-header[^>]*>(.*?)<\/header>/s', $html, $header);
+
+        $this->assertStringContainsString('href="'.route('automacao').'"', $header[1]);
+        $this->assertMatchesRegularExpression('/<h1[^>]*>\s*Triagem\s*<\/h1>/', $header[1]);
+
+        foreach (['Salvar rascunho', 'Validar', 'Testar', 'Publicar'] as $action) {
+            $this->assertStringContainsString($action, $header[1]);
+        }
+    }
+
+    /** Ferramenta de tela cheia: o layout sem margem (o da Fila) dá a altura; os avisos do topo não fazem a página rolar. */
+    public function test_editor_ocupa_a_altura_da_tela_sem_rolar_a_pagina(): void
+    {
+        $html = $this->actingAs($this->user)->get('/automacao/'.$this->workflow->id)->assertOk()->getContent();
+
+        $this->assertStringContainsString('flex h-[calc(100dvh-3.5rem)] flex-col !p-0 lg:h-dvh', $html);
+        $this->assertStringNotContainsString('h-[calc(100dvh-4rem)]', $html);
+    }
+
+    /** Com a altura fixa, a lista de erros longa não pode espremer o canvas até sumir. */
+    public function test_lista_de_erros_tem_teto_e_o_canvas_tem_altura_minima(): void
+    {
+        $html = Livewire::actingAs($this->user)->test(Editor::class, ['workflow' => $this->workflow])->html();
+
+        $this->assertMatchesRegularExpression('/<div x-show="errors.length (?:>|&gt;) 0"[^>]*class="[^"]*max-h-32[^"]*overflow-y-auto/', $html);
+        $this->assertStringContainsString('<div class="flex min-h-64 flex-1">', $html);
+    }
+
     public function test_atendente_nao_chama_as_acoes(): void
     {
         Livewire::actingAs(User::factory()->create(['role' => UserRole::ATENDENTE]))

@@ -63,7 +63,7 @@ class ContactCardCompactTest extends TestCase
         $tickets = $this->past(7);
 
         $card = $this->card(['compact' => true])
-            ->assertSee('Anteriores (7)')
+            ->assertSee('Atendimentos anteriores (7)')
             ->assertSee('Ver todos no Histórico')
             ->assertSeeHtml('contactId='.$this->contact->id);
 
@@ -77,7 +77,7 @@ class ContactCardCompactTest extends TestCase
     {
         $this->past(5);
 
-        $this->card(['compact' => true])->assertSee('Anteriores (5)')->assertDontSee('Ver todos no Histórico');
+        $this->card(['compact' => true])->assertSee('Atendimentos anteriores (5)')->assertDontSee('Ver todos no Histórico');
     }
 
     public function test_sem_anteriores_o_bloco_vem_fechado(): void
@@ -94,7 +94,7 @@ class ContactCardCompactTest extends TestCase
 
         $html = $this->card(['compact' => true])->html();
 
-        $this->assertStringContainsString('Anteriores (2)', $html);
+        $this->assertStringContainsString('Atendimentos anteriores (2)', $html);
         $this->assertDoesNotMatchRegularExpression('/\sopen[\s>]/', $this->detailsTag($html, 'details-history'));
     }
 
@@ -151,9 +151,9 @@ class ContactCardCompactTest extends TestCase
         $this->card(['compact' => true])->assertSee('Reenviar');
     }
 
-    public function test_em_contatos_o_formulario_continua_aberto(): void
+    public function test_em_contatos_abre_na_ficha_de_leitura_com_editar(): void
     {
-        $this->card()->assertSee('Salvar contato')->assertDontSee('Editar contato');
+        $this->card()->assertSee('Editar contato')->assertDontSee('Salvar contato');
     }
 
     public function test_somente_leitura_nao_edita_nem_salva(): void
@@ -219,8 +219,8 @@ class ContactCardCompactTest extends TestCase
 
         $html = $this->card()->html();
 
-        $this->assertMatchesRegularExpression('#<a href="[^"]*/historico\?ticketId='.$closed->id.'"[^>]*>\s*2026-000951\s*</a>#', $html);
-        $this->assertMatchesRegularExpression('#<a href="[^"]*/inbox\?ticket='.$open->id.'"[^>]*>\s*2026-000952\s*</a>#', $html);
+        $this->assertMatchesRegularExpression('#<a\s+href="[^"]*/historico\?ticketId='.$closed->id.'"[^>]*>(?:(?!</a>).)*2026-000951#s', $html);
+        $this->assertMatchesRegularExpression('#<a\s+href="[^"]*/inbox\?ticket='.$open->id.'"[^>]*>(?:(?!</a>).)*2026-000952#s', $html);
     }
 
     public function test_em_contatos_ticket_que_o_usuario_nao_ve_fica_sem_link(): void
@@ -237,6 +237,33 @@ class ContactCardCompactTest extends TestCase
 
         $this->assertStringContainsString('2026-000953', $html);
         $this->assertStringNotContainsString('ticketId='.$hidden->id, $html);
+    }
+
+    public function test_anteriores_viram_cartoes_e_so_os_abriveis_tem_seta(): void
+    {
+        $channel = Channel::factory()->create();
+        $mine = Sector::factory()->create();
+        $make = fn (Sector $sector, string $protocol): Ticket => Ticket::factory()->create([
+            'channel_id' => $channel->id, 'contact_id' => $this->contact->id, 'sector_id' => $sector->id,
+            'status' => TicketStatus::ENCERRADO, 'closed_at' => now()->subDay(), 'protocol' => $protocol,
+        ]);
+        $openable = $make($mine, '2026-000961');
+        $make(Sector::factory()->create(), '2026-000962');
+        $agent = User::factory()->create(['role' => UserRole::ATENDENTE]);
+        $agent->sectors()->attach($mine);
+
+        $xpath = $this->dom(Livewire::actingAs($agent)->test(ContactCard::class, ['contactId' => $this->contact->id, 'compact' => true])->html());
+        $card = fn (string $protocol) => $xpath->query('//*[@data-testid="details-history"]//*[@data-link-card][.//*[@data-link-card-title][normalize-space()="'.$protocol.'"]]')->item(0);
+
+        $link = $card('2026-000961');
+        $this->assertInstanceOf(\DOMElement::class, $link);
+        $this->assertSame('a', $link->tagName);
+        $this->assertSame(route('historico', ['ticketId' => $openable->id]), $link->getAttribute('href'));
+        $this->assertSame(1, $xpath->query('.//*[@data-link-card-chevron]', $link)->length);
+
+        $static = $card('2026-000962');
+        $this->assertInstanceOf(\DOMElement::class, $static);
+        $this->assertSame(0, $xpath->query('.//*[@data-link-card-chevron]', $static)->length);
     }
 
     private function channelWith(string $session, string $phone): Channel
@@ -285,6 +312,22 @@ class ContactCardCompactTest extends TestCase
         $this->card(['compact' => true, 'currentTicketId' => $current->id])
             ->assertSeeHtml('$parent.select('.$open->id.')')
             ->assertDontSee('também tem ticket aberto');
+    }
+
+    public function test_na_fila_o_anterior_aberto_e_um_botao_com_seta(): void
+    {
+        $channel = $this->channelWith('a', '5516999990001');
+        $current = $this->ticketOn($channel, TicketStatus::ENCERRADO);
+        $open = $this->ticketOn($channel, TicketStatus::AGUARDANDO);
+
+        $xpath = $this->dom($this->card(['compact' => true, 'currentTicketId' => $current->id])->html());
+        $card = $xpath->query('//*[@data-testid="details-history"]//*[@data-link-card][.//*[@data-link-card-title][normalize-space()="'.$open->protocol.'"]]')->item(0);
+
+        $this->assertInstanceOf(\DOMElement::class, $card);
+        $this->assertSame('button', $card->tagName);
+        $this->assertSame('button', $card->getAttribute('type'));
+        $this->assertSame('$parent.select('.$open->id.')', $card->getAttribute('wire:click'));
+        $this->assertSame(1, $xpath->query('.//*[@data-link-card-chevron]', $card)->length);
     }
 
     public function test_somente_leitura_mostra_o_aberto_sem_link(): void

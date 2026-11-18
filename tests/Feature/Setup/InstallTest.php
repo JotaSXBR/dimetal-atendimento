@@ -66,6 +66,22 @@ class InstallTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_instalacao_usa_campos_do_flux(): void
+    {
+        $html = $this->preencher('errado')->call('save')->html();
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html);
+        $xpath = new \DOMXPath($dom);
+
+        foreach (['code', 'name', 'email', 'password', 'password_confirmation'] as $field) {
+            $inputs = $xpath->query("//*[@data-flux-input]//input[@name='{$field}'][@*[name()='wire:model' and .='{$field}']]");
+            $this->assertSame(1, $inputs->length, "campo {$field} fora do flux:input");
+        }
+
+        $this->assertStringContainsString('Código inválido.', $html);
+    }
+
     public function test_sem_codigo_configurado_mostra_o_comando_e_nao_tem_formulario(): void
     {
         config(['setup.code' => '']);

@@ -32,7 +32,7 @@
     @else
         {{-- Foto como no WhatsApp: largura fixa e altura máxima; a mais alta que o limite é cortada. --}}
         {{-- Clique abre a prévia por cima do app (sem nova aba); Esc, clique fora ou no X fecham. --}}
-        <div x-data="{ open: false }" x-on:keydown.escape.window="open = false" class="relative w-fit">
+        <div x-data="{ open: false }" x-on:keydown.escape.window="open = false" class="relative w-fit max-w-full">
             <button type="button" data-photo-box x-on:click="open = true" class="block w-72 max-w-full cursor-zoom-in overflow-hidden rounded-lg"><img src="{{ $url }}" alt="Imagem recebida" loading="lazy" class="max-h-80 w-full object-cover"></button>
             <template x-teleport="body">
                 <div data-photo-preview x-show="open" x-cloak x-on:click="open = false" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
@@ -54,7 +54,7 @@
         @endif
     </div>
 @elseif (str_starts_with($mime, 'video/'))
-    <div class="relative w-fit">
+    <div class="relative w-fit max-w-full">
         <video controls preload="metadata" src="{{ $url }}" class="max-h-72 max-w-full rounded-lg"></video>
         {{-- No vídeo a hora sobe acima da barra de controles nativa. --}}
         @if (($timeMode ?? null) === 'overlay')

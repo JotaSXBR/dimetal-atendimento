@@ -556,6 +556,60 @@ class ChannelsScreenTest extends TestCase
     public function test_mais_opcoes_preserva_o_estado_aberto_entre_os_polls(): void
     {
         Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => Channel::factory()->create()])
-            ->assertSeeHtml('<details wire:ignore.self class="group mt-4 border-t border-line pt-3">');
+            ->assertSeeHtml('<details wire:ignore.self');
+    }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    private function panel(string $title): string
+    {
+        return '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="'.$title.'"]]';
+    }
+
+    public function test_canais_no_painel_do_desenho(): void
+    {
+        Channel::factory()->connected()->create(['name' => 'Comercial', 'waha_session' => 'comercial', 'phone' => '5516999990001']);
+        Channel::factory()->create(['name' => 'Financeiro', 'waha_session' => 'financeiro']);
+
+        $xpath = $this->xpath($this->actingAs($this->admin())->get('/configuracoes/canais')->getContent());
+
+        $this->assertSame(1, $xpath->query('//*[@role="note"][not(ancestor::*[@data-panel])][.//p[normalize-space()="Sem failover entre números"]]')->length);
+
+        $comercial = $this->panel('Comercial');
+        $this->assertSame(1, $xpath->query($comercial.'/*[@data-panel-header]//*[@data-panel-subtitle][normalize-space()="'.Channel::query()->where('name', 'Comercial')->sole()->phoneLabel().'"]')->length);
+        $this->assertSame(1, $xpath->query($comercial.'/*[@data-panel-header]//*[@data-panel-actions]//*[@data-status-tone="ok"][contains(., "Conectado")]')->length);
+        $this->assertSame(1, $xpath->query($this->panel('Financeiro').'/*[@data-panel-header]//*[@data-panel-subtitle][normalize-space()="número ainda não lido"]')->length);
+
+        $this->assertSame(1, $xpath->query($this->panel('Adicionar número').'//input[@*[name()="wire:model"]="sessionName"]')->length);
+        $this->assertSame(1, $xpath->query($this->panel('Webhook de entrada').'//*[@data-status-tone]')->length);
+        $this->assertSame(1, $xpath->query($this->panel('Últimos eventos'))->length);
+    }
+
+    public function test_cartao_do_canal_mantem_os_estados(): void
+    {
+        $qr = Channel::factory()->create(['name' => 'Financeiro', 'status' => ChannelStatus::SCAN_QR_CODE]);
+        $html = Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $qr])->set('qrValue', 'abc')->html();
+        $xpath = $this->xpath($html);
+
+        $root = '//*[@data-panel][@*[name()="wire:poll.5s"]="refreshStatus"][./*[@data-panel-header]//h2[normalize-space()="Financeiro"]]';
+        $this->assertSame(1, $xpath->query($root)->length, 'o painel é a raiz com o poll');
+        $this->assertSame(1, $xpath->query($root.'//*[@x-ref="canvas"][@*[name()="wire:ignore"]]')->length);
+        $this->assertSame(1, $xpath->query($root.'//*[contains(., "O QR é renovado automaticamente.")][not(*)]')->length);
+        $this->assertSame(1, $xpath->query($root.'//button[@*[name()="wire:click"]="connect"][contains(., "Gerar novo QR")]')->length);
+        $this->assertSame(1, $xpath->query($root.'//details[@*[name()="wire:ignore.self"]]//p[normalize-space()="Conectar com código de pareamento"]')->length);
+
+        $off = Channel::factory()->create(['name' => 'Parado', 'waha_session' => 'parado', 'active' => false]);
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(ChannelCard::class, ['channel' => $off])->call('ask', 'deactivate')->html());
+
+        $root = $this->panel('Parado');
+        $this->assertSame(1, $xpath->query($root.'/*[@data-panel-header]//*[@data-status-tone="neutral"][contains(., "Desativado")]')->length);
+        $this->assertSame(1, $xpath->query($root.'//button[@*[name()="wire:click"]="reactivate"]')->length);
+        $this->assertSame(1, $xpath->query($root.'//*[@role="alert"]//button[@*[name()="wire:click"]="deactivate"][contains(., "Confirmar Desativar")]')->length);
     }
 }

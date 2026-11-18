@@ -16,6 +16,7 @@ use App\Services\Bot\Vars;
 use App\Services\Bot\WorkflowPublisher;
 use Closure;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -26,6 +27,7 @@ use Livewire\Component;
  *
  * @phpstan-import-type StateShape from SimulationState
  */
+#[Layout('layouts::inbox')]
 #[Title('Editor de workflow')]
 class Editor extends Component
 {

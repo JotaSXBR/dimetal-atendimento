@@ -259,7 +259,7 @@ class InboxTranscriptTest extends TestCase
         $this->assertStringNotContainsString('mt-1 flex justify-end', $html, 'o menu não ocupa mais uma linha entre o texto e o horário');
     }
 
-    public function test_bolha_com_menu_reserva_espaco_para_o_botao(): void
+    public function test_bolha_tem_folga_igual_dos_dois_lados(): void
     {
         [$me, $ticket] = $this->mine();
         $this->say($ticket, 'Ok')->update(['wa_message_id' => 'W1']);
@@ -267,12 +267,77 @@ class InboxTranscriptTest extends TestCase
         $apagada->update(['wa_message_id' => 'W2', 'revoked_at' => now()]);
 
         $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
-        $this->assertSame(1, substr_count($html, 'ps-3 pe-9'), 'só a bolha com menu reserva o espaço do botão (24 px + 4 de folga + 8)');
-        $this->assertStringNotContainsString('min-w-28', $html);
+        $this->assertStringNotContainsString('ps-3 pe-9', $html);
+        $this->assertSame(1, substr_count($html, '[@media(hover:none)]:pe-9'), 'só a bolha com menu reserva espaço, e só no toque');
 
         $this->actingAs($me);
         $readonly = view('livewire.inbox.transcript', ['messages' => $ticket->messages()->get(), 'readonly' => true])->render();
-        $this->assertStringNotContainsString('pe-9', $readonly);
+        $this->assertStringNotContainsString('message-menu-button', $readonly);
+        $this->assertStringNotContainsString('[@media(hover:none)]:pe-9', $readonly);
+    }
+
+    public function test_fundo_da_bolha_e_do_botao_vem_da_mesma_variavel(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Oi')->update(['wa_message_id' => 'W1', 'origin' => MessageOrigin::BOT]);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+
+        $this->assertStringContainsString('[--bubble-bg:color-mix(in_oklab,var(--color-bot)_15%,var(--color-canvas))]', $html);
+        $this->assertStringContainsString('bg-(--bubble-bg)', $html);
+        preg_match('/<button[^>]*data-testid="message-menu-button"[^>]*>/', $html, $m);
+        $this->assertStringContainsString('var(--bubble-bg)', $m[0]);
+        $this->assertStringNotContainsString('bg-surface/80', $m[0]);
+    }
+
+    public function test_chevron_aparece_no_hover_e_no_foco(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Oi')->update(['wa_message_id' => 'W1']);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+        preg_match('/<button[^>]*data-testid="message-menu-button"[^>]*>/', $html, $m);
+        preg_match('/\sclass="([^"]*)"/', $m[0], $c);
+        $classes = preg_split('/\s+/', trim($c[1]));
+
+        foreach (['opacity-0', 'group-hover:opacity-100', 'focus-visible:opacity-100', '[@media(hover:none)]:opacity-100', 'translate-x-1', 'group-hover:translate-x-0', 'focus-visible:translate-x-0', 'motion-reduce:translate-x-0', 'transition-[opacity,translate]'] as $classe) {
+            $this->assertContains($classe, $classes);
+        }
+    }
+
+    public function test_chevron_oculto_nao_captura_clique(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Oi')->update(['wa_message_id' => 'W1']);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+        preg_match('/<button[^>]*data-testid="message-menu-button"[^>]*>/', $html, $m);
+        preg_match('/\sclass="([^"]*)"/', $m[0], $c);
+        $classes = preg_split('/\s+/', trim($c[1]));
+
+        foreach (['pointer-events-none', 'group-hover:pointer-events-auto', 'focus-visible:pointer-events-auto', '[@media(hover:none)]:pointer-events-auto'] as $classe) {
+            $this->assertContains($classe, $classes);
+        }
+    }
+
+    public function test_setinha_sobre_midia_ou_citacao_flutua_sem_degrade(): void
+    {
+        [$me, $ticket] = $this->mine();
+        $this->say($ticket, 'Texto simples')->update(['wa_message_id' => 'W1']);
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'W2', 'body' => 'com citação', 'quoted_wa_message_id' => 'W1', 'quoted_snapshot' => ['author' => 'Maria', 'type' => 'text', 'excerpt' => 'antiga']]);
+        Message::factory()->for($ticket)->create(['wa_message_id' => 'W3', 'type' => 'media', 'body' => '', 'media_mime' => 'image/jpeg', 'media_name' => 'f.jpg', 'media_ref' => 'files/f.jpg']);
+
+        $html = Livewire::actingAs($me)->test(Transcript::class, ['ticketId' => $ticket->id])->html();
+        preg_match_all('/<button[^>]*data-testid="message-menu-button"[^>]*>/', $html, $m);
+
+        $this->assertCount(3, $m[0]);
+        $this->assertStringContainsString('linear-gradient', $m[0][0]);
+        $this->assertStringNotContainsString('rounded-full', $m[0][0]);
+        foreach ([$m[0][1], $m[0][2]] as $botao) {
+            $this->assertStringContainsString('rounded-full', $botao);
+            $this->assertStringContainsString('shadow-sm', $botao);
+            $this->assertStringNotContainsString('linear-gradient', $botao);
+        }
     }
 
     public function test_mensagem_apagada_nao_tem_menu(): void

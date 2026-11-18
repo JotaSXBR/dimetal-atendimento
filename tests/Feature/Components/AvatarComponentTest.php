@@ -105,19 +105,26 @@ class AvatarComponentTest extends TestCase
             ->assertDontSee('aria-label', false);
     }
 
-    public function test_accent_usa_o_amarelo_da_marca_e_o_padrao_usa_cor_automatica(): void
+    public function test_accent_usa_o_fundo_da_marca_e_o_padrao_e_monocromatico(): void
     {
         $this->blade('<x-avatar name="Zeta" accent />')
-            ->assertSee('bg-accent', false)
-            ->assertSee('text-accent-foreground', false)
-            ->assertDontSee('bg-amber-200', false);
+            ->assertSee('bg-accent text-accent-foreground', false)
+            ->assertDontSee('bg-accent-soft', false);
 
-        $this->blade('<x-avatar name="Zeta" />')->assertDontSee('bg-accent', false);
+        // Vale também com foto: o monograma de baixo aparece quando a foto falha.
+        foreach (['<x-avatar name="Zeta" />', '<x-avatar name="Maria Souza" src="/foto.webp" />'] as $blade) {
+            $html = (string) $this->blade($blade);
+
+            $this->assertStringContainsString('bg-accent-soft text-ink-2', $html);
+            $this->assertStringNotContainsString('text-accent-foreground', $html);
+            // A cor automática do Flux pinta `bg-<cor>-200 text-<cor>-800`; o zinc sai antes por ser o padrão `[:where(&)]` dele, não cor automática.
+            $this->assertDoesNotMatchRegularExpression('/\b(bg|text)-[a-z]+-(200|800)\b/', str_replace(['bg-zinc-200', 'text-zinc-800'], '', $html));
+        }
     }
 
-    public function test_monograma_da_marca_no_menu_e_no_login_e_amarelo(): void
+    public function test_monograma_da_marca_no_menu_e_no_login_usa_o_fundo_da_marca(): void
     {
-        $this->get('/login')->assertOk()->assertSee('bg-accent', false);
-        $this->actingAs(User::factory()->create())->get('/inbox')->assertOk()->assertSee('bg-accent', false);
+        $this->get('/login')->assertOk()->assertSee('bg-accent text-accent-foreground', false);
+        $this->actingAs(User::factory()->create())->get('/inbox')->assertOk()->assertSee('bg-accent text-accent-foreground', false);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Audit;
 
+use App\Enums\AuditAction;
 use App\Enums\UserRole;
 use App\Livewire\Audit\Index as TicketsAudit;
 use App\Livewire\Audit\SystemLog;
@@ -110,11 +111,69 @@ class SystemLogPageTest extends TestCase
             ->assertSeeHtml('href="'.route('auditoria.sistema').'"')->assertSeeHtml('aria-current="page"');
     }
 
+    public function test_as_abas_ficam_dentro_do_cabecalho_nas_duas_paginas(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+
+        foreach (['/auditoria', '/auditoria/sistema'] as $url) {
+            $dom = new \DOMDocument;
+            @$dom->loadHTML('<?xml encoding="utf-8"?>'.$this->actingAs($admin)->get($url)->assertOk()->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+            $xpath = new \DOMXPath($dom);
+
+            $this->assertSame(1, $xpath->query('//*[@data-page-header]//nav[@aria-label="Tipo de auditoria"]')->length, $url);
+            $this->assertSame(1, $xpath->query('//nav[@aria-label="Tipo de auditoria"]')->length, $url);
+        }
+    }
+
     public function test_o_item_auditoria_do_menu_segue_ativo_na_pagina_nova(): void
     {
         $item = collect(Navigation::items())->first(fn ($item): bool => $item->route === 'auditoria');
 
         $this->assertNotNull($item);
         $this->assertSame('auditoria*', $item->match);
+    }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_auditoria_do_sistema_em_tabela_larga_num_painel(): void
+    {
+        $this->log('auth.logout');
+        $id = DB::table('audit_logs')->value('id');
+        $xpath = $this->xpath($this->page()->html());
+
+        $this->assertSame(1, $xpath->query("//section[contains(concat(' ', normalize-space(@class), ' '), ' max-w-[120rem] ')]")->length);
+        $this->assertSame(1, $xpath->query('//*[@data-panel]//table[caption[normalize-space()="Eventos do sistema"]]')->length);
+        $columns = array_map(fn (\DOMNode $th): string => trim($th->textContent), iterator_to_array($xpath->query('//*[@data-panel]//table//th')));
+        $this->assertSame(['Data e hora', 'Ação', 'O que aconteceu', 'IP'], $columns);
+
+        $row = $xpath->query('//*[@data-panel]//tr[@*[name()="wire:key"]="log-'.$id.'"]');
+        $this->assertSame(1, $row->length);
+        $badge = $xpath->query('.//*[@data-status-tone="neutral"]', $row->item(0));
+        $this->assertSame(1, $badge->length);
+        $this->assertSame(AuditAction::tryFrom('auth.logout')?->label() ?? 'auth.logout', trim($badge->item(0)->textContent));
+        $this->assertSame('10.0.0.9', trim($xpath->query('./td[4]', $row->item(0))->item(0)?->textContent ?? ''));
+    }
+
+    public function test_log_sem_ip_mostra_travessao_na_coluna_ip(): void
+    {
+        $this->log('auth.logout', ip: null);
+        $id = DB::table('audit_logs')->value('id');
+        $row = $this->xpath($this->page()->html())->query('//*[@data-panel]//tr[@*[name()="wire:key"]="log-'.$id.'"]')->item(0);
+
+        $this->assertNotNull($row);
+        $this->assertSame('—', trim((new \DOMXPath($row->ownerDocument))->query('./td[4]', $row)->item(0)?->textContent ?? ''));
+    }
+
+    public function test_auditoria_do_sistema_vazia_mostra_estado_vazio_com_circulo(): void
+    {
+        $xpath = $this->xpath($this->page()->html());
+
+        $this->assertSame(1, $xpath->query('//*[@data-panel]//table//td//*[@data-empty-state-icon]')->length);
     }
 }

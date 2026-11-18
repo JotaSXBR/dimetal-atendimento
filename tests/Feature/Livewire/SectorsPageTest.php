@@ -138,4 +138,30 @@ class SectorsPageTest extends TestCase
         $this->assertSame($sector->id, $ticket->fresh()?->sector_id);
         $this->assertSame(TicketStatus::AGUARDANDO, $ticket->fresh()?->status);
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_setores_no_painel_do_desenho(): void
+    {
+        $sector = Sector::factory()->create(['name' => 'Vendas', 'menu_order' => 1]);
+        $used = Sector::factory()->create(['name' => 'SAC', 'menu_order' => 2]);
+        Ticket::factory()->create(['sector_id' => $used->id, 'status' => TicketStatus::AGUARDANDO]);
+        $page = Livewire::actingAs($this->admin())->test(Sectors::class);
+
+        $xpath = $this->xpath($page->html());
+        $this->assertSame(1, $xpath->query('//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="Novo setor"]]//form//input[@*[name()="wire:model"]="newName"]')->length);
+        $row = fn (int $id): string => '//*[@data-panel]//li[@*[name()="wire:key"]="sector-'.$id.'"]';
+        $this->assertSame(1, $xpath->query($row($sector->id).'//*[starts-with(@x-data, "sectorRow(")]')->length);
+
+        foreach ([['rename', $sector->id, 'SAC'], ['setStatus', $sector->id, 'xx'], ['remove', $used->id, null]] as [$method, $id, $arg]) {
+            $html = $page->call($method, ...array_filter([$id, $arg], fn ($value): bool => $value !== null))->html();
+            $this->assertSame(1, $this->xpath($html)->query($row($id).'//*[@role="alert"]')->length, $method);
+        }
+    }
 }

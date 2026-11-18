@@ -225,6 +225,15 @@ class AutomationIndexTest extends TestCase
         $this->page()->set('newName', '  ')->call('create')->assertHasErrors(['newName' => 'required']);
     }
 
+    public function test_duplicar_e_apagar_ficam_juntos_sem_quebrar_linha(): void
+    {
+        Workflow::factory()->create(['name' => 'Original']);
+
+        $html = $this->page()->html();
+
+        $this->assertMatchesRegularExpression('/<div class="[^"]*flex-nowrap[^"]*">\s*<button[^>]*aria-label="Duplicar Original"[^>]*>.*?<\/button>\s*<button[^>]*aria-label="Apagar Original"/s', $html);
+    }
+
     public function test_duplica_e_apaga(): void
     {
         $workflow = Workflow::factory()->create(['name' => 'Original']);
@@ -269,5 +278,32 @@ class AutomationIndexTest extends TestCase
         $page->call('restore', $workflow->id, $first?->id);
 
         $this->assertCount(8, $workflow->fresh()?->draft['nodes']);
+    }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_automacao_no_painel_do_desenho(): void
+    {
+        $panel = fn (string $title): string => '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="'.$title.'"]]';
+
+        $empty = $this->xpath($this->page()->html());
+        $this->assertSame(1, $empty->query("//section[contains(concat(' ', normalize-space(@class), ' '), ' max-w-[120rem] ')]")->length);
+        $this->assertSame(1, $empty->query($panel('Workflows').'//*[@data-empty-state]')->length);
+
+        $workflow = Workflow::factory()->create(['name' => 'Fluxo X']);
+        $xpath = $this->xpath($this->page()->set('showNew', true)->html());
+        $this->assertSame(1, $xpath->query($panel('Workflows').'//*[@*[name()="wire:key"]="workflow-'.$workflow->id.'"]')->length);
+        $this->assertSame('1 workflow', trim($xpath->query($panel('Workflows').'//*[@data-panel-subtitle]')->item(0)?->textContent ?? ''));
+        $this->assertSame(1, $xpath->query($panel('Novo workflow').'//form[@*[name()="wire:submit"]="create"]')->length);
+
+        Workflow::factory()->create(['name' => 'Fluxo Y']);
+        $two = $this->xpath($this->page()->html());
+        $this->assertSame('2 workflows', trim($two->query($panel('Workflows').'//*[@data-panel-subtitle]')->item(0)?->textContent ?? ''));
     }
 }

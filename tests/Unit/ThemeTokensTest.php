@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 class ThemeTokensTest extends TestCase
 {
-    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'warn', 'danger', 'ok', 'bot', 'read', 'danger-foreground', 'warn-foreground'];
+    private const TOKENS = ['ink', 'ink-2', 'ink-3', 'line', 'canvas', 'surface', 'muted', 'accent', 'accent-content', 'accent-foreground', 'accent-soft', 'warn', 'danger', 'ok', 'bot', 'read', 'danger-foreground', 'warn-foreground'];
 
     public function test_todo_token_tem_algum_uso(): void
     {
@@ -200,6 +200,30 @@ class ThemeTokensTest extends TestCase
     public function test_minimapa_do_editor_nao_traz_o_amarelo_padrao_da_biblioteca(): void
     {
         $this->assertMatchesRegularExpression('/rete-minimap\s*\{[^}]*filter:\s*grayscale\(1\)/', $this->css());
+    }
+
+    public function test_bloco_do_editor_tem_cabecalho_neutro_e_a_categoria_so_no_icone(): void
+    {
+        preg_match('/\.flow-head\s*\{([^}]*)\}/', $this->css(), $head);
+
+        $this->assertStringContainsString('background: var(--color-canvas)', $head[1] ?? '');
+        $this->assertStringNotContainsString('--flow-cat', $head[1] ?? '');
+        $this->assertMatchesRegularExpression('/\.flow-head svg\s*\{[^}]*color:\s*var\(--flow-cat\)/', $this->css());
+    }
+
+    public function test_icone_de_cada_categoria_tem_contraste_sobre_o_canvas_nos_dois_temas(): void
+    {
+        preg_match('/^\.flow-canvas\s*\{([^}]*)\}/m', $this->css(), $light);
+        preg_match('/\.dark \.flow-canvas\s*\{([^}]*)\}/', $this->css(), $dark);
+
+        foreach (['light' => $light[1] ?? '', 'dark' => $dark[1] ?? ''] as $theme => $block) {
+            preg_match_all('/--flow-cat-([a-z]+):\s*(#[0-9a-fA-F]{6})/', $block, $m, PREG_SET_ORDER);
+            $this->assertCount(6, $m, $theme);
+
+            foreach ($m as [, $cat, $hex]) {
+                $this->assertGreaterThanOrEqual(3.0, $this->ratio($hex, $this->themes()[$theme]['canvas']), "{$theme}: {$cat}");
+            }
+        }
     }
 
     public function test_o_flux_enxerga_o_zinc_de_verdade_sem_remapear_para_stone(): void
@@ -424,5 +448,32 @@ class ThemeTokensTest extends TestCase
         }
 
         $this->assertSame([], $offenders, 'amber-* não acompanha o tema escuro: use bg-warn/10, border-warn/30, text-warn');
+    }
+
+    public function test_layout_de_pagina_reserva_a_barra_de_rolagem(): void
+    {
+        $css = (string) file_get_contents(dirname(__DIR__, 2).'/resources/css/app.css');
+
+        $this->assertMatchesRegularExpression('/html:has\(\[data-page-layout\]\)[^{]*\{[^}]*scrollbar-gutter\s*:\s*stable/', $css);
+    }
+
+    /** Layouts de entrada (`layouts/auth/`) ficam de fora: entram na fatia 6 do redesenho, com fundo e cartão próprios. */
+    public function test_layouts_nao_usam_zinc_nem_branco_cru(): void
+    {
+        $layouts = dirname(__DIR__, 2).'/resources/views/layouts';
+        $fixed = [$layouts.'/app.blade.php', $layouts.'/inbox.blade.php', $layouts.'/setup.blade.php'];
+        $app = glob($layouts.'/app/*.blade.php') ?: [];
+        $this->assertNotEmpty($app, 'layouts/app/ sem arquivos: o glob não achou nada');
+        $offenders = [];
+        foreach ([...$fixed, ...$app] as $file) {
+            $this->assertFileExists($file);
+            foreach (file($file) ?: [] as $n => $line) {
+                if (preg_match('/bg-white|dark:bg-zinc-|border-zinc-|var\(--color-zinc-/', $line, $m) === 1) {
+                    $offenders[] = basename($file).':'.($n + 1).' '.$m[0];
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders, 'use bg-surface, bg-canvas e border-line');
     }
 }

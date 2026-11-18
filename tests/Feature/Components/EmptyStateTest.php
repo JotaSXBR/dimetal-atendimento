@@ -41,13 +41,34 @@ class EmptyStateTest extends TestCase
         $this->assertSame(0, $sem->query('//*[@data-empty-state-action]')->length);
     }
 
-    public function test_compacto_ocupa_menos_altura_e_classe_do_chamador_se_mistura(): void
+    public function test_icone_fica_num_circulo_fora_do_compacto(): void
     {
-        $normal = $this->xpath('<x-empty-state title="Nada" />')->query('//*[@data-empty-state]')->item(0);
-        $compact = $this->xpath('<x-empty-state title="Nada" compact class="ms-2" />')->query('//*[@data-empty-state]')->item(0);
+        $normal = $this->xpath('<x-empty-state title="Nada" />');
+        $compact = $this->xpath('<x-empty-state title="Nada" compact />');
 
-        $this->assertStringContainsString('py-10', $normal->getAttribute('class'));
-        $this->assertStringContainsString('py-4', $compact->getAttribute('class'));
-        $this->assertStringContainsString('ms-2', $compact->getAttribute('class'));
+        $this->assertStringContainsString('rounded-full', $normal->query('//*[@data-empty-state-icon]')->item(0)?->getAttribute('class') ?? '');
+        $this->assertSame(0, $compact->query('//*[@data-empty-state-icon]')->length);
+        $this->assertSame(1, $compact->query('//*[@data-empty-state]//svg')->length);
+    }
+
+    public function test_compacto_nao_tem_o_circulo_do_icone_e_mistura_a_classe_do_chamador(): void
+    {
+        $normal = $this->xpath('<x-empty-state title="Nada" />');
+        $compact = $this->xpath('<x-empty-state title="Nada" compact class="ms-2" />');
+
+        // O compacto é o que fica sem o círculo de 44 px em volta do ícone.
+        $this->assertSame(1, $normal->query('//*[@data-empty-state]/*[@data-empty-state-icon]')->length);
+        $this->assertSame(0, $compact->query('//*[@data-empty-state-icon]')->length);
+        $this->assertStringContainsString('ms-2', $compact->query('//*[@data-empty-state]')->item(0)->getAttribute('class'));
+    }
+
+    public function test_circulo_do_icone_usa_o_fundo_muted_visivel_no_tema_claro(): void
+    {
+        $xpath = $this->xpath('<x-empty-state title="Nada" />');
+
+        // canvas (#fafafa) some sobre o corpo branco; muted (zinc-100) é o tom do desenho no Pencil.
+        $classes = explode(' ', $xpath->query('//*[@data-empty-state-icon]')->item(0)?->getAttribute('class') ?? '');
+        $this->assertContains('bg-muted', $classes);
+        $this->assertNotContains('bg-canvas', $classes);
     }
 }

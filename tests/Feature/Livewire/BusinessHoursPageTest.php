@@ -188,4 +188,28 @@ class BusinessHoursPageTest extends TestCase
     {
         Livewire::actingAs(User::factory()->create(['role' => UserRole::SUPERVISOR]))->test(BusinessHoursPage::class)->call('saveSla')->assertForbidden();
     }
+
+    private function xpath(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        return new \DOMXPath($dom);
+    }
+
+    public function test_horario_no_painel_do_desenho(): void
+    {
+        BusinessHour::create(['weekday' => 1, 'opens_at' => '08:00', 'closes_at' => '12:00']);
+        $xpath = $this->xpath(Livewire::actingAs($this->admin())->test(BusinessHoursPage::class)->html());
+        $panel = '//*[@data-panel][./*[@data-panel-header]//h2[normalize-space()="%s"]]';
+
+        foreach (['Faixas de atendimento' => 'saveHours', 'Feriados' => 'addHoliday', 'Prazo de primeira resposta (SLA)' => 'saveSla', 'Resposta automática fora do horário' => 'saveMessage'] as $title => $submit) {
+            $this->assertSame(1, $xpath->query(sprintf($panel, $title).'//form[@*[name()="wire:submit"]="'.$submit.'"]')->length, $title);
+        }
+
+        $day = sprintf($panel, 'Faixas de atendimento').'//*[@*[name()="wire:key"]="day-%d"]';
+        $this->assertSame(1, $xpath->query(sprintf($day, 1).'/*[@data-day-name][normalize-space()="Segunda-feira"]')->length);
+        $this->assertSame(1, $xpath->query(sprintf($day, 1).'/*[@data-day-windows]//input[@type="time"]/ancestor::*[@*[name()="wire:key"]="day-1-0"]')->length);
+        $this->assertSame(1, $xpath->query(sprintf($day, 0).'/*[@data-day-windows][normalize-space()="Fechado"]')->length);
+    }
 }

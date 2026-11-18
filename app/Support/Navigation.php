@@ -100,6 +100,23 @@ class Navigation
         return $groups;
     }
 
+    /**
+     * O menu de Minha conta (todo usuário abre; fora da lista de `items()` para não entrar na barra nem na busca).
+     *
+     * @return array<string, list<NavItem>>
+     */
+    public function accountGroups(): array
+    {
+        $item = fn (string $label, string $route, string $icon): NavItem => new NavItem($label, $route, null, 'Minha conta', 'Minha conta', $icon, $route);
+
+        return ['Minha conta' => [
+            $item('Perfil', 'profile.edit', 'user'),
+            $item('Segurança', 'security.edit', 'shield-check'),
+            $item('Aparência', 'appearance.edit', 'sun'),
+            $item('Meus alertas', 'alerts.edit', 'bell'),
+        ]];
+    }
+
     /** Destino do item "Configuração" do menu: o primeiro que o usuário pode abrir; `null` se nenhum. */
     public function settingsEntry(User $user): ?NavItem
     {
